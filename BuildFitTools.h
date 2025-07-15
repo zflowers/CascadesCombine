@@ -1,7 +1,11 @@
 
-#ifndef "BFTOOLS.h"
-#define "BFTOOLS.h"
-
+#ifndef BFTOOLS_H
+#define BFTOOLS_H
+#include <string>
+#include <map>
+#include <sstream> 
+#include <cmath>
+#include <vector>
 
 class Process{
 	
@@ -10,19 +14,24 @@ class Process{
 	long long unsigned int nevents{};
 	double wnevents{};
 	double staterror{};
-	Process(std::string name, long long unsigned int n, double wn, double err);
-	Process::Process(std::string name, long long unsigned int n, double wn, double err){
-		procname = name;
-		nevents =n;
-		wnevents = wn;
-		staterror = err;
+
+	Process(std::string name, long long unsigned int n, double wn, double err) :procname(name), nevents(n), wnevents(wn), staterror(err){}
+	//assume it is initialized from 0
+	void Add(Process* p){
+		nevents += p->nevents;
+		wnevents += p->wnevents;
+		staterror += p->staterror * p->staterror;
+	}
+	void FixError(){
+		staterror = std::sqrt(staterror);
 	}
 };
 class Bin{
 	
 	public:
 	std::string binname{};
-	satistd::map<std::string, Process*> bkgProcs{};
+	std::map<std::string, Process*> bkgProcs{};
+	std::map<std::string, Process*> combinedProcs{};
 	std::map<std::string, Process*> signals{};
 
 };
@@ -31,23 +40,24 @@ class Bin{
 class BFTool{
 
 	public:
-	static std::vector<std::string> SplitString(const std::string& input, char delimiter);
-	static std::string GetSignalKeys(const std::string& input);
+	static std::vector<std::string> SplitString(const std::string& input, const std::string& delimiter);
+	static std::string GetSignalTokens(const std::string& input);
 };
 
-inline std::vector<std::string> BFTool::SplitString(const std::string& input, char delimiter) {
+inline std::vector<std::string> splitStringByString(const std::string& str, const std::string& delimiter) {
     std::vector<std::string> tokens;
-    std::istringstream stream(input); // Create an input string stream from the input string
-    std::string token;
+    size_t prev_pos = 0;
+    size_t current_pos;
 
-    // Read tokens from the string stream separated by the delimiter
-    while (std::getline(stream, token, delimiter)) {
-        tokens.push_back(token); // Add the extracted token to the vector
+    while ((current_pos = str.find(delimiter, prev_pos)) != std::string::npos) {
+        tokens.push_back(str.substr(prev_pos, current_pos - prev_pos));
+        prev_pos = current_pos + delimiter.length();
     }
+    tokens.push_back(str.substr(prev_pos)); // Add the last token
 
     return tokens;
 }
-inline std::string BFTool::GetSignalKeys(const std::string& input ){
+inline std::string BFTool::GetSignalTokens(const std::string& input ){
 	std::string mode = "x";
 	std::string mgo = "0";
 	std::string mn2 = "0";
@@ -63,7 +73,7 @@ inline std::string BFTool::GetSignalKeys(const std::string& input ){
 	mn1 = SplitString(sig_toks[8], "-")[1];
 	
 	std::string signalKeys = mode+"_"+mgo+"_"+mn2+"_"+mn1+"_"+ctau;
-	return singalKeys;
+	return signalKeys;
 	
 	
 }
