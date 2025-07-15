@@ -36,15 +36,14 @@ class Bin{
 
 };
 
-
 class BFTool{
 
 	public:
-	static std::vector<std::string> SplitString(const std::string& input, const std::string& delimiter);
-	static std::string GetSignalTokens(const std::string& input);
+	static std::vector<std::string> SplitString(const std::string& str,const std::string& delimiter);
+	static std::string GetSignalTokens(std::string& input);
 };
 
-inline std::vector<std::string> splitStringByString(const std::string& str, const std::string& delimiter) {
+inline std::vector<std::string> BFTool::SplitString(const std::string& str,const std::string& delimiter) {
     std::vector<std::string> tokens;
     size_t prev_pos = 0;
     size_t current_pos;
@@ -57,7 +56,7 @@ inline std::vector<std::string> splitStringByString(const std::string& str, cons
 
     return tokens;
 }
-inline std::string BFTool::GetSignalTokens(const std::string& input ){
+inline std::string BFTool::GetSignalTokens(std::string& input ){
 	std::string mode = "x";
 	std::string mgo = "0";
 	std::string mn2 = "0";

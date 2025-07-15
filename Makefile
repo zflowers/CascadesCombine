@@ -18,7 +18,7 @@ LDFLAGS = $(shell root-config --glibs)
 TARGET = myprogram
 
 # Define source files
-SRCS = main.cpp SampleTool.cpp BuildFitInput.cpp BuildFitTools.h JSONFactory.h
+SRCS = main.cpp SampleTool.cpp BuildFitInput.cpp BuildFitTools.h 
 
 # Define object files
 OBJS = $(SRCS:.cpp=.o)
