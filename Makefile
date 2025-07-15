@@ -18,7 +18,7 @@ LDFLAGS = $(shell root-config --glibs)
 TARGET = myprogram
 
 # Define source files
-SRCS = main.cpp SampleTool.cpp BuildFitInput.cpp BuildFitTools.h 
+SRCS = main.cpp SampleTool.cpp BuildFitInput.cpp BuildFitTools.h JSONFactory.cpp
 
 # Define object files
 OBJS = $(SRCS:.cpp=.o)
@@ -37,4 +37,4 @@ $(TARGET): $(OBJS)
 # Clean target: remove generated files, this deleted my headers!
 clean:
 	rm *.o
-	#rm -f $(OBJS) $(TARGET)
+	rm myprogram

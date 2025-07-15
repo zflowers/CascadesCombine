@@ -3,7 +3,7 @@
 
 #include "SampleTool.h"
 #include "BuildFitInput.h"
-//#include "JSONFactory.h"
+#include "JSONFactory.h"
 
 int main() {
 	double Lumi= 400.;
@@ -60,6 +60,6 @@ int main() {
 	BFI->AddSigToBinObjects( countResults_S, sumResults_S, errorResults_S, BFI->analysisbins);
 	BFI->PrintBins(1);
 	
-	//JSONFactory* json = new JSONFactory();
-	
+	JSONFactory* json = new JSONFactory(BFI->analysisbins);
+	json->WriteJSON("test.json");
 }
