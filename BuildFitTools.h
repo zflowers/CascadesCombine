@@ -33,6 +33,7 @@ class Bin{
 	std::map<std::string, Process*> bkgProcs{};
 	std::map<std::string, Process*> combinedProcs{};
 	std::map<std::string, Process*> signals{};
+	std::pair<std::string, Process*> totalBkg{};
 
 };
 
@@ -76,5 +77,6 @@ inline std::string BFTool::GetSignalTokens(std::string& input ){
 	
 	
 }
+
 
 #endif
