@@ -14,6 +14,7 @@ class JSONFactory{
 
 	public:
 	JSONFactory(std::map<std::string, Bin*> analysisbins);
+	JSONFactory(std::string filename);
 	json j{};
 	void WriteJSON(std::string filename);
 };

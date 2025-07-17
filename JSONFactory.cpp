@@ -18,6 +18,11 @@ JSONFactory::JSONFactory(std::map<std::string, Bin*> analysisbins){
 		}
 	}
 }
+JSONFactory::JSONFactory(std::string filename){
+	std::ifstream ifs(filename);
+	j = json::parse(ifs);
+
+}
 void JSONFactory::WriteJSON(std::string filename){
 	std::cout<<"Writing json "<<filename<<" ... \n";
 	std::ofstream outputFile(filename);
