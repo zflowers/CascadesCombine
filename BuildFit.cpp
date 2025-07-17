@@ -1,15 +1,23 @@
+#include "BuildFit.h"
 
-ch::Categories BuildCats(JSONFactory* j){
+ch::Categories BuildFit::BuildCats(JSONFactory* j){
 	ch::Categories cats{};
+	int binNum=0;
 	for (json::iterator it = j->j.begin(); it != j->j.end(); ++it) {
   		std::cout << it.key() <<"\n";
+		cats.push_back( {binNum, it.key()} );
+		binNum++;
 	}
 	return cats;
 }
 std::map<std::string, float> BuildAsimovData(JSONFactory* j){
-	
-}
+	std::map<std::string, float> obs_rates{};
+	return obs_rates;	
 
+}
+void BuildFit::BuildAsimovFit(JSONFactory* j){
+	ch::Categories cats = BuildCats(j);
+}	
 /*
 void BuildAsimovRegions(
 
