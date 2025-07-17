@@ -4,20 +4,81 @@ ch::Categories BuildFit::BuildCats(JSONFactory* j){
 	ch::Categories cats{};
 	int binNum=0;
 	for (json::iterator it = j->j.begin(); it != j->j.end(); ++it) {
-  		std::cout << it.key() <<"\n";
+  		//std::cout << it.key() <<"\n";
 		cats.push_back( {binNum, it.key()} );
 		binNum++;
 	}
 	return cats;
 }
-std::map<std::string, float> BuildAsimovData(JSONFactory* j){
-	std::map<std::string, float> obs_rates{};
-	return obs_rates;	
+std::map<std::string, float> BuildFit::BuildAsimovData(JSONFactory* j){
 
+	std::map<std::string, float> obs_rates{};
+	
+	//outer loop bin iterator
+	for (json::iterator it = j->j.begin(); it != j->j.end(); ++it){
+		//inner loop process iterator
+		std::string binname = it.key();
+		float totalBkg = 0;
+		for (json::iterator it2 = it.value().begin(); it2 != it.value().end(); ++it2){
+			//std::cout<< it2.key()<<"\n";
+			
+			if( BFTool::ContainsAnySubstring( it2.key(), sigkeys)){
+				continue;
+			}
+			else{
+				//get the wnevents, index 1 of array
+				json json_array = it2.value();
+				//std::cout<< it2.key()<<" "<<json_array[1].get<float>()<<" "<<"\n";
+				totalBkg+= json_array[1].get<float>();
+			}
+		}
+		obs_rates[binname] = float(int(totalBkg));
+		std::cout<<"adding totalbkg: "<<binname<<" "<< float(int(totalBkg))<<"\n";
+	}
+	return obs_rates;	
+}
+std::vector<std::string> BuildFit::GetBkgProcs(JSONFactory* j){
+	std::vector<std::string> bkgprocs{};
+
+	for (json::iterator it = j->j.begin(); it != j->j.end(); ++it){
+                //inner loop process iterator
+                std::string binname = it.key();
+                for (json::iterator it2 = it.value().begin(); it2 != it.value().end(); ++it2){
+                //      std::cout<< it2.key()<<"\n";
+                        if( BFTool::ContainsAnySubstring( it2.key(), sigkeys)){
+                                continue;
+                        }
+                        else{
+				bkgprocs.push_back(it2.key());
+			}
+		}
+	}
+	return bkgprocs;
 }
 void BuildFit::BuildAsimovFit(JSONFactory* j){
 	ch::Categories cats = BuildCats(j);
+	std::cout<<"building obs rates \n";
+	std::map<std::string, float> obs_rates = BuildAsimovData(j);
+	std::cout<<"Getting process list\n";
+	std::vector<std::string> bkgprocs = GetBkgProcs(j);
+	std::cout<<"Build cb objects\n";
+	cb.SetVerbosity(3);
+	cb.AddObservations({"*"}, {""}, {"13.6TeV"}, {""}, cats);
+	cb.AddProcesses(   {"*"}, {""}, {"13.6TeV"}, {""}, bkgprocs, cats, false);
+	cb.ForEachObs([&](ch::Observation *x){
+		x->set_rate(obs_rates[x->bin()]);
+	});
+	cb.ForEachProc([&j](ch::Process *x) {
+	    std::cout<<x->bin()<<" "<<x->process()<<"\n";
+	    json json_array = j->j[x->bin()][x->process()];
+	    x->set_rate(json_array[1].get<float>());
+	});
+
+	cb.PrintAll();
+
 }	
+
+
 /*
 void BuildAsimovRegions(
 
