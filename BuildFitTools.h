@@ -6,7 +6,7 @@
 #include <sstream> 
 #include <cmath>
 #include <vector>
-
+#include <iostream>
 class Process{
 	
 	public: 
@@ -41,6 +41,7 @@ class BFTool{
 	public:
 	static std::vector<std::string> SplitString(const std::string& str,const std::string& delimiter);
 	static std::string GetSignalTokens(std::string& input);
+	static bool  ContainsAnySubstring(const std::string& mainString, const std::vector<std::string>& substrings);
 };
 
 inline std::vector<std::string> BFTool::SplitString(const std::string& str,const std::string& delimiter) {
@@ -76,5 +77,15 @@ inline std::string BFTool::GetSignalTokens(std::string& input ){
 	
 	
 }
-
+inline bool BFTool::ContainsAnySubstring(const std::string& mainString, const std::vector<std::string>& substrings) {
+    for (const std::string& sub : substrings) {
+	//std::cout<<"comparing string: "<< mainString <<", "<<sub<<"\n";
+        if (mainString.find(sub) != std::string::npos) {
+            // Substring found
+            return true; 
+        }
+    }
+    // No substring found
+    return false; 
+}
 #endif

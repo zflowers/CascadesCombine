@@ -3,6 +3,7 @@
 #define BUILDFIT_H
 
 #include "JSONFactory.h"
+#include "BuildFitTools.h"
 #include <iostream>
 #include <vector>
 #include <map>
@@ -22,10 +23,15 @@ class BuildFit{
 	public:
 	ch::CombineHarvester cb{};
 	
-	void BuildAsimovFit(JSONFactory* j);
+//	void BuildAsimovFit(JSONFactory* j);
 
 	ch::Categories BuildCats(JSONFactory* j);
 	std::map<std::string, float> BuildAsimovData(JSONFactory* j);
+        std::vector<std::string> GetBkgProcs(JSONFactory* j);
+       	void BuildAsimovFit(JSONFactory* j);
+	
+	
+	std::vector<std::string> sigkeys = { "gogoZ", "gogoG", "gogoGZ", "sqsqZ", "sqsqG", "sqsqGZ" };
 	
 
 };
