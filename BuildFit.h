@@ -34,7 +34,7 @@ class BuildFit{
 	std::vector<std::string> ExtractSignalDetails( std::string signalPoint);
 	std::vector<std::string> GetBinSet( JSONFactory* j);
        
-	void BuildAsimovFit(JSONFactory* j, std::string signaPoint);
+	void BuildAsimovFit(JSONFactory* j, std::string signaPoint, std::string datacard_dir);
 	
 	
 	std::vector<std::string> sigkeys = { "gogoZ", "gogoG", "gogoGZ", "sqsqZ", "sqsqG", "sqsqGZ" };

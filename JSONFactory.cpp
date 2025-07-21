@@ -23,6 +23,22 @@ JSONFactory::JSONFactory(std::string filename){
 	j = json::parse(ifs);
 
 }
+std::vector<std::string> JSONFactory::GetSigProcs(){
+        std::vector<std::string> sigprocs{};
+
+        for (json::iterator it = j.begin(); it != j.end(); ++it){
+                //inner loop process iterator
+                std::string binname = it.key();
+                for (json::iterator it2 = it.value().begin(); it2 != it.value().end(); ++it2){
+                //      std::cout<< it2.key()<<"\n";
+                        if( BFTool::ContainsAnySubstring( it2.key(), sigkeys)){
+                                sigprocs.push_back(it2.key());
+                        }
+                }
+        }
+        return sigprocs;
+}
+
 void JSONFactory::WriteJSON(std::string filename){
 	std::cout<<"Writing json "<<filename<<" ... \n";
 	std::ofstream outputFile(filename);

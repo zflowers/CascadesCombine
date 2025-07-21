@@ -33,7 +33,7 @@ std::map<std::string, float> BuildFit::BuildAsimovData(JSONFactory* j){
 			}
 		}
 		obs_rates[binname] = float(int(totalBkg));
-		std::cout<<"adding totalbkg: "<<binname<<" "<< float(int(totalBkg))<<"\n";
+		//std::cout<<"adding totalbkg: "<<binname<<" "<< float(int(totalBkg))<<"\n";
 	}
 	return obs_rates;	
 }
@@ -77,7 +77,7 @@ std::vector<std::string> BuildFit::GetBinSet( JSONFactory* j){
 
 }
 
-void BuildFit::BuildAsimovFit(JSONFactory* j, std::string signalPoint){
+void BuildFit::BuildAsimovFit(JSONFactory* j, std::string signalPoint, std::string datacard_dir){
 	ch::Categories cats = BuildCats(j);
 	std::cout<<"building obs rates \n";
 	std::map<std::string, float> obs_rates = BuildAsimovData(j);
@@ -94,7 +94,7 @@ void BuildFit::BuildAsimovFit(JSONFactory* j, std::string signalPoint){
 		x->set_rate(obs_rates[x->bin()]);
 	});
 	cb.ForEachProc([&j](ch::Process *x) {
-	    std::cout<<x->bin()<<" "<<x->process()<<"\n";
+	    //std::cout<<x->bin()<<" "<<x->process()<<"\n";
 	    json json_array = j->j[x->bin()][x->process()];
 	    x->set_rate(json_array[1].get<float>());
 	});
@@ -104,8 +104,8 @@ void BuildFit::BuildAsimovFit(JSONFactory* j, std::string signalPoint){
 
 
       
-	cb.PrintAll();
-	cb.WriteDatacard("datacards/"+signalPoint+".txt");
+	//cb.PrintAll();
+	cb.WriteDatacard(datacard_dir+"/"+signalPoint+".txt");
 
 }	
 

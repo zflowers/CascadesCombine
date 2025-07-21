@@ -16,7 +16,11 @@ class JSONFactory{
 	JSONFactory(std::map<std::string, Bin*> analysisbins);
 	JSONFactory(std::string filename);
 	json j{};
+	std::vector<std::string> GetSigProcs();
 	void WriteJSON(std::string filename);
+
+	std::vector<std::string> sigkeys = { "gogoZ", "gogoG", "gogoGZ", "sqsqZ", "sqsqG", "sqsqGZ" };
+
 };
 
 #endif
