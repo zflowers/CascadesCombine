@@ -33,12 +33,12 @@ int main() {
 	std::string jets22="&& (rjrNJetsJa[1] >= 2) && (rjrNJetsJb[1] >= 2)";
 	
 	
-	BFI->FilterRegions( "1PhotonMMT11j", pho1+MMT+jets12);
-	BFI->FilterRegions( "1PhotonMMT22j", pho1+MMT+jets22);
-	BFI->FilterRegions( "2PhotonLLL", pho2+LLL);
-	BFI->CreateBin("1PhotonMMT11j");
-	BFI->CreateBin("1PhotonMMT22j");
-	BFI->CreateBin("2PhotonLLL");
+	BFI->FilterRegions( "G1MMT11j", pho1+MMT+jets12);
+	BFI->FilterRegions( "G1MMT22j", pho1+MMT+jets22);
+	BFI->FilterRegions( "G2LLL", pho2+LLL);
+	BFI->CreateBin("G1MMT11j");
+	BFI->CreateBin("G1MMT22j");
+	BFI->CreateBin("G2LLL");
 
 	//book operations
 	countmap countResults = BFI->CountRegions(BFI->bkg_filtered_dataframes);
