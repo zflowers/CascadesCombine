@@ -55,16 +55,41 @@ std::vector<std::string> BuildFit::GetBkgProcs(JSONFactory* j){
 	}
 	return bkgprocs;
 }
-void BuildFit::BuildAsimovFit(JSONFactory* j){
+std::vector<std::string> BuildFit::ExtractSignalDetails( std::string signalPoint){
+
+	std::vector<std::string> splitPoint = BFTool::SplitString( signalPoint, "_");
+	std::string analysis = splitPoint[0];
+	std::string channel = "gamma";	
+	//pad for mass?
+	std::string mass = "1";
+
+	std::vector<std::string> signalDetails = {analysis, channel, mass};
+	return signalDetails;
+
+}
+std::vector<std::string> BuildFit::GetBinSet( JSONFactory* j){
+	std::vector<std::string> bins{};
+        for (json::iterator it = j->j.begin(); it != j->j.end(); ++it) {
+                //std::cout << it.key() <<"\n";
+                bins.push_back(  it.key() );
+        }
+        return bins;
+
+}
+
+void BuildFit::BuildAsimovFit(JSONFactory* j, std::string signalPoint){
 	ch::Categories cats = BuildCats(j);
 	std::cout<<"building obs rates \n";
 	std::map<std::string, float> obs_rates = BuildAsimovData(j);
 	std::cout<<"Getting process list\n";
 	std::vector<std::string> bkgprocs = GetBkgProcs(j);
+	std::cout<<"Parse Signal point\n";
+	std::vector<std::string> signalDetails = ExtractSignalDetails( signalPoint);
 	std::cout<<"Build cb objects\n";
 	cb.SetVerbosity(3);
-	cb.AddObservations({"*"}, {""}, {"13.6TeV"}, {""}, cats);
-	cb.AddProcesses(   {"*"}, {""}, {"13.6TeV"}, {""}, bkgprocs, cats, false);
+	cb.AddObservations({"*"}, {signalDetails[0]}, {"13.6TeV"}, {signalDetails[1]}, cats);
+	cb.AddProcesses(   {"*"}, {signalDetails[0]}, {"13.6TeV"}, {signalDetails[1]}, bkgprocs, cats, false);
+	cb.AddProcesses(   {signalDetails[2]}, {signalDetails[1]}, {"13.6Tev"}, {signalDetails[1]}, {signalPoint}, cats, true);
 	cb.ForEachObs([&](ch::Observation *x){
 		x->set_rate(obs_rates[x->bin()]);
 	});
@@ -74,7 +99,13 @@ void BuildFit::BuildAsimovFit(JSONFactory* j){
 	    x->set_rate(json_array[1].get<float>());
 	});
 
+	std::vector<std::string> binset = GetBinSet(j);
+	cb.cp().bin(binset).AddSyst(cb, "DummySys", "lnN", SystMap<>::init(1.10));
+
+
+      
 	cb.PrintAll();
+	cb.WriteDatacard("datacards/"+signalPoint+".txt");
 
 }	
 
