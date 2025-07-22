@@ -34,11 +34,11 @@ int main() {
 	
 	
 //	BFI->FilterRegions( "G1MMT11j", pho1+MMT+jets12);
-	BFI->FilterRegions( "G1MMT22j", pho1+MMT+jets22);
-//	BFI->FilterRegions( "G2LLL", pho2+LLL);
+//	BFI->FilterRegions( "G1MMT22j", pho1+MMT+jets22);
+	BFI->FilterRegions( "G2LLL", pho2+LLL);
 //	BFI->CreateBin("G1MMT11j");
-	BFI->CreateBin("G1MMT22j");
-//	BFI->CreateBin("G2LLL");
+//	BFI->CreateBin("G1MMT22j");
+	BFI->CreateBin("G2LLL");
 
 	//book operations
 	countmap countResults = BFI->CountRegions(BFI->bkg_filtered_dataframes);
@@ -61,5 +61,5 @@ int main() {
 	BFI->PrintBins(1);
 	
 	JSONFactory* json = new JSONFactory(BFI->analysisbins);
-	json->WriteJSON("test_G1MMT22j.json");
+	json->WriteJSON("test_G2LLL.json");
 }
