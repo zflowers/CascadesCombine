@@ -26,6 +26,8 @@ def get_directories(path):
 
 #datacard_dir = "datacards"
 datacard_dir = "datacards_22j"
+#datacard_dir = "datacards_11j"
+#datacard_dir = "datacards_2GLLL"
 datacard_subdir_list = get_directories(datacard_dir)
 
 #print(datacard_subdir_list)

@@ -61,7 +61,10 @@ std::vector<std::string> BuildFit::ExtractSignalDetails( std::string signalPoint
 	std::string analysis = splitPoint[0];
 	std::string channel = "gamma";	
 	//pad for mass?
-	std::string mass = "1";
+	std::string mass = "";
+	for( long unsigned int i=1; i< splitPoint.size(); i++){
+		mass += splitPoint[i];
+	}
 
 	std::vector<std::string> signalDetails = {analysis, channel, mass};
 	return signalDetails;
@@ -86,10 +89,10 @@ void BuildFit::BuildAsimovFit(JSONFactory* j, std::string signalPoint, std::stri
 	std::cout<<"Parse Signal point\n";
 	std::vector<std::string> signalDetails = ExtractSignalDetails( signalPoint);
 	std::cout<<"Build cb objects\n";
-	cb.SetVerbosity(3);
+	//cb.SetVerbosity(3);
 	cb.AddObservations({"*"}, {signalDetails[0]}, {"13.6TeV"}, {signalDetails[1]}, cats);
 	cb.AddProcesses(   {"*"}, {signalDetails[0]}, {"13.6TeV"}, {signalDetails[1]}, bkgprocs, cats, false);
-	cb.AddProcesses(   {signalDetails[2]}, {signalDetails[1]}, {"13.6Tev"}, {signalDetails[1]}, {signalPoint}, cats, true);
+	cb.AddProcesses(   {signalDetails[2]}, {signalDetails[0]}, {"13.6Tev"}, {signalDetails[1]}, {signalPoint}, cats, true);
 	cb.ForEachObs([&](ch::Observation *x){
 		x->set_rate(obs_rates[x->bin()]);
 	});
@@ -105,8 +108,9 @@ void BuildFit::BuildAsimovFit(JSONFactory* j, std::string signalPoint, std::stri
 
       
 	//cb.PrintAll();
-	cb.WriteDatacard(datacard_dir+"/"+signalPoint+".txt");
+	cb.WriteDatacard(datacard_dir+"/"+signalPoint+"/"+signalPoint+".txt");
 
 }	
+
 
 
