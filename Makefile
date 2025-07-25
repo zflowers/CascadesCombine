@@ -9,25 +9,34 @@ CXX = g++
 # -g for debugging, -Wall for warnings, -fPIC for position-independent code (often needed for shared libraries)
 # $(shell root-config --cflags) gets ROOT-specific compiler flags
 CXXFLAGS = -g -Wall -fPIC $(shell root-config --cflags)
-CXXFLAGS += -I../../src
+CXXFLAGS += -I../../src -I./include/
 # Define linker flags
 # $(shell root-config --glibs) gets ROOT-specific linker flags (libraries)
 LDFLAGS = $(shell root-config --glibs)
 LIBS = -lCombineHarvesterCombineTools 
 LIBPATH = -L../../lib/el9_amd64_gcc12/
 
+#Define src and objects
+SRC_DIR = src
+INC_DIR = include
+OBJS_DIR = obj
+BIN_DIR = .
+SRCS = $(SRC_DIR)/main.cpp $(SRC_DIR)/SampleTool.cpp $(SRC_DIR)/BuildFitInput.cpp $(INC_DIR)/BuildFitTools.h $(SRC_DIR)/JSONFactory.cpp
+CMSSWSRCS = $(SRC_DIR)/BFmain.cpp $(SRC_DIR)/BuildFit.cpp $(SRC_DIR)/JSONFactory.cpp $(INC_DIR)/BuildFitTools.h
+OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJS_DIR)/%.o,$(SRCS))
+CMSSWOBJS=  $(patsubst $(SRC_DIR)/%.cpp,$(OBJS_DIR)/%.o,$(CMSSWSRCS))
 
 # Define the executable name
-TARGET = BFI.x
-CMSSWTARGET = BF.x
+TARGET = $(BIN_DIR)/BFI.x
+CMSSWTARGET = $(BIN_DIR)/BF.x
 
 # Define source files
-SRCS = main.cpp SampleTool.cpp BuildFitInput.cpp BuildFitTools.h JSONFactory.cpp
-CMSSWSRCS = BFmain.cpp BuildFit.cpp JSONFactory.cpp BuildFitTools.h
+#SRCS = main.cpp SampleTool.cpp BuildFitInput.cpp BuildFitTools.h JSONFactory.cpp
+#CMSSWSRCS = BFmain.cpp BuildFit.cpp JSONFactory.cpp BuildFitTools.h
 
 # Define object files
-OBJS = $(SRCS:.cpp=.o)
-CMSSWOBJS = $(CMSSWSRCS:.cpp=.o)
+#OBJS = $(SRCS:.cpp=.o)
+#CMSSWOBJS = $(CMSSWSRCS:.cpp=.o)
 
 
 # Default target: build the executable
@@ -36,17 +45,17 @@ cmssw: $(CMSSWTARGET)
 
 
 # Rule to build the executable from object files
-$(TARGET): $(OBJS)
+$(TARGET): $(OBJS_DIR) $(OBJS)
 	$(CXX) $(OBJS) -o $@ $(LDFLAGS)
 
-$(CMSSWTARGET): $(CMSSWOBJS)
+$(CMSSWTARGET): $(OBJS_DIR) $(CMSSWOBJS) 
 	$(CXX) $(CMSSWOBJS) $(LDFLAGS) $(LIBPATH) $(LIBS) -o $@
 
 # Rule to compile C++ source files into object files
-%.o: %.cpp
+$(OBJS_DIR)/%.o: $(SRC_DIR)/%.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 
 # Clean target: remove generated files, this deleted my headers!
 clean:
-	rm *.o BFI.x BF.x
+	rm ./obj/*.o BFI.x BF.x
