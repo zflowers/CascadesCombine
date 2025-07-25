@@ -76,6 +76,9 @@ the binaries to run are then just `BFI.x` and `BF.x`
 **Expected file formats**
 Each file in sample tool will have it's own dataframe, do not combine them. If it has a different cross-section (e.g. HT slice) then it needs it's own data frame because I chose to use a constant weight when propagating statistical error. Typically you might sumW2 object with a histogram but we are avoiding ROOT for the sake of performace, thus the statistical errors are calculated by hand.
 
+**Signal file format and naming conventions**
+Both BFI and BF expect signals to be 1 file per grid point with the signal name (process name) and mass information in the file name. These get parsed and passed into JSON/datacards with the common tool header `BuildFitTools.h`.
+
 **Event loop design philosophy**
 The way we calculate the amount of weighted events in  a bin is by creating the event weight branch in the dataframe and then summing the event weights in that bin. In principle SFs and corrections can be applied in the same way: just add a new branch that creates a new SF weight, multiply evtWt and SFevtwt into a new branch newEvtWt. Now the number of events in the bin will be the sum over newEvtWt branch.
 
