@@ -3,6 +3,7 @@ An RDataframe interface to go from TTree skims to combine datacards and fits
 
 ### Build instructions
 BFI - can work locally just update sample tool constructor prefix accordingly (to find you files)
+
 BFI/BF - designed for el9 on LPC due to constraints from Combine
 
 Local BFI builds just clone and `make`
@@ -47,7 +48,8 @@ Also clone this into the CMSSW src
 `git clone git@github.com:Jphsx/LLPCombine.git`
 
 
-When everything is clone and scram b'd go into the LLPCombine directory
+When everything is cloned and scram b'd go into the LLPCombine directory
+
 to make BFI step do `make` to make the BF step do `make cmssw`
 
 the binaries to run are then just `BFI.x` and `BF.x`
@@ -60,7 +62,7 @@ the binaries to run are then just `BFI.x` and `BF.x`
   - Write the results to a json
 - JSON is the intermediate BFI format
   - the JSON mapping is dictionary-like BINNAME[ PROCESS[ YIELDS]]
-  - the yields are background or signal process by  name
+  - the process are background or signal by name
   - the yields are a vector of 3 quantities, {base_events, weighted_events, statistical_error}
 - BFmain.cpp is what sets up datacards
   - define your input json and datacard output directory here
@@ -78,5 +80,5 @@ Each file in sample tool will have it's own dataframe, do not combine them. If i
 The way we calculate the amount of weighted events in  a bin is by creating the event weight branch in the dataframe and then summing the event weights in that bin. In principle SFs and corrections can be applied in the same way: just add a new branch that creates a new SF weight, multiply evtWt and SFevtwt into a new branch newEvtWt. Now the number of events in the bin will be the sum over newEvtWt branch.
 
 **Obey RDataFrame lazy execution**
-The Filters book operations (bin creation) on the dataframe but the result of that operation isn't acquired until an action on the dataframe is executed. action happens when you dereference a result, thistriggering the event loop. After the event loop  the result ptrs that hold what you want to filter etc. will be populated. Don't trigger multiple event loops, the run time will blow up
+The Filters book operations (bin creation) on the dataframe but the result of that operation isn't acquired until an action on the dataframe is executed. Action happens when you dereference a result, triggering the event loop. After the event loop  the result ptrs that hold what you want to filter (or count or sum etc.) will be populated. Don't trigger multiple event loops, the run time will blow up
 
