@@ -13,6 +13,7 @@ CXXFLAGS += -I../../src -I./include/
 # Define linker flags
 # $(shell root-config --glibs) gets ROOT-specific linker flags (libraries)
 LDFLAGS = $(shell root-config --glibs)
+ROOTCFLAGS  = $(shell root-config --cflags)
 LIBS = -lCombineHarvesterCombineTools 
 LIBPATH = -L../../lib/el9_amd64_gcc12/
 
@@ -46,10 +47,10 @@ cmssw: $(CMSSWTARGET)
 
 # Rule to build the executable from object files
 $(TARGET): $(OBJS_DIR) $(OBJS)
-	$(CXX) $(OBJS) -o $@ $(LDFLAGS)
+	$(CXX) $(OBJS) -o $@ $(LDFLAGS) $(ROOTCFLAGS)
 
 $(CMSSWTARGET): $(OBJS_DIR) $(CMSSWOBJS) 
-	$(CXX) $(CMSSWOBJS) $(LDFLAGS) $(LIBPATH) $(LIBS) -o $@
+	$(CXX) $(CMSSWOBJS) $(LDFLAGS) $(ROOTCFLAGS) $(LIBPATH) $(LIBS) -o $@
 
 # Rule to compile C++ source files into object files
 $(OBJS_DIR)/%.o: $(SRC_DIR)/%.cpp

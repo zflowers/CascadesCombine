@@ -1,163 +1,132 @@
 #include "SampleTool.h"
 
-
-
 SampleTool::SampleTool(){
 
-	string pathPrefix = "/uscms/home/jaking/nobackup/llpana_skims/";
-	MasterDict["Wjets"] = {pathPrefix+"WJetsToLNu_HT-100To200_R18_IPM100_v24_LLPGskim_v24_rjrvars.root",
-						   pathPrefix+"WJetsToLNu_HT-1200To2500_R18_IPM100_v24_LLPGskim_v24_rjrvars.root",
-						   pathPrefix+"WJetsToLNu_HT-200To400_R18_IPM100_v24_LLPGskim_v24_rjrvars.root",
-						   pathPrefix+"WJetsToLNu_HT-2500ToInf_R18_IPM100_v24_LLPGskim_v24_rjrvars.root",
-						   pathPrefix+"WJetsToLNu_HT-400To600_R18_IPM100_v24_LLPGskim_v24_rjrvars.root",
-						   pathPrefix+"WJetsToLNu_HT-600To800_R18_IPM100_v24_LLPGskim_v24_rjrvars.root",
-						   pathPrefix+"WJetsToLNu_HT-800To1200_R18_IPM100_v24_LLPGskim_v24_rjrvars.root"};
-						   
-	MasterDict["Zjets"] = {pathPrefix+"ZJetsToNuNu_HT-100To200_R18_SVIPM100_v27_LLPGZskim_v27_rjrvars.root",
-						   pathPrefix+"ZJetsToNuNu_HT-1200To2500_R18_SVIPM100_v27_LLPGZskim_v27_rjrvars.root",
-						   pathPrefix+"ZJetsToNuNu_HT-200To400_R18_SVIPM100_v27_LLPGZskim_v27_rjrvars.root",
-						   pathPrefix+"ZJetsToNuNu_HT-2500ToInf_R18_SVIPM100_v27_LLPGZskim_v27_rjrvars.root",
-						   pathPrefix+"ZJetsToNuNu_HT-400To600_R18_SVIPM100_v27_LLPGZskim_v27_rjrvars.root",
-						   pathPrefix+"ZJetsToNuNu_HT-600To800_R18_SVIPM100_v27_LLPGZskim_v27_rjrvars.root",
-						   pathPrefix+"ZJetsToNuNu_HT-800To1200_R18_SVIPM100_v27_LLPGZskim_v27_rjrvars.root"};
-						   
-	MasterDict["Top"] = {pathPrefix+"TGJets_R18_IPM100_v24_LLPGskim_v24_rjrvars.root",
-						 pathPrefix+"TTGJets_R18_IPM100_v24_LLPGskim_v24_rjrvars.root",
-						 pathPrefix+"TTJets_R18_IPM100_v24_LLPGskim_v24_rjrvars.root",
-						 pathPrefix+"ttWJets_R18_IPM100_v24_LLPGskim_v24_rjrvars.root",
-						 pathPrefix+"ttZJets_R18_IPM100_v24_LLPGskim_v24_rjrvars.root"};
-						 
-	MasterDict["Gjets"] = {pathPrefix+"GJets_HT-100To200_R18_IPM100_v24_LLPGskim_v24_rjrvars.root",
-						   pathPrefix+"GJets_HT-200To400_R18_IPM100_v25_LLPGskim_v24_rjrvars.root",
-						   pathPrefix+"GJets_HT-400To600_R18_IPM100_v24_LLPGskim_v24_rjrvars.root",
-						   pathPrefix+"GJets_HT-40To100_R18_IPM100_v24_LLPGskim_v24_rjrvars.root",
-						   pathPrefix+"GJets_HT-600ToInf_R18_IPM100_v24_LLPGskim_v24_rjrvars.root"};
-						 
-	MasterDict["QCD"] = {pathPrefix+"QCD_HT1000to1500_R18_IPM100_v25_LLPGskim_v26_rjrvars.root",
-						 pathPrefix+"QCD_HT100to200_R18_IPM100_v25_LLPGskim_v26_rjrvars.root",
-						 pathPrefix+"QCD_HT1500to2000_R18_IPM100_v25_LLPGskim_v26_rjrvars.root",
-						 pathPrefix+"QCD_HT2000toInf_R18_IPM100_v25_LLPGskim_v26_rjrvars.root",
-						 pathPrefix+"QCD_HT200to300_R18_IPM100_v25_LLPGskim_v26_rjrvars.root",
-						 pathPrefix+"QCD_HT300to500_R18_IPM100_v25_LLPGskim_v26_rjrvars.root",	
-						 pathPrefix+"QCD_HT500to700_R18_IPM100_v25_LLPGskim_v26_rjrvars.root",		
-						 pathPrefix+"QCD_HT50to100_R18_IPM100_v25_LLPGskim_v26_rjrvars.root",	
-						 pathPrefix+"QCD_HT700to1000_R18_IPM100_v25_LLPGskim_v26_rjrvars.root"};	
-						 
-	MasterDict["DB"] = {pathPrefix+"WZ_R18_IPM100_v24_LLPGskim_v24_rjrvars.root"};
-	
-	
-	MasterDict["gogoG"] = {pathPrefix+"SMS_SVIPM100_v28_gogoG_AODSIM_mGl-1500_mN2-500_mN1-100-ct0p1_rjrskim_v28.root",	
-						   pathPrefix+"SMS_SVIPM100_v28_gogoG_AODSIM_mGl-2000_mN2-1000_mN1-1-ct0p1_rjrskim_v28.root",	
-						   pathPrefix+"SMS_SVIPM100_v28_gogoG_AODSIM_mGl-2000_mN2-1000_mN1-250-ct0p1_rjrskim_v28.root",	
-						   pathPrefix+"SMS_SVIPM100_v28_gogoG_AODSIM_mGl-2000_mN2-1000_mN1-500-ct0p1_rjrskim_v28.root",	
-						   pathPrefix+"SMS_SVIPM100_v28_gogoG_AODSIM_mGl-2000_mN2-1500_mN1-1000-ct0p1_rjrskim_v28.root",
-						   pathPrefix+"SMS_SVIPM100_v28_gogoG_AODSIM_mGl-2000_mN2-1500_mN1-1-ct0p1_rjrskim_v28.root",	
-						   pathPrefix+"SMS_SVIPM100_v28_gogoG_AODSIM_mGl-2000_mN2-1500_mN1-250-ct0p1_rjrskim_v28.root",	
-						   pathPrefix+"SMS_SVIPM100_v28_gogoG_AODSIM_mGl-2000_mN2-1500_mN1-500-ct0p1_rjrskim_v28.root",	
-						   pathPrefix+"SMS_SVIPM100_v28_gogoG_AODSIM_mGl-2000_mN2-1900_mN1-1000-ct0p1_rjrskim_v28.root",
-						   pathPrefix+"SMS_SVIPM100_v28_gogoG_AODSIM_mGl-2000_mN2-1900_mN1-1500-ct0p1_rjrskim_v28.root",
-						   pathPrefix+"SMS_SVIPM100_v28_gogoG_AODSIM_mGl-2000_mN2-1900_mN1-1-ct0p1_rjrskim_v28.root",	
-						   pathPrefix+"SMS_SVIPM100_v28_gogoG_AODSIM_mGl-2000_mN2-1900_mN1-250-ct0p1_rjrskim_v28.root",	
-						   pathPrefix+"SMS_SVIPM100_v28_gogoG_AODSIM_mGl-2000_mN2-1900_mN1-500-ct0p1_rjrskim_v28.root",	
-						   pathPrefix+"SMS_SVIPM100_v28_gogoG_AODSIM_mGl-2000_mN2-1950_mN1-1000-ct0p1_rjrskim_v28.root",
-					       pathPrefix+"SMS_SVIPM100_v28_gogoG_AODSIM_mGl-2000_mN2-1950_mN1-1500-ct0p1_rjrskim_v28.root",
-						   pathPrefix+"SMS_SVIPM100_v28_gogoG_AODSIM_mGl-2000_mN2-1950_mN1-1900-ct0p1_rjrskim_v28.root",
-						   pathPrefix+"SMS_SVIPM100_v28_gogoG_AODSIM_mGl-2000_mN2-1950_mN1-1-ct0p1_rjrskim_v28.root",	
-						   pathPrefix+"SMS_SVIPM100_v28_gogoG_AODSIM_mGl-2000_mN2-1950_mN1-250-ct0p1_rjrskim_v28.root",	
-						   pathPrefix+"SMS_SVIPM100_v28_gogoG_AODSIM_mGl-2000_mN2-1950_mN1-500-ct0p1_rjrskim_v28.root",	
-						   pathPrefix+"SMS_SVIPM100_v28_gogoG_AODSIM_mGl-2000_mN2-500_mN1-1-ct0p1_rjrskim_v28.root",	
-						   pathPrefix+"SMS_SVIPM100_v28_gogoG_AODSIM_mGl-2000_mN2-500_mN1-250-ct0p1_rjrskim_v28.root",	
-						   pathPrefix+"SMS_SVIPM100_v28_gogoG_AODSIM_mGl-2500_mN2-1500_mN1-1000-ct0p1_rjrskim_v28.root"};
+  string pathPrefix = "root://cmseos.fnal.gov//store/user/lpcsusylep/NTUPLES_Cascades_v3/";
 
-						   
-	MasterDict["gogoZ"] = {pathPrefix+"SMS_SVIPM100_v28_gogoZ_AODSIM_mGl-1500_mN2-500_mN1-100-ct0p1_rjrskim_v28.root",
-						   pathPrefix+"SMS_SVIPM100_v28_gogoZ_AODSIM_mGl-2000_mN2-1900_mN1-200-ct0p001_rjrsqwkim_v28.root",
-						   pathPrefix+"SMS_SVIPM100_v28_gogoZ_AODSIM_mGl-2000_mN2-1900_mN1-200-ct0p1_rjrskim_v28.root",
-						   pathPrefix+"SMS_SVIPM100_v28_gogoZ_AODSIM_mGl-2000_mN2-1900_mN1-200-ct0p3_rjrskim_v28.root",
-						   pathPrefix+"SMS_SVIPM100_v28_gogoZ_AODSIM_mGl-2000_mN2-1900_mN1-350-ct0p001_rjrskim_v28.root",
-						   pathPrefix+"SMS_SVIPM100_v28_gogoZ_AODSIM_mGl-2000_mN2-1900_mN1-350-ct0p1_rjrskim_v28.root",
-						   pathPrefix+"SMS_SVIPM100_v28_gogoZ_AODSIM_mGl-2000_mN2-1900_mN1-350-ct0p3_rjrskim_v28.root",
-						   pathPrefix+"SMS_SVIPM100_v28_gogoZ_AODSIM_mGl-2000_mN2-1950_mN1-1900-ct0p1_rjrskim_v28.root",
-						   pathPrefix+"SMS_SVIPM100_v28_gogoZ_AODSIM_mGl-2000_mN2-400_mN1-200-ct0p001_rjrskim_v28.root",
-						   pathPrefix+"SMS_SVIPM100_v28_gogoZ_AODSIM_mGl-2000_mN2-400_mN1-200-ct0p1_rjrskim_v28.root",
-						   pathPrefix+"SMS_SVIPM100_v28_gogoZ_AODSIM_mGl-2000_mN2-400_mN1-200-ct0p3_rjrskim_v28.root",
-						   pathPrefix+"SMS_SVIPM100_v28_gogoZ_AODSIM_mGl-2000_mN2-400_mN1-350-ct0p001_rjrskim_v28.root",
-						   pathPrefix+"SMS_SVIPM100_v28_gogoZ_AODSIM_mGl-2000_mN2-400_mN1-350-ct0p1_rjrskim_v28.root",
-						   pathPrefix+"SMS_SVIPM100_v28_gogoZ_AODSIM_mGl-2000_mN2-400_mN1-350-ct0p3_rjrskim_v28.root"};
-						   
-	MasterDict["sqsqG"] = {pathPrefix+"SMS_SVIPM100_v28_sqsqG_AODSIM_mGl-1700_mN2-1500_mN1-100_ct0p1_rjrskim_v28.root",
-						   pathPrefix+"SMS_SVIPM100_v28_sqsqG_AODSIM_mGl-1700_mN2-300_mN1-100_ct0p1_rjrskim_v28.root",
-						   pathPrefix+"SMS_SVIPM100_v28_sqsqG_AODSIM_mGl-1850_mN2-1650_mN1-100_ct0p1_rjrskim_v28.root",
-						   pathPrefix+"SMS_SVIPM100_v28_sqsqG_AODSIM_mGl-1850_mN2-300_mN1-100_ct0p1_rjrskim_v28.root",
-						   pathPrefix+"SMS_SVIPM100_v28_sqsqG_AODSIM_mGl-2000_mN2-1800_mN1-100_ct0p1_rjrskim_v28.root",
-						   pathPrefix+"SMS_SVIPM100_v28_sqsqG_AODSIM_mGl-2000_mN2-300_mN1-100_ct0p1_rjrskim_v28.root",
-						   pathPrefix+"SMS_SVIPM100_v28_sqsqG_AODSIM_mGl-2150_mN2-1950_mN1-100_ct0p1_rjrskim_v28.root",
-						   pathPrefix+"SMS_SVIPM100_v28_sqsqG_AODSIM_mGl-2150_mN2-300_mN1-100_ct0p1_rjrskim_v28.root"};
+  MasterDict["ttbar"] = {
+    pathPrefix + "Summer23BPix_130X/TTto2L2Nu-2Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/TTtoLminusNu2Q-2Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/TTtoLplusNu2Q-2Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/TTto4Q_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/TTTT_TuneCP5_13p6TeV_amcatnlo-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/TTWW_TuneCP5_13p6TeV_madgraph-madspin-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/TTZ-ZtoQQ-1Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/TZQB-ZtoLL-TtoL-CPV_TuneCP5_13p6TeV_madgraph-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/TTHto2B_M-125_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/TTHtoNon2B_M-125_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root"
+  };
 
+  MasterDict["ST"] = {
+    pathPrefix + "Summer23BPix_130X/TBbartoLplusNuBbar-s-channel-4FS_TuneCP5_13p6TeV_amcatnlo-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/TQbarto2Q-t-channel_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/TQbartoLNu-t-channel_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/TbarBtoLminusNuB-s-channel-4FS_TuneCP5_13p6TeV_amcatnlo-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/TbarQto2Q-t-channel_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/TbarQtoLNu-t-channel_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/TbarWplusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/TbarWplusto4Q_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/TbarWplustoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/TWminusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/TWminusto4Q_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/TWminustoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root"
+  };
 
+  MasterDict["DY"] = {
+    pathPrefix + "Summer23BPix_130X/DYto2L-4Jets_MLL-120_HT-100to400_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/DYto2L-4Jets_MLL-120_HT-1500to2500_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/DYto2L-4Jets_MLL-120_HT-2500_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/DYto2L-4Jets_MLL-120_HT-400to800_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/DYto2L-4Jets_MLL-120_HT-40to70_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/DYto2L-4Jets_MLL-120_HT-70to100_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/DYto2L-4Jets_MLL-120_HT-800to1500_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/DYto2L-4Jets_MLL-4to50_HT-100to400_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/DYto2L-4Jets_MLL-4to50_HT-1500to2500_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/DYto2L-4Jets_MLL-4to50_HT-2500_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/DYto2L-4Jets_MLL-4to50_HT-400to800_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/DYto2L-4Jets_MLL-4to50_HT-40to70_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/DYto2L-4Jets_MLL-4to50_HT-70to100_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/DYto2L-4Jets_MLL-4to50_HT-800to1500_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/DYto2L-4Jets_MLL-50to120_HT-100to400_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/DYto2L-4Jets_MLL-50to120_HT-1500to2500_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/DYto2L-4Jets_MLL-50to120_HT-2500_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/DYto2L-4Jets_MLL-50to120_HT-400to800_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/DYto2L-4Jets_MLL-50to120_HT-40to70_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/DYto2L-4Jets_MLL-50to120_HT-70to100_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/DYto2L-4Jets_MLL-50to120_HT-800to1500_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root"
+  };
 
+  MasterDict["ZInv"] = {
+    pathPrefix + "Summer23BPix_130X/Zto2Nu-4Jets_HT-100to200_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/Zto2Nu-4Jets_HT-1500to2500_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/Zto2Nu-4Jets_HT-200to400_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/Zto2Nu-4Jets_HT-2500_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/Zto2Nu-4Jets_HT-400to800_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/Zto2Nu-4Jets_HT-800to1500_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root"
+  };
 
+  MasterDict["DBTB"] = {
+    pathPrefix + "Summer23BPix_130X/WWto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/WWto4Q_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/WWtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/WZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/WZto3LNu-1Jets-4FS_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/WZtoL3Nu-1Jets-4FS_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/WZtoLNu2Q-1Jets-4FS_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/ZZto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/ZZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/ZZto2Nu2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/ZZto4L_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/WWW_4F_TuneCP5_13p6TeV_amcatnlo-madspin-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/WWZ_4F_TuneCP5_13p6TeV_amcatnlo-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/WZGtoLNuZG_TuneCP5_13p6TeV_amcatnlo-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/WZZ_TuneCP5_13p6TeV_amcatnlo-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/ZZZ_TuneCP5_13p6TeV_amcatnlo-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/VH_HtoNonbb_M-125_TuneCP5_13p6TeV_amcatnloFXFX-madspin-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/GluGluHToTauTau_M-125_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/GluGluHto2WtoLNu2Q_M-125_TuneCP5_13p6TeV_powheg-JHUGenV752-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/GluGluHto2Wto2L2Nu_M-125_TuneCP5_13p6TeV_powheg-jhugen752-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/GluGluHto2Zto2L2Q_M-125_TuneCP5_13p6TeV_powheg-jhugenv7520-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/GluGluHtoZZto4L_M-125_TuneCP5_13p6TeV_powheg-jhugen-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/WminusH_Hto2B_WtoLNu_M-125_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/WplusH_Hto2B_WtoLNu_M-125_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/ZH_Hto2B_Zto2L_M-125_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/ZH_Hto2B_Zto2Nu_M-125_TuneCP5_13p6TeV_powheg-minlo-pythia8_Summer23BPix_130X.root"
+  };
+ 
+  MasterDict["QCD"] = {
+    pathPrefix + "Summer23BPix_130X/QCD-4Jets_HT-100to200_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/QCD-4Jets_HT-200to400_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/QCD-4Jets_HT-400to600_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/QCD-4Jets_HT-600to800_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/QCD-4Jets_HT-800to1000_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/QCD-4Jets_HT-1000to1200_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/QCD-4Jets_HT-1200to1500_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/QCD-4Jets_HT-1500to2000_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/QCD-4Jets_HT-2000_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root"
+  };
 
+  MasterDict["Wjets"] = {
+    pathPrefix + "Summer23BPix_130X/WtoLNu-4Jets_MLNu-0to120_HT-100to400_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/WtoLNu-4Jets_MLNu-0to120_HT-1500to2500_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/WtoLNu-4Jets_MLNu-0to120_HT-2500_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/WtoLNu-4Jets_MLNu-0to120_HT-400to800_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/WtoLNu-4Jets_MLNu-0to120_HT-40to100_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/WtoLNu-4Jets_MLNu-0to120_HT-800to1500_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/WtoLNu-4Jets_MLNu-120_HT-100to400_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/WtoLNu-4Jets_MLNu-120_HT-1500to2500_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/WtoLNu-4Jets_MLNu-120_HT-2500_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/WtoLNu-4Jets_MLNu-120_HT-400to800_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/WtoLNu-4Jets_MLNu-120_HT-40to100_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/WtoLNu-4Jets_MLNu-120_HT-800to1500_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root"
+  };
 
-
-
-
-
-/* (from my local laptop build)
-//initialize master dictionary
-	string pathPrefix = "../RJR_NTuples/batch5/";
-	MasterDict["Wjets"] = {pathPrefix+"WJetsToLNu_HT-100To200_R18_IPM100_v24_LLPGskim_v23_rjrvars.root",
-							pathPrefix+"WJetsToLNu_HT-1200To2500_R18_IPM100_v24_LLPGskim_v23_rjrvars.root",
-							pathPrefix+"WJetsToLNu_HT-200To400_R18_IPM100_v24_LLPGskim_v23_rjrvars.root",
-							pathPrefix+"WJetsToLNu_HT-2500ToInf_R18_IPM100_v24_LLPGskim_v23_rjrvars.root",
-							pathPrefix+"WJetsToLNu_HT-400To600_R18_IPM100_v24_LLPGskim_v23_rjrvars.root",
-							pathPrefix+"WJetsToLNu_HT-600To800_R18_IPM100_v24_LLPGskim_v23_rjrvars.root",
-							pathPrefix+"WJetsToLNu_HT-800To1200_R18_IPM100_v24_LLPGskim_v23_rjrvars.root"};
-							
-	pathPrefix = "../RJR_NTuples/batch5/";
-	MasterDict["Zjets"] = {pathPrefix+"ZJetsToNuNu_HT-1200To2500_R18_IPM100_v24_LLPGskim_v23_rjrvars.root",
-							pathPrefix+"ZJetsToNuNu_HT-200To400_R18_IPM100_v24_LLPGskim_v23_rjrvars.root",
-							pathPrefix+"ZJetsToNuNu_HT-2500ToInf_R18_IPM100_v24_LLPGskim_v23_rjrvars.root",
-							pathPrefix+"ZJetsToNuNu_HT-400To600_R18_IPM100_v24_LLPGskim_v23_rjrvars.root",
-							pathPrefix+"ZJetsToNuNu_HT-600To800_R18_IPM100_v24_LLPGskim_v23_rjrvars.root",
-							pathPrefix+"ZJetsToNuNu_HT-800To1200_R18_IPM100_v24_LLPGskim_v23_rjrvars.root"};
-	
-	pathPrefix = "../RJR_NTuples/batch5/";
-	MasterDict["Top"] = {pathPrefix+"TGJets_R18_IPM100_v24_LLPGskim_v23_rjrvars.root",
-						pathPrefix+"TTGJets_R18_IPM100_v24_LLPGskim_v23_rjrvars.root",
-						pathPrefix+"TTJets_R18_IPM100_v24_LLPGskim_v23_rjrvars.root",
-						pathPrefix+"ttWJets_R18_IPM100_v24_LLPGskim_v23_rjrvars.root",
-						pathPrefix+"ttZJets_R18_IPM100_v24_LLPGskim_v23_rjrvars.root"};
-	
-	pathPrefix = "../RJR_NTuples/batch7/";
-	MasterDict["Gjets"] = {pathPrefix+"GJets_HT-100To200_R18_IPM100_v24_LLPGskim_v24_rjrvars.root",
-							pathPrefix+"GJets_HT-200To400_R18_IPM100_v25_LLPGskim_v24_rjrvars.root",
-							pathPrefix+"GJets_HT-400To600_R18_IPM100_v24_LLPGskim_v24_rjrvars.root",
-							pathPrefix+"GJets_HT-40To100_R18_IPM100_v24_LLPGskim_v24_rjrvars.root",
-							pathPrefix+"GJets_HT-600ToInf_R18_IPM100_v24_LLPGskim_v24_rjrvars.root"};	
-
-	pathPrefix = "../RJR_NTuples/batch6/";
-	MasterDict["gogoG"] = {pathPrefix+"gogoG_Sig_IPM100_v24_SMS-GlGl_AODSIM_mGl-2000_mN2-1000_mN1-1_LLPGskim_v24_rjrvars.root", 
-						pathPrefix+"gogoG_Sig_IPM100_v24_SMS-GlGl_AODSIM_mGl-2000_mN2-1900_mN1-250_LLPGskim_v24_rjrvars.root",
-						pathPrefix+"gogoG_Sig_IPM100_v24_SMS-GlGl_AODSIM_mGl-2000_mN2-1000_mN1-250_LLPGskim_v24_rjrvars.root",   
-						pathPrefix+"gogoG_Sig_IPM100_v24_SMS-GlGl_AODSIM_mGl-2000_mN2-1900_mN1-500_LLPGskim_v24_rjrvars.root",
-						pathPrefix+"gogoG_Sig_IPM100_v24_SMS-GlGl_AODSIM_mGl-2000_mN2-1000_mN1-500_LLPGskim_v24_rjrvars.root",  
-						pathPrefix+"gogoG_Sig_IPM100_v24_SMS-GlGl_AODSIM_mGl-2000_mN2-1950_mN1-1000_LLPGskim_v24_rjrvars.root",
-						pathPrefix+"gogoG_Sig_IPM100_v24_SMS-GlGl_AODSIM_mGl-2000_mN2-1500_mN1-1000_LLPGskim_v24_rjrvars.root",  
-						pathPrefix+"gogoG_Sig_IPM100_v24_SMS-GlGl_AODSIM_mGl-2000_mN2-1950_mN1-1500_LLPGskim_v24_rjrvars.root",
-						pathPrefix+"gogoG_Sig_IPM100_v24_SMS-GlGl_AODSIM_mGl-2000_mN2-1500_mN1-1_LLPGskim_v24_rjrvars.root",     
-						pathPrefix+"gogoG_Sig_IPM100_v24_SMS-GlGl_AODSIM_mGl-2000_mN2-1950_mN1-1900_LLPGskim_v24_rjrvars.root",
-						pathPrefix+"gogoG_Sig_IPM100_v24_SMS-GlGl_AODSIM_mGl-2000_mN2-1500_mN1-250_LLPGskim_v24_rjrvars.root",   
-						pathPrefix+"gogoG_Sig_IPM100_v24_SMS-GlGl_AODSIM_mGl-2000_mN2-1950_mN1-1_LLPGskim_v24_rjrvars.root",
-						pathPrefix+"gogoG_Sig_IPM100_v24_SMS-GlGl_AODSIM_mGl-2000_mN2-1500_mN1-500_LLPGskim_v24_rjrvars.root",   
-						pathPrefix+"gogoG_Sig_IPM100_v24_SMS-GlGl_AODSIM_mGl-2000_mN2-1950_mN1-250_LLPGskim_v24_rjrvars.root",
-						pathPrefix+"gogoG_Sig_IPM100_v24_SMS-GlGl_AODSIM_mGl-2000_mN2-1900_mN1-1000_LLPGskim_v24_rjrvars.root",  
-						pathPrefix+"gogoG_Sig_IPM100_v24_SMS-GlGl_AODSIM_mGl-2000_mN2-1950_mN1-500_LLPGskim_v24_rjrvars.root",
-						pathPrefix+"gogoG_Sig_IPM100_v24_SMS-GlGl_AODSIM_mGl-2000_mN2-1900_mN1-1500_LLPGskim_v24_rjrvars.root",  
-						pathPrefix+"gogoG_Sig_IPM100_v24_SMS-GlGl_AODSIM_mGl-2000_mN2-500_mN1-1_LLPGskim_v24_rjrvars.root",
-						pathPrefix+"gogoG_Sig_IPM100_v24_SMS-GlGl_AODSIM_mGl-2000_mN2-1900_mN1-1_LLPGskim_v24_rjrvars.root",     
-						pathPrefix+"gogoG_Sig_IPM100_v24_SMS-GlGl_AODSIM_mGl-2000_mN2-500_mN1-250_LLPGskim_v24_rjrvars.root"};		
-*/
+  MasterDict["Cascades"] = {
+    pathPrefix + "Summer23BPix_130X_Cascades/SlepSnuCascade_MN1-220_MN2-260_MC1-240_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X_Cascades/SlepSnuCascade_MN1-260_MN2-280_MC1-270_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X_Cascades/SlepSnuCascade_MN1-270_MN2-280_MC1-275_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer22_130X_Cascades/SlepSnuCascade_220-209_200-190-180_2022_NANO_JustinPrivateMC_Summer22_130X_Cascades_Summer22_130X.root"
+  };
 
 }
 void SampleTool::LoadBkgs( stringlist& bkglist ){
@@ -185,19 +154,18 @@ void SampleTool::LoadSigs( stringlist& siglist ){
 		std::vector< std::string > keylist{};
 		s_strings = SigDict[siglist[i]];
 		for( long unsigned int j=0; j< s_strings.size(); j++){
-			//keylist.push_back( GetSignalTokens( s_strings[j] ) );
-			SignalKeys.push_back( BFTool::GetSignalTokens( s_strings[j] ) );
+			SignalKeys.push_back( BFTool::GetSignalTokensCascades( s_strings[j] ) );
 		}
 	}
 }
 void SampleTool::PrintDict( map<string,stringlist>& d ){
 	for(auto it = d.cbegin(); it != d.cend(); ++it){
-    	std::cout << "key:"<< it->first << ":\n";
-    	stringlist str = it->second;
-    	for (std::vector<string>::iterator it2 = str.begin(); it2 != str.end(); ++it2) {
-        std::cout << *it2 << " \n";
-    	}
-    	
+ 	std::cout << "key:"<< it->first << ":\n";
+ 	stringlist str = it->second;
+ 	for (std::vector<string>::iterator it2 = str.begin(); it2 != str.end(); ++it2) {
+  std::cout << *it2 << " \n";
+ 	}
+ 	
 	}
 	std::cout<<"\n";
 	

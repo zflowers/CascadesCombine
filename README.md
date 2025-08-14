@@ -23,7 +23,7 @@ https://cms-analysis.github.io/HiggsAnalysis-CombinedLimit/latest/#combine-v10-r
 This combine version will use CMSSW 14 and we set it up like usual:
 ```
 cmsrel CMSSW_14_1_0_pre4
-cd CMSSW_14_1_0_pre4/src
+cd CMSSW_14_1_0_pre4/src/
 cmsenv
 git -c advice.detachedHead=false clone --depth 1 --branch v10.2.1 https://github.com/cms-analysis/HiggsAnalysis-CombinedLimit.git HiggsAnalysis/CombinedLimit
 cd HiggsAnalysis/CombinedLimit
@@ -38,14 +38,15 @@ https://cms-analysis.github.io/CombineHarvester/
 Combine harvester  also needs set up in the CMSSW src
 ```
 git clone https://github.com/cms-analysis/CombineHarvester.git CombineHarvester
+cd CombineHarvester/
 git checkout v3.0.0-pre1
 scram b
 ```
 
 The RDataframe framework is here,
-https://github.com/Jphsx/LLPCombine
+https://github.com/zflowers/CascadesCombine
 Also clone this into the CMSSW src
-`git clone git@github.com:Jphsx/LLPCombine.git`
+`git clone git@github.com:zflowers/CascadesCombine.git`
 
 
 When everything is cloned and scram b'd go into the LLPCombine directory

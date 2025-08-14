@@ -9,6 +9,10 @@
 #include <iostream>
 #include <algorithm> // For std::all_of
 #include <cctype>    // For std::isdigit
+#include <sstream>
+
+#include <TFile.h>
+#include <TTree.h>
 
 class Process{
 	
@@ -45,6 +49,7 @@ class BFTool{
 	public:
 	static std::vector<std::string> SplitString(const std::string& str,const std::string& delimiter);
 	static std::string GetSignalTokens(std::string& input);
+	static std::string GetSignalTokensCascades(std::string& input);
 	static bool  ContainsAnySubstring(const std::string& mainString, const std::vector<std::string>& substrings);
 };
 
@@ -112,9 +117,48 @@ inline std::string BFTool::GetSignalTokens(std::string& input ){
 	
 	std::string signalKeys = mode+"_"+mgo+"_"+mn2+"_"+mn1+"_"+ctau;
 	return signalKeys;
-	
-	
 }
+
+inline std::string BFTool::GetSignalTokensCascades(std::string& input ){
+
+    TFile *file = TFile::Open(input.c_str(), "READ");
+    if (!file || file->IsZombie()) {
+        std::cerr << "Error: could not open file " << input << std::endl;
+        return "";
+    }
+
+    // Get the tree
+    TTree *tree = nullptr;
+    file->GetObject("KUAnalysis", tree);
+    if (!tree) {
+        std::cerr << "Error: could not find tree" << std::endl;
+        file->Close();
+        return "";
+    }
+
+    // Variables to hold branch data
+    int MP, MSlepL, MSneu, MN2, MC1, MN1;
+
+    // Set branch addresses
+    tree->SetBranchAddress("MP",     &MP);
+    tree->SetBranchAddress("MSlepL", &MSlepL);
+    tree->SetBranchAddress("MSneu",  &MSneu);
+    tree->SetBranchAddress("MN2",    &MN2);
+    tree->SetBranchAddress("MC1",    &MC1);
+    tree->SetBranchAddress("MN1",    &MN1);
+
+    // Read first entry
+    tree->GetEntry(0);
+    file->Close();
+    std::ostringstream oss;
+    oss << MP << "_" << MSlepL << "_" << MSneu << "_" 
+        << MN2 << "_" << MC1 << "_" << MN1;
+    
+    std::string combined = oss.str();
+    return combined;
+  
+}
+
 inline bool BFTool::ContainsAnySubstring(const std::string& mainString, const std::vector<std::string>& substrings) {
     for (const std::string& sub : substrings) {
 	//std::cout<<"comparing string: "<< mainString <<", "<<sub<<"\n";

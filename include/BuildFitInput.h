@@ -49,16 +49,17 @@ class BuildFitInput{
 	void BuildRVBranch();//old skims dont have rv, need to build - this needs fixed upstream
 	
 	//load helpers
-	void LoadBkg_KeyValue( std::string key, stringlist bkglist, double Lumi );
-	void LoadSig_KeyValue( std::string key, stringlist siglist, double Lumi );
+	void LoadBkg_KeyValue( std::string key, stringlist bkglist, const double& Lumi);
+	void LoadSig_KeyValue( std::string key, stringlist siglist, const double& Lumi);
 	
-	void LoadSig_byMap( map< std::string, stringlist>& SigDict, double Lumi );
-	void LoadBkg_byMap( map< std::string, stringlist>& BkgDict, double Lumi );
+	void LoadSig_byMap( map< std::string, stringlist>& SigDict, const double& Lumi);
+	void LoadBkg_byMap( map< std::string, stringlist>& BkgDict, const double& Lumi);
 	
 	void FilterRegions( std::string filterName, std::string filterCuts );
 	countmap CountRegions(nodemap& filtered_df);
 	summap SumRegions(std::string branchname, nodemap& filtered_df);
-	errormap ComputeStatError( countmap countResults, map< std::string, double >& evtwt );
+	summap SumRegions(std::string branchname, nodemap& filtered_df, const double& Lumi = 1.);
+        errormap ComputeStatError(nodemap& filtered_df, const double& Lumi = 1.);
 	
 	//bin objects
 	std::map<std::string, Bin*> analysisbins{};
@@ -75,5 +76,6 @@ class BuildFitInput{
 	void ConstructBkgBinObjects( countmap countResults, summap sumResults, errormap errorResults );
 	void AddSigToBinObjects( countmap countResults, summap sumResults, errormap errorResults, std::map<std::string, Bin*>& analysisbins);
 	void PrintBins(int verbosity=1);
+
 };
 #endif

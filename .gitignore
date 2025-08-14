@@ -3,3 +3,5 @@ myprogram
 *.x
 datacards*
 *.json
+*.debug
+json/*

@@ -5,59 +5,25 @@ BuildFitInput::BuildFitInput(){
 	std::cout<<"Hello world \n";
 	ROOT::EnableImplicitMT();
 }
-void BuildFitInput::LoadBkg_KeyValue( std::string key, stringlist bkglist, double Lumi){
-	//RDF df("kuSkimTree", bkglist);
+
+void BuildFitInput::LoadBkg_KeyValue( std::string key, stringlist bkglist, const double& Lumi){
 	for( unsigned int i=0; i< bkglist.size(); i++){
 		std::string subkey = key+"_"+std::to_string(i);
 
-		ROOT::RDataFrame df("kuSkimTree", bkglist[i]);
+		ROOT::RDataFrame df("KUAnalysis", bkglist[i]);
 		_base_rdf_BkgDict[subkey] = std::make_unique<RNode>(df);
-		
-		//also make the event weight branch here while we have the correct bkg file
-		float sumEvtWgt{};
-		float xsec{};
-		TFile* f = TFile::Open(bkglist[i].c_str());
-		TTree* configTree = (TTree*)f->Get("kuSkimConfigTree");
-		configTree->SetBranchAddress("sumEvtWgt", &sumEvtWgt);
-		configTree->SetBranchAddress("sCrossSection", &xsec);
-		configTree->GetEntry(0);
-		double wt{};
-		wt = xsec*1000.*Lumi/sumEvtWgt;
-		//save the weight for error propagation later
-		bkg_evtwt[subkey] = wt;
-		auto tempdf = df.Define("evtwt", std::to_string(wt));
-		//cast to RNode with uniqueptr
-		rdf_BkgDict[subkey] = std::make_unique<RNode>(tempdf);
-		f->Close();
+                rdf_BkgDict[subkey] = std::make_unique<RNode>(df);
 		
 	}
 }
 
-void BuildFitInput::LoadSig_KeyValue( std::string key, stringlist siglist, double Lumi){
-	//RDF df("kuSkimTree", bkglist);
+void BuildFitInput::LoadSig_KeyValue( std::string key, stringlist siglist, const double& Lumi){
 	for( unsigned int i=0; i< siglist.size(); i++){//signal keys are vector doubles (mode, mgo, mn2, mn1, ctau)
-		//std::string subkey = key+"_"+std::to_string(i);//1 file per?
-		std::string subkey = BFTool::GetSignalTokens( siglist[i]);
+		std::string subkey = BFTool::GetSignalTokensCascades( siglist[i]);
 
-		ROOT::RDataFrame df("kuSkimTree", siglist[i]);
+		ROOT::RDataFrame df("KUAnalysis", siglist[i]);
 		_base_rdf_SigDict[subkey] = std::make_unique<RNode>(df);
-		
-		//also make the event weight branch here while we have the correct bkg file
-		int ntot{};
-		float xsec{};
-		TFile* f = TFile::Open(siglist[i].c_str());
-		TTree* configTree = (TTree*)f->Get("kuSkimConfigTree");
-		configTree->SetBranchAddress("nTotEvts", &ntot);//cross section is genweight!!
-		configTree->SetBranchAddress("sCrossSection", &xsec);
-		configTree->GetEntry(0);
-		double wt{};
-		wt = xsec*1000.*Lumi/((float)ntot);
-		//save the weight for error propagation later
-		sig_evtwt[subkey] = wt;
-		auto tempdf = df.Define("evtwt", std::to_string(wt));
-		//cast to RNode with uniqueptr
-		rdf_SigDict[subkey] = std::make_unique<RNode>(tempdf);
-		f->Close();
+                rdf_SigDict[subkey] = std::make_unique<RNode>(df);
 		
 	}
 }
@@ -74,19 +40,19 @@ void BuildFitInput::BuildRVBranch(){
 		rdf_SigDict[dfkey.first] = std::make_unique<RNode>(tempdf);
 	}
 }
-void BuildFitInput::LoadBkg_byMap( map< std::string, stringlist>& BkgDict, double Lumi ){
+void BuildFitInput::LoadBkg_byMap( map< std::string, stringlist>& BkgDict, const double& Lumi){
 	
 	for (const auto& pair : BkgDict) {
 		std::cout<<"Loading RDataFrame for: "<<pair.first<<"\n";
-		LoadBkg_KeyValue( pair.first, pair.second, Lumi );
+		LoadBkg_KeyValue( pair.first, pair.second, Lumi);
 	}
 
 }
-void BuildFitInput::LoadSig_byMap( map< std::string, stringlist>& SigDict, double Lumi ){
+void BuildFitInput::LoadSig_byMap( map< std::string, stringlist>& SigDict, const double& Lumi){
 	
 	for (const auto& pair : SigDict) {
 		std::cout<<"Loading RDataFrame for: "<<pair.first<<"\n";
-		LoadSig_KeyValue( pair.first, pair.second, Lumi );
+		LoadSig_KeyValue( pair.first, pair.second, Lumi);
 	}
 	
 }
@@ -133,6 +99,7 @@ countmap BuildFitInput::CountRegions(nodemap& filtered_df){
 	}
 	return countResults;
 }
+
 summap BuildFitInput::SumRegions(std::string branchname, nodemap& filtered_df){
 	std::cout<<"Loading Sum action  ... \n";
 	summap sumResults{};
@@ -142,6 +109,24 @@ summap BuildFitInput::SumRegions(std::string branchname, nodemap& filtered_df){
 	}
 	return sumResults;		
 }
+
+summap BuildFitInput::SumRegions(std::string branchname, nodemap& filtered_df, const double& Lumi) {
+    std::cout << "Loading Sum action ... \n";
+    summap sumResults{};
+
+    for (const auto& [key, node_ptr] : filtered_df) {
+        RNode node = *node_ptr;
+
+        // Optionally scale the branch values (e.g., apply Lumi)
+        auto scaled_sum = node.Define("scaled_value", [Lumi](double x){ return x*Lumi; }, {branchname})
+                              .Sum("scaled_value");
+
+        sumResults[key] = scaled_sum; // RResultPtr<double>
+    }
+
+    return sumResults;
+}
+
 
 void BuildFitInput::PrintCountReports( countmap countResults) {
 	std::cout<<"Reporting counts ... \n";
@@ -160,19 +145,24 @@ void BuildFitInput::PrintSumReports( summap sumResults){
 	}
 	std::cout<<"\n";
 }
-errormap BuildFitInput::ComputeStatError( countmap countResults, map< std::string, double >& evtwt ){
-	std::cout<<"Computing statistical error ... \n";
-	errormap errorResults{};
- 	for (const auto& it : countResults){
-        // Access key and values from both maps
-        ROOT::RDF::RResultPtr<long long unsigned int> count_result = it.second;
-        double count = (double) *count_result;
-		double err = evtwt[it.first.first] * std::sqrt( count );
-		errorResults[std::make_pair( it.first.first, it.first.second)] = err;
-    }
-    return errorResults;
 
+errormap BuildFitInput::ComputeStatError(nodemap& filtered_df, const double& Lumi) {
+    std::cout << "Computing statistical error ... \n";
+    errormap errorResults{};
+
+    for (auto& [key, node_ptr] : filtered_df) {
+        RNode node = *node_ptr;
+
+        // Compute sum of squared weights
+        auto sumw2 = node.Define("w2_scaled", [Lumi](double w){ return (w*Lumi)*(w*Lumi); }, {"weight"})
+                         .Sum("w2_scaled");
+
+        errorResults[key] = sqrt(*sumw2);  // sqrt(sum_i (w_i * Lumi)^2)
+    }
+
+    return errorResults;
 }
+
 void BuildFitInput::FullReport( countmap countResults, summap sumResults, errormap errorResults ){
 
 	std::cout<<"BkgKey RawEvt WtEvt Err\n";
@@ -273,12 +263,4 @@ void BuildFitInput::PrintBins(int verbosity){
 		}
 	}
 }
-
-
-
-
-
-	
-		
-
 
