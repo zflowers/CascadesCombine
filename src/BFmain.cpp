@@ -9,18 +9,9 @@ namespace fs = std::filesystem;
 
 int main(){
 
-//	std::string datacard_dir = "datacards";
-//	std::string input_json = "test.json";
-	//std::string datacard_dir = "datacards_22j";
-	//std::string input_json = "test_G1MMT22j.json";
-	//std::string datacard_dir = "datacards_11j";
-        //std::string input_json = "test_G1MMT11j.json";
-	//std::string datacard_dir = "datacards_2GLLL";
-        //std::string input_json = "test_G2LLL.json";
-	std::string datacard_dir = "datacards_eos";
-	std::string input_json = "./json/test_eos.json";
+	std::string datacard_dir = "datacards_cascades";
+	std::string input_json = "./json/test_cascades.json";
 	
-
 	JSONFactory* j = new JSONFactory(input_json);
 //	BuildFit* BF = new BuildFit();
 	

@@ -63,7 +63,7 @@ int main() {
 	
         std::cout << "Making json... \n";
 	JSONFactory* json = new JSONFactory(BFI->analysisbins);
-	json->WriteJSON("./json/test_eos.json");
+	json->WriteJSON("./json/test_cascades.json");
 	auto end = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> elapsed = end - start;
 	std::cout << "Took " << elapsed.count() << " seconds to produce BFI" << std::endl;
