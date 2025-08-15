@@ -37,7 +37,7 @@ class BuildFit{
 	void BuildAsimovFit(JSONFactory* j, std::string signaPoint, std::string datacard_dir);
 	
 	
-	std::vector<std::string> sigkeys = { "gogoZ", "gogoG", "gogoGZ", "sqsqZ", "sqsqG", "sqsqGZ" };
+	std::vector<std::string> sigkeys = { "Cascades" };
 	
 
 };

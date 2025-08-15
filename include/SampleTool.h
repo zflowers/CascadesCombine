@@ -8,7 +8,6 @@
 #include "BuildFitTools.h"
 
 using namespace std;
-typedef std::vector<std::string> stringlist;
 
 class SampleTool{
 

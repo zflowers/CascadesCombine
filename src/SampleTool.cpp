@@ -128,6 +128,10 @@ SampleTool::SampleTool(){
     pathPrefix + "Summer22_130X_Cascades/SlepSnuCascade_220-209_200-190-180_2022_NANO_JustinPrivateMC_Summer22_130X_Cascades_Summer22_130X.root"
   };
 
+  MasterDict["SMS_Gluinos"] = {
+    pathPrefix + "Fall17_102X_SMS/SMS-T1bbbb_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root"
+  };
+
 }
 void SampleTool::LoadBkgs( stringlist& bkglist ){
 	for( long unsigned int i=0; i<bkglist.size(); i++){
@@ -154,7 +158,15 @@ void SampleTool::LoadSigs( stringlist& siglist ){
 		std::vector< std::string > keylist{};
 		s_strings = SigDict[siglist[i]];
 		for( long unsigned int j=0; j< s_strings.size(); j++){
-			SignalKeys.push_back( BFTool::GetSignalTokensCascades( s_strings[j] ) );
+                        if(s_strings[j].find("X_Cascades") != std::string::npos) 
+			  SignalKeys.push_back( BFTool::GetSignalTokensCascades( s_strings[j] ) );
+                        else if(s_strings[j].find("X_SMS") != std::string::npos){
+                          stringlist sms_temp = BFTool::GetSignalTokensSMS( s_strings[j] );
+                          for (const auto& sms_entry : sms_temp)
+			    SignalKeys.push_back( sms_entry );
+                        }
+                        else
+			  SignalKeys.push_back( BFTool::GetSignalTokens( s_strings[j] ) );
 		}
 	}
 }

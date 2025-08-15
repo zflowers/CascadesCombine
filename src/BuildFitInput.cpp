@@ -2,8 +2,8 @@
 
 
 BuildFitInput::BuildFitInput(){
-	std::cout<<"Hello world \n";
 	ROOT::EnableImplicitMT();
+	std::cout<<"Enabled MT \n";
 }
 
 void BuildFitInput::LoadBkg_KeyValue( std::string key, stringlist bkglist, const double& Lumi){
@@ -11,33 +11,37 @@ void BuildFitInput::LoadBkg_KeyValue( std::string key, stringlist bkglist, const
 		std::string subkey = key+"_"+std::to_string(i);
 
 		ROOT::RDataFrame df("KUAnalysis", bkglist[i]);
-		_base_rdf_BkgDict[subkey] = std::make_unique<RNode>(df);
-                rdf_BkgDict[subkey] = std::make_unique<RNode>(df);
+                 // Define scaled weight (w * Lumi)
+        	auto df_scaled = df.Define("weight_scaled", [Lumi](double w) { return w * Lumi; }, {"weight"});
+        	// Define squared scaled weight ((w * Lumi)^2)
+        	df_scaled = df_scaled.Define("weight_sq_scaled", [Lumi](double w) { return (w * Lumi) * (w * Lumi); }, {"weight"});
+		_base_rdf_BkgDict[subkey] = std::make_unique<RNode>(df_scaled);
+                rdf_BkgDict[subkey] = std::make_unique<RNode>(df_scaled);
 		
 	}
 }
 
 void BuildFitInput::LoadSig_KeyValue( std::string key, stringlist siglist, const double& Lumi){
-	for( unsigned int i=0; i< siglist.size(); i++){//signal keys are vector doubles (mode, mgo, mn2, mn1, ctau)
-		std::string subkey = BFTool::GetSignalTokensCascades( siglist[i]);
-
-		ROOT::RDataFrame df("KUAnalysis", siglist[i]);
-		_base_rdf_SigDict[subkey] = std::make_unique<RNode>(df);
-                rdf_SigDict[subkey] = std::make_unique<RNode>(df);
-		
-	}
-}
-void BuildFitInput::BuildRVBranch(){
-	
-	for (const auto& dfkey :rdf_BkgDict){
-		//std::cout<<"building Rv for key:"<< dfkey <<"\n";
-		auto tempdf = rdf_BkgDict[dfkey.first]->Define("Rv", "2.0*(rjrMVSum[1])/rjrASMass[1]");
-		rdf_BkgDict[dfkey.first] = std::make_unique<RNode>(tempdf);
-	}
-	for (const auto& dfkey :rdf_SigDict){
-		//std::cout<<"building Rv for key:"<< dfkey <<"\n";
-		auto tempdf = rdf_SigDict[dfkey.first]->Define("Rv", "2.0*(rjrMVSum[1])/rjrASMass[1]");
-		rdf_SigDict[dfkey.first] = std::make_unique<RNode>(tempdf);
+	for( unsigned int i=0; i< siglist.size(); i++){
+		std::string tree_name = "KUAnalysis";
+                stringlist subkeys;
+		bool isSMS = false;
+                if(siglist[i].find("X_SMS") != std::string::npos){
+  		  isSMS = true;
+		  subkeys = BFTool::GetSignalTokensSMS( siglist[i]);
+                }
+                else
+		  subkeys.push_back( BFTool::GetSignalTokensCascades( siglist[i] ));
+                for (const auto& subkey : subkeys){
+                  if(isSMS) tree_name = subkey;
+		  ROOT::RDataFrame df(tree_name, siglist[i]);
+                  // Define scaled weight (w * Lumi)
+                  auto df_scaled = df.Define("weight_scaled", [Lumi](double w) { return w * Lumi; }, {"weight"});
+        	  // Define squared scaled weight ((w * Lumi)^2)
+        	  df_scaled = df_scaled.Define("weight_sq_scaled", [Lumi](double w) { return (w * Lumi) * (w * Lumi); }, {"weight"});
+		  _base_rdf_SigDict[subkey] = std::make_unique<RNode>(df_scaled);
+                  rdf_SigDict[subkey] = std::make_unique<RNode>(df_scaled);
+		}
 	}
 }
 void BuildFitInput::LoadBkg_byMap( map< std::string, stringlist>& BkgDict, const double& Lumi){
@@ -55,6 +59,19 @@ void BuildFitInput::LoadSig_byMap( map< std::string, stringlist>& SigDict, const
 		LoadSig_KeyValue( pair.first, pair.second, Lumi);
 	}
 	
+}
+void BuildFitInput::BuildRVBranch(){
+	
+	for (const auto& dfkey :rdf_BkgDict){
+		//std::cout<<"building Rv for key:"<< dfkey <<"\n";
+		auto tempdf = rdf_BkgDict[dfkey.first]->Define("Rv", "2.0*(rjrMVSum[1])/rjrASMass[1]");
+		rdf_BkgDict[dfkey.first] = std::make_unique<RNode>(tempdf);
+	}
+	for (const auto& dfkey :rdf_SigDict){
+		//std::cout<<"building Rv for key:"<< dfkey <<"\n";
+		auto tempdf = rdf_SigDict[dfkey.first]->Define("Rv", "2.0*(rjrMVSum[1])/rjrASMass[1]");
+		rdf_SigDict[dfkey.first] = std::make_unique<RNode>(tempdf);
+	}
 }
 void BuildFitInput::FilterRegions( std::string filterName, std::string filterCuts ){
 	
@@ -110,23 +127,39 @@ summap BuildFitInput::SumRegions(std::string branchname, nodemap& filtered_df){
 	return sumResults;		
 }
 
-summap BuildFitInput::SumRegions(std::string branchname, nodemap& filtered_df, const double& Lumi) {
-    std::cout << "Loading Sum action ... \n";
-    summap sumResults{};
-
-    for (const auto& [key, node_ptr] : filtered_df) {
+summap BuildFitInput::SumRegions(std::string colname, nodemap &nodes, const double& Lumi) {
+    summap results{};
+    for (auto& [key, node_ptr] : nodes) {
         RNode node = *node_ptr;
 
-        // Optionally scale the branch values (e.g., apply Lumi)
-        auto scaled_sum = node.Define("scaled_value", [Lumi](double x){ return x*Lumi; }, {branchname})
-                              .Sum("scaled_value");
-
-        sumResults[key] = scaled_sum; // RResultPtr<double>
+        if (colname == "weight") {
+            // Scale the original weight by Lumi
+            auto scaled_node = node.Define("weight_scaled", [Lumi](double w){ return w * Lumi; }, {"weight"});
+            results[key] = scaled_node.Sum("weight_scaled");
+        }
+        else if (colname == "weight_sq") {
+            // Compute (weight*Lumi)^2 on the fly
+            auto sq_node = node.Define("weight_sq", [Lumi](double w){ return (w * Lumi) * (w * Lumi); }, {"weight"});
+            // When w2 already exists in the tree, just scale by Lumi^2
+            //auto scaled_node = node.Define("weight_sq_scaled", [Lumi](double w2){ return w2 * Lumi * Lumi; }, {"w2"});
+            results[key] = sq_node.Sum("weight_sq");
+        }
+        else {
+            // Sum any other column directly
+            results[key] = node.Sum(colname);
+        }
     }
-
-    return sumResults;
+    return results;
 }
 
+errormap BuildFitInput::ComputeStatErrorFromSumW2(summap &sumw2) {
+    std::cout << "Computing stat error ... \n";
+    errormap errorResults{};
+    for (auto& [key, sum_ptr] : sumw2) {
+        errorResults[key] = std::sqrt(*sum_ptr);
+    }
+    return errorResults;
+}
 
 void BuildFitInput::PrintCountReports( countmap countResults) {
 	std::cout<<"Reporting counts ... \n";
@@ -153,11 +186,13 @@ errormap BuildFitInput::ComputeStatError(nodemap& filtered_df, const double& Lum
     for (auto& [key, node_ptr] : filtered_df) {
         RNode node = *node_ptr;
 
-        // Compute sum of squared weights
-        auto sumw2 = node.Define("w2_scaled", [Lumi](double w){ return (w*Lumi)*(w*Lumi); }, {"weight"})
-                         .Sum("w2_scaled");
+        // define a temporary column for (w*Lumi)^2
+        auto node2 = node.Define("w2_scaled", [Lumi](double w){ return (w*Lumi)*(w*Lumi); }, {"weight"});
 
-        errorResults[key] = sqrt(*sumw2);  // sqrt(sum_i (w_i * Lumi)^2)
+        // sum the new column
+        auto sumw2 = node2.Sum("w2_scaled");
+
+        errorResults[key] = std::sqrt(*sumw2);  // sqrt(sum_i (w_i * Lumi)^2)
     }
 
     return errorResults;

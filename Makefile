@@ -59,4 +59,4 @@ $(OBJS_DIR)/%.o: $(SRC_DIR)/%.cpp
 
 # Clean target: remove generated files, this deleted my headers!
 clean:
-	rm ./obj/*.o BFI.x BF.x
+	rm ./obj/*.o *.x

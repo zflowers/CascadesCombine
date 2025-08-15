@@ -10,9 +10,16 @@
 #include <algorithm> // For std::all_of
 #include <cctype>    // For std::isdigit
 #include <sstream>
+#include <regex> // for regex matching
 
+// ROOT includes
 #include <TFile.h>
 #include <TTree.h>
+#include <TKey.h>
+#include <TClass.h>
+#include <TCollection.h>
+
+typedef std::vector<std::string> stringlist;
 
 class Process{
 	
@@ -50,8 +57,12 @@ class BFTool{
 	static std::vector<std::string> SplitString(const std::string& str,const std::string& delimiter);
 	static std::string GetSignalTokens(std::string& input);
 	static std::string GetSignalTokensCascades(std::string& input);
+	static stringlist GetSignalTokensSMS(std::string& input);
 	static bool  ContainsAnySubstring(const std::string& mainString, const std::vector<std::string>& substrings);
+        static stringlist filterSignalsSMS;
+
 };
+inline stringlist BFTool::filterSignalsSMS{};
 
 inline std::vector<std::string> BFTool::SplitString(const std::string& str,const std::string& delimiter) {
     std::vector<std::string> tokens;
@@ -66,6 +77,7 @@ inline std::vector<std::string> BFTool::SplitString(const std::string& str,const
 
     return tokens;
 }
+
 inline std::string BFTool::GetSignalTokens(std::string& input ){
 	std::string mode = "x";
 	std::string mgo = "0";
@@ -119,6 +131,37 @@ inline std::string BFTool::GetSignalTokens(std::string& input ){
 	return signalKeys;
 }
 
+inline stringlist BFTool::GetSignalTokensSMS(std::string& input ){
+
+    std::vector<std::string> tree_names;
+    TFile *file = TFile::Open(input.c_str(), "READ");
+    if (!file || file->IsZombie()) {
+        std::cerr << "Error: could not open file " << input << std::endl;
+        return tree_names;
+    }
+
+    // Regex pattern for tree names like SMS_123_456
+    std::regex sms_pattern("^SMS_[0-9]+_[0-9]+$");
+
+    // Iterate over keys in the file
+    TIter nextkey(file->GetListOfKeys());
+    TKey *key;
+    while ((key = (TKey*)nextkey())) {
+        if (std::string(key->GetClassName()) != "TTree")
+            continue; // only process TTrees
+
+        std::string tree_name = key->GetName();
+        if (!std::regex_match(tree_name, sms_pattern))
+            continue; // skip if not matching SMS_X_Y format
+	if (std::find(BFTool::filterSignalsSMS.begin(), BFTool::filterSignalsSMS.end(), tree_name) == BFTool::filterSignalsSMS.end())
+            continue;
+        tree_names.push_back(tree_name);
+    }
+    file->Close();
+    return tree_names;
+
+}
+
 inline std::string BFTool::GetSignalTokensCascades(std::string& input ){
 
     TFile *file = TFile::Open(input.c_str(), "READ");
@@ -151,8 +194,9 @@ inline std::string BFTool::GetSignalTokensCascades(std::string& input ){
     tree->GetEntry(0);
     file->Close();
     std::ostringstream oss;
-    oss << MP << "_" << MSlepL << "_" << MSneu << "_" 
-        << MN2 << "_" << MC1 << "_" << MN1;
+    oss << "Cascades_"
+    << MP << "_" << MSlepL << "_" << MSneu << "_" 
+    << MN2 << "_" << MC1 << "_" << MN1;
     
     std::string combined = oss.str();
     return combined;

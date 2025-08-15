@@ -58,7 +58,8 @@ class BuildFitInput{
 	void FilterRegions( std::string filterName, std::string filterCuts );
 	countmap CountRegions(nodemap& filtered_df);
 	summap SumRegions(std::string branchname, nodemap& filtered_df);
-	summap SumRegions(std::string branchname, nodemap& filtered_df, const double& Lumi = 1.);
+	summap SumRegions(std::string branchname, nodemap& filtered_df, const double& Lumi);
+        errormap ComputeStatErrorFromSumW2(summap &sumw2);
         errormap ComputeStatError(nodemap& filtered_df, const double& Lumi = 1.);
 	
 	//bin objects
