@@ -1,4 +1,3 @@
-
 import os
 import ROOT as rt
 
@@ -22,19 +21,14 @@ def get_directories(path):
         print(f"An error occurred: {e}")
         
     return directories
+
 #specify datacard dir
-
-#datacard_dir = "datacards"
-#datacard_dir = "datacards_22j"
-#datacard_dir = "datacards_11j"
-#datacard_dir = "datacards_2GLLL"
-datacard_dir = "../datacards_eos"
+datacard_dir = "datacards_cascades"
 datacard_subdir_list = get_directories(datacard_dir)
-
 
 #print(datacard_subdir_list)
 
-with open("../output/Significance_eos.txt", "w") as file:
+with open("output/Significance_cascades.txt", "w") as file:
     sig=-1;
     for subdir in datacard_subdir_list:
         f = rt.TFile.Open(datacard_dir+"/"+subdir+"/higgsCombine.Test.Significance.mH120.root")
@@ -42,6 +36,7 @@ with open("../output/Significance_eos.txt", "w") as file:
         for entry in tree:
             sig = entry.limit
         line = subdir +" "+ str(sig) +"\n"
+        print(line)
         file.write(line)
     file.close()
 

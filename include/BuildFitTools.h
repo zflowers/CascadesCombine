@@ -1,4 +1,3 @@
-
 #ifndef BFTOOLS_H
 #define BFTOOLS_H
 #include <string>
@@ -11,6 +10,8 @@
 #include <cctype>    // For std::isdigit
 #include <sstream>
 #include <regex> // for regex matching
+#include <memory>
+#include <utility>
 
 // ROOT includes
 #include <TFile.h>
@@ -55,9 +56,9 @@ class BFTool{
 
 	public:
 	static std::vector<std::string> SplitString(const std::string& str,const std::string& delimiter);
-	static std::string GetSignalTokens(std::string& input);
-	static std::string GetSignalTokensCascades(std::string& input);
-	static stringlist GetSignalTokensSMS(std::string& input);
+	static std::string GetSignalTokens(const std::string& input);
+	static std::string GetSignalTokensCascades(const std::string& input);
+	static stringlist GetSignalTokensSMS(const std::string& input);
 	static bool  ContainsAnySubstring(const std::string& mainString, const std::vector<std::string>& substrings);
         static stringlist filterSignalsSMS;
 
@@ -78,7 +79,7 @@ inline std::vector<std::string> BFTool::SplitString(const std::string& str,const
     return tokens;
 }
 
-inline std::string BFTool::GetSignalTokens(std::string& input ){
+inline std::string BFTool::GetSignalTokens(const std::string& input ){
 	std::string mode = "x";
 	std::string mgo = "0";
 	std::string mn2 = "0";
@@ -131,7 +132,7 @@ inline std::string BFTool::GetSignalTokens(std::string& input ){
 	return signalKeys;
 }
 
-inline stringlist BFTool::GetSignalTokensSMS(std::string& input ){
+inline stringlist BFTool::GetSignalTokensSMS(const std::string& input ){
 
     std::vector<std::string> tree_names;
     TFile *file = TFile::Open(input.c_str(), "READ");
@@ -162,7 +163,7 @@ inline stringlist BFTool::GetSignalTokensSMS(std::string& input ){
 
 }
 
-inline std::string BFTool::GetSignalTokensCascades(std::string& input ){
+inline std::string BFTool::GetSignalTokensCascades(const std::string& input ){
 
     TFile *file = TFile::Open(input.c_str(), "READ");
     if (!file || file->IsZombie()) {

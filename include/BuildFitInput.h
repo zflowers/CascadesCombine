@@ -1,14 +1,9 @@
 #ifndef BFI_H
 #define BFI_H
+#include "BuildFitTools.h"//Bin and process source
 #include <ROOT/RDataFrame.hxx>
-#include <map>
-#include <algorithm>
-#include <iostream>
-#include <vector>
-#include <string>
-#include "TFile.h"
-#include "TTree.h"
-#include "BuildFitTools.h"//Bin and process sourcej
+#include <ROOT/RVec.hxx>
+#include "Math/Vector4Dfwd.h"
 
 using namespace std;
 using ROOT::RDF::RNode;
@@ -21,11 +16,6 @@ typedef std::map< proc_cut_pair, ROOT::RDF::RResultPtr<long long unsigned int> >
 typedef std::map< proc_cut_pair, ROOT::RDF::RResultPtr<double> > summap;
 typedef std::map< proc_cut_pair, double> errormap;
 typedef std::map< proc_cut_pair, std::unique_ptr<RN> > nodemap;
-
-
-using namespace std;
-using ROOT::RDF::RNode;
-
 
 class BuildFitInput{
 	
@@ -49,16 +39,15 @@ class BuildFitInput{
 	void BuildRVBranch();//old skims dont have rv, need to build - this needs fixed upstream
 	
 	//load helpers
-	void LoadBkg_KeyValue( std::string key, stringlist bkglist, const double& Lumi);
-	void LoadSig_KeyValue( std::string key, stringlist siglist, const double& Lumi);
+	void LoadBkg_KeyValue( const std::string& key, const stringlist& bkglist, const double& Lumi);
+	void LoadSig_KeyValue( const std::string& key, const stringlist& siglist, const double& Lumi);
 	
 	void LoadSig_byMap( map< std::string, stringlist>& SigDict, const double& Lumi);
 	void LoadBkg_byMap( map< std::string, stringlist>& BkgDict, const double& Lumi);
 	
-	void FilterRegions( std::string filterName, std::string filterCuts );
+	void FilterRegions(const std::string& filterName, const stringlist& filterCuts );
 	countmap CountRegions(nodemap& filtered_df);
 	summap SumRegions(std::string branchname, nodemap& filtered_df);
-	summap SumRegions(std::string branchname, nodemap& filtered_df, const double& Lumi);
         errormap ComputeStatErrorFromSumW2(summap &sumw2);
         errormap ComputeStatError(nodemap& filtered_df, const double& Lumi = 1.);
 	
@@ -72,11 +61,28 @@ class BuildFitInput{
 	void FullReport( countmap countResults, summap sumResults, errormap errorResults );
 	
 	//helpers bin objects
-	void CreateBin(std::string binname);
+	void CreateBin(const std::string& binname);
+	void CreateBin(const std::string& binName, const std::vector<std::string>& cuts);
 	std::map<std::string, Process*> CombineBkgs( std::map<std::string, Process*>& bkgProcs );
 	void ConstructBkgBinObjects( countmap countResults, summap sumResults, errormap errorResults );
 	void AddSigToBinObjects( countmap countResults, summap sumResults, errormap errorResults, std::map<std::string, Bin*>& analysisbins);
 	void PrintBins(int verbosity=1);
+        std::string GetCleaningCut();
+	std::string GetZstarCut();
+
+    	std::map<std::string,std::string> userMacros = {
+    	    {"MAX", "ROOT::VecOps::Max"},
+    	    {"MIN", "ROOT::VecOps::Min"},
+    	    {"SUM", "ROOT::VecOps::Sum"}
+    	    // can add default macros
+    	};
+
+    	// Register a new macro
+    	void RegisterMacro(const std::string& name, const std::string& expansion);
+        std::string ExpandMacros(const std::string& expr);
+	std::string BuildLeptonCut(const std::string& shorthand, const std::string& side = "");
+	ROOT::RDF::RNode DefineLeptonPairCounts(ROOT::RDF::RNode rdf, const std::string& side = "");
+	ROOT::RDF::RNode DefinePairKinematics(ROOT::RDF::RNode rdf, const std::string& side = "");
 
 };
 #endif

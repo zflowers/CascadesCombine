@@ -1,0 +1,41 @@
+universe                = vanilla
+executable              = condor/BFI.sh
+arguments               =
+
+# Log files (Condor's own accounting)
+log                     = condor/logs/BFI.log
+output                  = condor/logs/BFI.out
+error                   = condor/logs/BFI.err
+
+# Transfer files (exe + wrapper + input configs)
+should_transfer_files   = YES
+when_to_transfer_output = ON_EXIT
+transfer_input_files    = BFI.x,BFI.sh
+
+# Output files to bring back
+transfer_output_files   = BFI.debug,json/test_cascades.json
+transfer_output_remaps  = "BFI.debug = condor/logs/BFI.debug; json/test_cascades.json = json/test_cascades.json"
+
+# Resources
+request_cpus            = 1
+request_memory          = 8 GB
+
+# Periodic hold/release logic
+periodic_hold = (CpusUsage > RequestCpus || MemoryUsage > RequestMemory) && (JobStatus == 2) && (CurrentTime - EnteredCurrentStatus > 60)
+
++JobTransforms = "if HoldReasonSubCode == 42 set RequestCpus = MIN(RequestCpus + 1, 32); if HoldReasonCode == 34 set RequestMemory = MIN(RequestMemory + 1, 24)"
+
+periodic_release = (HoldReasonCode == 12 && HoldReasonSubCode == 256) || \
+                   (HoldReasonCode == 13 && HoldReasonSubCode == 2)   || \
+                   (HoldReasonCode == 12 && HoldReasonSubCode == 2)   || \
+                   (HoldReasonCode == 26 && HoldReasonSubCode == 120) || \
+                   (HoldReasonCode == 3  && HoldReasonSubCode == 0)   || \
+                   (HoldReasonSubCode == 42)
+
+# Use user X509 proxy for xrootd
+use_x509userproxy       = True
+
+# Forward environment variables
+getenv                  = True
+
+queue
