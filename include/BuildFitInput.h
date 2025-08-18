@@ -12,10 +12,12 @@ typedef ROOT::RDataFrame RDF;
 typedef ROOT::RDF::RNode RN;
 typedef std::vector<std::string> stringlist;
 typedef std::pair<std::string,std::string> proc_cut_pair;
-typedef std::map< proc_cut_pair, ROOT::RDF::RResultPtr<long long unsigned int> > countmap;
-typedef std::map< proc_cut_pair, ROOT::RDF::RResultPtr<double> > summap;
-typedef std::map< proc_cut_pair, double> errormap;
 typedef std::map< proc_cut_pair, std::unique_ptr<RN> > nodemap;
+//typedef std::map< proc_cut_pair, ROOT::RDF::RResultPtr<long long unsigned int> > countmap;
+//typedef std::map< proc_cut_pair, ROOT::RDF::RResultPtr<double> > summap;
+typedef std::map<proc_cut_pair, double> errormap;
+typedef std::map<proc_cut_pair, double> countmap;
+typedef std::map<proc_cut_pair, double> summap;
 
 class BuildFitInput{
 	
@@ -36,7 +38,6 @@ class BuildFitInput{
 	nodemap sig_filtered_dataframes;
 
 	BuildFitInput();
-	void BuildRVBranch();//old skims dont have rv, need to build - this needs fixed upstream
 	
 	//load helpers
 	void LoadBkg_KeyValue( const std::string& key, const stringlist& bkglist, const double& Lumi);
@@ -48,17 +49,16 @@ class BuildFitInput{
 	void FilterRegions(const std::string& filterName, const stringlist& filterCuts );
 	countmap CountRegions(nodemap& filtered_df);
 	summap SumRegions(std::string branchname, nodemap& filtered_df);
-        errormap ComputeStatErrorFromSumW2(summap &sumw2);
-        errormap ComputeStatError(nodemap& filtered_df, const double& Lumi = 1.);
 	
 	//bin objects
 	std::map<std::string, Bin*> analysisbins{};
 	
 	//helpers print and debug df datastructures
 	void ReportRegions(int verbosity=1);//report on base frame, initates action
-	void PrintCountReports( countmap resultmap);
-	void PrintSumReports( summap sumResults);
-	void FullReport( countmap countResults, summap sumResults, errormap errorResults );
+        void ReportRegions(int verbosity, countmap &countResults, summap &sumResults, errormap &errorResults, bool DoSig);
+	void PrintCountReports( const countmap& resultmap);
+	void PrintSumReports( const summap& sumResults);
+	void FullReport( const countmap& countResults, const summap& sumResults, const errormap& errorResults);
 	
 	//helpers bin objects
 	void CreateBin(const std::string& binname);

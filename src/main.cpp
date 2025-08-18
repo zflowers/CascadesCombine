@@ -100,26 +100,19 @@ for (const auto &side : sides) {
 
 std::cout << "\n[TEST] Finished creating shorthand test bins. Running RDF booking & event loop...\n";
 
-// Book operations
-countmap countResults   = BFI->CountRegions(BFI->bkg_filtered_dataframes);
-countmap countResults_S = BFI->CountRegions(BFI->sig_filtered_dataframes);
 
-summap sumResults   = BFI->SumRegions("weight_scaled",    BFI->bkg_filtered_dataframes);
-summap sumResults_S = BFI->SumRegions("weight_scaled",    BFI->sig_filtered_dataframes);
+// Declare maps for bkg and signal
+countmap countResults, countResults_S;
+summap sumResults, sumResults_S;
+errormap errorResults, errorResults_S;
 
-summap sumW2Results   = BFI->SumRegions("weight_sq_scaled", BFI->bkg_filtered_dataframes);
-summap sumW2Results_S = BFI->SumRegions("weight_sq_scaled", BFI->sig_filtered_dataframes);
+// Compute counts, sums, errors for background and signal
+BFI->ReportRegions(0, countResults, sumResults, errorResults, false);
+BFI->ReportRegions(0, countResults_S, sumResults_S, errorResults_S, true);
 
-// Trigger the event loop (computes RResultPtr values)
-BFI->ReportRegions(0);
-
-// Compute stat errors
-errormap errorResults   = BFI->ComputeStatErrorFromSumW2(sumW2Results);
-errormap errorResults_S = BFI->ComputeStatErrorFromSumW2(sumW2Results_S);
-
-// Build in-memory objects
-BFI->ConstructBkgBinObjects( countResults, sumResults, errorResults );
-BFI->AddSigToBinObjects(    countResults_S, sumResults_S, errorResults_S, BFI->analysisbins );
+// Construct bins
+BFI->ConstructBkgBinObjects(countResults, sumResults, errorResults);
+BFI->AddSigToBinObjects(countResults_S, sumResults_S, errorResults_S, BFI->analysisbins);
 
 // Compact closure report for backgrounds
 std::cout << "\n[CLOSURE REPORT - BACKGROUNDS]\n";
@@ -128,14 +121,13 @@ for (auto &kv : countResults) {
     const std::string procName = key.first;
     const std::string binName  = key.second;
 
-    // kv.second is RResultPtr<unsigned long long> (non-const iteration so GetValue() is callable)
-    unsigned long long count = kv.second.GetValue();
+    // countResults now stores double
+    unsigned long long count = static_cast<unsigned long long>(kv.second);
 
     double sum = 0.0, sumw2 = 0.0, err = 0.0;
     try {
-        sum   = sumResults.at(key).GetValue();
-        sumw2 = sumW2Results.at(key).GetValue();
-        err   = errorResults.at(key);
+        sum   = sumResults.at(key);       // already double
+        err   = errorResults.at(key);     // already double
     } catch (const std::out_of_range&) {
         std::cout << "[WARN] Missing sum/sumW2/error for " << procName << " / " << binName << "\n";
     }
@@ -153,12 +145,11 @@ for (auto &kv : countResults_S) {
     const std::string procName = key.first;
     const std::string binName  = key.second;
 
-    unsigned long long count = kv.second.GetValue();
+    unsigned long long count = static_cast<unsigned long long>(kv.second);
 
     double sum = 0.0, sumw2 = 0.0, err = 0.0;
     try {
-        sum   = sumResults_S.at(key).GetValue();
-        sumw2 = sumW2Results_S.at(key).GetValue();
+        sum   = sumResults_S.at(key);
         err   = errorResults_S.at(key);
     } catch (const std::out_of_range&) {
         std::cout << "[WARN] Missing signal sum/sumW2/error for " << procName << " / " << binName << "\n";

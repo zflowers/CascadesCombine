@@ -16,6 +16,8 @@ void BuildFitInput::LoadBkg_KeyValue(const std::string& key, const stringlist& b
         auto df_scaled = df
             .Define("weight_scaled", [Lumi](double w){ return w * Lumi; }, {"weight"})
             .Define("weight_sq_scaled", [Lumi](double w){ return (w*Lumi)*(w*Lumi); }, {"weight"});
+            //.Define("weight_sq_scaled", [Lumi](double w2){ return w2 * Lumi * Lumi; }, {"weight2"});
+
 
         // Define lepton pair counts for all sides
         //auto df_with_lep = df_scaled;  // debug temp
@@ -86,19 +88,6 @@ void BuildFitInput::LoadSig_byMap( map< std::string, stringlist>& SigDict, const
 		LoadSig_KeyValue( pair.first, pair.second, Lumi);
 	}
 	
-}
-void BuildFitInput::BuildRVBranch(){
-	
-	for (const auto& dfkey :rdf_BkgDict){
-		//std::cout<<"building Rv for key:"<< dfkey <<"\n";
-		auto tempdf = rdf_BkgDict[dfkey.first]->Define("Rv", "2.0*(rjrMVSum[1])/rjrASMass[1]");
-		rdf_BkgDict[dfkey.first] = std::make_unique<RNode>(tempdf);
-	}
-	for (const auto& dfkey :rdf_SigDict){
-		//std::cout<<"building Rv for key:"<< dfkey <<"\n";
-		auto tempdf = rdf_SigDict[dfkey.first]->Define("Rv", "2.0*(rjrMVSum[1])/rjrASMass[1]");
-		rdf_SigDict[dfkey.first] = std::make_unique<RNode>(tempdf);
-	}
 }
 
 inline bool ColumnExists(ROOT::RDF::RNode rdf, const std::string& name) {
@@ -796,6 +785,62 @@ std::string BuildFitInput::ExpandMacros(const std::string& expr) {
     return expanded;
 }
 
+void BuildFitInput::ReportRegions(int verbosity,
+                                  countmap &countResults,
+                                  summap &sumResults,
+                                  errormap &errorResults,
+				  bool DoSig)
+{
+
+    countResults.clear();
+    sumResults.clear();
+    errorResults.clear();
+
+    auto processNodes = [&](auto& nodes){
+        for (const auto& it : nodes){
+            RNode& node = *(it.second);
+    
+            // Compute counts, sums, and sum-of-squares
+            ROOT::RDF::RResultPtr<long long unsigned int> count_r = node.Count();
+            ROOT::RDF::RResultPtr<double> sum_r   = node.Sum("weight_scaled");
+            ROOT::RDF::RResultPtr<double> sumw2_r = node.Sum("weight_sq_scaled");
+    
+            // Extract values
+            double count_val = static_cast<double>(*count_r);
+            double sum_val   = sum_r.GetValue();
+            double error_val = std::sqrt(sumw2_r.GetValue());
+    
+            // Convert string key to proc_cut_pair
+            std::string strkey = it.first;
+            size_t last_underscore = strkey.rfind('_');
+            std::string procname = strkey.substr(0, last_underscore);
+            std::string binname  = strkey.substr(last_underscore + 1);
+            proc_cut_pair key{procname, binname};
+    
+            // Fill maps
+            countResults[key] = count_val;
+            sumResults[key]   = sum_val;
+            errorResults[key] = error_val;
+    
+            if (verbosity > 0){
+                std::cout << strkey << ":\n"
+                          << "Count: " << count_val
+                          << ", Sum: " << sum_val
+                          << ", Error: " << error_val << "\n\n";
+            }
+        }
+    };
+
+
+    if(DoSig){
+      std::cout << "Processing Sig nodes...\n";
+      processNodes(_base_rdf_SigDict);
+    } else {
+      std::cout << "Processing Bkg nodes...\n";
+      processNodes(_base_rdf_BkgDict);
+    }
+}
+
 void BuildFitInput::ReportRegions(int verbosity){
 	std::cout<<"Reporting bkg nodes ...  \n";
 	for (const auto& it : _base_rdf_BkgDict){
@@ -819,90 +864,41 @@ void BuildFitInput::ReportRegions(int verbosity){
 	}
 }
 
-countmap BuildFitInput::CountRegions(nodemap& filtered_df){
-	std::cout<<"Loading Count action ...  \n";
-	countmap countResults{};
-	for (const auto& it : filtered_df){
-		ROOT::RDF::RResultPtr<long long unsigned int> count_result = (it.second)->Count();
-		countResults[std::make_pair( it.first.first, it.first.second) ] = count_result;		
-	}
-	return countResults;
-}
-
-summap BuildFitInput::SumRegions(std::string branchname, nodemap& filtered_df){
-	std::cout<<"Loading Sum action  ... \n";
-	summap sumResults{};
-	for ( const auto& it: filtered_df){
-		ROOT::RDF::RResultPtr<double>  sum_result = (it.second)->Sum(branchname);
-		sumResults[std::make_pair( it.first.first, it.first.second) ] = sum_result;
-	}
-	return sumResults;		
-}
-
-errormap BuildFitInput::ComputeStatErrorFromSumW2(summap &sumw2) {
-    std::cout << "Computing stat error ... \n";
-    errormap errorResults{};
-    for (const auto &entry : sumw2) {
-        const proc_cut_pair &key = entry.first;
-        // Make a non-const copy of the RResultPtr
-        ROOT::RDF::RResultPtr<double> sum_ptr = entry.second; 
-        if (sum_ptr) {
-            std::cout << "[ComputeStatErrorFromSumW2] for: " 
-            << key.first << "," << key.second << endl;
-            //errorResults[key] = std::sqrt(*sum_ptr);
-            errorResults[key] = std::sqrt(sum_ptr.GetValue());
-        }
-        else {
-            std::cerr << "ComputeStatErrorFromSumW2: missing sum for key ("
-                      << key.first << "," << key.second << ") setting error=0\n";
-            errorResults[key] = 0.0;
-        }
+void BuildFitInput::PrintCountReports(const countmap& countResults) {
+    std::cout << "Reporting counts ... \n";
+    for (const auto& it : countResults) {
+        std::cout << it.first.first << " " << it.first.second
+                  << " " << it.second << "\n";
     }
-    return errorResults;
+    std::cout << "\n";
 }
 
-// this for when weight2 exists in new ntuples
-//errormap BuildFitInput::ComputeStatErrorFromSumW2(summap &sumw2) {
-    //errormap errorResults{};
-    //for (auto& [key, sum_ptr] : sumw2)
-    //  errorResults[key] = std::sqrt(*sum_ptr);
-    //return errorResults;
-//}
-
-void BuildFitInput::PrintCountReports( countmap countResults) {
-	std::cout<<"Reporting counts ... \n";
-	for (const auto& it : countResults){
-	ROOT::RDF::RResultPtr<long long unsigned int> count_result = it.second;
-		std::cout<<it.first.first<<" "<< it.first.second<<" "<<*count_result<<"\n";
-	}
-	std::cout<<"\n";
-	
-}
-void BuildFitInput::PrintSumReports( summap sumResults){
-	std::cout<<"Reporting sums ... \n";
-	for (const auto& it : sumResults){
-	ROOT::RDF::RResultPtr<double> sum_result = it.second;
-		std::cout<<it.first.first<<" "<<it.first.second<<" "<<*sum_result<<"\n";
-	}
-	std::cout<<"\n";
-}
-
-void BuildFitInput::FullReport( countmap countResults, summap sumResults, errormap errorResults ){
-
-	std::cout<<"BkgKey RawEvt WtEvt Err\n";
-    // Iterate as long as both iterators are valid (assuming same size and keys)
-	for (const auto& it : countResults){
-        // Access key and values from both maps
-        proc_cut_pair key = it.first;
-        ROOT::RDF::RResultPtr<long long unsigned int> count_result = it.second;
-        int count = *(count_result);
-        double sum = *(sumResults[key]);
-        double err = errorResults[key];
-
-        std::cout << key.first<<" "<<key.second<<" " << count<<" "<<sum<<" "<<err << std::endl;
-
+void BuildFitInput::PrintSumReports(const summap& sumResults) {
+    std::cout << "Reporting sums ... \n";
+    for (const auto& it : sumResults) {
+        std::cout << it.first.first << " " << it.first.second
+                  << " " << it.second << "\n";
     }
+    std::cout << "\n";
+}
 
+void BuildFitInput::FullReport(const countmap& countResults,
+                               const summap& sumResults,
+                               const errormap& errorResults) {
+
+    std::cout << "BkgKey RawEvt WtEvt Err\n";
+
+    for (const auto& it : countResults) {
+        const proc_cut_pair& key = it.first;
+        // Values are already double, no RResultPtr
+        double count = it.second;          // countResults now stores double
+        double sum   = sumResults.at(key); // sumResults stores double
+        double err   = errorResults.at(key);
+
+        std::cout << key.first << " " << key.second
+                  << " " << count << " " << sum << " " << err
+                  << std::endl;
+    }
 }
 
 std::map<std::string, Process*> BuildFitInput::CombineBkgs( std::map<std::string, Process*>& bkgProcs ){
@@ -941,38 +937,48 @@ void BuildFitInput::CreateBin(const std::string& binName, const std::vector<std:
     CreateBin(binName);              // then create the bin
 }
 
-void BuildFitInput::ConstructBkgBinObjects( countmap countResults, summap sumResults, errormap errorResults ){
-	for( const auto& it: countResults ){
-		proc_cut_pair cutpairkey = it.first;
-		std::string procname = it.first.first;
-		std::string binname = cutpairkey.second;
-		//ROOT::RDF::RResultPtr<long long unsigned int> count_result = it.second;
-		
-		Process* thisproc = new Process(procname, *countResults[cutpairkey], *sumResults[cutpairkey], errorResults[cutpairkey]);
-		analysisbins[ binname ]->bkgProcs.insert({procname, thisproc} ); 
-	}
-	// get the combined dictionary now
-	for(const auto& it: analysisbins ){
-		std::map<std::string, Process*> combinedBkgProcs = CombineBkgs(  it.second->bkgProcs );
-		it.second->combinedProcs = combinedBkgProcs;
-	}	
-	
-}
-void BuildFitInput::AddSigToBinObjects( countmap countResults, summap sumResults, errormap errorResults, std::map<std::string, Bin*>& analysisbins){
-	for(const auto& it: analysisbins ){
-		std::string binname = it.first;
-		for( const auto& it2: countResults){
+void BuildFitInput::ConstructBkgBinObjects(countmap countResults,
+                                           summap sumResults,
+                                           errormap errorResults)
+{
+    for (const auto& it : countResults) {
+        proc_cut_pair cutpairkey = it.first;
+        std::string procname = cutpairkey.first;
+        std::string binname  = cutpairkey.second;
 
-			proc_cut_pair cutpairkey = it2.first;
-			if( binname != cutpairkey.second ) continue;
-			std::string binname2 = it2.first.second;
-			std::string procname = it2.first.first;
-			
-			Process* thisproc = new Process( procname, *countResults[cutpairkey], *sumResults[cutpairkey], errorResults[cutpairkey]);
-			analysisbins[binname]->signals.insert({procname, thisproc} );
-		}
-	}
+        Process* thisproc = new Process(procname,
+                                        countResults[cutpairkey],
+                                        sumResults[cutpairkey],
+                                        errorResults[cutpairkey]);
+        analysisbins[binname]->bkgProcs.insert({procname, thisproc});
+    }
+
+    for (const auto& it : analysisbins){
+        it.second->combinedProcs = CombineBkgs(it.second->bkgProcs);
+    }
 }
+
+void BuildFitInput::AddSigToBinObjects(countmap countResults,
+                                       summap sumResults,
+                                       errormap errorResults,
+                                       std::map<std::string, Bin*>& analysisbins)
+{
+    for (const auto& it : analysisbins) {
+        std::string binname = it.first;
+        for (const auto& it2 : countResults) {
+            proc_cut_pair cutpairkey = it2.first;
+            if (binname != cutpairkey.second) continue;
+
+            std::string procname = cutpairkey.first;
+            Process* thisproc = new Process(procname,
+                                            countResults[cutpairkey],
+                                            sumResults[cutpairkey],
+                                            errorResults[cutpairkey]);
+            analysisbins[binname]->signals.insert({procname, thisproc});
+        }
+    }
+}
+
 void BuildFitInput::PrintBins(int verbosity){
 	for(const auto& it: analysisbins){
 		std::cout<<"Bin: "<< it.second->binname << "\n";
