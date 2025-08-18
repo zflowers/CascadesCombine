@@ -5,3 +5,4 @@ datacards*
 *.json
 *.debug
 json/*
+condor/logs/*

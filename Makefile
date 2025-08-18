@@ -25,42 +25,40 @@ BIN_DIR = .
 SRCS = $(SRC_DIR)/main.cpp $(SRC_DIR)/SampleTool.cpp $(SRC_DIR)/BuildFitInput.cpp $(INC_DIR)/BuildFitTools.h $(SRC_DIR)/JSONFactory.cpp
 SRCS_CONDOR = $(SRC_DIR)/BFI_condor.cpp $(SRC_DIR)/SampleTool.cpp $(SRC_DIR)/BuildFitInput.cpp $(INC_DIR)/BuildFitTools.h $(SRC_DIR)/JSONFactory.cpp
 CMSSWSRCS = $(SRC_DIR)/BFmain.cpp $(SRC_DIR)/BuildFit.cpp $(SRC_DIR)/JSONFactory.cpp $(INC_DIR)/BuildFitTools.h
+SRCS_MERGE = $(SRC_DIR)/mergeJSONs.cpp $(SRC_DIR)/JSONFactory.cpp $(SRC_DIR)/SampleTool.cpp $(SRC_DIR)/BuildFitInput.cpp
 OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJS_DIR)/%.o,$(SRCS))
 CMSSWOBJS=  $(patsubst $(SRC_DIR)/%.cpp,$(OBJS_DIR)/%.o,$(CMSSWSRCS))
 CONDOROBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJS_DIR)/%.o,$(SRCS_CONDOR))
+MERGEOBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJS_DIR)/%.o,$(SRCS_MERGE))
 
-# Define the executable name
+# Define the executable names
 TARGET = $(BIN_DIR)/BFI.x
 CMSSWTARGET = $(BIN_DIR)/BF.x
 CONDORTARGET = $(BIN_DIR)/BFI_condor.x
-
-# Define source files
-#SRCS = main.cpp SampleTool.cpp BuildFitInput.cpp BuildFitTools.h JSONFactory.cpp
-#CMSSWSRCS = BFmain.cpp BuildFit.cpp JSONFactory.cpp BuildFitTools.h
-
-# Define object files
-#OBJS = $(SRCS:.cpp=.o)
-#CMSSWOBJS = $(CMSSWSRCS:.cpp=.o)
+MERGETARGET = $(BIN_DIR)/mergeJSONs.x
 
 $(TARGET): $(OBJS_DIR) $(OBJS)
 	$(CXX) $(OBJS) -o $@ $(LDFLAGS) $(ROOTCFLAGS)
 
 # Default target: build the executable
-all: $(TARGET) $(CMSSWTARGET) $(CONDORTARGET)
+all: $(TARGET) $(CMSSWTARGET) $(CONDORTARGET) $(MERGETARGET)
 cmssw: $(CMSSWTARGET)
 condor: $(CONDORTARGET)
+merge: $(MERGETARGET)
 
 $(CMSSWTARGET): $(OBJS_DIR) $(CMSSWOBJS) 
 	$(CXX) $(CMSSWOBJS) $(LDFLAGS) $(ROOTCFLAGS) $(LIBPATH) $(LIBS) -o $@
 
 $(CONDORTARGET): $(OBJS_DIR) $(CONDOROBJS)
-	$(CXX) $(CONDOROBJS) -o $@ $(LDFLAGS) $(ROOTCFLAGS) $(LIBPATH) $(LIBS)
+	$(CXX) $(CONDOROBJS) -o $@ $(LDFLAGS) $(ROOTCFLAGS) $(LIBPATH)
+
+$(MERGETARGET): $(OBJS_DIR) $(MERGEOBJS)
+	$(CXX) $(MERGEOBJS) -o $@ $(LDFLAGS) $(ROOTCFLAGS) $(LIBPATH)
 
 # Rule to compile C++ source files into object files
 $(OBJS_DIR)/%.o: $(SRC_DIR)/%.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-
-# Clean target: remove generated files, this deleted my headers!
+# Clean target: remove generated files
 clean:
 	rm -f ./obj/*.o *.x
