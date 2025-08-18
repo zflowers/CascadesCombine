@@ -1,6 +1,5 @@
 #include "BuildFitInput.h"
 
-
 BuildFitInput::BuildFitInput(){
 	ROOT::EnableImplicitMT();
 	std::cout<<"Enabled MT \n";

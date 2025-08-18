@@ -23,13 +23,16 @@ INC_DIR = include
 OBJS_DIR = obj
 BIN_DIR = .
 SRCS = $(SRC_DIR)/main.cpp $(SRC_DIR)/SampleTool.cpp $(SRC_DIR)/BuildFitInput.cpp $(INC_DIR)/BuildFitTools.h $(SRC_DIR)/JSONFactory.cpp
+SRCS_CONDOR = $(SRC_DIR)/BFI_condor.cpp $(SRC_DIR)/SampleTool.cpp $(SRC_DIR)/BuildFitInput.cpp $(INC_DIR)/BuildFitTools.h $(SRC_DIR)/JSONFactory.cpp
 CMSSWSRCS = $(SRC_DIR)/BFmain.cpp $(SRC_DIR)/BuildFit.cpp $(SRC_DIR)/JSONFactory.cpp $(INC_DIR)/BuildFitTools.h
 OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJS_DIR)/%.o,$(SRCS))
 CMSSWOBJS=  $(patsubst $(SRC_DIR)/%.cpp,$(OBJS_DIR)/%.o,$(CMSSWSRCS))
+CONDOROBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJS_DIR)/%.o,$(SRCS_CONDOR))
 
 # Define the executable name
 TARGET = $(BIN_DIR)/BFI.x
 CMSSWTARGET = $(BIN_DIR)/BF.x
+CONDORTARGET = $(BIN_DIR)/BFI_condor.x
 
 # Define source files
 #SRCS = main.cpp SampleTool.cpp BuildFitInput.cpp BuildFitTools.h JSONFactory.cpp
@@ -39,18 +42,19 @@ CMSSWTARGET = $(BIN_DIR)/BF.x
 #OBJS = $(SRCS:.cpp=.o)
 #CMSSWOBJS = $(CMSSWSRCS:.cpp=.o)
 
-
-# Default target: build the executable
-all: $(TARGET)
-cmssw: $(CMSSWTARGET)
-
-
-# Rule to build the executable from object files
 $(TARGET): $(OBJS_DIR) $(OBJS)
 	$(CXX) $(OBJS) -o $@ $(LDFLAGS) $(ROOTCFLAGS)
 
+# Default target: build the executable
+all: $(TARGET) $(CMSSWTARGET) $(CONDORTARGET)
+cmssw: $(CMSSWTARGET)
+condor: $(CONDORTARGET)
+
 $(CMSSWTARGET): $(OBJS_DIR) $(CMSSWOBJS) 
 	$(CXX) $(CMSSWOBJS) $(LDFLAGS) $(ROOTCFLAGS) $(LIBPATH) $(LIBS) -o $@
+
+$(CONDORTARGET): $(OBJS_DIR) $(CONDOROBJS)
+	$(CXX) $(CONDOROBJS) -o $@ $(LDFLAGS) $(ROOTCFLAGS) $(LIBPATH) $(LIBS)
 
 # Rule to compile C++ source files into object files
 $(OBJS_DIR)/%.o: $(SRC_DIR)/%.cpp
