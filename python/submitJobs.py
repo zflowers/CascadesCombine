@@ -47,11 +47,11 @@ periodic_hold = (CpusUsage > RequestCpus || MemoryUsage > RequestMemory) && (Job
 
 +JobTransforms = "if HoldReasonSubCode == 42 set RequestCpus = MIN(RequestCpus + 1, 32); if HoldReasonCode == 34 set RequestMemory = MIN(RequestMemory + 1, 24)"
 
-periodic_release = (HoldReasonCode == 12 && HoldReasonSubCode == 256) || \\
-                   (HoldReasonCode == 13 && HoldReasonSubCode == 2)   || \\
-                   (HoldReasonCode == 12 && HoldReasonSubCode == 2)   || \\
-                   (HoldReasonCode == 26 && HoldReasonSubCode == 120) || \\
-                   (HoldReasonCode == 3  && HoldReasonSubCode == 0)   || \\
+periodic_release = (HoldReasonCode == 12 && HoldReasonSubCode == 256) || \
+                   (HoldReasonCode == 13 && HoldReasonSubCode == 2)   || \
+                   (HoldReasonCode == 12 && HoldReasonSubCode == 2)   || \
+                   (HoldReasonCode == 26 && HoldReasonSubCode == 120) || \
+                   (HoldReasonCode == 3  && HoldReasonSubCode == 0)   || \
                    (HoldReasonSubCode == 42)
 
 use_x509userproxy       = True
@@ -100,7 +100,7 @@ def build_jobs(tool, bin_name, cuts, lep_cuts, predef_cuts):
 # ----------------------------------------
 # Condor submit file writing
 # ----------------------------------------
-def write_submit_file(bin_name, jobs, cpus="1", memory="8 GB", dryrun=False):
+def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", dryrun=False):
     bin_safe = sanitize(bin_name)
     bin_dir = CONDOR_DIR / bin_safe
     bin_dir.mkdir(parents=True, exist_ok=True)
@@ -110,7 +110,6 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="8 GB", dryrun=False):
     out_dir = bin_dir / "out"
     err_dir = bin_dir / "err"
     json_dir = bin_dir / "json"
-
     for d in (log_dir, out_dir, err_dir, json_dir):
         d.mkdir(parents=True, exist_ok=True)
 
@@ -120,28 +119,13 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="8 GB", dryrun=False):
     header = CONDOR_HEADER.format(cpus=cpus, memory=memory)
     submit_lines = [header]
 
-    # Log, stdout, stderr
+    # Logs go here (shared config, uses $(LogFile))
     submit_lines.append(f"log    = {log_dir}/$(LogFile).log")
     submit_lines.append(f"output = {out_dir}/$(LogFile).out")
     submit_lines.append(f"error  = {err_dir}/$(LogFile).err")
 
-    # Build transfer output and remaps
-    transfer_outputs = []
-    transfer_remaps = []
-    seen = set()
-    for job in jobs:
-        base = sanitize(f"{bin_name}_{job['dataset']}_{job['fname_stem']}")
-        remote_json = f"{base}.json"  # always written in container's ./ directory
-        local_json = (json_dir / f"{base}.json").as_posix()
-
-        if remote_json not in seen:
-            transfer_outputs.append(remote_json)
-            transfer_remaps.append(f"{remote_json} = {local_json}")
-            seen.add(remote_json)
-
-    if transfer_outputs:
-        submit_lines.append(f"transfer_output_files = {','.join(transfer_outputs)}")
-        submit_lines.append(f'transfer_output_remaps = "{"; ".join(transfer_remaps)}"')
+    submit_lines.append("transfer_output_files = $(LogFile).json")
+    submit_lines.append(f'transfer_output_remaps = "$(LogFile).json = {json_dir.as_posix()}/$(LogFile).json"')
 
     # Inline queue
     submit_lines.append("# Queue jobs with LogFile (used for log/out/err) and Args")
@@ -154,12 +138,13 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="8 GB", dryrun=False):
         sig_type = job.get("sig_type", None)
 
         base = sanitize(f"{bin_name}_{ds}_{fname_stem}")
-        remote_json = f"./{base}.json"  # container writes here
+        # Pass plain filename (no leading ./) so Condor matches it to transfer_output_files
+        remote_json_arg = f"{base}.json"
 
         args_list = [
             f"--bin {bin_name}",
             f"--file {fpath}",
-            f"--output {remote_json}",
+            f"--output {remote_json_arg}",
             f"--cuts {job.get('cuts','')}",
             f"--lep-cuts {job.get('lep_cuts','')}",
             f"--predefined-cuts {job.get('predef_cuts','')}"
@@ -168,6 +153,7 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="8 GB", dryrun=False):
             args_list.append(f"--sig-type {sig_type}")
 
         args_str = " ".join(a for a in args_list if a and not a.isspace())
+        # The first column (base) becomes $(LogFile)
         submit_lines.append(f'{base} "{args_str}"')
 
     submit_lines.append(")")

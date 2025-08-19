@@ -47,10 +47,11 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# --- Ensure directories exist ---
-mkdir -p "$(dirname "$OUTPUT_JSON")"
+# --- Ensure output file is correct ---
+BASE=$(basename "$OUTPUT_JSON")
+OUTPUT_JSON="$BASE"
 
-# --- Build command ---
+# --- Run the executable ---
 CMD="./BFI_condor.x --bin \"$BIN\" --file \"$ROOTFILE\" --output \"$OUTPUT_JSON\""
 [[ -n "$CUTS" ]] && CMD="$CMD --cuts \"$CUTS\""
 [[ -n "$LEP_CUTS" ]] && CMD="$CMD --lep-cuts \"$LEP_CUTS\""
