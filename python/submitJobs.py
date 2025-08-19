@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-import argparse
-import subprocess
+import os, argparse, subprocess
 from itertools import product
 from concurrent.futures import ThreadPoolExecutor
 
@@ -29,6 +28,31 @@ limit_submit = None  # e.g., 10
 # -----------------------------
 # TEMPLATING / HELPERS
 # -----------------------------
+
+def write_flatten_script(bin_names, flatten_exe="./flattenJSONs.x", json_dir="json"):
+    """
+    Create a run_flatten.sh script that merges all JSONs for the given bins.
+    
+    Args:
+        bin_names (list of str): List of bin names.
+        flatten_exe (str): Path to the flattenJSON executable.
+        json_dir (str): Directory where final flattened JSON will be stored.
+    """
+    os.makedirs(json_dir, exist_ok=True)
+    output_name = "_".join(bin_names)
+    output_file = os.path.join(json_dir, f"flattened_{output_name}.json")
+    script_path = "condor/run_flatten.sh"
+
+    with open(script_path, "w") as f:
+        f.write("#!/usr/bin/env bash\n")
+        f.write("# Auto-generated flatten script\n")
+        # build the command
+        input_paths = [f"condor/{bin_name}" for bin_name in bin_names]
+        f.write(f"{flatten_exe} {' '.join(input_paths)} {output_file}\n")
+        f.write(f"echo 'Flattened JSON written to {output_file}'\n")
+
+    os.chmod(script_path, 0o755)
+    print(f"[submitJobs] Generated flatten script: {script_path}")
 
 def build_bin_name(base, shorthand, side, extra=None):
     """Construct a unique bin name"""
@@ -130,9 +154,14 @@ def main():
     
     # Manual bins
     manual_bins = {
-        "TEST_manualExample": {
+        "TEST_manualExample1": {
             "cuts": "Nlep>=2,MET>=150,PTISR>=200",
             "lep-cuts": ">=1OSSF",
+            "predefined-cuts": "Cleaning",
+        },
+        "TEST_manualExample2": {
+            "cuts": "Nlep>=2,MET>=200,PTISR>=300",
+            "lep-cuts": ">1OSSF",
             "predefined-cuts": "Cleaning",
         },
     }
@@ -179,6 +208,7 @@ def main():
         executor.map(submit_job, jobs)
     
     if not dryrun:
+        write_flatten_script(list(bins.keys()))
         print("\nAll submissions dispatched.\n")
 
 if __name__ == "__main__":
