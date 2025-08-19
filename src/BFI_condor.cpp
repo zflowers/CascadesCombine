@@ -240,6 +240,11 @@ int main(int argc, char** argv) {
         delete BFI;
         return 2;
     }
+    
+    // Expand macros in all cuts
+    std::vector<std::string> finalCutsExpanded;
+    for (const auto &cut : finalCuts)
+        finalCutsExpanded.push_back(BFI->ExpandMacros(cut));
 
     // Auto-detect sig type if needed
     if (isSignal && sigType.empty()) {
@@ -252,26 +257,23 @@ int main(int argc, char** argv) {
     // Prepare results structures
     std::map<std::string, std::map<std::string, std::array<double,3>>> fileResults; // sample -> file -> [count, sum, err]
     std::map<std::string, std::array<double,3>> totals;                             // sample -> total [count, sum, err]
-    
-    // ---------- PROCESS BACKGROUND ----------
-    if (!isSignal) {
-        std::string tree_name = "KUAnalysis";
+
+    auto processTree = [&](const std::string &tree_name, const std::string &key) {
         ROOT::RDataFrame df(tree_name, rootFilePath);
-    
         auto df_scaled = df
-            .Define("weight_scaled", [Lumi](double w){ return w * Lumi; }, {"weight"})
+            .Define("weight_scaled", [Lumi](double w){ return w*Lumi; }, {"weight"})
             .Define("weight_sq_scaled", [Lumi](double w){ return (w*Lumi)*(w*Lumi); }, {"weight"});
-    
+        
         auto df_with_lep = BFI->DefineLeptonPairCounts(df_scaled, "");
         df_with_lep = BFI->DefineLeptonPairCounts(df_with_lep, "A");
         df_with_lep = BFI->DefineLeptonPairCounts(df_with_lep, "B");
-    
+        
         df_with_lep = BFI->DefinePairKinematics(df_with_lep, "");
         df_with_lep = BFI->DefinePairKinematics(df_with_lep, "A");
         df_with_lep = BFI->DefinePairKinematics(df_with_lep, "B");
     
         ROOT::RDF::RNode node = df_with_lep;
-        for (const auto &c : finalCuts) node = node.Filter(c);
+        for (const auto &c : finalCutsExpanded) node = node.Filter(c);
     
         auto cnt = node.Count();
         auto sumW = node.Sum<double>("weight_scaled");
@@ -282,93 +284,25 @@ int main(int argc, char** argv) {
         double sW2 = sumW2.GetValue();
         double err = (sW2 >= 0) ? std::sqrt(sW2) : 0.0;
     
-        // store per-file
-        fileResults[sampleName][rootFilePath] = { (double)n_entries, sW, err };
-        // update totals (sum counts and weights, sum squared errors)
-        auto &tot = totals[sampleName];
+        fileResults[key][rootFilePath] = { (double)n_entries, sW, err };
+        auto &tot = totals[key];
         tot[0] += (double)n_entries;
         tot[1] += sW;
         tot[2] += err*err;
-    }
+    };
     
-    // ---------- PROCESS SIGNAL ----------
-    else {
-        if (sigType == "cascades") {
-            std::string subkey = BFTool::GetSignalTokensCascades(rootFilePath);
-            std::string tree_name = "KUAnalysis";
-            ROOT::RDataFrame df(tree_name, rootFilePath);
-    
-            auto df_scaled = df
-                .Define("weight_scaled", [Lumi](double w){ return w * Lumi; }, {"weight"})
-                .Define("weight_sq_scaled", [Lumi](double w){ return (w*Lumi)*(w*Lumi); }, {"weight"});
-    
-            auto df_with_lep = BFI->DefineLeptonPairCounts(df_scaled, "");
-            df_with_lep = BFI->DefineLeptonPairCounts(df_with_lep, "A");
-            df_with_lep = BFI->DefineLeptonPairCounts(df_with_lep, "B");
-    
-            df_with_lep = BFI->DefinePairKinematics(df_with_lep, "");
-            df_with_lep = BFI->DefinePairKinematics(df_with_lep, "A");
-            df_with_lep = BFI->DefinePairKinematics(df_with_lep, "B");
-    
-            ROOT::RDF::RNode node = df_with_lep;
-            for (const auto &c : finalCuts) node = node.Filter(c);
-    
-            auto cnt = node.Count();
-            auto sumW = node.Sum<double>("weight_scaled");
-            auto sumW2 = node.Sum<double>("weight_sq_scaled");
-    
-            unsigned long long n_entries = cnt.GetValue();
-            double sW = sumW.GetValue();
-            double sW2 = sumW2.GetValue();
-            double err = (sW2 >= 0) ? std::sqrt(sW2) : 0.0;
-    
-            std::string name = subkey.empty() ? sampleName : subkey;
-            fileResults[name][rootFilePath] = { (double)n_entries, sW, err };
-            auto &tot = totals[name];
-            tot[0] += (double)n_entries;
-            tot[1] += sW;
-            tot[2] += err*err;
-    
-        } else if (sigType == "sms") {
-            auto tree_names = BFTool::GetSignalTokensSMS(rootFilePath);
-            for (const auto &tree_name : tree_names) {
-                ROOT::RDataFrame df(tree_name, rootFilePath);
-    
-                auto df_scaled = df
-                    .Define("weight_scaled", [Lumi](double w){ return w * Lumi; }, {"weight"})
-                    .Define("weight_sq_scaled", [Lumi](double w){ return (w*Lumi)*(w*Lumi); }, {"weight"});
-    
-                auto df_with_lep = BFI->DefineLeptonPairCounts(df_scaled, "");
-                df_with_lep = BFI->DefineLeptonPairCounts(df_with_lep, "A");
-                df_with_lep = BFI->DefineLeptonPairCounts(df_with_lep, "B");
-    
-                df_with_lep = BFI->DefinePairKinematics(df_with_lep, "");
-                df_with_lep = BFI->DefinePairKinematics(df_with_lep, "A");
-                df_with_lep = BFI->DefinePairKinematics(df_with_lep, "B");
-    
-                ROOT::RDF::RNode node = df_with_lep;
-                for (const auto &c : finalCuts) node = node.Filter(c);
-    
-                auto cnt = node.Count();
-                auto sumW = node.Sum<double>("weight_scaled");
-                auto sumW2 = node.Sum<double>("weight_sq_scaled");
-    
-                unsigned long long n_entries = cnt.GetValue();
-                double sW = sumW.GetValue();
-                double sW2 = sumW2.GetValue();
-                double err = (sW2 >= 0) ? std::sqrt(sW2) : 0.0;
-    
-                fileResults[tree_name][rootFilePath] = { (double)n_entries, sW, err };
-                auto &tot = totals[tree_name];
-                tot[0] += (double)n_entries;
-                tot[1] += sW;
-                tot[2] += err*err;
-            }
-        } else {
-            std::cerr << "[BFI_condor] Unknown sig-type: " << sigType << "\n";
-            delete BFI;
-            return 4;
-        }
+    if (!isSignal) {
+        processTree("KUAnalysis", sampleName);
+    } else if (sigType == "cascades") {
+        std::string subkey = BFTool::GetSignalTokensCascades(rootFilePath);
+        processTree("KUAnalysis", subkey.empty() ? sampleName : subkey);
+    } else if (sigType == "sms") {
+        for (const auto &tree_name : BFTool::GetSignalTokensSMS(rootFilePath))
+            processTree(tree_name, tree_name);
+    } else {
+        std::cerr << "[BFI_condor] Unknown sig-type: " << sigType << "\n";
+        delete BFI;
+        return 4;
     }
     
     // Convert summed squared errors to sqrt
