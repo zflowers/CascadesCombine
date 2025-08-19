@@ -16,12 +16,8 @@ def load_pybind_module(module_name, folder):
 libs_dir = Path(__file__).parent.parent / "libs"
 pySampleTool = load_pybind_module("pySampleTool", libs_dir)
 
-LOG_DIR = Path("condor/logs")
-JSON_DIR = Path("json")
-SUBMIT_DIR = Path("condor/submit")
-LOG_DIR.mkdir(parents=True, exist_ok=True)
-JSON_DIR.mkdir(parents=True, exist_ok=True)
-SUBMIT_DIR.mkdir(parents=True, exist_ok=True)
+CONDOR_DIR = Path("condor")
+CONDOR_DIR.mkdir(exist_ok=True)
 
 CONDOR_HEADER = """
 universe                = vanilla
@@ -86,53 +82,81 @@ def build_jobs(tool, bin_name, cuts, lep_cuts, predef_cuts):
     return jobs
 
 def write_submit_file(bin_name, jobs, cpus="1", memory="8 GB", dryrun=False):
+    """
+    Write a Condor .sub file with bin-specific directory structure:
+    condor/<bin_name>/
+        - logs/
+        - outs/
+        - errs/
+        - debugs/
+        - json/
+    """
     bin_safe = sanitize(bin_name)
-    submit_path = SUBMIT_DIR / f"{bin_safe}.sub"
+    bin_dir = CONDOR_DIR / bin_safe  # CONDOR_DIR = Path("condor") at module level
+    bin_dir.mkdir(parents=True, exist_ok=True)
 
+    # --- Subdirectories ---
+    log_dir = bin_dir / "logs"
+    out_dir = bin_dir / "outs"
+    err_dir = bin_dir / "errs"
+    debug_dir = bin_dir / "debugs"
+    json_dir = bin_dir / "json"
+
+    for d in (log_dir, out_dir, err_dir, debug_dir, json_dir):
+        d.mkdir(exist_ok=True, parents=True)
+
+    submit_path = bin_dir / f"{bin_safe}.sub"
+
+    # Header
     header = CONDOR_HEADER.format(cpus=cpus, memory=memory)
-
-    transfer_outputs = []
-    transfer_remaps = []
-
-    # --- Ensure directories exist ---
-    LOG_DIR.mkdir(parents=True, exist_ok=True)
-    JSON_DIR.mkdir(parents=True, exist_ok=True)
-
     submit_lines = [header]
 
-    # --- Build global transfer outputs/remaps ---
+    # Log / output / error using $(LogFile)
+    submit_lines.append(f"log    = {log_dir}/$(LogFile).log")
+    submit_lines.append(f"output = {out_dir}/$(LogFile).out")
+    submit_lines.append(f"error  = {err_dir}/$(LogFile).err")
+
+    # Build transfer outputs/remaps
+    transfer_outputs = []
+    transfer_remaps = []
+    seen_remotes = set()
+
     for job in jobs:
-        fname_stem = job["fname_stem"]
         ds = job["dataset"]
-        jobname_safe = sanitize(f"{bin_name}_{ds}_{fname_stem}")
+        fname_stem = job["fname_stem"]
+        base = sanitize(f"{bin_name}_{ds}_{fname_stem}")
 
-        remote_json = f"json/{bin_name}_{ds}_{fname_stem}.json"
-        remote_debug = f"condor/logs/{jobname_safe}.debug"
+        remote_json = f"{json_dir}/{base}.json"
+        remote_debug = f"{debug_dir}/{base}.debug"
 
-        local_json = JSON_DIR / f"{bin_name}_{ds}_{fname_stem}.json"
-        local_debug = LOG_DIR / f"{jobname_safe}.debug"
+        local_json = (json_dir / f"{base}.json").as_posix()
+        local_debug = (debug_dir / f"{base}.debug").as_posix()
 
-        transfer_outputs.extend([remote_json, remote_debug])
+        # Deduplicate
+        for r in (remote_json, remote_debug):
+            if r not in seen_remotes:
+                transfer_outputs.append(r)
+                seen_remotes.add(r)
+
         transfer_remaps.append(f"{remote_json} = {local_json}")
         transfer_remaps.append(f"{remote_debug} = {local_debug}")
 
-    submit_lines.append(f"transfer_output_files = {','.join(transfer_outputs)}")
-    submit_lines.append(f'transfer_output_remaps = "{"; ".join(transfer_remaps)}"')
+    if transfer_outputs:
+        submit_lines.append(f"transfer_output_files = {','.join(transfer_outputs)}")
+        submit_lines.append(f'transfer_output_remaps = "{"; ".join(transfer_remaps)}"')
 
-    # --- Inline job list ---
-    submit_lines.append("# Inline job list with unique log/output/error/debug/json per job")
-    submit_lines.append("queue LogFile, OutFile, ErrFile, Args from (")
+    # Inline queue
+    submit_lines.append("# Queue jobs with LogFile (used for log/out/err) and Args")
+    submit_lines.append("queue LogFile, Args from (")
 
     for job in jobs:
         ds = job["dataset"]
         fpath = job["filepath"]
         fname_stem = job["fname_stem"]
         sig_type = job.get("sig_type", None)
-        jobname_safe = sanitize(f"{bin_name}_{ds}_{fname_stem}")
 
-        # Use Condor variables $LogFile, $OutFile, $ErrFile
-        # remote_json is already set above
-        remote_json = f"json/{bin_name}_{ds}_{fname_stem}.json"
+        base = sanitize(f"{bin_name}_{ds}_{fname_stem}")
+        remote_json = f"{json_dir}/{base}.json"
 
         args_list = [
             f"--bin {bin_name}",
@@ -144,17 +168,18 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="8 GB", dryrun=False):
         ]
         if sig_type:
             args_list.append(f"--sig-type {sig_type}")
-        args_str = " ".join(args_list)
 
-        # Queue line uses $LogFile, $OutFile, $ErrFile
-        submit_lines.append(f'$LogFile $OutFile $ErrFile "{args_str}"')
+        args_str = " ".join(a for a in args_list if a and not a.isspace())
+        submit_lines.append(f'{base} "{args_str}"')
 
-    submit_lines.append(")")  # close queue
+    submit_lines.append(")")
 
+    # Write submit file
     submit_content = "\n".join(submit_lines) + "\n"
     submit_path.write_text(submit_content)
     print(f"Wrote submit file: {submit_path}")
 
+    # Optional submission
     if not dryrun:
         proc = subprocess.run(
             f"source /cvmfs/cms.cern.ch/cmsset_default.sh && condor_submit {submit_path}",
