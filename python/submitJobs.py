@@ -3,6 +3,9 @@ import os, sys, subprocess, argparse, re
 from pathlib import Path
 import importlib.util
 
+# ----------------------------------------
+# Utilities
+# ----------------------------------------
 def load_pybind_module(module_name, folder):
     folder = Path(folder)
     so_files = list(folder.glob(f"{module_name}*.so"))
@@ -13,9 +16,19 @@ def load_pybind_module(module_name, folder):
     spec.loader.exec_module(mod)
     return mod
 
+def sanitize(s):
+    s = re.sub(r'[^A-Za-z0-9_.-]', '_', s)
+    return s[:200]
+
+# ----------------------------------------
+# Module imports
+# ----------------------------------------
 libs_dir = Path(__file__).parent.parent / "libs"
 pySampleTool = load_pybind_module("pySampleTool", libs_dir)
 
+# ----------------------------------------
+# Condor setup
+# ----------------------------------------
 CONDOR_DIR = Path("condor")
 CONDOR_DIR.mkdir(exist_ok=True)
 
@@ -45,12 +58,13 @@ use_x509userproxy       = True
 getenv                  = True
 """
 
-def sanitize(s):
-    s = re.sub(r'[^A-Za-z0-9_.-]', '_', s)
-    return s[:200]
-
+# ----------------------------------------
+# Job building
+# ----------------------------------------
 def build_jobs(tool, bin_name, cuts, lep_cuts, predef_cuts):
     jobs = []
+
+    # Background jobs
     for ds, files in tool.BkgDict.items():
         for fpath in files:
             fname_stem = Path(fpath).stem
@@ -62,6 +76,8 @@ def build_jobs(tool, bin_name, cuts, lep_cuts, predef_cuts):
                 "lep_cuts": lep_cuts,
                 "predef_cuts": predef_cuts
             })
+
+    # Signal jobs
     for ds, files in tool.SigDict.items():
         for fpath in files:
             fname_stem = Path(fpath).stem
@@ -81,28 +97,21 @@ def build_jobs(tool, bin_name, cuts, lep_cuts, predef_cuts):
             })
     return jobs
 
+# ----------------------------------------
+# Condor submit file writing
+# ----------------------------------------
 def write_submit_file(bin_name, jobs, cpus="1", memory="8 GB", dryrun=False):
-    """
-    Write a Condor .sub file with bin-specific directory structure:
-    condor/<bin_name>/
-        - logs/
-        - outs/
-        - errs/
-        - debugs/
-        - json/
-    """
     bin_safe = sanitize(bin_name)
-    bin_dir = CONDOR_DIR / bin_safe  # CONDOR_DIR = Path("condor") at module level
+    bin_dir = CONDOR_DIR / bin_safe
     bin_dir.mkdir(parents=True, exist_ok=True)
 
-    # --- Subdirectories ---
-    log_dir = bin_dir / "logs"
-    out_dir = bin_dir / "outs"
-    err_dir = bin_dir / "errs"
-    debug_dir = bin_dir / "debugs"
+    # Subdirectories
+    log_dir = bin_dir / "log"
+    out_dir = bin_dir / "out"
+    err_dir = bin_dir / "err"
     json_dir = bin_dir / "json"
 
-    for d in (log_dir, out_dir, err_dir, debug_dir, json_dir):
+    for d in (log_dir, out_dir, err_dir, json_dir):
         d.mkdir(exist_ok=True, parents=True)
 
     submit_path = bin_dir / f"{bin_safe}.sub"
@@ -111,7 +120,7 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="8 GB", dryrun=False):
     header = CONDOR_HEADER.format(cpus=cpus, memory=memory)
     submit_lines = [header]
 
-    # Log / output / error using $(LogFile)
+    # Use $(LogFile) for log, stdout, stderr
     submit_lines.append(f"log    = {log_dir}/$(LogFile).log")
     submit_lines.append(f"output = {out_dir}/$(LogFile).out")
     submit_lines.append(f"error  = {err_dir}/$(LogFile).err")
@@ -120,26 +129,21 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="8 GB", dryrun=False):
     transfer_outputs = []
     transfer_remaps = []
     seen_remotes = set()
-
     for job in jobs:
         ds = job["dataset"]
         fname_stem = job["fname_stem"]
         base = sanitize(f"{bin_name}_{ds}_{fname_stem}")
 
         remote_json = f"{json_dir}/{base}.json"
-        remote_debug = f"{debug_dir}/{base}.debug"
 
         local_json = (json_dir / f"{base}.json").as_posix()
-        local_debug = (debug_dir / f"{base}.debug").as_posix()
 
-        # Deduplicate
-        for r in (remote_json, remote_debug):
+        for r in remote_json:
             if r not in seen_remotes:
                 transfer_outputs.append(r)
                 seen_remotes.add(r)
 
         transfer_remaps.append(f"{remote_json} = {local_json}")
-        transfer_remaps.append(f"{remote_debug} = {local_debug}")
 
     if transfer_outputs:
         submit_lines.append(f"transfer_output_files = {','.join(transfer_outputs)}")
@@ -174,12 +178,12 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="8 GB", dryrun=False):
 
     submit_lines.append(")")
 
-    # Write submit file
+    # Write .sub
     submit_content = "\n".join(submit_lines) + "\n"
     submit_path.write_text(submit_content)
     print(f"Wrote submit file: {submit_path}")
 
-    # Optional submission
+    # Optional submit
     if not dryrun:
         proc = subprocess.run(
             f"source /cvmfs/cms.cern.ch/cmsset_default.sh && condor_submit {submit_path}",
@@ -193,6 +197,9 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="8 GB", dryrun=False):
         else:
             print(f"Submitted bin {bin_name} ({len(jobs)} jobs)")
 
+# ----------------------------------------
+# Main
+# ----------------------------------------
 def main():
     bkglist = ["ttbar", "ST", "DY", "ZInv", "DBTB", "QCD", "Wjets"]
     siglist = ["Cascades"]
@@ -218,4 +225,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

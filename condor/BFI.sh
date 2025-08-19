@@ -35,6 +35,7 @@ OUTPUT_JSON=""
 CUTS=""
 LEP_CUTS=""
 PREDEF_CUTS=""
+SIG_TYPE=""
 
 while [[ $# -gt 0 ]]; do
     key="$1"
@@ -50,8 +51,8 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# --- Debug file derived from --output ---
-debug_file="condor/logs/$(basename "${OUTPUT_JSON}" .json).debug"
+# --- Ensure directories exist ---
+mkdir -p "$(dirname "$OUTPUT_JSON")"
 
 # --- Build command ---
 CMD="./BFI_condor.x --bin \"$BIN\" --file \"$ROOTFILE\" --output \"$OUTPUT_JSON\""
@@ -60,15 +61,9 @@ CMD="./BFI_condor.x --bin \"$BIN\" --file \"$ROOTFILE\" --output \"$OUTPUT_JSON\
 [[ -n "$PREDEF_CUTS" ]] && CMD="$CMD --predefined-cuts \"$PREDEF_CUTS\""
 [[ -n "$SIG_TYPE" ]] && CMD="$CMD --sig-type $SIG_TYPE"
 
-# --- Ensure directories exist --- 
-mkdir -p "$(dirname "$OUTPUT_JSON")"
-mkdir -p "$(dirname "$debug_file")"
-
 # --- Echo and run ---
 echo "Running BFI_condor.x with arguments:"
 echo "$CMD"
-
-# Use eval with stdbuf to preserve live stdout and tee into debug file
-eval stdbuf -oL -eL $CMD 2>&1 | tee "$debug_file"
-
+eval $CMD
 echo "[$(date)] Job finished."
+
