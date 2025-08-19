@@ -184,7 +184,6 @@ void SampleTool::LoadAllFromMaster() {
     for (const auto &kv : MasterDict) {
         const std::string &group = kv.first;
         const stringlist &files = kv.second;
-
         // Rule: treat "Cascades" or anything containing "SMS" as signal
         if (group == "Cascades" || group.find("SMS") != std::string::npos) {
             SigDict[group] = files;

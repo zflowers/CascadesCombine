@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-import subprocess
-import time
-import glob
-import os
+import subprocess, time, glob, os, sys
 from CondorJobCountMonitor import CondorJobCountMonitor
 
 def build_binaries():
@@ -75,8 +72,8 @@ def main():
     # 5) Run BF.x on the flattened JSON
     flattened_json = get_flattened_json_path()
     output_dir = get_output_dir()
-    if not os.path.isfile(flattened_json) or os.path.getsize(flattened_json) == 0:
-        raise RuntimeError(f"Flattened JSON '{flattened_json}' is missing or empty!")
+    #if not os.path.isfile(flattened_json) or os.path.getsize(flattened_json) == 0:
+    #    raise RuntimeError(f"Flattened JSON '{flattened_json}' is missing or empty!")
     print(f"Running BF.x with input {flattened_json} & output {output_dir}")
     subprocess.run(["./BF.x", flattened_json, output_dir], check=True)
 

@@ -18,7 +18,7 @@ memory = "1 GB"
 # Defaults (can be overridden by CLI args)
 dryrun = False
 stress_test = False
-lumi = 1.
+lumi = str(1.)
 
 # Maximum concurrent submissions
 max_workers = 4
@@ -121,8 +121,8 @@ def generate_bins_from_shorthands():
     
     sides = [
         "",
-        "a",
-        "b"
+        #"a",
+        #"b"
     ]
     
     generated = {}
@@ -147,7 +147,7 @@ def build_command(bin_name, cfg):
         "--lep-cuts", cfg["lep-cuts"],
         "--predefined-cuts", cfg["predefined-cuts"],
         "--cpus", cpus,
-        "--memory", memory
+        "--memory", memory,
         "--lumi", lumi
     ]
     if dryrun:
@@ -173,9 +173,9 @@ def main():
                         help="Enable dry-run mode")
     parser.add_argument("--stress_test", dest="stress_test", action="store_true",
                         help="Run stress test")
-    parser.add_argument("--lumi", dest="lumi",
+    parser.add_argument("--lumi", dest="lumi", type=str, default=lumi,
                         help="Lumi to scale events to")
-    parser.set_defaults(dryrun=dryrun, stress_test=stress_test, lumi=lumi)
+    parser.set_defaults(dryrun=dryrun, stress_test=stress_test)
     args = parser.parse_args()
 
     dryrun = args.dryrun
@@ -235,7 +235,6 @@ def main():
         print("Dry-run mode enabled: no jobs will actually be submitted.")
     if limit_submit is not None:
         print(f"Limit enabled: will only submit first {limit_submit} job(s).")
-    print()
     
     # Apply limit if requested
     if limit_submit is not None:
