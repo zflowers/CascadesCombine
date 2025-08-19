@@ -63,6 +63,7 @@ done
 
 # Ensure json/ exists
 mkdir -p json
+debug_file="$(basename "${OUTPUT_JSON}" .json).debug"
 
 CMD="./BFI_condor.x --bin \"$BIN\" --file \"$ROOTFILE\" --output \"$OUTPUT_JSON\""
 [[ -n "$CUTS" ]] && CMD="$CMD --cuts \"$CUTS\""
@@ -74,7 +75,7 @@ echo "Running BFI_condor.x with arguments:"
 echo "$CMD"
 
 # Use eval to preserve the quotes
-eval stdbuf -oL -eL $CMD 2>&1 | tee BFI_condor.debug
+eval stdbuf -oL -eL $CMD 2>&1 | tee "$debug_file"
 
 echo "[$(date)] Job finished."
 

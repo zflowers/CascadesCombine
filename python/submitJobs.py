@@ -80,9 +80,12 @@ def write_and_submit(jobname, arguments, cpus="1", memory="8 GB", dryrun=False):
     err_file = LOG_DIR / f"{jobname_safe}.err"
     json_file = JSON_DIR / f"{jobname_safe}.json"
 
-    transfer_outputs = f"BFI_condor.debug,{json_file.name}"
-    # remap : remote file -> local path to store
-    transfer_remaps = f"BFI_condor.debug = {LOG_DIR / 'BFI_condor.debug'}; {json_file.name} = {json_file}"
+    # Unique debug file for this job
+    debug_file = LOG_DIR / f"{json_file.stem}.debug"
+    
+    # Condor transfer setup
+    transfer_outputs = f"{debug_file.name},json/{json_file.name}"
+    transfer_remaps = f"{debug_file.name} = {debug_file}; {json_file.name} = {json_file}"
 
     submit_content = CONDOR_TEMPLATE.format(
         arguments=arguments,
@@ -139,19 +142,20 @@ def main():
     for ds, files in tool.BkgDict.items():
         for fpath in files:
             jobname_safe, submit_path = make_jobname_and_submit_path(args.bin, ds, fpath)
+            json_file = JSON_DIR / f"{args.bin}_{ds}_{Path(fpath).stem}.json"
             arguments = (
-                f"--bin {args.bin} --file {fpath} "
+                f"--bin {args.bin} --file {fpath} --output {json_file} "
                 f"--cuts {args.cuts} --lep-cuts {args.lep_cuts} --predefined-cuts {args.predefined_cuts} "
             )
             write_and_submit(jobname_safe, arguments, cpus=args.cpus, memory=args.memory, dryrun=args.dryrun)
-            break  # debug
     
     # Sig loop
     for ds, files in tool.SigDict.items():
         for fpath in files:
             jobname_safe, submit_path = make_jobname_and_submit_path(args.bin, ds, fpath)
+            json_file = JSON_DIR / f"{args.bin}_{ds}_{Path(fpath).stem}.json"
             arguments = (
-                f"--bin {args.bin} --file {fpath} "
+                f"--bin {args.bin} --file {fpath} --output {json_file} "
                 f"--cuts {args.cuts} --lep-cuts {args.lep_cuts} --predefined-cuts {args.predefined_cuts} "
             )
             if "Cascades" in fpath:
@@ -159,7 +163,6 @@ def main():
             elif "SMS" in fpath:
                 arguments += "--sig-type sms"
             write_and_submit(jobname_safe, arguments, cpus=args.cpus, memory=args.memory, dryrun=args.dryrun)
-            break  # debug
 
 if __name__ == "__main__":
     main()
