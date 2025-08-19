@@ -1,63 +1,42 @@
 #!/usr/bin/env python3
-#Example: python checkJobs.py manualExample1
+"""
+checkJobs.py
 
-import os
-import re
-import argparse
-import subprocess
-import sys
+Checks Condor job outputs for a given submission (condor/<submit_name>),
+and, if there are failed jobs, writes a single data-driven resubmit file
+(with one `queue LogFile, Args from (...)` block) and optionally submits it.
+
+Usage:
+    python3 checkJobs.py <submit_name> [--root-dir CONDOR_DIR] [--no-submit] [--clean-json] [--cms-env PATH]
+
+Examples:
+    python3 checkJobs.py manualExample1
+"""
+import argparse, os, re, subprocess, sys, glob
+from typing import Dict, Tuple, List
+
+DEFAULT_CMS_ENV = "/cvmfs/cms.cern.ch/cmsset_default.sh"
 
 def parse_args():
-    p = argparse.ArgumentParser(description="Check Condor jobs and resubmit failed ones (single .sub for all failed).")
-    p.add_argument("submit_name", help="Submission name (folder name and submit file prefix), e.g. manualExample1")
-    p.add_argument("--root-dir", default="condor", help="Top-level condor directory (default: 'condor')")
-    p.add_argument("--no-submit", action="store_true", help="Do not actually call condor_submit; only write the resubmit .sub file")
-    p.add_argument("--clean-json", action="store_true", help="Remove existing JSON outputs for failed jobs before resubmitting")
-    p.add_argument("--cms-env", default="/cvmfs/cms.cern.ch/cmsset_default.sh", help="Path to cmsset_default.sh for environment setup")
+    p = argparse.ArgumentParser(description="Check and resubmit Condor jobs (single-queue resubmit).")
+    p.add_argument("submit_name", help="Name of the submission folder (e.g. manualExample1).")
+    p.add_argument("--root-dir", default="condor", help="Top-level condor directory (default: 'condor').")
+    p.add_argument("--no-submit", action="store_true", help="Do not actually call condor_submit; just write the resubmit file.")
+    p.add_argument("--clean-json", action="store_true", help="Remove partial JSON outputs for failed jobs before resubmitting.")
+    p.add_argument("--cms-env", default=DEFAULT_CMS_ENV, help=f"Path to cmsset_default.sh (default: {DEFAULT_CMS_ENV})")
     return p.parse_args()
 
-def load_logfile_args(submit_path):
-    """
-    Parse queue LogFile, Args block from submit file and return dict LogFile -> Args
-    """
-    mapping = {}
-    with open(submit_path, "r") as fh:
-        content = fh.read()
+# --------------------- job checks ---------------------
+def job_paths(base_dir: str, job: str) -> Tuple[str, str, str]:
+    """Return (json_path, out_path, err_path) for a job"""
+    json_path = os.path.join(base_dir, "json", f"{job}.json")
+    out_path  = os.path.join(base_dir, "out",  f"{job}.out")
+    err_path  = os.path.join(base_dir, "err",  f"{job}.err")
+    return json_path, out_path, err_path
 
-    # Attempt to find the block: queue LogFile, Args from ( ... )
-    m = re.search(r'queue\s+LogFile\s*,\s*Args\s+from\s*\(\s*(.*?)\s*\)', content, re.S)
-    if not m:
-        # fallback: try to find any lines like `name "args"`
-        lines = re.findall(r'^\s*([^\s"]+)\s+"([^"]+)"\s*$', content, re.M)
-        for name, args in lines:
-            mapping[name] = args
-        return mapping
-
-    block = m.group(1)
-    for raw_line in block.strip().splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#"):
-            continue
-        # Expect: LogFileName "full args"
-        mm = re.match(r'([^\s"]+)\s+"(.+)"\s*$', line)
-        if mm:
-            mapping[mm.group(1)] = mm.group(2)
-        else:
-            # If pattern doesn't match, try to parse single-quoted args or space-separated
-            mm2 = re.match(r"([^\s]+)\s+'(.+)'$", line)
-            if mm2:
-                mapping[mm2.group(1)] = mm2.group(2)
-            else:
-                # Last resort: attempt to split at first space, treat remainder as args (without quotes)
-                parts = line.split(None, 1)
-                if len(parts) == 2:
-                    mapping[parts[0]] = parts[1].strip().strip('"').strip("'")
-    return mapping
-
-def check_job_ok(base_dirs, jobname):
-    json_path = os.path.join(base_dirs["json"], f"{jobname}.json")
-    out_path  = os.path.join(base_dirs["out"], f"{jobname}.out")
-    err_path  = os.path.join(base_dirs["err"], f"{jobname}.err")
+def check_job_ok(base_dir: str, job: str) -> bool:
+    """Return True if job passes all checks, False otherwise."""
+    json_path, out_path, err_path = job_paths(base_dir, job)
 
     # Condition 1: json exists
     json_ok = os.path.exists(json_path)
@@ -74,91 +53,202 @@ def check_job_ok(base_dirs, jobname):
                     if "Wrote output to: " in line:
                         out_ok = True
                         break
-        except Exception:
+        except Exception as e:
+            print(f"[checkJobs] Warning reading {out_path}: {e}", file=sys.stderr)
             out_ok = False
 
     return json_ok and err_ok and out_ok
 
+# --------------------- parse original submit ---------------------
+def parse_submit_for_mapping(submit_path: str) -> Tuple[str, Dict[str, str]]:
+    """
+    Parse the original submit file <submit_path>.
+
+    Returns (header_text, mapping) where:
+      - header_text is the content before the `queue LogFile, Args from (...)` block
+        (or a default header if not found).
+      - mapping is a dict LogFile -> Args (strings).
+    """
+    default_header = (
+        "universe = vanilla\n"
+        "executable = scripts/BFI.sh\n"
+        "should_transfer_files = YES\n"
+        "when_to_transfer_output = ON_EXIT\n"
+        "transfer_input_files = BFI_condor.x\n"
+        "request_cpus = 1\n"
+        "request_memory = 1 GB\n\n"
+    )
+
+    if not os.path.exists(submit_path):
+        # no submit file; return default header and empty mapping
+        return default_header, {}
+
+    content = open(submit_path, "r", errors="ignore").read()
+
+    # Try to capture header and queue block (LogFile, Args style)
+    m = re.search(r'(.*?)(?:\n|\r)+queue\s+LogFile\s*,\s*Args\s+from\s*\(\s*(.*?)\s*\)\s*',
+                  content, flags=re.S | re.I)
+    mapping = {}
+    if m:
+        header = m.group(1).rstrip() + "\n\n"
+        queue_block = m.group(2)
+        # Each line expected: <LogFileToken> "full args"
+        for raw_line in queue_block.strip().splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#"):
+                continue
+            # Try double-quoted args
+            mm = re.match(r'([^\s"]+)\s+"(.+)"\s*$', line)
+            if mm:
+                mapping[mm.group(1)] = mm.group(2)
+                continue
+            # Try single-quoted args
+            mm = re.match(r"([^\s']+)\s+'(.+)'\s*$", line)
+            if mm:
+                mapping[mm.group(1)] = mm.group(2)
+                continue
+            # Last-resort: split at first whitespace
+            parts = line.split(None, 1)
+            if len(parts) == 2:
+                mapping[parts[0]] = parts[1].strip().strip('"').strip("'")
+        return header, mapping
+
+    # Fallback: try to find any lines like `LogFileName "Args"` anywhere
+    lines = re.findall(r'^\s*([^\s"]+)\s+"([^"]+)"\s*$', content, flags=re.M)
+    if lines:
+        header = default_header
+        for name, args in lines:
+            mapping[name] = args
+        return header, mapping
+
+    # Nothing found: return default header and empty mapping
+    return default_header, {}
+
+# --------------------- resubmit file builder ---------------------
+def write_single_queue_resubmit(resubmit_path: str, header: str, mapping: Dict[str, str], failed_jobs: List[str]) -> None:
+    """
+    Write a single resubmit submit file with a common header and one queue block listing failed jobs.
+    Only jobs present in mapping will be included; others will be skipped (with a warning).
+    """
+    with open(resubmit_path, "w") as rf:
+        rf.write("# AUTO-GENERATED resubmit file\n")
+        rf.write("# header (copied from original submit if available)\n")
+        rf.write(header.rstrip() + "\n\n")
+
+        rf.write("queue LogFile, Args from (\n")
+        any_written = False
+        for j in failed_jobs:
+            if j not in mapping:
+                print(f"[checkJobs] Warning: original Args not found for job '{j}'; skipping it in resubmit file.", file=sys.stderr)
+                continue
+            argstr = mapping[j].replace('"', '\\"')
+            rf.write(f"{j} \"{argstr}\"\n")
+            any_written = True
+        rf.write(")\n")
+
+    if not any_written:
+        # If no jobs were written, remove file and raise
+        try:
+            os.remove(resubmit_path)
+        except Exception:
+            pass
+        raise RuntimeError("No failed jobs had an Args mapping; resubmit file not created.")
+
+# --------------------- main ---------------------
 def main():
     args = parse_args()
-
     submit_name = args.submit_name
-    root_dir = args.root_dir
-    base_dir = os.path.join(root_dir, submit_name)
+    base_dir = os.path.join(args.root_dir, submit_name)
 
-    log_dir  = os.path.join(base_dir, "log")
+    if not os.path.isdir(base_dir):
+        print(f"[checkJobs] ERROR: submission directory not found: {base_dir}", file=sys.stderr)
+        sys.exit(2)
+
+    json_dir = os.path.join(base_dir, "json")
     out_dir  = os.path.join(base_dir, "out")
     err_dir  = os.path.join(base_dir, "err")
-    json_dir = os.path.join(base_dir, "json")
     submit_path = os.path.join(base_dir, f"{submit_name}.sub")
 
-    # sanity checks
-    if not os.path.isdir(base_dir):
-        print(f"ERROR: submission directory does not exist: {base_dir}", file=sys.stderr)
-        sys.exit(2)
-    if not os.path.exists(submit_path):
-        print(f"ERROR: submit file not found: {submit_path}", file=sys.stderr)
-        sys.exit(2)
     if not os.path.isdir(json_dir):
-        print(f"ERROR: json directory not found: {json_dir}", file=sys.stderr)
+        print(f"[checkJobs] ERROR: json directory not found: {json_dir}", file=sys.stderr)
         sys.exit(2)
 
-    logfile_to_args = load_logfile_args(submit_path)
-    if not logfile_to_args:
-        print("WARNING: couldn't parse LogFile->Args mapping from submit file. Resubmits requiring exact args may be skipped.", file=sys.stderr)
+    # Find jobs by json files (consistent with earlier behaviour)
+    jobs = sorted([os.path.splitext(x)[0] for x in os.listdir(json_dir) if x.endswith(".json")])
 
-    # find all jobs based on json files
-    jobs = sorted([os.path.splitext(f)[0] for f in os.listdir(json_dir) if f.endswith(".json")])
+    if not jobs:
+        print(f"[checkJobs] No jobs (json/*.json) found in {json_dir}", file=sys.stderr)
+        sys.exit(1)
 
     successful = []
     failed = []
 
-    base_dirs = {"log": log_dir, "out": out_dir, "err": err_dir, "json": json_dir}
-
     for job in jobs:
-        ok = check_job_ok(base_dirs, job)
+        ok = check_job_ok(base_dir, job)
         if ok:
             successful.append(job)
         else:
             failed.append(job)
 
+    # Print summary
     print(f"Successful jobs ({len(successful)}):")
-    for j in successful:
-        print("  ", j)
+    for s in successful:
+        print("  ", s)
     print()
     print(f"Failed jobs ({len(failed)}):")
-    for j in failed:
-        print("  ", j)
+    for fjob in failed:
+        print("  ", fjob)
 
     if not failed:
         print("\nNo failed jobs to resubmit.")
-        return
+        sys.exit(0)
 
-    # Optionally clean partial json files for failed jobs
+    # Optionally clean partial jsons
     if args.clean_json:
-        for job in failed:
-            jp = os.path.join(json_dir, f"{job}.json")
+        for fjob in failed:
+            jp = os.path.join(json_dir, f"{fjob}.json")
             if os.path.exists(jp):
                 try:
                     os.remove(jp)
-                    print(f"Removed existing JSON: {jp}")
+                    print(f"[checkJobs] Removed partial JSON: {jp}")
                 except Exception as e:
-                    print(f"Warning: could not remove {jp}: {e}", file=sys.stderr)
+                    print(f"[checkJobs] Warning removing {jp}: {e}", file=sys.stderr)
 
-    # Build single resubmit file
+    # Parse original submit to get header + mapping
+    header, mapping = parse_submit_for_mapping(submit_path)
+    if not mapping:
+        print("[checkJobs] Warning: could not extract LogFile->Args mapping from original submit file."
+              " Jobs without a mapping will be skipped.", file=sys.stderr)
+
+    # Build resubmit file path
     resubmit_name = f"resubmit_failed_{submit_name}.sub"
     resubmit_path = os.path.join(base_dir, resubmit_name)
-    print(f"\nWriting resubmit file: {resubmit_path}")
 
-    with open(resubmit_path, "w") as rf:
-        rf.write("universe = vanilla\n")
-        rf.write("executable = scripts/BFI.sh\n")
-        rf.write("should_transfer_files = YES\n")
-        rf.write("when_to_transfer_output = ON_EXIT\n")
-        rf.write("transfer_input_files = BFI_condor.x\n")
-        rf.write("request_cpus = 1\n")
-        rf.write("request_memory = 1 GB\n\n")
+    try:
+        write_single_queue_resubmit(resubmit_path, header, mapping, failed)
+    except RuntimeError as e:
+        print(f"[checkJobs] ERROR: {e}", file=sys.stderr)
+        sys.exit(1)
 
-        for job in failed:
-            if job not in logfile_to_args:
+    print(f"\nResubmit file written: {resubmit_path}")
+
+    if args.no_submit:
+        print("[checkJobs] --no-submit specified: not calling condor_submit.")
+        sys.exit(0)
+
+    # Submit using cms environment
+    submit_cmd = f"source {args.cms_env} && condor_submit {resubmit_path}"
+    print(f"[checkJobs] Submitting resubmit file with:\n  {submit_cmd}\n")
+
+    proc = subprocess.run(submit_cmd, shell=True, executable="/bin/bash", capture_output=True, text=True)
+
+    if proc.returncode != 0:
+        print(f"[checkJobs] condor_submit failed with exit code {proc.returncode}", file=sys.stderr)
+        sys.exit(proc.returncode)
+
+    print("Resubmit submitted successfully.")
+    sys.exit(0)
+
+if __name__ == "__main__":
+    main()
 
