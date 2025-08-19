@@ -104,7 +104,7 @@ def generate_bins_from_shorthands():
     Returns mapping: bin_name -> { "cuts": ..., "lep-cuts": ..., "predefined-cuts": ... }
     """
     base_name = "TEST"
-    base_cuts = "Nlep>=2,MET>=150"
+    base_cuts = "Nlep>=2;MET>=150"
     predefined_cuts = "Cleaning"
     
     shorthands = [
@@ -116,7 +116,7 @@ def generate_bins_from_shorthands():
         ">=2Mu",
         ">=1Elec",
         "<1SSSF",
-        ">=1Muon"
+        ">=1Muon",
     ]
     
     sides = [
@@ -193,13 +193,26 @@ def main():
         #     "predefined-cuts": predefined cuts in src/BuildFitInput.cpp,
         # },
         "manualExample1": {
-            "cuts": "Nlep>=2,MET>=150,PTISR>=200",
+            "cuts": "Nlep>=2;MET>=150;PTISR>=200",
             "lep-cuts": ">=1OSSF",
             "predefined-cuts": "Cleaning",
         },
         "manualExample2": {
-            "cuts": "Nlep>=2,MET>=200,PTISR>=300",
-            "lep-cuts": ">1OSSF",
+            "cuts": "Nlep>=3;MET>=100;PTISR>=100",
+            "lep-cuts": (
+                ">=1OSSF_a|mass![3.1:3.8]|mass<65|DeltaR>0.4;"
+                ">=1OSSF_b|mass![20:90]|DeltaR<0.5;"
+                ">=1SSSF|mass>10"
+            ),
+            "predefined-cuts": "Cleaning;ZStar",
+        },
+        "manualExample3": {
+            "cuts": "Nlep>=4;MET>=50",
+            "lep-cuts": (
+                ">=2OSSF|mass>=60|mass<=120;"
+                ">=1OSOF|mass![80:100];"
+                ">=1SSOF|mass>10|DeltaR<0.3"
+            ),
             "predefined-cuts": "Cleaning",
         },
     }

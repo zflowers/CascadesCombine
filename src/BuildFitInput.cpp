@@ -251,15 +251,21 @@ std::string BuildFitInput::BuildLeptonCut(const std::string& shorthand_in, const
     // make a mutable copy
     std::string shorthand = shorthand_in;
 
-    // split comma-separated tokens (first token describes the count/type,
-    // remaining tokens are pair-level filters like mass<..., DeltaR>..., mass![a,b])
+    // split first token (count/type) from extraCuts using | instead of comma
     std::vector<std::string> tokens;
     {
-        std::stringstream ss(shorthand);
-        std::string tok;
-        while (std::getline(ss, tok, ',')) tokens.push_back(trim_copy(tok));
+        size_t sep = shorthand.find('|');
+        std::string first = (sep == std::string::npos) ? shorthand : shorthand.substr(0, sep);
+        std::string extras = (sep == std::string::npos) ? "" : shorthand.substr(sep+1);
+    
+        tokens.push_back(trim_copy(first));
+    
+        if (!extras.empty()) {
+            std::stringstream ss(extras);
+            std::string tok;
+            while (std::getline(ss, tok, '|')) tokens.push_back(trim_copy(tok));
+        }
     }
-    if (tokens.empty()) return "";
 
     std::string first = tokens[0];
     std::vector<std::string> extraCuts;

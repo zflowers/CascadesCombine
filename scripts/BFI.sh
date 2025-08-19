@@ -32,6 +32,7 @@ CUTS=""
 LEP_CUTS=""
 PREDEF_CUTS=""
 SIG_TYPE=""
+LUMI=""
 
 while [[ $# -gt 0 ]]; do
     key="$1"
@@ -43,6 +44,7 @@ while [[ $# -gt 0 ]]; do
         --lep-cuts) LEP_CUTS=$(clean_arg "$2"); shift; shift;;
         --predefined-cuts) PREDEF_CUTS=$(clean_arg "$2"); shift; shift;;
         --sig-type) SIG_TYPE=$(clean_arg "$2"); shift; shift;;
+        --lumi) LUMI=$(clean_arg "$2"); shift; shift;;
         *) echo "Unknown option $1"; shift;;
     esac
 done
@@ -57,6 +59,7 @@ CMD="./BFI_condor.x --bin \"$BIN\" --file \"$ROOTFILE\" --output \"$OUTPUT_JSON\
 [[ -n "$LEP_CUTS" ]] && CMD="$CMD --lep-cuts \"$LEP_CUTS\""
 [[ -n "$PREDEF_CUTS" ]] && CMD="$CMD --predefined-cuts \"$PREDEF_CUTS\""
 [[ -n "$SIG_TYPE" ]] && CMD="$CMD --sig-type $SIG_TYPE"
+[[ -n "$LUMI" ]] && CMD="$CMD --lumi $LUMI"
 
 # --- Echo and run ---
 echo "Running BFI_condor.x with arguments:"

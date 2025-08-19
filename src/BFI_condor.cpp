@@ -18,8 +18,8 @@
 static void usage(const char* me) {
     std::cerr << "Usage: " << me 
               << " --bin BINNAME --file ROOTFILE --output OUT.json "
-                 "[--cuts CUT1,CUT2,...] [--lep-cuts LEPCUT1,LEPCUT2,...] "
-                 "[--predefined-cuts NAME1,NAME2,...]\n\n";
+                 "[--cuts CUT1;CUT2;...] [--lep-cuts LEPCUT1;LEPCUT2;...] "
+                 "[--predefined-cuts NAME1;NAME2;...]\n\n";
 
     std::cerr << "Required arguments:\n";
     std::cerr << "  --bin        Name of the bin to process (e.g. TEST)\n";
@@ -27,12 +27,17 @@ static void usage(const char* me) {
     std::cerr << "  --output     Path to write partial JSON output\n\n";
 
     std::cerr << "Optional arguments:\n";
-    std::cerr << "  --cuts               Comma-separated list of normal tree cuts "
-                 "(e.g. MET>=150,PTISR>=250)\n";
-    std::cerr << "  --lep-cuts           Comma-separated list of cuts that should be "
-                 "passed to BuildLeptonCut (e.g. >=1OSSF,=2Pos)\n";
-    std::cerr << "  --predefined-cuts    Comma-separated list of predefined cuts by name "
-                 "(e.g. Cleaning,ZStar)\n";
+    std::cerr << "  --cuts               Semicolon-separated list of normal tree cuts "
+                 "(e.g. MET>=150;PTISR>=250). If no semicolon is present, commas are "
+                 "accepted for backwards compatibility (e.g. MET>=150,PTISR>=250).\n";
+    std::cerr << "  --lep-cuts           Semicolon-separated list of cuts that should be "
+                 "passed to BuildLeptonCut. Each element may contain commas for "
+                 "pair-level extraCuts (e.g. \n"
+                 "                       \">=1OSSF,mass>=80,mass<=100,DeltaR<0.4;"
+                 ">=1SSSF,mass![70,110]\"). If no semicolon is present, comma-only "
+                 "lists are accepted for backwards compatibility.\n";
+    std::cerr << "  --predefined-cuts    Semicolon-separated list of predefined cuts by name "
+                 "(e.g. Cleaning;ZStar). If no semicolon is present, commas are accepted.\n";
     std::cerr << "  --help               Display this help message\n";
 }
 
@@ -217,21 +222,38 @@ int main(int argc, char** argv) {
     try { BFI = new BuildFitInput(); }
     catch (...) { std::cerr << "[BFI_condor] Failed to construct BuildFitInput\n"; return 3; }
 
-    // helper to split CSV -> vector<string>
-    auto splitString = [](const std::string& s, char delim) -> std::vector<std::string> {
+    // helper to split top-level lists:
+    // - prefer semicolon ';' as the separator
+    // - if no semicolon present, fall back to comma ',' for backwards compatibility
+    // - trims whitespace from tokens
+    auto splitTopLevel = [](const std::string& s) -> std::vector<std::string> {
+        auto trim = [](std::string str) -> std::string {
+            const char* ws = " \t\n\r\f\v";
+            size_t start = str.find_first_not_of(ws);
+            if (start == std::string::npos) return "";
+            size_t end = str.find_last_not_of(ws);
+            return str.substr(start, end - start + 1);
+        };
+
         std::vector<std::string> elems;
         if (s.empty()) return elems;
+
+        // prefer semicolon; if none found, fall back to comma
+        char delim = (s.find(';') != std::string::npos) ? ';' : ',';
+
         std::stringstream ss(s);
         std::string item;
         while (std::getline(ss, item, delim)) {
-            if (!item.empty()) elems.push_back(item);
+            std::string t = trim(item);
+            if (!t.empty()) elems.push_back(t);
         }
         return elems;
     };
 
-    std::vector<std::string> cutsVec    = splitString(cutsStr, ',');
-    std::vector<std::string> lepCutsVec = splitString(lepCutsStr, ',');
-    std::vector<std::string> predefCutsVec = splitString(predefCutsStr, ',');
+    // Use the new splitter for all three top-level lists
+    std::vector<std::string> cutsVec    = splitTopLevel(cutsStr);
+    std::vector<std::string> lepCutsVec = splitTopLevel(lepCutsStr);
+    std::vector<std::string> predefCutsVec = splitTopLevel(predefCutsStr);
 
     // Build finalCuts using BFI (builds lepton cuts and maps predefined cuts)
     std::vector<std::string> finalCuts;

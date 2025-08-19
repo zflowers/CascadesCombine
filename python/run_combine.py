@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import subprocess, time, glob, os, sys
+import subprocess, time, glob, os, sys, time
 from CondorJobCountMonitor import CondorJobCountMonitor
 
 def build_binaries():
@@ -62,6 +62,7 @@ def get_output_dir():
     return output_dir
 
 def main():
+    start_time = time.time()
 
     # 1) Compile framework
     print("Building binaries...", flush=True)
@@ -69,7 +70,7 @@ def main():
 
     # 2) Submit jobs and generate master_merge.sh
     print("Submitting jobs...", flush=True)
-    submit_jobs(stress_test=True)
+    submit_jobs(stress_test=False)
 
     # 3) Wait for jobs to finish
     print("Waiting for condor jobs", flush=True)
@@ -94,6 +95,17 @@ def main():
     subprocess.run(["python3", "-u", "macro/CollectSignificance.py", output_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
 
     print("All steps completed.", flush=True)
+    # end time
+    end_time = time.time()
+
+    # total time in seconds
+    total_time_seconds = end_time - start_time
+    # total time in minutes
+    total_time_minutes = total_time_seconds / 60
+    # total time in hours
+    total_time_hours = total_time_minutes / 60
+    
+    print("Total time: {0:.2f} seconds = {1:.2f} minutes = {2:.2f} hours".format(total_time_seconds, total_time_minutes, total_time_hours))
 
 if __name__ == "__main__":
     main()
