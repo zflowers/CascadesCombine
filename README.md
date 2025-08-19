@@ -2,7 +2,7 @@
 An RDataframe interface to go from TTree skims to combine datacards and fits
 
 ### Build instructions
-BFI - can work locally just update sample tool constructor prefix accordingly (to find you files)
+BFI - can work locally just update sample tool constructor prefix accordingly (to find your files)
 
 BFI/BF - designed for el9 on LPC due to constraints from Combine
 
@@ -15,6 +15,10 @@ LPC build
 export SCRAM_ARCH=el9_amd64_gcc12
 source /cvmfs/cms.cern.ch/cmsset_default.sh
 source /cvmfs/cms.cern.ch/crab3/crab.sh
+```
+I set up the following alias that I run whenever I login and want to use this tool:
+```
+alias setup_combine='export SCRAM_ARCH=el9_amd64_gcc12 && cd /uscms/home/z374f439/nobackup/CMSSW_14_1_0_pre4/src/CascadesCombine/ && cmsenv'
 ```
 
 The combine version is v10
@@ -49,24 +53,49 @@ Also clone this into the CMSSW src
 `git clone git@github.com:zflowers/CascadesCombine.git`
 
 
-When everything is cloned and scram b'd go into the LLPCombine directory
+When everything is cloned and scram b'd go into the LLPCombine directory and compile everything
+```
+make clean
+make all -j 8
+```
 
-to make BFI step do `make` to make the BF step do `make cmssw`
-
-the binaries to run are then just `BFI.x` and `BF.x`
+### Workflow Super TLDR;
+- Setup bins in python/submitJobs.py
+- call python3 python/run_combine.py to do everything
+- alias to run in bkg: 
+```
+nohup python3 python/run_combine.py > debug_run_combine.debug 2>&1 &
+```
 
 ### Workflow TLDR;
-- main.cpp is where BFI's are set up
+- src/main.cpp is where BFI's are set up
   - load all the necessary bkgs and signals from sample tool
   - define strings to create (cut) your signal bin
   - `BFI->ReportRegions(0)` launches the event loop
   - Write the results to a json
-- JSON is the intermediate BFI format
+  - Relatively slow for the cascades analysis due to various factors (skim size, xrootd, etc.)
+- src/JSON is the intermediate BFI format
   - the JSON mapping is dictionary-like BINNAME[ PROCESS[ YIELDS]]
   - the process are background or signal by name
   - the yields are a vector of 3 quantities, {base_events, weighted_events, statistical_error}
-- BFmain.cpp is what sets up datacards
-  - define your input json and datacard output directory here
+- src/BFI_condor.cpp is what is used for the CASCADES
+  - runs a BFI job to create the JSON for each file in SampleTool
+  - the bin name is a user defined name that maps to various cuts
+  - different types of cuts are loaded in using strings
+- python/createJobs.py
+  - creates a condor submission script and working directory folders in condor/
+  - keyed off of the bin name
+  - submits all jobs for each file for a given bin
+- python/submitJobs.py
+  - actual user submission script
+  - use this to load up your cut strings (examples inside)
+  - run to make calls to createJobs for each bin
+- src/flattenJSONs.cpp & src/mergeJSONs.cpp
+  - helpers to merge JSON outputs from BFI_condor.cpp
+  - createJobs and submitJobs automatically creates .sh scripts with relevant commands for calling mergers
+  - submitJobs also places a master_merge file in the condor/ dir for a one bash call script
+- src/BFmain.cpp is what sets up datacards
+  - define your input json and datacard output directory here or pass with command line
   - additional systematics can be constructed in BuildFit.cpp
   - This BF design avoids shapes templates and ROOT histograms -- we do everything by hand, which is way faster
 - running combine macro

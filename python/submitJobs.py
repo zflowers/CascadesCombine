@@ -109,20 +109,20 @@ def generate_bins_from_shorthands():
     
     shorthands = [
         "=0Bronze",
-        #"=2Pos",
-        #"=2Gold",
-        #">=1OSSF",
-        #"=1SSOF",
-        # ">=2Mu",
-        #">=1Elec",
-        #"<1SSSF",
-        # ">=1Muon"
+        "=2Pos",
+        "=2Gold",
+        ">=1OSSF",
+        "=1SSOF",
+        ">=2Mu",
+        ">=1Elec",
+        "<1SSSF",
+        ">=1Muon"
     ]
     
     sides = [
         "",
-        #"a",
-        #"b"
+        "a",
+        "b"
     ]
     
     generated = {}
