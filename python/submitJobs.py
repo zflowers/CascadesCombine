@@ -20,9 +20,6 @@ memory = "1 GB"
 dryrun = False
 stress_test = False
 
-# Use template-generated bins. Comment the generate call below to disable.
-use_generate_from_shorthand = True
-
 # Maximum concurrent submissions
 max_workers = 4
 
@@ -142,12 +139,11 @@ def main():
     bins.update(manual_bins)
     
     # Templated bins
-    if use_generate_from_shorthand:
+    if stress_test:
         gen = generate_bins_from_shorthands()
         for k, v in gen.items():
             if k in bins:
-                if stress_test:
-                    print(f"[TEMPLATE SKIP] Generated bin '{k}' collides with manual bin; skipping.")
+                print(f"[TEMPLATE SKIP] Generated bin '{k}' collides with manual bin; skipping.")
                 continue
             bins[k] = v
     
@@ -167,7 +163,7 @@ def main():
     
     # Summary
     total_jobs = len(jobs)
-    print(f"Prepared {total_jobs} job(s) for submission.")
+    print(f"Prepared {total_jobs} bin(s) for submission.")
     if dryrun:
         print("Dry-run mode enabled: no jobs will actually be submitted.")
     if limit_submit is not None:
