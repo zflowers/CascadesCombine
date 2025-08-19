@@ -16,10 +16,6 @@ else
     exit 1
 fi
 
-# --- X509 proxy ---
-echo "Using proxy: $X509_USER_PROXY"
-export X509_USER_PROXY=$X509_USER_PROXY
-
 # --- Make sure executable is runnable ---
 chmod +x BFI_condor.x
 
@@ -64,6 +60,5 @@ CMD="./BFI_condor.x --bin \"$BIN\" --file \"$ROOTFILE\" --output \"$OUTPUT_JSON\
 # --- Echo and run ---
 echo "Running BFI_condor.x with arguments:"
 echo "$CMD"
-eval $CMD
+eval stdbuf -oL -eL $CMD
 echo "[$(date)] Job finished."
-

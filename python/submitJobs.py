@@ -138,10 +138,9 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="8 GB", dryrun=False):
 
         local_json = (json_dir / f"{base}.json").as_posix()
 
-        for r in remote_json:
-            if r not in seen_remotes:
-                transfer_outputs.append(r)
-                seen_remotes.add(r)
+        if remote_json not in seen_remotes:
+            transfer_outputs.append(remote_json)
+            seen_remotes.add(remote_json)
 
         transfer_remaps.append(f"{remote_json} = {local_json}")
 
