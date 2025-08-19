@@ -6,3 +6,6 @@ datacards*
 *.debug
 json/*
 condor/logs/*
+output/*
+libs/
+obj/

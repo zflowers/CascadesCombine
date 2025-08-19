@@ -1,6 +1,4 @@
 #!/bin/bash
-# Wrapper for HTCondor job at LPC
-
 echo "[$(date)] Starting job on $(hostname)"
 echo "[$(date)] Working directory: $(pwd)"
 
@@ -26,12 +24,57 @@ echo "Using proxy: $X509_USER_PROXY"
 export X509_USER_PROXY=$X509_USER_PROXY
 
 # Make sure executable is runnable
-chmod +x BFI.x
+chmod +x BFI_condor.x
 mkdir -p json/
 
-# Run the executable
-echo "Running BFI.x"
-stdbuf -oL -eL ./BFI.x 2>&1 | tee BFI.debug
+# --- Helper to clean arguments ---
+clean_arg() {
+    # Remove newlines, carriage returns, and leading/trailing whitespace
+    echo "$1" | tr -d '\n' | tr -d '\r' | xargs
+}
+
+# Parse arguments from "$@" manually to handle Condor quoting
+BIN=""
+ROOTFILE=""
+OUTPUT_JSON=""
+CUTS=""
+LEP_CUTS=""
+PREDEF_CUTS=""
+
+while [[ $# -gt 0 ]]; do
+    key="$1"
+    case $key in
+        --bin)
+            BIN=$(clean_arg "$2"); shift; shift;;
+        --file)
+            ROOTFILE=$(clean_arg "$2"); shift; shift;;
+        --output)
+            OUTPUT_JSON=$(clean_arg "$2"); shift; shift;;
+        --cuts)
+            CUTS=$(clean_arg "$2"); shift; shift;;
+        --lep-cuts)
+            LEP_CUTS=$(clean_arg "$2"); shift; shift;;
+        --predefined-cuts)
+            PREDEF_CUTS=$(clean_arg "$2"); shift; shift;;
+        *)
+            echo "Unknown option $1"; shift;;
+    esac
+done
+
+# Ensure json/ exists
+mkdir -p json
+
+CMD="./BFI_condor.x --bin \"$BIN\" --file \"$ROOTFILE\" --output \"$OUTPUT_JSON\""
+[[ -n "$CUTS" ]] && CMD="$CMD --cuts \"$CUTS\""
+[[ -n "$LEP_CUTS" ]] && CMD="$CMD --lep-cuts \"$LEP_CUTS\""
+[[ -n "$PREDEF_CUTS" ]] && CMD="$CMD --predefined-cuts \"$PREDEF_CUTS\""
+
+# Echo and run
+echo "Running BFI_condor.x with arguments:"
+echo "$CMD"
+
+# Use eval to preserve the quotes
+eval stdbuf -oL -eL $CMD 2>&1 | tee BFI_condor.debug
 
 echo "[$(date)] Job finished."
 
