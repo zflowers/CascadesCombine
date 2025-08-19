@@ -9,4 +9,4 @@ condor/logs/
 output/*
 libs/
 obj/
-condor/submit/
+condor/

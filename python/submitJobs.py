@@ -34,7 +34,7 @@ CONDOR_DIR.mkdir(exist_ok=True)
 
 CONDOR_HEADER = """
 universe                = vanilla
-executable              = condor/BFI.sh
+executable              = scripts/BFI.sh
 
 should_transfer_files   = YES
 when_to_transfer_output = ON_EXIT
@@ -112,7 +112,7 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="8 GB", dryrun=False):
     json_dir = bin_dir / "json"
 
     for d in (log_dir, out_dir, err_dir, json_dir):
-        d.mkdir(exist_ok=True, parents=True)
+        d.mkdir(parents=True, exist_ok=True)
 
     submit_path = bin_dir / f"{bin_safe}.sub"
 
@@ -120,29 +120,24 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="8 GB", dryrun=False):
     header = CONDOR_HEADER.format(cpus=cpus, memory=memory)
     submit_lines = [header]
 
-    # Use $(LogFile) for log, stdout, stderr
+    # Log, stdout, stderr
     submit_lines.append(f"log    = {log_dir}/$(LogFile).log")
     submit_lines.append(f"output = {out_dir}/$(LogFile).out")
     submit_lines.append(f"error  = {err_dir}/$(LogFile).err")
 
-    # Build transfer outputs/remaps
+    # Build transfer output and remaps
     transfer_outputs = []
     transfer_remaps = []
-    seen_remotes = set()
+    seen = set()
     for job in jobs:
-        ds = job["dataset"]
-        fname_stem = job["fname_stem"]
-        base = sanitize(f"{bin_name}_{ds}_{fname_stem}")
-
-        remote_json = f"{json_dir}/{base}.json"
-
+        base = sanitize(f"{bin_name}_{job['dataset']}_{job['fname_stem']}")
+        remote_json = f"{base}.json"  # always written in container's ./ directory
         local_json = (json_dir / f"{base}.json").as_posix()
 
-        if remote_json not in seen_remotes:
+        if remote_json not in seen:
             transfer_outputs.append(remote_json)
-            seen_remotes.add(remote_json)
-
-        transfer_remaps.append(f"{remote_json} = {local_json}")
+            transfer_remaps.append(f"{remote_json} = {local_json}")
+            seen.add(remote_json)
 
     if transfer_outputs:
         submit_lines.append(f"transfer_output_files = {','.join(transfer_outputs)}")
@@ -159,7 +154,7 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="8 GB", dryrun=False):
         sig_type = job.get("sig_type", None)
 
         base = sanitize(f"{bin_name}_{ds}_{fname_stem}")
-        remote_json = f"{json_dir}/{base}.json"
+        remote_json = f"./{base}.json"  # container writes here
 
         args_list = [
             f"--bin {bin_name}",
@@ -211,7 +206,7 @@ def main():
     parser.add_argument("--lep-cuts", default=">=1OSSF")
     parser.add_argument("--predefined-cuts", default="Cleaning")
     parser.add_argument("--cpus", default="1")
-    parser.add_argument("--memory", default="8 GB")
+    parser.add_argument("--memory", default="1 GB")
     parser.add_argument("--dryrun", "--dry-run", action="store_true")
     args = parser.parse_args()
 

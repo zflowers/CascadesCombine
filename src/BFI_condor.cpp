@@ -204,7 +204,7 @@ int main(int argc, char** argv) {
                                                         : "SMS")
                                : sampleName;
 
-        outputJsonPath = "json/" + binName + "_" + sampleId + ".json";
+        outputJsonPath = binName + "_" + sampleId + ".json";
     }
 
     if (binName.empty() || rootFilePath.empty() || outputJsonPath.empty()) {
