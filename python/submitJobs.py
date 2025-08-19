@@ -13,10 +13,9 @@ def load_pybind_module(module_name, folder):
     spec.loader.exec_module(mod)
     return mod
 
-libs_dir = Path(__file__).parent.parent / "libs"  # go up one level
+libs_dir = Path(__file__).parent.parent / "libs"
 pySampleTool = load_pybind_module("pySampleTool", libs_dir)
 
-# --- configuration ---
 LOG_DIR = Path("condor/logs")
 JSON_DIR = Path("json")
 SUBMIT_DIR = Path("condor/submit")
@@ -24,21 +23,13 @@ LOG_DIR.mkdir(parents=True, exist_ok=True)
 JSON_DIR.mkdir(parents=True, exist_ok=True)
 SUBMIT_DIR.mkdir(parents=True, exist_ok=True)
 
-CONDOR_TEMPLATE = """
+CONDOR_HEADER = """
 universe                = vanilla
 executable              = condor/BFI.sh
-arguments               = {arguments}
-
-log                     = {log_file}
-output                  = {out_file}
-error                   = {err_file}
 
 should_transfer_files   = YES
 when_to_transfer_output = ON_EXIT
 transfer_input_files    = BFI_condor.x
-
-transfer_output_files   = {transfer_outputs}
-transfer_output_remaps  = "{transfer_remaps}"
 
 request_cpus            = {cpus}
 request_memory          = {memory}
@@ -56,113 +47,151 @@ periodic_release = (HoldReasonCode == 12 && HoldReasonSubCode == 256) || \\
 
 use_x509userproxy       = True
 getenv                  = True
-
-queue
 """
 
-def make_jobname_and_submit_path(bin_name, dataset_name, filepath, submit_dir=SUBMIT_DIR):
-    """Return a sanitized jobname and the Path to the submit file with .sub extension."""
-    fname = Path(filepath).stem          # drops .root
-    jobname_raw = f"{bin_name}_{dataset_name}_{fname}"
-    jobname_safe = sanitize(jobname_raw)
-    submit_path = submit_dir / f"{jobname_safe}.sub"
-    return jobname_safe, submit_path
-
-# sanitize a string to be safe for filenames/condor names
 def sanitize(s):
     s = re.sub(r'[^A-Za-z0-9_.-]', '_', s)
-    return s[:200]  # avoid extremely long names
+    return s[:200]
 
-def write_and_submit(jobname, arguments, cpus="1", memory="8 GB", dryrun=False):
-    jobname_safe = sanitize(jobname)
-    log_file = LOG_DIR / f"{jobname_safe}.log"
-    out_file = LOG_DIR / f"{jobname_safe}.out"
-    err_file = LOG_DIR / f"{jobname_safe}.err"
-    json_file = JSON_DIR / f"{jobname_safe}.json"
+def build_jobs(tool, bin_name, cuts, lep_cuts, predef_cuts):
+    jobs = []
+    for ds, files in tool.BkgDict.items():
+        for fpath in files:
+            fname_stem = Path(fpath).stem
+            jobs.append({
+                "dataset": ds,
+                "filepath": fpath,
+                "fname_stem": fname_stem,
+                "cuts": cuts,
+                "lep_cuts": lep_cuts,
+                "predef_cuts": predef_cuts
+            })
+    for ds, files in tool.SigDict.items():
+        for fpath in files:
+            fname_stem = Path(fpath).stem
+            sig_type = None
+            if "Cascades" in fpath:
+                sig_type = "cascades"
+            elif "SMS" in fpath:
+                sig_type = "sms"
+            jobs.append({
+                "dataset": ds,
+                "filepath": fpath,
+                "fname_stem": fname_stem,
+                "cuts": cuts,
+                "lep_cuts": lep_cuts,
+                "predef_cuts": predef_cuts,
+                "sig_type": sig_type
+            })
+    return jobs
 
-    # Unique debug file for this job
-    debug_file = LOG_DIR / f"{json_file.stem}.debug"
+def write_submit_file(bin_name, jobs, cpus="1", memory="8 GB", dryrun=False):
+    bin_safe = sanitize(bin_name)
+    submit_path = SUBMIT_DIR / f"{bin_safe}.sub"
+
+    header = CONDOR_HEADER.format(cpus=cpus, memory=memory)
+
+    transfer_outputs = []
+    transfer_remaps = []
+    submit_lines = [header]
+
+    # --- Build the inline job list with unique log/output/error/debug/json per job ---
+    submit_lines.append("# Inline job list with unique log/output/error/debug/json per job")
+    submit_lines.append("queue LogFile, OutFile, ErrFile, Args from (")
     
-    # Condor transfer setup
-    transfer_outputs = f"{debug_file.name},json/{json_file.name}"
-    transfer_remaps = f"{debug_file.name} = {debug_file}; {json_file.name} = {json_file}"
+    for job in jobs:
+        ds = job["dataset"]
+        fpath = job["filepath"]
+        fname_stem = job["fname_stem"]
+        sig_type = job.get("sig_type", None)
+    
+        # Unique job name
+        jobname_safe = sanitize(f"{bin_name}_{ds}_{fname_stem}")
+    
+        # Remote paths (relative to execute dir) used in BFI.sh
+        remote_json = f"json/{bin_name}_{ds}_{fname_stem}.json"
+        remote_debug = f"condor/logs/{jobname_safe}.debug"
+    
+        # Local paths on submit host for transfer remaps
+        local_json = JSON_DIR / f"{bin_name}_{ds}_{fname_stem}.json"
+        local_debug = LOG_DIR / f"{jobname_safe}.debug"
+    
+        # Add to global transfer lists
+        transfer_outputs.extend([remote_json, remote_debug])
+        transfer_remaps.extend([
+            f"{remote_json} = {local_json}",
+            f"{remote_debug} = {local_debug}"
+        ])
+    
+        # Per-job log/out/err paths
+        log_file = f"condor/logs/{jobname_safe}.log"
+        out_file = f"condor/logs/{jobname_safe}.out"
+        err_file = f"condor/logs/{jobname_safe}.err"
+    
+        # Build arguments string for this job (properly quoted)
+        args_list = [
+            f'--bin {bin_name}',
+            f'--file {fpath}',
+            f'--output {remote_json}',
+            f'--cuts {job.get("cuts","")}',
+            f'--lep-cuts {job.get("lep_cuts","")}',
+            f'--predefined-cuts {job.get("predef_cuts","")}'
+        ]
+        if sig_type:
+            args_list.append(f'--sig-type {sig_type}')
+        args_str = " ".join(args_list)
+    
+        # Add one line per job to the inline queue
+        submit_lines.append(f'"{log_file}" "{out_file}" "{err_file}" "{args_str}"')
+    
+    submit_lines.append(")")  # close the inline queue
 
-    submit_content = CONDOR_TEMPLATE.format(
-        arguments=arguments,
-        log_file=log_file,
-        out_file=out_file,
-        err_file=err_file,
-        transfer_outputs=transfer_outputs,
-        transfer_remaps=transfer_remaps,
-        cpus=cpus,
-        memory=memory
-    )
+    # Add transfer output directives
+    transfer_outputs_str = ",".join(transfer_outputs)
+    transfer_remaps_str = "; ".join(transfer_remaps)
+    submit_lines.insert(1, f"transfer_output_files = {transfer_outputs_str}")
+    submit_lines.insert(2, f'transfer_output_remaps = "{transfer_remaps_str}"')
 
-    submit_path = SUBMIT_DIR / f"{jobname_safe}.sub"
+    submit_content = "\n".join(submit_lines) + "\n"
     submit_path.write_text(submit_content)
     print(f"Wrote submit file: {submit_path}")
-    # submit
+
     if not dryrun:
-        proc = subprocess.run(["condor_submit", str(submit_path)], capture_output=True, text=True)
+        proc = subprocess.run(
+            f"source /cvmfs/cms.cern.ch/cmsset_default.sh && condor_submit {submit_path}",
+            shell=True,
+            executable="/bin/bash",
+            capture_output=True,
+            text=True
+        )
         if proc.returncode != 0:
             print("condor_submit failed:", proc.stderr)
         else:
-            print("Submitted:", jobname_safe)
+            print(f"Submitted bin {bin_name} ({len(jobs)} jobs)")
 
 def main():
     bkglist = ["ttbar", "ST", "DY", "ZInv", "DBTB", "QCD", "Wjets"]
-    siglist = ["Cascades"]  # or ["SMS_Gluinos"] for SMS
+    siglist = ["Cascades"]
 
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--bkg_datasets",
-        nargs="+",
-        default=bkglist,
-        help="Bkg dataset names to query via SampleTool (exact names known to SampleTool)"
-    )
-    parser.add_argument(
-        "--sig_datasets",
-        nargs="+",
-        default=siglist,
-        help="Sig dataset names to query via SampleTool (exact names known to SampleTool)"
-    )
-    parser.add_argument("--bin", default="TEST", help="--bin argument to pass to BFI")
-    parser.add_argument("--cuts", default="Nlep>=2,MET>=150", help="--cuts")
-    parser.add_argument("--lep-cuts", default=">=1OSSF", help="--lep-cuts")
-    parser.add_argument("--predefined-cuts", default="Cleaning", help="--predefined-cuts")
+    parser.add_argument("--bkg_datasets", nargs="+", default=bkglist)
+    parser.add_argument("--sig_datasets", nargs="+", default=siglist)
+    parser.add_argument("--bin", default="TEST")
+    parser.add_argument("--cuts", default="Nlep>=2,MET>=150")
+    parser.add_argument("--lep-cuts", default=">=1OSSF")
+    parser.add_argument("--predefined-cuts", default="Cleaning")
     parser.add_argument("--cpus", default="1")
     parser.add_argument("--memory", default="8 GB")
-    parser.add_argument("--dryrun", "--dry-run", action="store_true", help="Do not call condor_submit")
+    parser.add_argument("--dryrun", "--dry-run", action="store_true")
     args = parser.parse_args()
 
     tool = pySampleTool.SampleTool()
     tool.LoadBkgs(args.bkg_datasets)
     tool.LoadSigs(args.sig_datasets)
-    # Bkg loop
-    for ds, files in tool.BkgDict.items():
-        for fpath in files:
-            jobname_safe, submit_path = make_jobname_and_submit_path(args.bin, ds, fpath)
-            json_file = JSON_DIR / f"{args.bin}_{ds}_{Path(fpath).stem}.json"
-            arguments = (
-                f"--bin {args.bin} --file {fpath} --output {json_file} "
-                f"--cuts {args.cuts} --lep-cuts {args.lep_cuts} --predefined-cuts {args.predefined_cuts} "
-            )
-            write_and_submit(jobname_safe, arguments, cpus=args.cpus, memory=args.memory, dryrun=args.dryrun)
-    
-    # Sig loop
-    for ds, files in tool.SigDict.items():
-        for fpath in files:
-            jobname_safe, submit_path = make_jobname_and_submit_path(args.bin, ds, fpath)
-            json_file = JSON_DIR / f"{args.bin}_{ds}_{Path(fpath).stem}.json"
-            arguments = (
-                f"--bin {args.bin} --file {fpath} --output {json_file} "
-                f"--cuts {args.cuts} --lep-cuts {args.lep_cuts} --predefined-cuts {args.predefined_cuts} "
-            )
-            if "Cascades" in fpath:
-                arguments += "--sig-type cascades"
-            elif "SMS" in fpath:
-                arguments += "--sig-type sms"
-            write_and_submit(jobname_safe, arguments, cpus=args.cpus, memory=args.memory, dryrun=args.dryrun)
+
+    jobs = build_jobs(tool, args.bin, args.cuts, args.lep_cuts, args.predefined_cuts)
+    write_submit_file(args.bin, jobs, cpus=args.cpus, memory=args.memory, dryrun=args.dryrun)
 
 if __name__ == "__main__":
     main()
+
