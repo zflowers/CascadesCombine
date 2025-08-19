@@ -133,7 +133,8 @@ SampleTool::SampleTool(){
   };
 
 }
-void SampleTool::LoadBkgs( stringlist& bkglist ){
+
+void SampleTool::LoadBkgs( const stringlist& bkglist ){
 	for( long unsigned int i=0; i<bkglist.size(); i++){
 		//check if background exists
 		if( MasterDict.count(bkglist[i]) == 0 ){
@@ -143,7 +144,7 @@ void SampleTool::LoadBkgs( stringlist& bkglist ){
 		BkgDict[bkglist[i]] = MasterDict[bkglist[i]];		
 	}
 }
-void SampleTool::LoadSigs( stringlist& siglist ){
+void SampleTool::LoadSigs( const stringlist& siglist ){
 
 	for( long unsigned int i=0; i<siglist.size(); i++){
 		if( MasterDict.count(siglist[i]) == 0 ){
@@ -168,6 +169,31 @@ void SampleTool::LoadSigs( stringlist& siglist ){
 		}
 	}
 }
+
+void SampleTool::LoadAllBkgs() {
+    std::vector<std::string> allBkgs = {"ttbar","ST","DY","ZInv","DBTB","QCD","Wjets"};
+    LoadBkgs(allBkgs);
+}
+
+void SampleTool::LoadAllSigs() {
+    std::vector<std::string> allSigs = {"Cascades","SMS_Gluinos","SMS_TChiWZ"};
+    LoadSigs(allSigs);
+}
+
+void SampleTool::LoadAllFromMaster() {
+    for (const auto &kv : MasterDict) {
+        const std::string &group = kv.first;
+        const stringlist &files = kv.second;
+
+        // Rule: treat "Cascades" or anything containing "SMS" as signal
+        if (group == "Cascades" || group.find("SMS") != std::string::npos) {
+            SigDict[group] = files;
+        } else {
+            BkgDict[group] = files;
+        }
+    }
+}
+
 void SampleTool::PrintDict( map<string,stringlist>& d ){
 	for(auto it = d.cbegin(); it != d.cend(); ++it){
  	std::cout << "key:"<< it->first << ":\n";

@@ -17,11 +17,13 @@ class SampleTool{
 	map <string, stringlist> MasterDict{};
 
 	stringlist SignalKeys{};
-	
-	
-	void LoadBkgs( stringlist& bkglist );
-	void LoadSigs( stringlist& siglist );
-	
+		
+	void LoadBkgs( const stringlist& bkglist );
+	void LoadSigs( const stringlist& siglist );
+	void LoadAllBkgs();
+    	void LoadAllSigs();
+	void LoadAllFromMaster();
+
 	SampleTool();
 	
 	void PrintDict( map<string, stringlist>& d );

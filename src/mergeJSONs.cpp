@@ -15,37 +15,29 @@ using json = nlohmann::json;
 using stringlist = std::vector<std::string>;
 namespace fs = std::filesystem;
 
-// Helper: pick canonical group name using SampleTool
-static std::string resolveGroup(SampleTool &ST, const std::string &key, const std::string &repFile) {
-    for (const auto &kv : ST.BkgDict) {
-        const auto &group = kv.first;
-        for (const auto &entry : kv.second) {
-            if (entry.find(key) != std::string::npos) return group;
-        }
-    }
-    for (const auto &kv : ST.SigDict) {
-        const auto &group = kv.first;
-        for (const auto &entry : kv.second) {
-            if (entry.find(key) != std::string::npos) return group;
-        }
-    }
-    return key; // fallback
-}
-
 bool mergeJSONsFlattenedWithFileBreakdown(const std::vector<std::string> &inputFiles,
                                           const std::string &outMergedFile,
                                           const std::string &outFilesFile = "")
 {
     SampleTool ST;
-    stringlist bkglist = {"ttbar","ST","DY","ZInv","DBTB","QCD","Wjets"};
-    stringlist siglist = {"Cascades"};
-    ST.LoadBkgs(bkglist);
-    ST.LoadSigs(siglist);
+    ST.LoadAllFromMaster();
 
-    // bin -> sample -> [count,sumW,err^2]
+    // --- Build a fast key -> canonical group map ---
+    std::map<std::string,std::string> keyToGroup;
+    for (const auto &kv : ST.BkgDict)
+        for (const auto &entry : kv.second)
+            keyToGroup[entry] = kv.first;
+    for (const auto &kv : ST.SigDict)
+        for (const auto &entry : kv.second)
+            keyToGroup[entry] = kv.first;
+
+    auto resolveGroupFast = [&keyToGroup](const std::string &key) -> std::string {
+        auto it = keyToGroup.find(key);
+        if (it != keyToGroup.end()) return it->second;
+        return key; // fallback
+    };
+
     std::map<std::string, std::map<std::string,std::array<double,3>>> merged;
-
-    // bin -> sample -> file -> [count,sumW,err^2]
     std::map<std::string, std::map<std::string,std::map<std::string,std::array<double,3>>>> filesBreakdown;
 
     for (const auto &fname : inputFiles) {
@@ -69,11 +61,10 @@ bool mergeJSONsFlattenedWithFileBreakdown(const std::vector<std::string> &inputF
                 const json &sampleObj = sampleItem.value();
 
                 std::string repFile;
-                if (sampleObj.contains("files") && !sampleObj["files"].empty()) {
+                if (sampleObj.contains("files") && !sampleObj["files"].empty())
                     repFile = sampleObj["files"].begin().key();
-                }
 
-                std::string group = resolveGroup(ST, origKey, repFile);
+                std::string group = resolveGroupFast(origKey);
 
                 double cnt  = sampleObj["totals"][0].get<double>();
                 double sumW = sampleObj["totals"][1].get<double>();
