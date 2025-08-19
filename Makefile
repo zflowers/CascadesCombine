@@ -25,6 +25,7 @@ SRCS = $(SRC_DIR)/main.cpp $(SRC_DIR)/SampleTool.cpp $(SRC_DIR)/BuildFitInput.cp
 SRCS_CONDOR = $(SRC_DIR)/BFI_condor.cpp $(SRC_DIR)/SampleTool.cpp $(SRC_DIR)/BuildFitInput.cpp $(SRC_DIR)/JSONFactory.cpp
 CMSSWSRCS = $(SRC_DIR)/BFmain.cpp $(SRC_DIR)/BuildFit.cpp $(SRC_DIR)/JSONFactory.cpp
 SRCS_MERGE = $(SRC_DIR)/mergeJSONs.cpp $(SRC_DIR)/JSONFactory.cpp $(SRC_DIR)/SampleTool.cpp $(SRC_DIR)/BuildFitInput.cpp
+SRCS_FLATTEN = $(SRC_DIR)/flattenJSONs.cpp
 PYBIND_SRCS = $(SRC_DIR)/pySampleTool.cpp $(SRC_DIR)/SampleTool.cpp
 
 # --- Object files ---
@@ -32,6 +33,7 @@ OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJS_DIR)/%.o,$(SRCS))
 CONDOROBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJS_DIR)/%.o,$(SRCS_CONDOR))
 CMSSWOBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJS_DIR)/%.o,$(CMSSWSRCS))
 MERGEOBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJS_DIR)/%.o,$(SRCS_MERGE))
+FLATTENOBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJS_DIR)/%.o,$(SRCS_FLATTEN))
 PYBIND_OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJS_DIR)/%.o,$(PYBIND_SRCS))
 
 # --- Executables ---
@@ -39,9 +41,10 @@ TARGET = $(BIN_DIR)/BFI.x
 CMSSWTARGET = $(BIN_DIR)/BF.x
 CONDORTARGET = $(BIN_DIR)/BFI_condor.x
 MERGETARGET = $(BIN_DIR)/mergeJSONs.x
+FLATTENTARGET = $(BIN_DIR)/flattenJSONs.x
 
 # --- Default target ---
-all: $(TARGET) $(CMSSWTARGET) $(CONDORTARGET) $(MERGETARGET) $(PYBIND_TARGET)
+all: $(TARGET) $(CMSSWTARGET) $(CONDORTARGET) $(MERGETARGET) $(FLATTENTARGET) $(PYBIND_TARGET)
 
 # --- Executable targets ---
 $(TARGET): $(OBJS_DIR) $(OBJS)
@@ -55,6 +58,9 @@ $(CONDORTARGET): $(OBJS_DIR) $(CONDOROBJS)
 
 $(MERGETARGET): $(OBJS_DIR) $(MERGEOBJS)
 	$(CXX) $(MERGEOBJS) -o $@ $(LDFLAGS) $(ROOTCFLAGS) $(LIBPATH)
+
+$(FLATTENTARGET): $(OBJS_DIR) $(FLATTENOBJS)
+	$(CXX) $(FLATTENOBJS) -o $@ $(LDFLAGS) $(ROOTCFLAGS) $(LIBPATH)
 
 $(PYBIND_TARGET): $(OBJS_DIR) $(PYBIND_OBJS) | $(LIB_DIR)
 	$(CXX) -shared -std=c++17 -fPIC $(PYBIND_OBJS) -o $@ $(PYBIND_INCLUDES) $(LDFLAGS) $(ROOTCFLAGS)

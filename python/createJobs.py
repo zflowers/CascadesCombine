@@ -4,7 +4,7 @@ from pathlib import Path
 import importlib.util
 
 # ----------------------------------------
-# Utilities
+# Module imports
 # ----------------------------------------
 def load_pybind_module(module_name, folder):
     folder = Path(folder)
@@ -16,13 +16,6 @@ def load_pybind_module(module_name, folder):
     spec.loader.exec_module(mod)
     return mod
 
-def sanitize(s):
-    s = re.sub(r'[^A-Za-z0-9_.-]', '_', s)
-    return s[:200]
-
-# ----------------------------------------
-# Module imports
-# ----------------------------------------
 libs_dir = Path(__file__).parent.parent / "libs"
 pySampleTool = load_pybind_module("pySampleTool", libs_dir)
 
@@ -31,6 +24,31 @@ pySampleTool = load_pybind_module("pySampleTool", libs_dir)
 # ----------------------------------------
 CONDOR_DIR = Path("condor")
 CONDOR_DIR.mkdir(exist_ok=True)
+
+# ----------------------------------------
+# Utilities
+# ----------------------------------------
+def sanitize(s):
+    s = re.sub(r'[^A-Za-z0-9_.-]', '_', s)
+    return s[:200]
+
+def write_merge_script(bin_name, json_dir="json"):
+    """
+    Create a mergeJSONs.sh script in condor/{bin_name} that merges all JSONs in json_dir.
+    Args:
+        bin_name (str): The bin name (used to create condor/{bin_name}/mergeJSONs.sh)
+        json_dir (str): Directory containing JSONs (default 'json')
+    """
+
+    merge_script_path = os.path.join(f'{CONDOR_DIR}/{bin_name}', "mergeJSONs.sh")
+    with open(merge_script_path, "w") as f:
+        f.write("#!/usr/bin/env bash\n")
+        f.write("# Auto-generated merge script\n")
+        f.write(f"./mergeJSONs.x {CONDOR_DIR}/{bin_name}/{bin_name} {json_dir}\n")
+
+    # Make the script executable
+    os.chmod(merge_script_path, 0o755)
+    print(f"[createJobs] Generated merge script: {merge_script_path}")
 
 CONDOR_HEADER = """
 universe                = vanilla
@@ -176,6 +194,7 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", dryrun=False):
             print("condor_submit failed:", proc.stderr)
         else:
             print(f"Submitted bin {bin_name} ({len(jobs)} jobs)")
+            write_merge_script(bin_name,json_dir)
 
 # ----------------------------------------
 # Main

@@ -5,6 +5,7 @@
 #include <map>
 #include <array>
 #include <cmath>
+#include <filesystem>
 
 #include "SampleTool.h"
 #include "BuildFitTools.h" // stringlist typedef
@@ -12,6 +13,7 @@
 #include "nlohmann/json.hpp"
 using json = nlohmann::json;
 using stringlist = std::vector<std::string>;
+namespace fs = std::filesystem;
 
 // Helper: pick canonical group name using SampleTool
 static std::string resolveGroup(SampleTool &ST, const std::string &key, const std::string &repFile) {
@@ -32,7 +34,7 @@ static std::string resolveGroup(SampleTool &ST, const std::string &key, const st
 
 bool mergeJSONsFlattenedWithFileBreakdown(const std::vector<std::string> &inputFiles,
                                           const std::string &outMergedFile,
-                                          const std::string &outFilesFile)
+                                          const std::string &outFilesFile = "")
 {
     SampleTool ST;
     stringlist bkglist = {"ttbar","ST","DY","ZInv","DBTB","QCD","Wjets"};
@@ -83,8 +85,8 @@ bool mergeJSONsFlattenedWithFileBreakdown(const std::vector<std::string> &inputF
                 arr[1] += sumW;
                 arr[2] += err*err;
 
-                // store per-file breakdown
-                if (sampleObj.contains("files")) {
+                // store per-file breakdown only if requested
+                if (!outFilesFile.empty() && sampleObj.contains("files")) {
                     auto &fileMap = filesBinMap[group];
                     for (auto &fkv : sampleObj["files"].items()) {
                         std::string fname = fkv.key();
@@ -107,10 +109,12 @@ bool mergeJSONsFlattenedWithFileBreakdown(const std::vector<std::string> &inputF
             samplePair.second[2] = std::sqrt(samplePair.second[2]);
         }
     }
-    for (auto &binPair : filesBreakdown) {
-        for (auto &samplePair : binPair.second) {
-            for (auto &filePair : samplePair.second) {
-                filePair.second[2] = std::sqrt(filePair.second[2]);
+    if (!outFilesFile.empty()) {
+        for (auto &binPair : filesBreakdown) {
+            for (auto &samplePair : binPair.second) {
+                for (auto &filePair : samplePair.second) {
+                    filePair.second[2] = std::sqrt(filePair.second[2]);
+                }
             }
         }
     }
@@ -129,36 +133,71 @@ bool mergeJSONsFlattenedWithFileBreakdown(const std::vector<std::string> &inputF
     if (!ofs1.is_open()) return false;
     ofs1 << outMerged.dump(4) << "\n";
 
-    // write per-file breakdown
-    json outFiles;
-    for (const auto &binPair : filesBreakdown) {
-        const std::string &binName = binPair.first;
-        for (const auto &samplePair : binPair.second) {
-            for (const auto &filePair : samplePair.second) {
-                outFiles[binName][samplePair.first]["files"][filePair.first] = {filePair.second[0],
-                                                                                filePair.second[1],
-                                                                                filePair.second[2]};
+    // write per-file breakdown only if requested
+    if (!outFilesFile.empty()) {
+        json outFiles;
+        for (const auto &binPair : filesBreakdown) {
+            const std::string &binName = binPair.first;
+            for (const auto &samplePair : binPair.second) {
+                for (const auto &filePair : samplePair.second) {
+                    outFiles[binName][samplePair.first]["files"][filePair.first] = {filePair.second[0],
+                                                                                    filePair.second[1],
+                                                                                    filePair.second[2]};
+                }
             }
         }
+        std::ofstream ofs2(outFilesFile);
+        if (!ofs2.is_open()) return false;
+        ofs2 << outFiles.dump(4) << "\n";
     }
-    std::ofstream ofs2(outFilesFile);
-    if (!ofs2.is_open()) return false;
-    ofs2 << outFiles.dump(4) << "\n";
 
     return true;
 }
 
 int main(int argc, char **argv) {
-    if (argc < 3) {
-        std::cerr << "Usage: " << argv[0] << " merged input1.json [input2.json ...]\n";
+    if (argc < 3 || argc > 4) {
+        std::cerr << "Usage: " << argv[0] << " merged output_directory [--per_file]\n";
         return 1;
     }
-    std::string outFile = argv[1];
-    std::vector<std::string> inputs;
-    for (int i=2;i<argc;++i) inputs.push_back(argv[i]);
 
-    if (!mergeJSONsFlattenedWithFileBreakdown(inputs, outFile+".json", outFile+"_files.json")) return 2;
+    std::string outFile = argv[1];
+    std::string jsonDir = argv[2];
+    bool per_file = false;
+
+    if (argc == 4) {
+        std::string flag = argv[3];
+        if (flag == "--per_file") {
+            per_file = true;
+        } else {
+            std::cerr << "Unknown flag: " << flag << "\n";
+            return 1;
+        }
+    }
+
+    std::vector<std::string> inputs;
+    for (const auto &entry : fs::directory_iterator(jsonDir)) {
+        if (entry.is_regular_file() && entry.path().extension() == ".json") {
+            inputs.push_back(entry.path().string());
+        }
+    }
+
+    if (inputs.empty()) {
+        std::cerr << "[mergeJSONs] No JSON files found in " << jsonDir << "\n";
+        return 2;
+    }
+
+    bool success = false;
+    if (per_file) {
+        success = mergeJSONsFlattenedWithFileBreakdown(inputs, outFile + ".json", outFile + "_files.json");
+    } else {
+        success = mergeJSONsFlattenedWithFileBreakdown(inputs, outFile + ".json", "");
+    }
+
+    if (!success) return 3;
+
     std::cout << "[mergeJSONs] Merged " << inputs.size() << " JSONs to " << outFile << "\n";
+    if (per_file) std::cout << "[mergeJSONs] Per-file breakdown written to " << outFile << "_files.json\n";
+
     return 0;
 }
 
