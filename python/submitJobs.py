@@ -1,207 +1,183 @@
 #!/usr/bin/env python3
-import os, sys, subprocess, argparse, re
-from pathlib import Path
-import importlib.util
+import subprocess
+from itertools import product
+from concurrent.futures import ThreadPoolExecutor
 
-# ----------------------------------------
-# Utilities
-# ----------------------------------------
-def load_pybind_module(module_name, folder):
-    folder = Path(folder)
-    so_files = list(folder.glob(f"{module_name}*.so"))
-    if not so_files:
-        raise ImportError(f"Cannot find {module_name} .so module in {folder}/")
-    spec = importlib.util.spec_from_file_location(module_name, so_files[0])
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+# -----------------------------
+# USER CONFIGURATION SECTION
+# -----------------------------
 
-def sanitize(s):
-    s = re.sub(r'[^A-Za-z0-9_.-]', '_', s)
-    return s[:200]
+# Datasets
+bkg_datasets = ["ttbar", "ST", "DY", "ZInv", "DBTB", "QCD", "Wjets"]
+sig_datasets = ["Cascades"]
 
-# ----------------------------------------
-# Module imports
-# ----------------------------------------
-libs_dir = Path(__file__).parent.parent / "libs"
-pySampleTool = load_pybind_module("pySampleTool", libs_dir)
+# Base arguments
+cpus = "1"
+memory = "1 GB"
+dryrun = True
+debug = True
 
-# ----------------------------------------
-# Condor setup
-# ----------------------------------------
-CONDOR_DIR = Path("condor")
-CONDOR_DIR.mkdir(exist_ok=True)
+# Use template-generated bins? Comment the generate call below to disable.
+use_generate_from_shorthand = True
 
-CONDOR_HEADER = """
-universe                = vanilla
-executable              = scripts/BFI.sh
+# Maximum concurrent submissions
+max_workers = 4
 
-should_transfer_files   = YES
-when_to_transfer_output = ON_EXIT
-transfer_input_files    = BFI_condor.x
+# Limit to first N jobs when submitting (None => no limit)
+limit_submit = None  # e.g., 10
 
-request_cpus            = {cpus}
-request_memory          = {memory}
+# -----------------------------
+# TEMPLATING / HELPERS
+# -----------------------------
 
-periodic_hold = (CpusUsage > RequestCpus || MemoryUsage > RequestMemory) && (JobStatus == 2) && (CurrentTime - EnteredCurrentStatus > 60)
+def build_bin_name(base, shorthand, side, extra=None):
+    """Construct a unique bin name"""
+    name = f"{base}_{shorthand}"
+    if side:
+        name += f"_{side}"
+    if extra:
+        name += f"_{extra}"
+    # sanitize: replace characters that might be awkward in names (optional)
+    name = name.replace(">", "gt").replace("<", "lt").replace("=", "eq").replace("+", "p")
+    name = name.replace(",", "").replace(" ", "")
+    return name
 
-+JobTransforms = "if HoldReasonSubCode == 42 set RequestCpus = MIN(RequestCpus + 1, 32); if HoldReasonCode == 34 set RequestMemory = MIN(RequestMemory + 1, 24)"
+def build_lep_cuts(shorthand, side):
+    """Build the lepton cut expression (simple expansion matching your C++ shorthand style)"""
+    return shorthand + (f"_{side}" if side else "")
 
-periodic_release = (HoldReasonCode == 12 && HoldReasonSubCode == 256) || \
-                   (HoldReasonCode == 13 && HoldReasonSubCode == 2)   || \
-                   (HoldReasonCode == 12 && HoldReasonSubCode == 2)   || \
-                   (HoldReasonCode == 26 && HoldReasonSubCode == 120) || \
-                   (HoldReasonCode == 3  && HoldReasonSubCode == 0)   || \
-                   (HoldReasonSubCode == 42)
+def generate_bins_from_shorthands():
+    """
+    Generate a dict of bins from cartesian product of shorthands x sides x extra_cuts.
+    Returns mapping: bin_name -> { "cuts": ..., "lep-cuts": ..., "predefined-cuts": ... }
+    """
 
-use_x509userproxy       = True
-getenv                  = True
-"""
+    base_name = "TEST"
+    base_cuts = "Nlep>=2,MET>=150"
+    predefined_cuts = "Cleaning"
+    
+    shorthands = [
+        "=0Bronze",
+        #"=2Pos",
+        #"=2Gold",
+        #">=1OSSF",
+        #"=1SSOF",
+        # ">=2Mu",
+        #">=1Elec",
+        #"<1SSSF",
+        # ">=1Muon"
+    ]
+    
+    sides = [
+        "",
+        "a",
+        "b"
+    ]
+    
+    generated = {}
+    for shorthand, side in product(shorthands, sides):
+        bin_name = build_bin_name(base_name, shorthand, side)
+        lep_cut = build_lep_cuts(shorthand, side)
+        generated[bin_name] = {
+            "cuts": base_cuts,
+            "lep-cuts": lep_cut,
+            "predefined-cuts": predefined_cuts
+        }
+    return generated
 
-# ----------------------------------------
-# Job building
-# ----------------------------------------
-def build_jobs(tool, bin_name, cuts, lep_cuts, predef_cuts):
-    jobs = []
+def build_command(bin_name, cfg):
+    """Construct the subprocess command to call createJobs.py"""
+    cmd = [
+        "python3", "python/createJobs.py",
+        "--bkg_datasets", *bkg_datasets,
+        "--sig_datasets", *sig_datasets,
+        "--bin", bin_name,
+        "--cuts", cfg["cuts"],
+        "--lep-cuts", cfg["lep-cuts"],
+        "--predefined-cuts", cfg["predefined-cuts"],
+        "--cpus", cpus,
+        "--memory", memory
+    ]
+    if dryrun:
+        cmd.append("--dryrun")
+    return cmd
 
-    # Background jobs
-    for ds, files in tool.BkgDict.items():
-        for fpath in files:
-            fname_stem = Path(fpath).stem
-            jobs.append({
-                "dataset": ds,
-                "filepath": fpath,
-                "fname_stem": fname_stem,
-                "cuts": cuts,
-                "lep_cuts": lep_cuts,
-                "predef_cuts": predef_cuts
-            })
-
-    # Signal jobs
-    for ds, files in tool.SigDict.items():
-        for fpath in files:
-            fname_stem = Path(fpath).stem
-            sig_type = None
-            if "Cascades" in fpath:
-                sig_type = "cascades"
-            elif "SMS" in fpath:
-                sig_type = "sms"
-            jobs.append({
-                "dataset": ds,
-                "filepath": fpath,
-                "fname_stem": fname_stem,
-                "cuts": cuts,
-                "lep_cuts": lep_cuts,
-                "predef_cuts": predef_cuts,
-                "sig_type": sig_type
-            })
-    return jobs
-
-# ----------------------------------------
-# Condor submit file writing
-# ----------------------------------------
-def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", dryrun=False):
-    bin_safe = sanitize(bin_name)
-    bin_dir = CONDOR_DIR / bin_safe
-    bin_dir.mkdir(parents=True, exist_ok=True)
-
-    # Subdirectories
-    log_dir = bin_dir / "log"
-    out_dir = bin_dir / "out"
-    err_dir = bin_dir / "err"
-    json_dir = bin_dir / "json"
-    for d in (log_dir, out_dir, err_dir, json_dir):
-        d.mkdir(parents=True, exist_ok=True)
-
-    submit_path = bin_dir / f"{bin_safe}.sub"
-
-    # Header
-    header = CONDOR_HEADER.format(cpus=cpus, memory=memory)
-    submit_lines = [header]
-
-    # Logs go here (shared config, uses $(LogFile))
-    submit_lines.append(f"log    = {log_dir}/$(LogFile).log")
-    submit_lines.append(f"output = {out_dir}/$(LogFile).out")
-    submit_lines.append(f"error  = {err_dir}/$(LogFile).err")
-
-    submit_lines.append("transfer_output_files = $(LogFile).json")
-    submit_lines.append(f'transfer_output_remaps = "$(LogFile).json = {json_dir.as_posix()}/$(LogFile).json"')
-
-    # Inline queue
-    submit_lines.append("# Queue jobs with LogFile (used for log/out/err) and Args")
-    submit_lines.append("queue LogFile, Args from (")
-
-    for job in jobs:
-        ds = job["dataset"]
-        fpath = job["filepath"]
-        fname_stem = job["fname_stem"]
-        sig_type = job.get("sig_type", None)
-
-        base = sanitize(f"{bin_name}_{ds}_{fname_stem}")
-        # Pass plain filename (no leading ./) so Condor matches it to transfer_output_files
-        remote_json_arg = f"{base}.json"
-
-        args_list = [
-            f"--bin {bin_name}",
-            f"--file {fpath}",
-            f"--output {remote_json_arg}",
-            f"--cuts {job.get('cuts','')}",
-            f"--lep-cuts {job.get('lep_cuts','')}",
-            f"--predefined-cuts {job.get('predef_cuts','')}"
-        ]
-        if sig_type:
-            args_list.append(f"--sig-type {sig_type}")
-
-        args_str = " ".join(a for a in args_list if a and not a.isspace())
-        # The first column (base) becomes $(LogFile)
-        submit_lines.append(f'{base} "{args_str}"')
-
-    submit_lines.append(")")
-
-    # Write .sub
-    submit_content = "\n".join(submit_lines) + "\n"
-    submit_path.write_text(submit_content)
-    print(f"Wrote submit file: {submit_path}")
-
-    # Optional submit
+def submit_job(cmd):
+    """Submit a single job via subprocess"""
+    print("Submit command:", " ".join(cmd))
     if not dryrun:
-        proc = subprocess.run(
-            f"source /cvmfs/cms.cern.ch/cmsset_default.sh && condor_submit {submit_path}",
-            shell=True,
-            executable="/bin/bash",
-            capture_output=True,
-            text=True
-        )
-        if proc.returncode != 0:
-            print("condor_submit failed:", proc.stderr)
-        else:
-            print(f"Submitted bin {bin_name} ({len(jobs)} jobs)")
+        subprocess.run(cmd)
 
-# ----------------------------------------
-# Main
-# ----------------------------------------
+# -----------------------------
+# BUILD THE FINAL BIN LIST
+# -----------------------------
+
 def main():
-    bkglist = ["ttbar", "ST", "DY", "ZInv", "DBTB", "QCD", "Wjets"]
-    siglist = ["Cascades"]
+    bins = {}
+    
+    # 1) Add manual bins first (user-defined)
+    # Manually defined bins (explicit mapping style).
+    # Each entry maps a bin name -> dict with keys "cuts", "lep-cuts", "predefined-cuts".
+    # Comment/uncomment entries to toggle.
+    manual_bins = {
+        # Example manual bin:
+        "TEST_manualExample": {
+            "cuts": "Nlep>=2,MET>=150,PTISR>=200",
+            "lep-cuts": ">=1OSSF",
+            "predefined-cuts": "Cleaning",
+        },
+    }
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--bkg_datasets", nargs="+", default=bkglist)
-    parser.add_argument("--sig_datasets", nargs="+", default=siglist)
-    parser.add_argument("--bin", default="TEST")
-    parser.add_argument("--cuts", default="Nlep>=2,MET>=150")
-    parser.add_argument("--lep-cuts", default=">=1OSSF")
-    parser.add_argument("--predefined-cuts", default="Cleaning")
-    parser.add_argument("--cpus", default="1")
-    parser.add_argument("--memory", default="1 GB")
-    parser.add_argument("--dryrun", "--dry-run", action="store_true")
-    args = parser.parse_args()
-
-    tool = pySampleTool.SampleTool()
-    tool.LoadBkgs(args.bkg_datasets)
-    tool.LoadSigs(args.sig_datasets)
-
-    jobs = build_jobs(tool, args.bin, args.cuts, args.lep_cuts, args.predefined_cuts)
-    write_submit_file(args.bin, jobs, cpus=args.cpus, memory=args.memory, dryrun=args.dryrun)
+    bins.update(manual_bins)
+    
+    # 2) Optionally generate templated bins for stress testing
+    if use_generate_from_shorthand:
+        gen = generate_bins_from_shorthands()
+        # If a generated name collides with a manual bin, manual wins (so manual overrides templating)
+        for k, v in gen.items():
+            if k in bins:
+                if debug:
+                    print(f"[TEMPLATE SKIP] Generated bin '{k}' collides with manual bin; skipping generated version.")
+                continue
+            bins[k] = v
+    
+    # -----------------------------
+    # MAIN: print diagnostics, build commands, submit
+    # -----------------------------
+    
+    jobs = []
+    print("\n===== BEGIN BIN DEFINITIONS =====\n")
+    for bin_name, cfg in bins.items():
+        cmd = build_command(bin_name, cfg)
+        jobs.append(cmd)
+    
+        if debug:
+            print(f"[BIN-DEF] bin=\"{bin_name}\"")
+            print(f"          lep-cuts=\"{cfg['lep-cuts']}\"")
+            print(f"          cuts=\"{cfg['cuts']}\"")
+            print(f"          predefined-cuts=\"{cfg['predefined-cuts']}\"\n")
+    
+    print("===== END BIN DEFINITIONS =====\n")
+    
+    # Print summary
+    total_jobs = len(jobs)
+    print(f"Prepared {total_jobs} job(s) for submission.")
+    if dryrun:
+        print("Dry-run mode enabled: no jobs will actually be submitted.")
+    if limit_submit is not None:
+        print(f"Limit enabled: will only submit first {limit_submit} job(s).")
+    print()
+    
+    # Apply limit if requested
+    if limit_submit is not None:
+        jobs = jobs[:limit_submit]
+    
+    # Submit jobs concurrently
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        executor.map(submit_job, jobs)
+    
+    if not dryrun:
+        print("\nAll submissions dispatched.\n")
 
 if __name__ == "__main__":
     main()
