@@ -60,6 +60,14 @@ getenv                  = True
 queue
 """
 
+def make_jobname_and_submit_path(bin_name, dataset_name, filepath, submit_dir=SUBMIT_DIR):
+    """Return a sanitized jobname and the Path to the submit file with .sub extension."""
+    fname = Path(filepath).stem          # drops .root
+    jobname_raw = f"{bin_name}_{dataset_name}_{fname}"
+    jobname_safe = sanitize(jobname_raw)
+    submit_path = submit_dir / f"{jobname_safe}.sub"
+    return jobname_safe, submit_path
+
 # sanitize a string to be safe for filenames/condor names
 def sanitize(s):
     s = re.sub(r'[^A-Za-z0-9_.-]', '_', s)
@@ -127,31 +135,31 @@ def main():
     tool = pySampleTool.SampleTool()
     tool.LoadBkgs(args.bkg_datasets)
     tool.LoadSigs(args.sig_datasets)
+    # Bkg loop
     for ds, files in tool.BkgDict.items():
         for fpath in files:
-            jobname = f"{ds}_{os.path.basename(fpath)}"
+            jobname_safe, submit_path = make_jobname_and_submit_path(args.bin, ds, fpath)
             arguments = (
                 f"--bin {args.bin} --file {fpath} "
                 f"--cuts {args.cuts} --lep-cuts {args.lep_cuts} --predefined-cuts {args.predefined_cuts} "
             )
-            write_and_submit(jobname, arguments, cpus=args.cpus, memory=args.memory, dryrun=args.dryrun)
-            break #debug
-
+            write_and_submit(jobname_safe, arguments, cpus=args.cpus, memory=args.memory, dryrun=args.dryrun)
+            break  # debug
+    
+    # Sig loop
     for ds, files in tool.SigDict.items():
         for fpath in files:
-            jobname = f"{ds}_{os.path.basename(fpath)}"            
-            # Base arguments
+            jobname_safe, submit_path = make_jobname_and_submit_path(args.bin, ds, fpath)
             arguments = (
                 f"--bin {args.bin} --file {fpath} "
                 f"--cuts {args.cuts} --lep-cuts {args.lep_cuts} --predefined-cuts {args.predefined_cuts} "
             )
-            # Add sig-type depending on the dataset name
-            if "Cascades" in jobname:
+            if "Cascades" in fpath:
                 arguments += "--sig-type cascades"
-            elif "SMS" in jobname:
+            elif "SMS" in fpath:
                 arguments += "--sig-type sms"
-            write_and_submit(jobname, arguments, cpus=args.cpus, memory=args.memory, dryrun=args.dryrun)
-            break #debug
+            write_and_submit(jobname_safe, arguments, cpus=args.cpus, memory=args.memory, dryrun=args.dryrun)
+            break  # debug
 
 if __name__ == "__main__":
     main()

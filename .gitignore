@@ -5,7 +5,8 @@ datacards*
 *.json
 *.debug
 json/*
-condor/logs/*
+condor/logs/
 output/*
 libs/
 obj/
+condor/submit/

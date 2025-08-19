@@ -1,0 +1,7 @@
+make clean
+make all -j 8
+./BFI_condor.x --bin TEST --file root://cmseos.fnal.gov//store/user/lpcsusylep/NTUPLES_Cascades_v3/Summer23BPix_130X/DYto2L-4Jets_MLL-120_HT-100to400_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root --cuts "Nlep>=2,MET>=150" --lep-cuts ">=1OSSF" --predefined-cuts "Cleaning"
+./BFI_condor.x --bin TEST --file root://cmseos.fnal.gov//store/user/lpcsusylep/NTUPLES_Cascades_v3/Summer23BPix_130X/DYto2L-4Jets_MLL-120_HT-1500to2500_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root --cuts "Nlep>=2,MET>=150" --lep-cuts ">=1OSSF" --predefined-cuts "Cleaning"
+./BFI_condor.x --bin TEST --file root://cmseos.fnal.gov//store/user/lpcsusylep/NTUPLES_Cascades_v3/Summer23BPix_130X/TTto2L2Nu-2Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer23BPix_130X.root --cuts "Nlep>=2,MET>=150" --lep-cuts ">=1OSSF" --predefined-cuts "Cleaning"
+./BFI_condor.x --bin TEST --file root://cmseos.fnal.gov//store/user/lpcsusylep/NTUPLES_Cascades_v3/Summer22_130X_Cascades/SlepSnuCascade_220-209_200-190-180_2022_NANO_JustinPrivateMC_Summer22_130X_Cascades_Summer22_130X.root --cuts "Nlep>=2,MET>=150" --lep-cuts ">=1OSSF" --predefined-cuts "Cleaning" --sig-type cascades
+./mergeJSONs.x json/TEST_MERGED.json json/TEST_Cascades_220_220_209_0_190_180.json json/TEST_DYto2L-4Jets_MLL-120_HT-100to400_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.json json/TEST_DYto2L-4Jets_MLL-120_HT-1500to2500_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.json json/TEST_TTto2L2Nu-2Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer23BPix_130X.json
