@@ -1,35 +1,41 @@
+#include <iostream>
+#include <filesystem>
+#include <vector>
+#include <string>
 
 #include "JSONFactory.h"
 #include "BuildFit.h"
-#include <vector>
-#include <string>
-#include <filesystem> // Required for std::filesystem
+
 namespace fs = std::filesystem;
 
+int main(int argc, char** argv) {
+    // Default values
+    std::string input_json = "./json/test_cascades.json";
+    std::string datacard_dir = "datacards_cascades";
 
-int main(){
+    // Override defaults if arguments are provided
+    if (argc > 1) input_json = argv[1];
+    if (argc > 2) datacard_dir = argv[2];
 
-	std::string datacard_dir = "datacards_cascades";
-	std::string input_json = "./json/test_cascades.json";
-	
-	JSONFactory* j = new JSONFactory(input_json);
-//	BuildFit* BF = new BuildFit();
-	
-	std::vector<std::string> signals = j->GetSigProcs();
-	//BF->BuildAsimovFit(j,"gogoG_2000_1000_500_10");
+    std::cout << "Using input JSON: " << input_json << "\n";
+    std::cout << "Using datacard directory: " << datacard_dir << "\n";
 
-	//regenerate datacard directories
-	fs::path dir_path = datacard_dir;
-	fs::remove_all(dir_path);
-	for( long unsigned int i=0; i<signals.size(); i++){
-		/*std::vector<std::string> splitSignal = BFTool::SplitString(signals[i], "_");
-		std::string mass = "";
-      		for(long unsigned int i=1; i< splitSignal.size(); i++){
-			mass += splitSignal[i];
-		}*/
-		BuildFit* BF = new BuildFit();
-		std::filesystem::create_directories( datacard_dir+"/"+signals[i] );
-		BF->BuildAsimovFit(j,signals[i], datacard_dir);
-		//break;
-	}
+    JSONFactory* j = new JSONFactory(input_json);
+
+    std::vector<std::string> signals = j->GetSigProcs();
+
+    // regenerate datacard directories
+    fs::path dir_path = datacard_dir;
+    fs::remove_all(dir_path);
+
+    for (long unsigned int i = 0; i < signals.size(); i++) {
+        BuildFit* BF = new BuildFit();
+        fs::create_directories(datacard_dir + "/" + signals[i]);
+        BF->BuildAsimovFit(j, signals[i], datacard_dir);
+	delete BF;
+    }
+
+    delete j; // clean up
+    return 0;
 }
+
