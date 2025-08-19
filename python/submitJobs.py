@@ -93,64 +93,63 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="8 GB", dryrun=False):
 
     transfer_outputs = []
     transfer_remaps = []
+
+    # --- Ensure directories exist ---
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    JSON_DIR.mkdir(parents=True, exist_ok=True)
+
     submit_lines = [header]
 
-    # --- Build the inline job list with unique log/output/error/debug/json per job ---
+    # --- Build global transfer outputs/remaps ---
+    for job in jobs:
+        fname_stem = job["fname_stem"]
+        ds = job["dataset"]
+        jobname_safe = sanitize(f"{bin_name}_{ds}_{fname_stem}")
+
+        remote_json = f"json/{bin_name}_{ds}_{fname_stem}.json"
+        remote_debug = f"condor/logs/{jobname_safe}.debug"
+
+        local_json = JSON_DIR / f"{bin_name}_{ds}_{fname_stem}.json"
+        local_debug = LOG_DIR / f"{jobname_safe}.debug"
+
+        transfer_outputs.extend([remote_json, remote_debug])
+        transfer_remaps.append(f"{remote_json} = {local_json}")
+        transfer_remaps.append(f"{remote_debug} = {local_debug}")
+
+    submit_lines.append(f"transfer_output_files = {','.join(transfer_outputs)}")
+    submit_lines.append(f'transfer_output_remaps = "{"; ".join(transfer_remaps)}"')
+
+    # --- Inline job list ---
     submit_lines.append("# Inline job list with unique log/output/error/debug/json per job")
     submit_lines.append("queue LogFile, OutFile, ErrFile, Args from (")
-    
+
     for job in jobs:
         ds = job["dataset"]
         fpath = job["filepath"]
         fname_stem = job["fname_stem"]
         sig_type = job.get("sig_type", None)
-    
-        # Unique job name
         jobname_safe = sanitize(f"{bin_name}_{ds}_{fname_stem}")
-    
-        # Remote paths (relative to execute dir) used in BFI.sh
+
+        # Use Condor variables $LogFile, $OutFile, $ErrFile
+        # remote_json is already set above
         remote_json = f"json/{bin_name}_{ds}_{fname_stem}.json"
-        remote_debug = f"condor/logs/{jobname_safe}.debug"
-    
-        # Local paths on submit host for transfer remaps
-        local_json = JSON_DIR / f"{bin_name}_{ds}_{fname_stem}.json"
-        local_debug = LOG_DIR / f"{jobname_safe}.debug"
-    
-        # Add to global transfer lists
-        transfer_outputs.extend([remote_json, remote_debug])
-        transfer_remaps.extend([
-            f"{remote_json} = {local_json}",
-            f"{remote_debug} = {local_debug}"
-        ])
-    
-        # Per-job log/out/err paths
-        log_file = f"condor/logs/{jobname_safe}.log"
-        out_file = f"condor/logs/{jobname_safe}.out"
-        err_file = f"condor/logs/{jobname_safe}.err"
-    
-        # Build arguments string for this job (properly quoted)
+
         args_list = [
-            f'--bin {bin_name}',
-            f'--file {fpath}',
-            f'--output {remote_json}',
-            f'--cuts {job.get("cuts","")}',
-            f'--lep-cuts {job.get("lep_cuts","")}',
-            f'--predefined-cuts {job.get("predef_cuts","")}'
+            f"--bin {bin_name}",
+            f"--file {fpath}",
+            f"--output {remote_json}",
+            f"--cuts {job.get('cuts','')}",
+            f"--lep-cuts {job.get('lep_cuts','')}",
+            f"--predefined-cuts {job.get('predef_cuts','')}"
         ]
         if sig_type:
-            args_list.append(f'--sig-type {sig_type}')
+            args_list.append(f"--sig-type {sig_type}")
         args_str = " ".join(args_list)
-    
-        # Add one line per job to the inline queue
-        submit_lines.append(f'"{log_file}" "{out_file}" "{err_file}" "{args_str}"')
-    
-    submit_lines.append(")")  # close the inline queue
 
-    # Add transfer output directives
-    transfer_outputs_str = ",".join(transfer_outputs)
-    transfer_remaps_str = "; ".join(transfer_remaps)
-    submit_lines.insert(1, f"transfer_output_files = {transfer_outputs_str}")
-    submit_lines.insert(2, f'transfer_output_remaps = "{transfer_remaps_str}"')
+        # Queue line uses $LogFile, $OutFile, $ErrFile
+        submit_lines.append(f'$LogFile $OutFile $ErrFile "{args_str}"')
+
+    submit_lines.append(")")  # close queue
 
     submit_content = "\n".join(submit_lines) + "\n"
     submit_path.write_text(submit_content)
