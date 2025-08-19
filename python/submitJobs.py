@@ -18,6 +18,7 @@ memory = "1 GB"
 # Defaults (can be overridden by CLI args)
 dryrun = False
 stress_test = False
+lumi = 1.
 
 # Maximum concurrent submissions
 max_workers = 4
@@ -53,6 +54,33 @@ def write_flatten_script(bin_names, flatten_exe="./flattenJSONs.x", json_dir="js
 
     os.chmod(script_path, 0o755)
     print(f"[submitJobs] Generated flatten script: {script_path}")
+
+def setup_master_merge_script(bin_names, flatten_sh="run_flatten.sh", json_dir="json"):
+    """
+    Create master_merge.sh to run all per-bin merges and then flatten into a single JSON.
+    """
+    os.makedirs(json_dir, exist_ok=True)
+    master_script_path = "condor/master_merge.sh"
+
+    # Start fresh
+    with open(master_script_path, "w") as f:
+        f.write("#!/usr/bin/env bash\n")
+        f.write("# Auto-generated master merge script\n\n")
+    
+        # Step 1: Run all per-bin merge scripts
+        for bin_name in bin_names:
+            merge_script = f"condor/{bin_name}/mergeJSONs.sh"
+            f.write(f"bash {merge_script}\n")
+        
+        # Step 2: Call flatten on all merged bins
+        input_bins = " ".join([f"condor/{bin_name}" for bin_name in bin_names])
+        output_file = os.path.join(json_dir, f"flattened_{'_'.join(bin_names)}.json")
+        f.write(f"bash condor/{flatten_sh}\n")
+        f.write(f"echo 'Final flattened JSON written to {output_file}'\n")
+    
+    os.chmod(master_script_path, 0o755)
+    print(f"[submitJobs] Master merge script generated: {master_script_path}")
+    return master_script_path
 
 def build_bin_name(base, shorthand, side, extra=None):
     """Construct a unique bin name"""
@@ -120,6 +148,7 @@ def build_command(bin_name, cfg):
         "--predefined-cuts", cfg["predefined-cuts"],
         "--cpus", cpus,
         "--memory", memory
+        "--lumi", lumi
     ]
     if dryrun:
         cmd.append("--dryrun")
@@ -136,7 +165,7 @@ def submit_job(cmd):
 # -----------------------------
 
 def main():
-    global dryrun, stress_test
+    global dryrun, stress_test, lumi
 
     # CLI parsing
     parser = argparse.ArgumentParser(description="Submit BFI jobs with templated bins")
@@ -144,22 +173,31 @@ def main():
                         help="Enable dry-run mode")
     parser.add_argument("--stress_test", dest="stress_test", action="store_true",
                         help="Run stress test")
-    parser.set_defaults(dryrun=dryrun, stress_test=stress_test)
+    parser.add_argument("--lumi", dest="lumi",
+                        help="Lumi to scale events to")
+    parser.set_defaults(dryrun=dryrun, stress_test=stress_test, lumi=lumi)
     args = parser.parse_args()
 
     dryrun = args.dryrun
     stress_test = args.stress_test
+    lumi = args.lumi
 
     bins = {}
     
     # Manual bins
     manual_bins = {
-        "TEST_manualExample1": {
+        # Structure
+        # Name of bin: {
+        #     "cuts": cuts directly on saved branches,
+        #     "lep-cuts": uses BuildFitInput::BuildLeptonCut to form cuts (see stress test above for examples),
+        #     "predefined-cuts": predefined cuts in src/BuildFitInput.cpp,
+        # },
+        "manualExample1": {
             "cuts": "Nlep>=2,MET>=150,PTISR>=200",
             "lep-cuts": ">=1OSSF",
             "predefined-cuts": "Cleaning",
         },
-        "TEST_manualExample2": {
+        "manualExample2": {
             "cuts": "Nlep>=2,MET>=200,PTISR>=300",
             "lep-cuts": ">1OSSF",
             "predefined-cuts": "Cleaning",
@@ -209,6 +247,7 @@ def main():
     
     if not dryrun:
         write_flatten_script(list(bins.keys()))
+        setup_master_merge_script(list(bins.keys()))
         print("\nAll submissions dispatched.\n")
 
 if __name__ == "__main__":

@@ -1,4 +1,3 @@
-
 #ifndef BUILDFIT_H
 #define BUILDFIT_H
 
@@ -15,7 +14,6 @@
 #include "CombineHarvester/CombineTools/interface/Utilities.h"
 #include "CombineHarvester/CombineTools/interface/Systematics.h"
 #include "CombineHarvester/CombineTools/interface/BinByBin.h"
-//using ch::syst::SystMapFunc;
 using ch::syst::SystMap;
 using ch::syst::SystMapFunc;
 using ch::syst::bin;
@@ -26,8 +24,6 @@ class BuildFit{
 	public:
 	ch::CombineHarvester cb{};
 	
-//	void BuildAsimovFit(JSONFactory* j);
-
 	ch::Categories BuildCats(JSONFactory* j);
 	std::map<std::string, float> BuildAsimovData(JSONFactory* j);
         std::vector<std::string> GetBkgProcs(JSONFactory* j);
@@ -36,9 +32,7 @@ class BuildFit{
        
 	void BuildAsimovFit(JSONFactory* j, std::string signaPoint, std::string datacard_dir);
 	
-	
-	std::vector<std::string> sigkeys = { "Cascades" };
-	
+	std::vector<std::string> sigkeys = { "Cascades", "SMS" };
 
 };
 #endif

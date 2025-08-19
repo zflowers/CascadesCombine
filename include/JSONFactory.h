@@ -19,7 +19,7 @@ class JSONFactory{
 	std::vector<std::string> GetSigProcs();
 	void WriteJSON(std::string filename);
 
-	std::vector<std::string> sigkeys = { "Cascades" };
+	std::vector<std::string> sigkeys = { "Cascades", "SMS" };
 
 };
 

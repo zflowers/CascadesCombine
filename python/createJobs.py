@@ -118,7 +118,7 @@ def build_jobs(tool, bin_name, cuts, lep_cuts, predef_cuts):
 # ----------------------------------------
 # Condor submit file writing
 # ----------------------------------------
-def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", dryrun=False):
+def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, dryrun=False):
     bin_safe = sanitize(bin_name)
     bin_dir = CONDOR_DIR / bin_safe
     bin_dir.mkdir(parents=True, exist_ok=True)
@@ -160,6 +160,7 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", dryrun=False):
         remote_json_arg = f"{base}.json"
 
         args_list = [
+            f"--lumi {lumi}",
             f"--bin {bin_name}",
             f"--file {fpath}",
             f"--output {remote_json_arg}",
@@ -212,6 +213,7 @@ def main():
     parser.add_argument("--predefined-cuts", default="Cleaning")
     parser.add_argument("--cpus", default="1")
     parser.add_argument("--memory", default="1 GB")
+    parser.add_argument("--lumi", default=1.)
     parser.add_argument("--dryrun", "--dry-run", action="store_true")
     args = parser.parse_args()
 
@@ -220,7 +222,7 @@ def main():
     tool.LoadSigs(args.sig_datasets)
 
     jobs = build_jobs(tool, args.bin, args.cuts, args.lep_cuts, args.predefined_cuts)
-    write_submit_file(args.bin, jobs, cpus=args.cpus, memory=args.memory, dryrun=args.dryrun)
+    write_submit_file(args.bin, jobs, cpus=args.cpus, memory=args.memory, lumi=args.lumi, dryrun=args.dryrun)
 
 if __name__ == "__main__":
     main()

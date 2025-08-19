@@ -10,3 +10,4 @@ output/*
 libs/
 obj/
 condor/
+python/__pycache__/
