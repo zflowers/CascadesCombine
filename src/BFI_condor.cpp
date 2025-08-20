@@ -67,6 +67,9 @@ static bool buildCutsForBin(BuildFitInput* bfi,
         } else if (pcut == "ZStar") {
             std::string z = bfi->GetZstarCut();
             if (!z.empty()) outCuts.push_back(z);
+        } else if (pcut == "noZStar") {
+            std::string z = bfi->GetnoZstarCut();
+            if (!z.empty()) outCuts.push_back(z);
         } else {
             std::cerr << "[BFI_condor] Unknown predefined cut: " << pcut << "\n";
         }

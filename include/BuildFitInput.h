@@ -69,12 +69,25 @@ class BuildFitInput{
 	void PrintBins(int verbosity=1);
         std::string GetCleaningCut();
 	std::string GetZstarCut();
+	std::string GetnoZstarCut();
 
     	std::map<std::string,std::string> userMacros = {
-    	    {"MAX", "ROOT::VecOps::Max"},
-    	    {"MIN", "ROOT::VecOps::Min"},
-    	    {"SUM", "ROOT::VecOps::Sum"}
-    	    // can add default macros
+            {"MAX",       "ROOT::VecOps::Max"},       // Maximum value in a vector
+            {"MIN",       "ROOT::VecOps::Min"},       // Minimum value in a vector
+            {"SUM",       "ROOT::VecOps::Sum"},       // Sum of all elements
+            {"MEAN",      "ROOT::VecOps::Mean"},      // Mean (average) of elements
+            {"STDDEV",    "ROOT::VecOps::StdDev"},    // Standard deviation
+            {"SIZE",      "ROOT::VecOps::Size"},      // Number of elements
+            {"EMPTY",     "ROOT::VecOps::Empty"},     // Check if vector is empty
+            {"NONEMPTY",  "!ROOT::VecOps::Empty"},    // Check if vector is not empty
+            {"FRONT",     "ROOT::VecOps::Front"},     // First element
+            {"BACK",      "ROOT::VecOps::Back"},      // Last element
+            {"SORT",      "ROOT::VecOps::Sort"},      // Sorted version of the vector
+            {"REVERSE",   "ROOT::VecOps::Reverse"},   // Reversed vector
+            {"FILTER",    "ROOT::VecOps::Filter"},    // Filter elements based on a condition
+            {"MAP",       "ROOT::VecOps::Map"},       // Apply a function to each element
+            {"DELTA_PHI", "ROOT::VecOps::DeltaPhi"},  // Compute difference in phi angles
+            {"DELTA_R",   "ROOT::VecOps::DeltaR"}     // Compute DeltaR between particles (eta, phi space)
     	};
 
     	// Register a new macro

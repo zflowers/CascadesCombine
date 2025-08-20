@@ -329,7 +329,19 @@ std::string BuildFitInput::BuildLeptonCut(const std::string& shorthand_in, const
         return "(SUM(" + branch + "==" + std::to_string(val) + ")" + op + std::to_string(n) + ")";
     }
 
-    // 3) pair counts (possibly with extra pair-level cuts)
+    // 3) Handle "AllSS" (All Same-Sign Leptons)
+    if (first == "AllSS") {
+        std::string branch = "Charge_lep" + sideSuffix;
+        return "((SUM(" + branch + "==1) == Nlep) || (SUM(" + branch + "==0) == Nlep))";
+    }
+
+    // 4) Handle "AllSF" (All Same-Flavor Leptons)
+    if (first == "AllSF") {
+        std::string branch = "Flavor_lep" + sideSuffix;
+        return "((SUM(" + branch + "==0) == Nlep) || (SUM(" + branch + "==1) == Nlep))";
+    }
+
+    // 5) pair counts (possibly with extra pair-level cuts)
     // Accept forms: ">=1OSSF" or ">=1OSSF_a" (the latter already stripped if found)
     {
         // For pair parsing we also want to capture if first token included a suffix (we already handled suffix earlier).
@@ -400,7 +412,7 @@ std::string BuildFitInput::BuildLeptonCut(const std::string& shorthand_in, const
         }
     }
 
-    // 4) flavor counts (single-lepton flavor), e.g. ">=1Elec" or ">=2Muon"
+    // 6) flavor counts (single-lepton flavor), e.g. ">=1Elec" or ">=2Muon"
     if (std::regex_match(first, match, flavorRgx)) {
         std::string op = match[1]; if (op == "=") op = "==";
         int n = std::stoi(match[2]);
@@ -1020,4 +1032,7 @@ std::string BuildFitInput::GetZstarCut(){
                BuildLeptonCut(">=1OSSF","b") + ") || "
                + "(Nlep==2 && " +
                BuildLeptonCut(">=1OSSF") + ")";
+}
+std::string BuildFitInput::GetnoZstarCut(){
+        return "!"+GetZstarCut();
 }
