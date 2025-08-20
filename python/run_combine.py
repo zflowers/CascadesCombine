@@ -3,13 +3,17 @@ import subprocess, time, glob, os, sys, time, argparse
 from CondorJobCountMonitor import CondorJobCountMonitor
 
 # ----- helper functions -----
-def build_binaries():
+def clean_binaries():
     """
-    Run `make clean` and `make all -j8` to ensure the latest binaries.
+    Run `make clean` to clean out binaries.
     """
     print("[run_all] Cleaning previous builds...", flush=True)
     subprocess.run(["make", "clean"], check=True)
 
+def build_binaries():
+    """
+    Run `make all -j8` to build the latest binaries.
+    """
     print("[run_all] Building all binaries...", flush=True)
     subprocess.run(["make", "all", "-j8"], check=True)
 
@@ -156,6 +160,7 @@ def main():
 
     # 1) Compile framework
     print("[run_all] Building binaries...", flush=True)
+    # clean_binaries()
     build_binaries()
 
     # 2) Submit jobs and generate master_merge.sh
@@ -187,7 +192,11 @@ def main():
     print("[run_all] Launching combine jobs...", flush=True)
     subprocess.run(["bash", "macro/launchCombine.sh", output_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
 
-    # 8) Collect significances
+    # 8) Print yields
+    print(f"[run_all] Yields for {args.bins_cfg}")
+    subprocess.run(["cat", flattened_json], check=True, stdout=sys.stdout, stderr=sys.stderr)
+
+    # 9) Collect significances
     print("[run_all] Collecting significances...", flush=True)
     subprocess.run(["python3", "-u", "macro/CollectSignificance.py", output_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
 
