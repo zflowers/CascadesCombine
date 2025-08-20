@@ -97,9 +97,6 @@ def run_checkjobs_loop_parallel(no_resubmit=False, max_resubmits=3):
             proc = subprocess.run(check_cmd, capture_output=True, text=True)
 
             # Print outputs (labeled)
-            if proc.stdout:
-                print(f"----- checkJobs stdout ({work_dir}) -----", flush=True)
-                print(proc.stdout, flush=True)
             if proc.stderr:
                 print(f"----- checkJobs stderr ({work_dir}) -----", file=sys.stderr, flush=True)
                 print(proc.stderr, file=sys.stderr, flush=True)

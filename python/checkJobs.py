@@ -206,9 +206,10 @@ def main():
             failed.append(job)
 
     # Print summary
-    print(f"Failed jobs ({len(failed)}):")
-    for fjob in failed:
-        print("  ", fjob)
+    if len(failed) > 0:
+        print(f"Failed jobs ({len(failed)}):")
+        for fjob in failed:
+            print("  ", fjob)
 
     if not failed:
         print("\nNo failed jobs to resubmit.")
