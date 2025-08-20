@@ -64,10 +64,10 @@ static bool buildCutsForBin(BuildFitInput* bfi,
         if (pcut == "Cleaning") {
             std::string c = bfi->GetCleaningCut();
             if (!c.empty()) outCuts.push_back(c);
-        } else if (pcut == "ZStar") {
+        } else if (pcut == "Zstar") {
             std::string z = bfi->GetZstarCut();
             if (!z.empty()) outCuts.push_back(z);
-        } else if (pcut == "noZStar") {
+        } else if (pcut == "noZstar") {
             std::string z = bfi->GetnoZstarCut();
             if (!z.empty()) outCuts.push_back(z);
         } else {

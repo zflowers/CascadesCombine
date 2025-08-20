@@ -1028,10 +1028,10 @@ std::string BuildFitInput::GetCleaningCut(){
 	"(-1.5625*pow(fabs(dphiCMI),2) + 7.8125*fabs(dphiCMI) - 8.766 <= 0.) )";
 }
 std::string BuildFitInput::GetZstarCut(){
-        return "(" + BuildLeptonCut(">=1OSSF","a") + " || " +
+        return "((" + BuildLeptonCut(">=1OSSF","a") + " || " +
                BuildLeptonCut(">=1OSSF","b") + ") || "
                + "(Nlep==2 && " +
-               BuildLeptonCut(">=1OSSF") + ")";
+               BuildLeptonCut(">=1OSSF") + "))";
 }
 std::string BuildFitInput::GetnoZstarCut(){
         return "!"+GetZstarCut();
