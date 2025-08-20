@@ -191,10 +191,10 @@ def main():
             failed.append(job)
 
     # Print summary
-    print(f"Successful jobs ({len(successful)}):")
-    for s in successful:
-        print("  ", s)
-    print()
+    #print(f"Successful jobs ({len(successful)}):")
+    #for s in successful:
+    #    print("  ", s)
+    #print()
     print(f"Failed jobs ({len(failed)}):")
     for fjob in failed:
         print("  ", fjob)
@@ -202,50 +202,40 @@ def main():
     if not failed:
         print("\nNo failed jobs to resubmit.")
         sys.exit(0)
-
-    # Optionally clean partial jsons
+    
     if args.clean_json:
         for fjob in failed:
             jp = os.path.join(json_dir, f"{fjob}.json")
             if os.path.exists(jp):
-                try:
-                    os.remove(jp)
-                    print(f"[checkJobs] Removed partial JSON: {jp}")
-                except Exception as e:
-                    print(f"[checkJobs] Warning removing {jp}: {e}", file=sys.stderr)
-
-    # Parse original submit to get header + mapping
-    header, mapping = parse_submit_for_mapping(submit_path)
-    if not mapping:
-        print("[checkJobs] Warning: could not extract LogFile->Args mapping from original submit file."
-              " Jobs without a mapping will be skipped.", file=sys.stderr)
-
-    # Build resubmit file path
+                os.remove(jp)
+                print(f"[checkJobs] Removed partial JSON: {jp}")
+    
+    # Single-queue resubmit: just reuse the original .sub
     resubmit_name = f"resubmit_failed_{submit_name}.sub"
     resubmit_path = os.path.join(base_dir, resubmit_name)
-
-    try:
-        write_single_queue_resubmit(resubmit_path, header, mapping, failed)
-    except RuntimeError as e:
-        print(f"[checkJobs] ERROR: {e}", file=sys.stderr)
+    
+    if not os.path.exists(submit_path):
+        print(f"[checkJobs] ERROR: original submit file not found: {submit_path}", file=sys.stderr)
         sys.exit(1)
-
+    
+    # Copy original .sub to resubmit
+    import shutil
+    shutil.copy(submit_path, resubmit_path)
     print(f"\nResubmit file written: {resubmit_path}")
-
+    
     if args.no_submit:
         print("[checkJobs] --no-submit specified: not calling condor_submit.")
         sys.exit(0)
-
-    # Submit using cms environment
+    
+    # Submit using CMS environment
     submit_cmd = f"source {args.cms_env} && condor_submit {resubmit_path}"
     print(f"[checkJobs] Submitting resubmit file with:\n  {submit_cmd}\n")
-
     proc = subprocess.run(submit_cmd, shell=True, executable="/bin/bash", capture_output=True, text=True)
-
+    
     if proc.returncode != 0:
         print(f"[checkJobs] condor_submit failed with exit code {proc.returncode}", file=sys.stderr)
         sys.exit(proc.returncode)
-
+    
     print("Resubmit submitted successfully.")
     sys.exit(0)
 
