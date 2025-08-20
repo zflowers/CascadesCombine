@@ -8,10 +8,6 @@ from pathlib import Path
 # USER CONFIGURATION SECTION
 # -----------------------------
 
-# Datasets
-bkg_datasets = ["ttbar", "ST", "DY", "ZInv", "DBTB", "QCD", "Wjets"]
-sig_datasets = ["Cascades"]
-
 # Base arguments
 cpus = "1"
 memory = "1 GB"
@@ -51,6 +47,14 @@ def write_flatten_script(bin_names, flatten_exe="./flattenJSONs.x", json_dir="js
 
     os.chmod(script_path, 0o755)
     print(f"[submitJobs] Generated flatten script: {script_path}")
+
+def load_datasets(cfg_path):
+    """Read dataset definitions from YAML."""
+    with open(cfg_path, "r") as f:
+        cfg = yaml.safe_load(f)
+    bkg = cfg.get("datasets", {}).get("bkg", [])
+    sig = cfg.get("datasets", {}).get("sig", [])
+    return bkg, sig
 
 def setup_master_merge_script(bin_names, flatten_sh="run_flatten.sh", json_dir="json"):
     """
@@ -133,8 +137,7 @@ def generate_bins_from_shorthands():
         }
     return generated
 
-
-def build_command(bin_name, cfg):
+def build_command(bin_name, cfg, bkg_datasets, sig_datasets, sms_filters):
     """Construct the subprocess command to call createJobs.py"""
     cuts = cfg.get("cuts", "")
     lep_cuts = cfg.get("lep-cuts", "")
@@ -150,8 +153,13 @@ def build_command(bin_name, cfg):
         "--predefined-cuts", predefined,
         "--cpus", cpus,
         "--memory", memory,
-        "--lumi", lumi
+        "--lumi", lumi,
     ]
+
+    # Add SMS filters if provided
+    if sms_filters:
+        cmd += ["--sms-filters", *sms_filters]
+
     if dryrun:
         cmd.append("--dryrun")
     return cmd
@@ -174,13 +182,23 @@ def main():
     parser.add_argument("--lumi", dest="lumi", type=str, default=lumi,
                         help="Lumi to scale events to")
     parser.add_argument("--bins-cfg", dest="bins_cfg", type=str, default="config/examples.yaml",
-                        help="Path to YAML config file containing bin definitions")
+                        help="YAML config file containing bin definitions")
+    parser.add_argument("--datasets-cfg", dest="datasets_cfg", type=str,
+                        default="config/datasets.yaml",
+                        help="YAML config file containing dataset definitions")
     parser.set_defaults(dryrun=dryrun, stress_test=stress_test)
     args = parser.parse_args()
 
     dryrun = args.dryrun
     stress_test = args.stress_test
     lumi = args.lumi
+
+    # Load dataset names from YAML
+    bkg_datasets, sig_datasets = load_datasets(args.datasets_cfg)
+    with open(args.datasets_cfg, "r") as f:
+        yaml_cfg = yaml.safe_load(f)
+    
+    sms_filters = yaml_cfg.get("sms_filters", [])
 
     bins = {}
     bins_cfg_path = args.bins_cfg
@@ -253,7 +271,7 @@ def main():
             print(f"[WARN] skipping malformed bin '{bin_name}'")
             continue
 
-        cmd = build_command(bin_name, cfg)
+        cmd = build_command(bin_name, cfg, bkg_datasets, sig_datasets, sms_filters)
         jobs.append(cmd)
 
         print(f"[BIN-DEF] bin=\"{bin_name}\"")

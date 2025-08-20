@@ -60,9 +60,14 @@ class BFTool{
 	static stringlist GetSignalTokensSMS(const std::string& input);
 	static bool  ContainsAnySubstring(const std::string& mainString, const std::vector<std::string>& substrings);
         static stringlist filterSignalsSMS;
+        static void SetFilterSignalsSMS(const stringlist& filters);
 
 };
 inline stringlist BFTool::filterSignalsSMS{};
+
+inline void BFTool::SetFilterSignalsSMS(const stringlist& filters){
+    filterSignalsSMS = filters;
+}
 
 inline std::vector<std::string> BFTool::SplitString(const std::string& str,const std::string& delimiter) {
     std::vector<std::string> tokens;

@@ -27,12 +27,12 @@ def wait_for_jobs():
     monitor = CondorJobCountMonitor(threshold=1, verbose=False)
     monitor.wait_until_jobs_below()
 
-def submit_jobs(stress_test,config):
+def submit_jobs(stress_test,config,datasets):
     """
     Runs submitJobs.py to generate Condor scripts and merge scripts.
     Must create `master_merge.sh` with all merge commands.
     """
-    cmd = ["python3", "python/submitJobs.py", "--bins-cfg", config]
+    cmd = ["python3", "python/submitJobs.py", "--bins-cfg", config, "--datasets-cfg", datasets]
     if stress_test:
         cmd.append("--stress_test")
     subprocess.run(
@@ -159,6 +159,8 @@ def parse_args():
                    help="Max resubmit cycles to attempt")
     p.add_argument("--bins-cfg", dest="bins_cfg", type=str, default="config/examples.yaml",
                    help="Path to YAML config file containing bin definitions")
+    p.add_argument("--datasets-cfg", dest="datasets_cfg", type=str, default="config/datasets.yaml",
+                   help="YAML config file containing dataset definitions")
     p.add_argument("--stress_test", dest="stress_test", action="store_true",
                    help="Run stress test")
     return p.parse_args()
@@ -175,7 +177,7 @@ def main():
 
     # 2) Submit jobs and generate master_merge.sh
     print("[run_all] Submitting jobs...", flush=True)
-    submit_jobs(stress_test=args.stress_test,config=args.bins_cfg)
+    submit_jobs(stress_test=args.stress_test,config=args.bins_cfg,datasets=args.datasets_cfg)
 
     # 3) Wait for jobs to finish
     print("[run_all] Waiting for condor jobs to finish...", flush=True)

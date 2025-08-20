@@ -100,10 +100,10 @@ def build_jobs(tool, bin_name, cuts, lep_cuts, predef_cuts):
         for fpath in files:
             fname_stem = Path(fpath).stem
             sig_type = None
-            if "Cascades" in fpath:
-                sig_type = "cascades"
-            elif "SMS" in fpath:
+            if "SMS" in fpath:
                 sig_type = "sms"
+            elif "Cascades" in fpath:
+                sig_type = "cascades"
             jobs.append({
                 "dataset": ds,
                 "filepath": fpath,
@@ -204,14 +204,15 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, dryrun=Fa
 # Main
 # ----------------------------------------
 def main():
-    bkglist = ["ttbar", "ST", "DY", "ZInv", "DBTB", "QCD", "Wjets"]
-    siglist = ["Cascades"]
-
     parser = argparse.ArgumentParser()
-    parser.add_argument("--bkg_datasets", nargs="+", default=bkglist)
-    parser.add_argument("--sig_datasets", nargs="+", default=siglist)
+    parser.add_argument("--bkg_datasets", nargs="+", default=[],
+                        help="List of background dataset names")
+    parser.add_argument("--sig_datasets", nargs="+", default=[],
+                        help="List of signal dataset names")
+    parser.add_argument("--sms-filters", nargs="*", default=[],
+                        help="Optional list of SMS trees to filter; empty means no filtering")
     parser.add_argument("--bin", default="TEST")
-    parser.add_argument("--cuts", default="Nlep>=2,MET>=150")
+    parser.add_argument("--cuts", default="Nlep>=2;MET>=150")
     parser.add_argument("--lep-cuts", default=">=1OSSF")
     parser.add_argument("--predefined-cuts", default="Cleaning")
     parser.add_argument("--cpus", default="1")
@@ -221,11 +222,28 @@ def main():
     args = parser.parse_args()
 
     tool = pySampleTool.SampleTool()
+
+    # Load datasets directly from args
+    if args.sms_filters:
+        pySampleTool.BFTool.SetFilterSignalsSMS(args.sms_filters)
     tool.LoadBkgs(args.bkg_datasets)
     tool.LoadSigs(args.sig_datasets)
 
-    jobs = build_jobs(tool, args.bin, args.cuts, args.lep_cuts, args.predefined_cuts)
-    write_submit_file(args.bin, jobs, cpus=args.cpus, memory=args.memory, lumi=args.lumi, dryrun=args.dryrun)
+    jobs = build_jobs(
+        tool,
+        args.bin,
+        args.cuts,
+        args.lep_cuts,
+        args.predefined_cuts
+    )
+    write_submit_file(
+        args.bin,
+        jobs,
+        cpus=args.cpus,
+        memory=args.memory,
+        lumi=args.lumi,
+        dryrun=args.dryrun
+    )
 
 if __name__ == "__main__":
     main()
