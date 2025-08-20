@@ -1,5 +1,5 @@
 SuperBin2L: # Example SuperBin
-  cuts: "Nlep==2;MET>=150;PTISR>=350;Nbjet==0;Mperp<=15;RISR>=0.95;RISR<=1;Njet_S==0"
+  cuts: "Nlep==2;MET>=150;PTISR>=350;Nbjet==0;Mperp<=15;RISR>=0.95;RISR<=1;Njet_S==0;fabs(dphiMET_V)<TMath::Pi()/2.0"
   lep-cuts: |
     =2Gold;
     =1OSOF|mass![3.,3.2]

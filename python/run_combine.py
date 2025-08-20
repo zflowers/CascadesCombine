@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import subprocess, time, glob, os, sys, time, argparse
+import subprocess, time, glob, os, sys, time, argparse, json
 from CondorJobCountMonitor import CondorJobCountMonitor
 
 # ----- helper functions -----
@@ -67,6 +67,16 @@ def get_output_dir():
         name_without_ext = name_without_ext[len("flattened_"):]  # remove prefix
     output_dir = f"datacards_{name_without_ext}"
     return output_dir
+
+def print_events(json_file):
+    with open(json_file, "r") as f:
+        data = json.load(f)
+    for bin_name, processes in data.items():
+        print(f"Bin: {bin_name}")
+        for proc_name, values in processes.items():
+            if len(values) > 1:
+                weighted_events = round(values[1], 2)
+                print(f"  {proc_name}: {weighted_events}")
 
 def get_work_dirs():
     """
@@ -194,7 +204,7 @@ def main():
 
     # 8) Print yields
     print(f"[run_all] Yields for {args.bins_cfg}")
-    subprocess.run(["cat", flattened_json], check=True, stdout=sys.stdout, stderr=sys.stderr)
+    print_events(flattened_json)
 
     # 9) Collect significances
     print("[run_all] Collecting significances...", flush=True)
