@@ -138,6 +138,8 @@ def parse_args():
                    help="Max resubmit cycles to attempt")
     p.add_argument("--bins-cfg", dest="bins_cfg", type=str, default="config/bins.yaml",
                    help="Path to YAML config file containing bin definitions")
+    p.add_argument("--stress_test", dest="stress_test", action="store_true",
+                   help="Run stress test")
     return p.parse_args()
 
 def main():
@@ -151,7 +153,7 @@ def main():
 
     # 2) Submit jobs and generate master_merge.sh
     print("[run_all] Submitting jobs...", flush=True)
-    submit_jobs(stress_test=False,config=args.bins_cfg)
+    submit_jobs(stress_test=args.stress_test,config=args.bins_cfg)
 
     # 3) Wait for jobs to finish
     print("[run_all] Waiting for condor jobs to finish...", flush=True)
