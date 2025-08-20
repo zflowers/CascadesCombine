@@ -18,7 +18,7 @@ memory = "1 GB"
 # Defaults (can be overridden by CLI args)
 dryrun = False
 stress_test = False
-lumi = str(1.)
+lumi = str(400.)
 
 # Maximum concurrent submissions
 max_workers = 4
@@ -210,7 +210,7 @@ def main():
             "cuts": "Nlep>=4;MET>=50",
             "lep-cuts": (
                 ">=2OSSF|mass>=60|mass<=120;"
-                ">=1OSOF|mass![80:100];"
+                ">=1OSOF|mass![80,100];"
                 ">=1SSOF|mass>10|DeltaR<0.3"
             ),
             "predefined-cuts": "Cleaning",
