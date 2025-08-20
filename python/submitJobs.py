@@ -200,8 +200,8 @@ def main():
         "manualExample2": {
             "cuts": "Nlep>=3;MET>=100;PTISR>=100",
             "lep-cuts": (
-                ">=1OSSF_a|mass![3.1:3.8]|mass<65|DeltaR>0.4;"
-                ">=1OSSF_b|mass![20:90]|DeltaR<0.5;"
+                ">=1OSSF_a|mass![3.1,3.8]|mass<65|DeltaR>0.4;"
+                ">=1OSSF_b|mass![20,90]|DeltaR<0.5;"
                 ">=1SSSF|mass>10"
             ),
             "predefined-cuts": "Cleaning;ZStar",

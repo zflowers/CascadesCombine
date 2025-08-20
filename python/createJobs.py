@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import os, sys, subprocess, argparse, re
+import os, sys, subprocess, argparse, re, shutil
 from pathlib import Path
 import importlib.util
 
@@ -121,6 +121,8 @@ def build_jobs(tool, bin_name, cuts, lep_cuts, predef_cuts):
 def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, dryrun=False):
     bin_safe = sanitize(bin_name)
     bin_dir = CONDOR_DIR / bin_safe
+    if bin_dir.exists():
+        shutil.rmtree(bin_dir)
     bin_dir.mkdir(parents=True, exist_ok=True)
 
     # Subdirectories
