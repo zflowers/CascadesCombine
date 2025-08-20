@@ -12,7 +12,7 @@ Usage:
 Examples:
     python3 checkJobs.py manualExample1
 """
-import argparse, os, re, subprocess, sys, glob
+import argparse, os, re, subprocess, sys, glob, shutil
 from typing import Dict, Tuple, List
 
 DEFAULT_CMS_ENV = "/cvmfs/cms.cern.ch/cmsset_default.sh"
@@ -40,9 +40,10 @@ def check_job_ok(base_dir: str, job: str) -> bool:
 
     # Condition 1: json exists
     json_ok = os.path.exists(json_path)
+    if json_ok: return True
 
     # Condition 2: err exists and is empty
-    err_ok = os.path.exists(err_path) and os.path.getsize(err_path) == 0
+    err_ok = os.path.exists(err_path) and os.path.getsize(err_path) <= 1
 
     # Condition 3: out contains "Wrote output to: "
     out_ok = False
@@ -173,11 +174,25 @@ def main():
         print(f"[checkJobs] ERROR: json directory not found: {json_dir}", file=sys.stderr)
         sys.exit(2)
 
-    # Find jobs by json files (consistent with earlier behaviour)
-    jobs = sorted([os.path.splitext(x)[0] for x in os.listdir(json_dir) if x.endswith(".json")])
-
+    header, mapping = parse_submit_for_mapping(submit_path)
+    
+    if mapping:
+        # Use original queued LogFile tokens as canonical job list
+        jobs = sorted(mapping.keys())
+    else:
+        # Fallback: union of names found in json/out/err if we couldn't parse the submit
+        print("[checkJobs] Warning: could not extract LogFile->Args mapping from original submit; "
+              "falling back to filesystem enumeration.", file=sys.stderr)
+        names = set()
+        for d, ext in ((json_dir, ".json"), (out_dir, ".out"), (err_dir, ".err")):
+            if os.path.isdir(d):
+                for fn in os.listdir(d):
+                    if fn.endswith(ext):
+                        names.add(os.path.splitext(fn)[0])
+        jobs = sorted(names)
+    
     if not jobs:
-        print(f"[checkJobs] No jobs (json/*.json) found in {json_dir}", file=sys.stderr)
+        print(f"[checkJobs] No jobs discovered (submit parsing and filesystem fallback both empty).", file=sys.stderr)
         sys.exit(1)
 
     successful = []
@@ -191,10 +206,6 @@ def main():
             failed.append(job)
 
     # Print summary
-    #print(f"Successful jobs ({len(successful)}):")
-    #for s in successful:
-    #    print("  ", s)
-    #print()
     print(f"Failed jobs ({len(failed)}):")
     for fjob in failed:
         print("  ", fjob)
@@ -219,7 +230,6 @@ def main():
         sys.exit(1)
     
     # Copy original .sub to resubmit
-    import shutil
     shutil.copy(submit_path, resubmit_path)
     print(f"\nResubmit file written: {resubmit_path}")
     

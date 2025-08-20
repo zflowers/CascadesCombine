@@ -122,6 +122,7 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, dryrun=Fa
     bin_safe = sanitize(bin_name)
     bin_dir = CONDOR_DIR / bin_safe
     if bin_dir.exists():
+        print("Removing dir:",bin_dir.name)
         shutil.rmtree(bin_dir)
     bin_dir.mkdir(parents=True, exist_ok=True)
 

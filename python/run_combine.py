@@ -70,73 +70,83 @@ def get_work_dirs():
     """
     return [name for name in os.listdir("condor/") if os.path.isdir(os.path.join("condor", name))]
 
-# ----- integration with checkJobs.py -----
-def run_checkjobs_loop(submit_name="",
-                       no_resubmit=False,
-                       max_resubmits=3):
+def run_checkjobs_loop_parallel(no_resubmit=False, max_resubmits=3):
     """
-    Call checkJobs.py in a loop:
-      - If checkJobs finds no failed jobs -> returns (proceed).
-      - If checkJobs resubmits jobs -> wait_for_jobs() and loop again,
-        up to max_resubmits times.
-    Returns True if the loop ended with no failed jobs, False if we hit max_resubmits.
+    Check all work directories with checkJobs.py, resubmit failing jobs across
+    all directories in one cycle, then wait once for all resubmitted jobs to finish.
+    Returns True if no failed jobs remain (proceed), False on error or if max resubmits reached.
     """
+    work_dirs = get_work_dirs()
+    if not work_dirs:
+        print("[run_all] No work directories found under condor/.", flush=True)
+        return True
+
     attempt = 0
-    check_cmd_base = ["python3", "python/checkJobs.py", submit_name]
+    check_marker_no_failed = "No failed jobs to resubmit."
+    check_marker_resub_ok = "Resubmit submitted successfully."
 
-    while True:
+    while attempt < max_resubmits:
         attempt += 1
-        print(f"[run_all] Running checkJobs (attempt {attempt}/{max_resubmits})...", flush=True)
+        print(f"[run_all] Running checkJobs for all work_dirs (attempt {attempt}/{max_resubmits})...", flush=True)
 
-        proc = subprocess.run(check_cmd_base,
-                              capture_output=True,
-                              text=True)
+        resubmitted_dirs = []
+        any_unexpected = False
 
-        # print outputs for debugging
-        if proc.stdout:
-            print("----- checkJobs stdout -----")
-            print(proc.stdout)
-        if proc.stderr:
-            print("----- checkJobs stderr -----", file=sys.stderr)
-            print(proc.stderr, file=sys.stderr)
+        for work_dir in work_dirs:
+            check_cmd = ["python3", "python/checkJobs.py", work_dir]
+            proc = subprocess.run(check_cmd, capture_output=True, text=True)
 
-        if proc.returncode != 0:
-            # checkJobs failed for some reason; surface the error
-            print(f"[run_all] checkJobs.py exited with code {proc.returncode}", file=sys.stderr)
-            return False
+            # Print outputs (labeled)
+            if proc.stdout:
+                print(f"----- checkJobs stdout ({work_dir}) -----", flush=True)
+                print(proc.stdout, flush=True)
+            if proc.stderr:
+                print(f"----- checkJobs stderr ({work_dir}) -----", file=sys.stderr, flush=True)
+                print(proc.stderr, file=sys.stderr, flush=True)
 
-        stdout = proc.stdout or ""
-
-        # check for the explicit messages that checkJobs.py prints
-        no_failed_marker = "No failed jobs to resubmit."
-        resubmit_success_marker = "Resubmit submitted successfully."
-
-        if no_failed_marker in stdout:
-            print("[run_all] checkJobs reports no failed jobs. Proceeding.", flush=True)
-            return True
-
-        if resubmit_success_marker in stdout:
-            # it resubmitted some jobs; we should wait for them to finish
-            if attempt >= max_resubmits:
-                print(f"[run_all] Reached max_resubmits ({max_resubmits}). Stopping here.", file=sys.stderr)
+            if proc.returncode != 0:
+                print(f"[run_all] checkJobs.py returned non-zero ({proc.returncode}) for {work_dir}. Aborting.", file=sys.stderr, flush=True)
                 return False
 
-            print("[run_all] Resubmissions were submitted. Waiting for resubmitted jobs to finish...", flush=True)
-            wait_for_jobs()
-            # after the wait, loop again to re-run checkJobs.py
-            continue
+            stdout = proc.stdout or ""
 
-        # If neither known marker is present, assume checkJobs did something unexpected.
-        # We'll treat this conservatively as failure.
-        print("[run_all] Unexpected checkJobs.py output. please inspect the printed stdout/stderr.", file=sys.stderr)
-        return False
+            if check_marker_no_failed in stdout:
+                # nothing to do for this work_dir
+                continue
+            elif check_marker_resub_ok in stdout:
+                resubmitted_dirs.append(work_dir)
+            else:
+                # Unexpected output: be conservative and surface for inspection
+                print(f"[run_all] Unexpected checkJobs output for {work_dir}. See printed stdout/stderr above.", file=sys.stderr, flush=True)
+                any_unexpected = True
+
+        if any_unexpected:
+            return False
+
+        if not resubmitted_dirs:
+            print("[run_all] No failed jobs remaining in any work_dir. Proceeding.", flush=True)
+            return True
+
+        if no_resubmit:
+            print(f"[run_all] Resubmissions would be performed in {resubmitted_dirs}, but no_resubmit=True. Stopping.", flush=True)
+            return False
+
+        # wait once for all resubmitted jobs across all dirs
+        print(f"[run_all] Resubmitted jobs in {resubmitted_dirs}. Waiting for all resubmitted jobs to finish...", flush=True)
+        wait_for_jobs()
+        time.sleep(3) # buffer time for new outputs to transfer before recheck
+        # after wait, loop again to re-run checkJobs across all dirs
+
+    # reached max attempts
+    print(f"[run_all] Reached max_resubmits ({max_resubmits}). Giving up.", file=sys.stderr, flush=True)
+    return False
 
 # ----- main workflow -----
 def parse_args():
     p = argparse.ArgumentParser(description="Top-level workflow runner")
     p.add_argument("--max-resubmits", type=int, default=3,
                    help="Max resubmit cycles to attempt")
-    p.add_argument("--bins-cfg", dest="bins_cfg", type=str, default="config/bins.yaml",
+    p.add_argument("--bins-cfg", dest="bins_cfg", type=str, default="config/examples.yaml",
                    help="Path to YAML config file containing bin definitions")
     p.add_argument("--stress_test", dest="stress_test", action="store_true",
                    help="Run stress test")
@@ -161,13 +171,10 @@ def main():
 
     # 4) Run checkJobs.py loop to find/resubmit failed jobs (if any)
     print("[run_all] Checking for failed jobs and resubmitting if necessary...", flush=True)
-    work_dirs = get_work_dirs()
-    for work_dir in work_dirs:
-        ok = run_checkjobs_loop(submit_name=work_dir,
-                                max_resubmits=args.max_resubmits)
-        if not ok:
-            print(f"[run_all] checkJobs step did not complete successfully for {work_dir}. Aborting further steps.", file=sys.stderr)
-            sys.exit(1)
+    ok = run_checkjobs_loop_parallel(no_resubmit=False, max_resubmits=args.max_resubmits)
+    if not ok:
+        print(f"[run_all] checkJobs step did not complete successfully. Aborting further steps.", file=sys.stderr)
+        sys.exit(1)
 
     # 5) Run all merge scripts
     print("[run_all] Running master merge script", flush=True)

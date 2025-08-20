@@ -173,7 +173,7 @@ def main():
                         help="Run stress test")
     parser.add_argument("--lumi", dest="lumi", type=str, default=lumi,
                         help="Lumi to scale events to")
-    parser.add_argument("--bins-cfg", dest="bins_cfg", type=str, default="config/bins.yaml",
+    parser.add_argument("--bins-cfg", dest="bins_cfg", type=str, default="config/examples.yaml",
                         help="Path to YAML config file containing bin definitions")
     parser.set_defaults(dryrun=dryrun, stress_test=stress_test)
     args = parser.parse_args()

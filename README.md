@@ -49,9 +49,8 @@ scram b
 
 The RDataframe framework is here,
 https://github.com/zflowers/CascadesCombine
-Also clone this into the CMSSW src
+Also clone this repo into the CMSSW src
 `git clone git@github.com:zflowers/CascadesCombine.git`
-
 
 When everything is cloned and scram b'd go into the LLPCombine directory and compile everything
 ```
@@ -60,24 +59,23 @@ make all -j 8
 ```
 
 ### Workflow Super TLDR;
-- Setup bins in python/submitJobs.py
+- Setup bins using .yaml files in config/
 - call python3 python/run_combine.py to do everything
 - alias to run in bkg: 
 ```
-nohup python3 python/run_combine.py > debug_run_combine.debug 2>&1 &
+nohup python3 python/run_combine.py --bins-cfg config/examples.yaml > debug_run_combine.debug 2>&1 &
 ```
 
 ### Workflow TLDR;
-- src/main.cpp is where BFI's are set up
-  - load all the necessary bkgs and signals from sample tool
-  - define strings to create (cut) your signal bin
-  - `BFI->ReportRegions(0)` launches the event loop
-  - Write the results to a json
-  - Relatively slow for the cascades analysis due to various factors (skim size, xrootd, etc.)
-- src/JSON is the intermediate BFI format
+- JSON is the intermediate BFI format
   - the JSON mapping is dictionary-like BINNAME[ PROCESS[ YIELDS]]
   - the process are background or signal by name
   - the yields are a vector of 3 quantities, {base_events, weighted_events, statistical_error}
+- config/ .yaml files are stored here with bin definitions
+  - three different types of cut strings are possible
+  - square cuts directly on branches in ntuples
+  - lepton based cuts on flavor, charge, etc. (see example)
+  - BuildFitInput also has a few handy functions of common cuts (Cleaning cuts in PTCM, dphiCMI)
 - src/BFI_condor.cpp is what is used for the CASCADES
   - runs a BFI job to create the JSON for each file in SampleTool
   - the bin name is a user defined name that maps to various cuts
@@ -87,8 +85,7 @@ nohup python3 python/run_combine.py > debug_run_combine.debug 2>&1 &
   - keyed off of the bin name
   - submits all jobs for each file for a given bin
 - python/submitJobs.py
-  - actual user submission script
-  - use this to load up your cut strings (examples inside)
+  - creates condor submission scripts
   - run to make calls to createJobs for each bin
 - src/flattenJSONs.cpp & src/mergeJSONs.cpp
   - helpers to merge JSON outputs from BFI_condor.cpp
