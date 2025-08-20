@@ -23,12 +23,12 @@ def wait_for_jobs():
     monitor = CondorJobCountMonitor(threshold=1, verbose=False)
     monitor.wait_until_jobs_below()
 
-def submit_jobs(stress_test):
+def submit_jobs(stress_test,config):
     """
     Runs submitJobs.py to generate Condor scripts and merge scripts.
     Must create `master_merge.sh` with all merge commands.
     """
-    cmd = ["python3", "python/submitJobs.py"]
+    cmd = ["python3", "python/submitJobs.py", "--bins-cfg", config]
     if stress_test:
         cmd.append("--stress_test")
     subprocess.run(
@@ -135,7 +135,9 @@ def run_checkjobs_loop(submit_name="",
 def parse_args():
     p = argparse.ArgumentParser(description="Top-level workflow runner")
     p.add_argument("--max-resubmits", type=int, default=3,
-                   help="Max resubmit cycles to attempt (default: 3).")
+                   help="Max resubmit cycles to attempt")
+    p.add_argument("--bins-cfg", dest="bins_cfg", type=str, default="config/bins.yaml",
+                   help="Path to YAML config file containing bin definitions")
     return p.parse_args()
 
 def main():
@@ -149,7 +151,7 @@ def main():
 
     # 2) Submit jobs and generate master_merge.sh
     print("[run_all] Submitting jobs...", flush=True)
-    submit_jobs(stress_test=False)
+    submit_jobs(stress_test=False,config=args.bins_cfg)
 
     # 3) Wait for jobs to finish
     print("[run_all] Waiting for condor jobs to finish...", flush=True)

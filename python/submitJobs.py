@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-import os, argparse, subprocess
+import os, sys, argparse, subprocess, yaml
 from itertools import product
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 # -----------------------------
 # USER CONFIGURATION SECTION
@@ -33,14 +34,10 @@ limit_submit = None  # e.g., 10
 def write_flatten_script(bin_names, flatten_exe="./flattenJSONs.x", json_dir="json"):
     """
     Create a run_flatten.sh script that merges all JSONs for the given bins.
-    
-    Args:
-        bin_names (list of str): List of bin names.
-        flatten_exe (str): Path to the flattenJSON executable.
-        json_dir (str): Directory where final flattened JSON will be stored.
     """
+    os.makedirs("condor", exist_ok=True)
     os.makedirs(json_dir, exist_ok=True)
-    output_name = "_".join(bin_names)
+    output_name = "_".join(bin_names) if bin_names else "all"
     output_file = os.path.join(json_dir, f"flattened_{output_name}.json")
     script_path = "condor/run_flatten.sh"
 
@@ -59,6 +56,7 @@ def setup_master_merge_script(bin_names, flatten_sh="run_flatten.sh", json_dir="
     """
     Create master_merge.sh to run all per-bin merges and then flatten into a single JSON.
     """
+    os.makedirs("condor", exist_ok=True)
     os.makedirs(json_dir, exist_ok=True)
     master_script_path = "condor/master_merge.sh"
 
@@ -73,7 +71,6 @@ def setup_master_merge_script(bin_names, flatten_sh="run_flatten.sh", json_dir="
             f.write(f"bash {merge_script}\n")
         
         # Step 2: Call flatten on all merged bins
-        input_bins = " ".join([f"condor/{bin_name}" for bin_name in bin_names])
         output_file = os.path.join(json_dir, f"flattened_{'_'.join(bin_names)}.json")
         f.write(f"bash condor/{flatten_sh}\n")
         f.write(f"echo 'Final flattened JSON written to {output_file}'\n")
@@ -136,16 +133,21 @@ def generate_bins_from_shorthands():
         }
     return generated
 
+
 def build_command(bin_name, cfg):
     """Construct the subprocess command to call createJobs.py"""
+    cuts = cfg.get("cuts", "")
+    lep_cuts = cfg.get("lep-cuts", "")
+    predefined = cfg.get("predefined-cuts", "")
+
     cmd = [
         "python3", "python/createJobs.py",
         "--bkg_datasets", *bkg_datasets,
         "--sig_datasets", *sig_datasets,
         "--bin", bin_name,
-        "--cuts", cfg["cuts"],
-        "--lep-cuts", cfg["lep-cuts"],
-        "--predefined-cuts", cfg["predefined-cuts"],
+        "--cuts", cuts,
+        "--lep-cuts", lep_cuts,
+        "--predefined-cuts", predefined,
         "--cpus", cpus,
         "--memory", memory,
         "--lumi", lumi
@@ -160,10 +162,6 @@ def submit_job(cmd):
     if not dryrun:
         subprocess.run(cmd)
 
-# -----------------------------
-# MAIN
-# -----------------------------
-
 def main():
     global dryrun, stress_test, lumi
 
@@ -175,6 +173,8 @@ def main():
                         help="Run stress test")
     parser.add_argument("--lumi", dest="lumi", type=str, default=lumi,
                         help="Lumi to scale events to")
+    parser.add_argument("--bins-cfg", dest="bins_cfg", type=str, default="config/bins.yaml",
+                        help="Path to YAML config file containing bin definitions")
     parser.set_defaults(dryrun=dryrun, stress_test=stress_test)
     args = parser.parse_args()
 
@@ -183,42 +183,57 @@ def main():
     lumi = args.lumi
 
     bins = {}
-    
-    # Manual bins
-    manual_bins = {
-        # Structure
-        # Name of bin: {
-        #     "cuts": cuts directly on saved branches,
-        #     "lep-cuts": uses BuildFitInput::BuildLeptonCut to form cuts (see stress test above for examples),
-        #     "predefined-cuts": predefined cuts in src/BuildFitInput.cpp,
-        # },
+    bins_cfg_path = args.bins_cfg
+    cfg_path = Path(bins_cfg_path)
+
+    # built-in default manual_bins (used only as fallback if YAML missing)
+    default_manual_bins = {
         "manualExample1": {
             "cuts": "Nlep>=2;MET>=150;PTISR>=200",
             "lep-cuts": ">=1OSSF",
             "predefined-cuts": "Cleaning",
-        },
-        "manualExample2": {
-            "cuts": "Nlep>=3;MET>=100;PTISR>=100",
-            "lep-cuts": (
-                ">=1OSSF_a|mass![3.1,3.8]|mass<65|DeltaR>0.4;"
-                ">=1OSSF_b|mass![20,90]|DeltaR<0.5;"
-                ">=1SSSF|mass>10"
-            ),
-            "predefined-cuts": "Cleaning;ZStar",
-        },
-        "manualExample3": {
-            "cuts": "Nlep>=4;MET>=50",
-            "lep-cuts": (
-                ">=2OSSF|mass>=60|mass<=120;"
-                ">=1OSOF|mass![80,100];"
-                ">=1SSOF|mass>10|DeltaR<0.3"
-            ),
-            "predefined-cuts": "Cleaning",
-        },
+        }
     }
-    bins.update(manual_bins)
-    
-    # Templated bins
+
+    if cfg_path.exists():
+        try:
+            with open(cfg_path) as f:
+                manual_bins = yaml.safe_load(f) or {}
+            # Normalize/flatten each bin entry
+            for name, cfg in list(manual_bins.items()):
+                if not isinstance(cfg, dict):
+                    print(f"[submitJobs] WARNING: bin '{name}' in YAML is not a mapping/dict; skipping.")
+                    manual_bins.pop(name, None)
+                    continue
+                # Ensure keys exist
+                cfg.setdefault("cuts", "")
+                cfg.setdefault("lep-cuts", "")
+                cfg.setdefault("predefined-cuts", "")
+
+                # Process lep-cuts: remove commented lines and join remaining lines
+                if isinstance(cfg["lep-cuts"], str):
+                    kept_lines = []
+                    for line in cfg["lep-cuts"].splitlines():
+                        if line.strip().startswith("#"):
+                            # skip commented lines
+                            continue
+                        kept_lines.append(line.rstrip())
+                    # join without newline to produce the compact shorthand expected by createJobs
+                    cfg["lep-cuts"] = "".join(kept_lines)
+            bins.update(manual_bins)
+            print(f"[submitJobs] Loaded {len(manual_bins)} bin(s) from YAML: {cfg_path}")
+        except Exception as e:
+            print(f"[submitJobs] ERROR loading YAML config: {e}")
+            print("[submitJobs] Falling back to built-in manual bins.")
+            bins.update(default_manual_bins)
+    else:
+        print(f"[submitJobs] WARNING: YAML config not found at {cfg_path}")
+        print("[submitJobs] Using built-in manual bins as fallback (you can supply --bins-cfg).")
+        bins.update(default_manual_bins)
+
+    # -----------------------------
+    # GENERATE STRESS-TEST TEMPLATED BINS
+    # -----------------------------
     if stress_test:
         gen = generate_bins_from_shorthands()
         for k, v in gen.items():
@@ -226,21 +241,28 @@ def main():
                 print(f"[TEMPLATE SKIP] Generated bin '{k}' collides with manual bin; skipping.")
                 continue
             bins[k] = v
-    
+
+    # -----------------------------
     # Build jobs
+    # -----------------------------
     jobs = []
     print("\n===== BEGIN BIN DEFINITIONS =====\n")
     for bin_name, cfg in bins.items():
+        # ensure cfg has expected keys (defensive)
+        if not isinstance(cfg, dict):
+            print(f"[WARN] skipping malformed bin '{bin_name}'")
+            continue
+
         cmd = build_command(bin_name, cfg)
         jobs.append(cmd)
-    
+
         print(f"[BIN-DEF] bin=\"{bin_name}\"")
-        print(f"          lep-cuts=\"{cfg['lep-cuts']}\"")
-        print(f"          cuts=\"{cfg['cuts']}\"")
-        print(f"          predefined-cuts=\"{cfg['predefined-cuts']}\"\n")
-    
+        print(f"          lep-cuts=\"{cfg.get('lep-cuts', '')}\"")
+        print(f"          cuts=\"{cfg.get('cuts', '')}\"")
+        print(f"          predefined-cuts=\"{cfg.get('predefined-cuts', '')}\"\n")
+
     print("===== END BIN DEFINITIONS =====\n")
-    
+
     # Summary
     total_jobs = len(jobs)
     print(f"Prepared {total_jobs} bin(s) for submission.")
@@ -248,15 +270,15 @@ def main():
         print("Dry-run mode enabled: no jobs will actually be submitted.")
     if limit_submit is not None:
         print(f"Limit enabled: will only submit first {limit_submit} job(s).")
-    
+
     # Apply limit if requested
     if limit_submit is not None:
         jobs = jobs[:limit_submit]
-    
+
     # Submit
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         executor.map(submit_job, jobs)
-    
+
     if not dryrun:
         write_flatten_script(list(bins.keys()))
         setup_master_merge_script(list(bins.keys()))
