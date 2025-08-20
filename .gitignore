@@ -11,3 +11,4 @@ libs/
 obj/
 condor/
 python/__pycache__/
+*.yaml
