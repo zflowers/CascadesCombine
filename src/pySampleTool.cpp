@@ -25,5 +25,7 @@ PYBIND11_MODULE(pySampleTool, m) {
 
     py::class_<BFTool>(m, "BFTool")
         .def_static("SetFilterSignalsSMS", &BFTool::SetFilterSignalsSMS,
-                    "Set the SMS filter list");
+                    "Set the SMS filter list")
+        .def_static("GetFilterSignalsSMS", &BFTool::GetFilterSignalsSMS,
+                    "Get the SMS filter list");
 }

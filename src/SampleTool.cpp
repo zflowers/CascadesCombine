@@ -145,7 +145,6 @@ void SampleTool::LoadBkgs( const stringlist& bkglist ){
 	}
 }
 void SampleTool::LoadSigs( const stringlist& siglist ){
-
 	for( long unsigned int i=0; i<siglist.size(); i++){
 		if( MasterDict.count(siglist[i]) == 0 ){
 			std::cout<<"Sig: "<<siglist[i]<<" not found ... skipping ...\n";
@@ -163,8 +162,13 @@ void SampleTool::LoadSigs( const stringlist& siglist ){
 			  SignalKeys.push_back( BFTool::GetSignalTokensCascades( s_strings[j] ) );
                         else if(s_strings[j].find("X_SMS") != std::string::npos){
                           stringlist sms_temp = BFTool::GetSignalTokensSMS( s_strings[j] );
-                          for (const auto& sms_entry : sms_temp)
+                          stringlist sms_filters_tmp;
+                          for (const auto& sms_entry : sms_temp){
 			    SignalKeys.push_back( sms_entry );
+			    sms_filters_tmp.push_back( sms_entry );
+                          }
+			  if (BFTool::filterSignalsSMS.empty())
+                            BFTool::SetFilterSignalsSMS(sms_filters_tmp);
                         }
 		}
 	}

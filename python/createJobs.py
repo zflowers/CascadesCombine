@@ -237,10 +237,15 @@ def main():
     tool = pySampleTool.SampleTool()
 
     # Load datasets directly from args
-    if args.sms_filters:
-        pySampleTool.BFTool.SetFilterSignalsSMS(args.sms_filters)
     tool.LoadBkgs(args.bkg_datasets)
-    tool.LoadSigs(args.sig_datasets)
+    sms_filters = []
+    if args.sms_filters:
+        sms_filters = args.sms_filters
+        pySampleTool.BFTool.SetFilterSignalsSMS(sms_filters)
+        tool.LoadSigs(args.sig_datasets)
+    else:
+        tool.LoadSigs(args.sig_datasets)
+        sms_filters = pySampleTool.BFTool.GetFilterSignalsSMS();
 
     jobs = build_jobs(
         tool,
@@ -248,7 +253,7 @@ def main():
         args.cuts,
         args.lep_cuts,
         args.predefined_cuts,
-        args.sms_filters
+        sms_filters
     )
     write_submit_file(
         args.bin,

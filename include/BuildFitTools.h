@@ -61,12 +61,17 @@ class BFTool{
 	static bool  ContainsAnySubstring(const std::string& mainString, const std::vector<std::string>& substrings);
         static stringlist filterSignalsSMS;
         static void SetFilterSignalsSMS(const stringlist& filters);
+        static stringlist GetFilterSignalsSMS();
 
 };
 inline stringlist BFTool::filterSignalsSMS{};
 
 inline void BFTool::SetFilterSignalsSMS(const stringlist& filters){
     filterSignalsSMS = filters;
+}
+
+inline stringlist BFTool::GetFilterSignalsSMS(){
+    return filterSignalsSMS;
 }
 
 inline std::vector<std::string> BFTool::SplitString(const std::string& str,const std::string& delimiter) {
