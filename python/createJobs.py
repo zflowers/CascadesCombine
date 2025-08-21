@@ -61,16 +61,12 @@ transfer_input_files    = BFI_condor.x
 request_cpus            = {cpus}
 request_memory          = {memory}
 
-periodic_hold = (CpusUsage > RequestCpus || MemoryUsage > RequestMemory) && (JobStatus == 2) && (CurrentTime - EnteredCurrentStatus > 60)
-
-+JobTransforms = "if HoldReasonSubCode == 42 set RequestCpus = MIN(RequestCpus + 1, 32); if HoldReasonCode == 34 set RequestMemory = MIN(RequestMemory + 1, 24)"
-
+# Release jobs automatically from hold for common conditions
 periodic_release = (HoldReasonCode == 12 && HoldReasonSubCode == 256) || \
                    (HoldReasonCode == 13 && HoldReasonSubCode == 2)   || \
                    (HoldReasonCode == 12 && HoldReasonSubCode == 2)   || \
                    (HoldReasonCode == 26 && HoldReasonSubCode == 120) || \
-                   (HoldReasonCode == 3  && HoldReasonSubCode == 0)   || \
-                   (HoldReasonSubCode == 42)
+                   (HoldReasonCode == 3  && HoldReasonSubCode == 0) \
 
 use_x509userproxy       = True
 getenv                  = True
