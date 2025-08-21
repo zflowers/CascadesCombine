@@ -79,40 +79,52 @@ getenv                  = True
 # ----------------------------------------
 # Job building
 # ----------------------------------------
-def build_jobs(tool, bin_name, cuts, lep_cuts, predef_cuts):
+def build_jobs(tool, bin_name, cuts, lep_cuts, predef_cuts, sms_filters):
     jobs = []
+
+    def make_base_job(ds, fpath):
+        return {
+            "dataset": ds,
+            "filepath": fpath,
+            "fname_stem": Path(fpath).stem,
+            "cuts": cuts,
+            "lep_cuts": lep_cuts,
+            "predef_cuts": predef_cuts
+        }
 
     # Background jobs
     for ds, files in tool.BkgDict.items():
         for fpath in files:
-            fname_stem = Path(fpath).stem
-            jobs.append({
-                "dataset": ds,
-                "filepath": fpath,
-                "fname_stem": fname_stem,
-                "cuts": cuts,
-                "lep_cuts": lep_cuts,
-                "predef_cuts": predef_cuts
-            })
+            jobs.append(make_base_job(ds, fpath))
 
     # Signal jobs
     for ds, files in tool.SigDict.items():
         for fpath in files:
-            fname_stem = Path(fpath).stem
+            base = make_base_job(ds, fpath)
+    
             sig_type = None
             if "SMS" in fpath:
                 sig_type = "sms"
             elif "Cascades" in fpath:
                 sig_type = "cascades"
-            jobs.append({
-                "dataset": ds,
-                "filepath": fpath,
-                "fname_stem": fname_stem,
-                "cuts": cuts,
-                "lep_cuts": lep_cuts,
-                "predef_cuts": predef_cuts,
-                "sig_type": sig_type
-            })
+    
+            # one job per filter
+            if sig_type == "sms" and sms_filters:
+                for filt in sms_filters:
+                    job = {
+                        **base,
+                        "sig_type": sig_type,
+                        "sms_filters": [filt],
+                    }
+                    jobs.append(job)
+            else:
+                # cascades or sms with no filters
+                job = {
+                    **base,
+                    "sig_type": sig_type,
+                }
+                jobs.append(job)
+    
     return jobs
 
 # ----------------------------------------
@@ -157,11 +169,15 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, dryrun=Fa
         fpath = job["filepath"]
         fname_stem = job["fname_stem"]
         sig_type = job.get("sig_type", None)
-
-        base = sanitize(f"{bin_name}_{ds}_{fname_stem}")
+        sms_filters = job.get("sms_filters", [])
+    
+        # include sms filter in base if present
+        filter_tag = sms_filters[0] if sms_filters else ""
+        base = sanitize(f"{bin_name}_{ds}_{fname_stem}_{filter_tag}")
+    
         # Pass plain filename (no leading ./) so Condor matches it to transfer_output_files
         remote_json_arg = f"{base}.json"
-
+    
         args_list = [
             f"--lumi {lumi}",
             f"--bin {bin_name}",
@@ -173,9 +189,11 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, dryrun=Fa
         ]
         if sig_type:
             args_list.append(f"--sig-type {sig_type}")
-
+        if sms_filters:
+            args_list.append("--sms-filters")
+            args_list.append(sms_filters[0])
+    
         args_str = " ".join(a for a in args_list if a and not a.isspace())
-        # The first column (base) becomes $(LogFile)
         submit_lines.append(f'{base} "{args_str}"')
 
     submit_lines.append(")")
@@ -234,7 +252,8 @@ def main():
         args.bin,
         args.cuts,
         args.lep_cuts,
-        args.predefined_cuts
+        args.predefined_cuts,
+        args.sms_filters
     )
     write_submit_file(
         args.bin,

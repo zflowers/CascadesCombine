@@ -33,6 +33,7 @@ LEP_CUTS=""
 PREDEF_CUTS=""
 SIG_TYPE=""
 LUMI=""
+SMS_FILTERS=""
 
 while [[ $# -gt 0 ]]; do
     key="$1"
@@ -45,6 +46,16 @@ while [[ $# -gt 0 ]]; do
         --predefined-cuts) PREDEF_CUTS=$(clean_arg "$2"); shift; shift;;
         --sig-type) SIG_TYPE=$(clean_arg "$2"); shift; shift;;
         --lumi) LUMI=$(clean_arg "$2"); shift; shift;;
+        --sms-filters)
+            shift
+            SMS_FILTERS=""
+            while [[ $# -gt 0 && ! $1 == --* ]]; do
+                SMS_FILTERS+="$1,"
+                shift
+            done
+            # remove trailing comma
+            SMS_FILTERS=${SMS_FILTERS%,}
+            ;;
         *) echo "Unknown option $1"; shift;;
     esac
 done
@@ -60,6 +71,7 @@ CMD="./BFI_condor.x --bin \"$BIN\" --file \"$ROOTFILE\" --output \"$OUTPUT_JSON\
 [[ -n "$PREDEF_CUTS" ]] && CMD="$CMD --predefined-cuts \"$PREDEF_CUTS\""
 [[ -n "$SIG_TYPE" ]] && CMD="$CMD --sig-type $SIG_TYPE"
 [[ -n "$LUMI" ]] && CMD="$CMD --lumi $LUMI"
+[[ -n "$SMS_FILTERS" ]] && CMD="$CMD --sms-filters $SMS_FILTERS"
 
 # --- Echo and run ---
 echo "Running BFI_condor.x with arguments:"

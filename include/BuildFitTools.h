@@ -105,8 +105,9 @@ inline stringlist BFTool::GetSignalTokensSMS(const std::string& input ){
         std::string tree_name = key->GetName();
         if (!std::regex_match(tree_name, sms_pattern))
             continue; // skip if not matching SMS_X_Y format
-	if (std::find(BFTool::filterSignalsSMS.begin(), BFTool::filterSignalsSMS.end(), tree_name) == BFTool::filterSignalsSMS.end())
-            continue;
+        if (!BFTool::filterSignalsSMS.empty())
+            if (std::find(BFTool::filterSignalsSMS.begin(), BFTool::filterSignalsSMS.end(), tree_name) == BFTool::filterSignalsSMS.end())
+                continue;
         tree_names.push_back(tree_name);
     }
     file->Close();
@@ -131,19 +132,32 @@ inline std::string BFTool::GetSignalTokensCascades(const std::string& input ){
         return "";
     }
 
-    // Variables to hold branch data
-    int MP, MSlepL, MSneu, MN2, MC1, MN1;
+    // Variables to hold final values
+    int MP = 0, MSlepL = 0, MSneu = 0, MN2 = 0, MC1 = 0, MN1 = 0;
+    
+    // Temporary variables to read event-by-event
+    int tMP, tMSlepL, tMSneu, tMN2, tMC1, tMN1;
+    tree->SetBranchAddress("MP",     &tMP);
+    tree->SetBranchAddress("MSlepL", &tMSlepL);
+    tree->SetBranchAddress("MSneu",  &tMSneu);
+    tree->SetBranchAddress("MN2",    &tMN2);
+    tree->SetBranchAddress("MC1",    &tMC1);
+    tree->SetBranchAddress("MN1",    &tMN1);
+    
+    Long64_t nEntries = tree->GetEntries();
+    for (Long64_t i = 0; i < nEntries; ++i) {
+        tree->GetEntry(i);
+    
+        if (!MP     && tMP)     MP     = tMP;
+        if (!MSlepL && tMSlepL) MSlepL = tMSlepL;
+        if (!MSneu  && tMSneu)  MSneu  = tMSneu;
+        if (!MN2    && tMN2)    MN2    = tMN2;
+        if (!MC1    && tMC1)    MC1    = tMC1;
+        if (!MN1    && tMN1)    MN1    = tMN1;
+    
+        if (MP && MSlepL && MSneu && MN2 && MC1 && MN1) break;
+    }
 
-    // Set branch addresses
-    tree->SetBranchAddress("MP",     &MP);
-    tree->SetBranchAddress("MSlepL", &MSlepL);
-    tree->SetBranchAddress("MSneu",  &MSneu);
-    tree->SetBranchAddress("MN2",    &MN2);
-    tree->SetBranchAddress("MC1",    &MC1);
-    tree->SetBranchAddress("MN1",    &MN1);
-
-    // Read first entry
-    tree->GetEntry(0);
     file->Close();
     std::ostringstream oss;
     oss << "Cascades_"

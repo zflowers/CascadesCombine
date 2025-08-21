@@ -1,6 +1,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>   // for map, vector, string
 #include "SampleTool.h"
+#include "BuildFitTools.h"
 
 namespace py = pybind11;
 
@@ -21,5 +22,8 @@ PYBIND11_MODULE(pySampleTool, m) {
         .def("LoadSigs", &SampleTool::LoadSigs)
         .def("PrintDict", &SampleTool::PrintDict)
         .def("PrintKeys", &SampleTool::PrintKeys);
-}
 
+    py::class_<BFTool>(m, "BFTool")
+        .def_static("SetFilterSignalsSMS", &BFTool::SetFilterSignalsSMS,
+                    "Set the SMS filter list");
+}

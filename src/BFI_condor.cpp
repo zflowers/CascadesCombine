@@ -8,7 +8,6 @@
 #include <getopt.h>
 #include "TFile.h"
 #include "BuildFitInput.h"
-#include "SampleTool.h"
 #include "BuildFitTools.h"
 
 // ----------------------
@@ -156,6 +155,7 @@ int main(int argc, char** argv) {
     std::string rootFilePath;
     std::string outputJsonPath;
     std::string sampleName;
+    std::vector<std::string> smsFilters;
     bool isSignal = false;
     std::string sigType; // "cascades" or "sms" (optional)
     double Lumi = 1.0;
@@ -171,6 +171,7 @@ int main(int argc, char** argv) {
         {"sig-type", required_argument, 0, 't'},
         {"lumi", required_argument, 0, 'u'},
         {"sample-name", required_argument, 0, 'n'},
+        {"sms-filters", required_argument, 0, 'm'},
         {"help", no_argument, 0, 'h'},
         {0,0,0,0}
     };
@@ -189,6 +190,7 @@ int main(int argc, char** argv) {
             case 't': sigType = optarg; isSignal = true; break;
             case 'u': Lumi = atof(optarg); break;
             case 'n': sampleName = optarg; break;
+            case 'm': smsFilters = BFTool::SplitString(optarg, ","); break;
             case 'h':
             default:
                 usage(argv[0]);
@@ -322,6 +324,8 @@ int main(int argc, char** argv) {
         std::string subkey = BFTool::GetSignalTokensCascades(rootFilePath);
         processTree("KUAnalysis", subkey.empty() ? sampleName : subkey);
     } else if (sigType == "sms") {
+        if (!smsFilters.empty())
+            BFTool::filterSignalsSMS = smsFilters;
         for (const auto &tree_name : BFTool::GetSignalTokensSMS(rootFilePath))
             processTree(tree_name, tree_name);
     } else {

@@ -172,7 +172,7 @@ def main():
 
     # 1) Compile framework
     print("[run_all] Building binaries...", flush=True)
-    # clean_binaries()
+    clean_binaries()
     build_binaries()
 
     # 2) Submit jobs and generate master_merge.sh

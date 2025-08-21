@@ -22,7 +22,7 @@ PYBIND_CXXFLAGS = $(CXXFLAGS) $(PYBIND_INCLUDES)
 
 # --- Source files ---
 SRCS = $(SRC_DIR)/main.cpp $(SRC_DIR)/SampleTool.cpp $(SRC_DIR)/BuildFitInput.cpp $(SRC_DIR)/JSONFactory.cpp
-SRCS_CONDOR = $(SRC_DIR)/BFI_condor.cpp $(SRC_DIR)/SampleTool.cpp $(SRC_DIR)/BuildFitInput.cpp $(SRC_DIR)/JSONFactory.cpp
+SRCS_CONDOR = $(SRC_DIR)/BFI_condor.cpp $(SRC_DIR)/BuildFitInput.cpp $(SRC_DIR)/JSONFactory.cpp
 CMSSWSRCS = $(SRC_DIR)/BFmain.cpp $(SRC_DIR)/BuildFit.cpp $(SRC_DIR)/JSONFactory.cpp
 SRCS_MERGE = $(SRC_DIR)/mergeJSONs.cpp $(SRC_DIR)/JSONFactory.cpp $(SRC_DIR)/SampleTool.cpp $(SRC_DIR)/BuildFitInput.cpp
 SRCS_FLATTEN = $(SRC_DIR)/flattenJSONs.cpp
