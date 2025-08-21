@@ -172,8 +172,7 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, dryrun=Fa
         sms_filters = job.get("sms_filters", [])
     
         # include sms filter in base if present
-        filter_tag = sms_filters[0] if sms_filters else ""
-        base = sanitize(f"{bin_name}_{ds}_{fname_stem}_{filter_tag}")
+        base = sanitize(f"{bin_name}_{ds}_{fname_stem}" + (f"_{sms_filters[0]}" if sms_filters else ""))
     
         # Pass plain filename (no leading ./) so Condor matches it to transfer_output_files
         remote_json_arg = f"{base}.json"
