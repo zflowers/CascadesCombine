@@ -20,6 +20,10 @@ I set up the following alias that I run whenever I login and want to use this to
 ```
 alias setup_combine='export SCRAM_ARCH=el9_amd64_gcc12 && cd /uscms/home/z374f439/nobackup/CMSSW_14_1_0_pre4/src/CascadesCombine/ && cmsenv'
 ```
+And for reference, I put my .bash_profile as an example in 
+```
+scripts/example_bash_profile.sh
+```
 
 The combine version is v10
 https://cms-analysis.github.io/HiggsAnalysis-CombinedLimit/latest/#combine-v10-recommended-version
