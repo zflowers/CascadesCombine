@@ -75,7 +75,19 @@ getenv                  = True
 # ----------------------------------------
 # Job building
 # ----------------------------------------
-def build_jobs(tool, bin_name, cuts, lep_cuts, predef_cuts, sms_filters):
+def build_jobs(tool, bin_name, cuts, lep_cuts, predef_cuts, sms_filters, hist_yaml_file=None):
+    """
+    Build the job list for Condor submission.
+    
+    Arguments:
+        tool           : pySampleTool.SampleTool instance
+        bin_name       : str, name of the bin
+        cuts           : str, event selection cuts
+        lep_cuts       : str, lepton-specific cuts
+        predef_cuts    : str, predefined cuts
+        sms_filters    : list of SMS filters to apply
+        hist_yaml_file : optional str, path to histogram YAML to pass to each job
+    """
     jobs = []
 
     def make_base_job(ds, fpath):
@@ -85,7 +97,8 @@ def build_jobs(tool, bin_name, cuts, lep_cuts, predef_cuts, sms_filters):
             "fname_stem": Path(fpath).stem,
             "cuts": cuts,
             "lep_cuts": lep_cuts,
-            "predef_cuts": predef_cuts
+            "predef_cuts": predef_cuts,
+            "hist_yaml": hist_yaml_file,
         }
 
     # Background jobs
@@ -97,14 +110,14 @@ def build_jobs(tool, bin_name, cuts, lep_cuts, predef_cuts, sms_filters):
     for ds, files in tool.SigDict.items():
         for fpath in files:
             base = make_base_job(ds, fpath)
-    
+
             sig_type = None
             if "SMS" in fpath:
                 sig_type = "sms"
             elif "Cascades" in fpath:
                 sig_type = "cascades"
-    
-            # one job per filter
+
+            # one job per SMS filter if applicable
             if sig_type == "sms" and sms_filters:
                 for filt in sms_filters:
                     job = {
@@ -119,7 +132,7 @@ def build_jobs(tool, bin_name, cuts, lep_cuts, predef_cuts, sms_filters):
                     "sig_type": sig_type,
                 }
                 jobs.append(job)
-    
+
     return jobs
 
 # ----------------------------------------
@@ -129,7 +142,7 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, make_json
     bin_safe = sanitize(bin_name)
     bin_dir = CONDOR_DIR / bin_safe
     if bin_dir.exists():
-        print("Removing dir:",bin_dir.name)
+        print("Removing dir:", bin_dir.name)
         shutil.rmtree(bin_dir)
     bin_dir.mkdir(parents=True, exist_ok=True)
 
@@ -148,28 +161,14 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, make_json
     header = CONDOR_HEADER.format(cpus=cpus, memory=memory)
     submit_lines = [header]
 
-    # Logs go here
+    # Logs
     submit_lines.append(f"log    = {log_dir}/$(LogFile).log")
     submit_lines.append(f"output = {out_dir}/$(LogFile).out")
     submit_lines.append(f"error  = {err_dir}/$(LogFile).err")
 
-    # Dynamic transfer files
-    transfer_files = []
-    remaps = []
-    if make_json:
-        transfer_files.append("$(LogFile).json")
-        remaps.append(f'$(LogFile).json = {json_dir.as_posix()}/$(LogFile).json')
-    if make_root:
-        transfer_files.append("$(LogFile).root")
-        remaps.append(f'$(LogFile).root = {root_dir.as_posix()}/$(LogFile).root')
-
-    if transfer_files:
-        submit_lines.append("transfer_output_files = " + ", ".join(transfer_files))
-        submit_lines.append(f'transfer_output_remaps = "{"; ".join(remaps)}"')
-
-    # Inline queue
-    submit_lines.append("# Queue jobs with LogFile (used for log/out/err) and Args")
-    submit_lines.append("queue LogFile, Args from (")
+    # Build per-job outputs and transfer input files
+    all_inputs = set(["BFI_condor.x"])
+    all_remaps = []
 
     for job in jobs:
         ds = job["dataset"]
@@ -181,11 +180,36 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, make_json
         base = sanitize(f"{bin_name}_{ds}_{fname_stem}" + (f"_{sms_filters[0]}" if sms_filters else ""))
 
         outputs = []
-        if make_json:
-            outputs.append(f"--output-json {base}.json")
-        if make_root:
-            outputs.append(f"--output-root {base}.root")
 
+        # JSON
+        if make_json:
+            local_json = f"{base}.json"
+            outputs.append("--json")
+            outputs.append(f"--json-output {local_json}")
+            job["remap_outputs"] = job.get("remap_outputs", [])
+            job["remap_outputs"].append(f"{local_json} = json/{local_json}")
+
+        # ROOT / histograms
+        if make_root:
+            local_root = f"{base}.root"
+            outputs.append("--hist")
+            outputs.append(f"--root-output {local_root}")
+            job["remap_outputs"] = job.get("remap_outputs", [])
+            job["remap_outputs"].append(f"{local_root} = root/{local_root}")
+            # Include YAML file if defined
+            hist_yaml_file = job.get("hist_yaml", "")
+            if hist_yaml_file:
+                outputs.append(f"--hist-yaml {os.path.basename(hist_yaml_file)}")
+                job.setdefault("transfer_input_files", []).append(hist_yaml_file)
+                all_inputs.add(hist_yaml_file)
+
+        # Ensure BFI_condor.x is in transfer_input_files
+        job.setdefault("transfer_input_files", []).append("BFI_condor.x")
+
+        # Collect remaps
+        all_remaps.extend(job.get("remap_outputs", []))
+
+        # Args string for this job
         args_list = [
             f"--bin {bin_name}",
             f"--file {fpath}",
@@ -201,14 +225,32 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, make_json
             args_list.append(sms_filters[0])
 
         args_str = " ".join(a for a in args_list if a and not a.isspace())
-        submit_lines.append(f'{base} "{args_str}"')
+        job["args_str"] = args_str
+        job["base"] = base
+
+    # Write transfer_input_files and remaps (global for the submit file)
+    submit_lines.append("transfer_input_files = " + ", ".join(sorted(all_inputs)))
+    if all_remaps:
+        submit_lines.append(
+            "transfer_output_files = " + ", ".join(sorted(set(f.split(" = ")[0] for f in all_remaps)))
+        )
+        submit_lines.append(f'transfer_output_remaps = "{"; ".join(all_remaps)}"')
+
+    # Queue jobs
+    submit_lines.append("# Queue jobs with LogFile (used for log/out/err) and Args")
+    submit_lines.append("queue LogFile, Args from (")
+
+    for job in jobs:
+        submit_lines.append(f'{job["base"]} "{job["args_str"]}"')
 
     submit_lines.append(")")
 
+    # Write file
     submit_content = "\n".join(submit_lines) + "\n"
     submit_path.write_text(submit_content)
     print(f"Wrote submit file: {submit_path}")
 
+    # Submit if not dryrun
     if not dryrun:
         proc = subprocess.run(
             f"source /cvmfs/cms.cern.ch/cmsset_default.sh && condor_submit {submit_path}",
@@ -244,6 +286,12 @@ def main():
     parser.add_argument("--cpus", default="1")
     parser.add_argument("--memory", default="1 GB")
     parser.add_argument("--lumi", type=float, default=1.)
+    parser.add_argument("--make-json", action="store_true",
+                        help="Enable JSON output")
+    parser.add_argument("--make-root", action="store_true",
+                        help="Enable ROOT/histogram output")
+    parser.add_argument("--hist-yaml", default="",
+                        help="Path to histogram YAML config (used if --make-root)")
     parser.add_argument("--dryrun", "--dry-run", action="store_true")
     args = parser.parse_args()
 
@@ -266,8 +314,14 @@ def main():
         args.cuts,
         args.lep_cuts,
         args.predefined_cuts,
-        sms_filters
+        sms_filters,
+        hist_yaml_file=args.hist_yaml
     )
+
+    # Inject YAML path into each job if provided
+    if args.hist_yaml:
+        for job in jobs:
+            job["hist_yaml"] = args.hist_yaml
 
     write_submit_file(
         args.bin,
@@ -275,8 +329,8 @@ def main():
         cpus=args.cpus,
         memory=args.memory,
         lumi=args.lumi,
-        make_json=True,
-        make_root=True,
+        make_json=args.make_json,
+        make_root=args.make_root,
         dryrun=args.dryrun
     )
 

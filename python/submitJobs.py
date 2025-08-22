@@ -129,7 +129,7 @@ def generate_bins_from_shorthands():
         generated[bin_name] = {"cuts": base_cuts, "lep-cuts": lep_cut, "predefined-cuts": predefined_cuts}
     return generated
 
-def build_command(bin_name, cfg, bkg_datasets, sig_datasets, sms_filters):
+def build_command(bin_name, cfg, bkg_datasets, sig_datasets, sms_filters, make_json, make_root, hist_yaml):
     cmd = [
         "python3", "python/createJobs.py",
         "--bkg_datasets", *bkg_datasets,
@@ -146,6 +146,15 @@ def build_command(bin_name, cfg, bkg_datasets, sig_datasets, sms_filters):
         cmd += ["--sms-filters", *sms_filters]
     if dryrun:
         cmd.append("--dryrun")
+    
+    # Add histogram/ROOT options
+    if make_json:
+        cmd.append("--make-json")
+    if make_root:
+        cmd.append("--make-root")
+    if hist_yaml:
+        cmd += ["--hist-yaml", hist_yaml]
+    
     return cmd
 
 def submit_job(cmd):
@@ -165,7 +174,16 @@ def main():
     parser.add_argument("--lumi", type=str, default=lumi)
     parser.add_argument("--bins-cfg", type=str, default="config/examples.yaml")
     parser.add_argument("--datasets-cfg", type=str, default="config/datasets.yaml")
+    parser.add_argument("--make-json", action="store_true", help="Create JSON output")
+    parser.add_argument("--make-root", action="store_true", help="Create ROOT output")
+    parser.add_argument("--hist-yaml", type=str, default=None, help="YAML file for histogram configuration")
     args = parser.parse_args()
+
+    # Default behavior: make JSON if neither specified
+    make_json = args.make_json
+    make_root = args.make_root
+    if not (make_json or make_root):
+        make_json = True
 
     dryrun = args.dryrun
     stress_test = args.stress_test
@@ -199,7 +217,7 @@ def main():
     jobs = []
     print("\n===== BEGIN BIN DEFINITIONS =====\n")
     for bin_name, cfg in bins.items():
-        cmd = build_command(bin_name, cfg, bkg_datasets, sig_datasets, sms_filters)
+        cmd = build_command(bin_name, cfg, bkg_datasets, sig_datasets, sms_filters, make_json, make_root, args.hist_yaml)
         jobs.append(cmd)
         print(f"[BIN-DEF] bin={bin_name} cuts={cfg.get('cuts')} lep-cuts={cfg.get('lep-cuts')} predefined-cuts={cfg.get('predefined-cuts')}")
     print("===== END BIN DEFINITIONS =====\n")

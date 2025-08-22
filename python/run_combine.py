@@ -27,20 +27,23 @@ def wait_for_jobs():
     monitor = CondorJobCountMonitor(threshold=1, verbose=False)
     monitor.wait_until_jobs_below()
 
-def submit_jobs(stress_test,config,datasets):
+def submit_jobs(stress_test, config, datasets, hist, write_json=False, write_root=False):
     """
     Runs submitJobs.py to generate Condor scripts and merge scripts.
     Must create `master_merge.sh` with all merge commands.
     """
     cmd = ["python3", "python/submitJobs.py", "--bins-cfg", config, "--datasets-cfg", datasets]
+
     if stress_test:
         cmd.append("--stress_test")
-    subprocess.run(
-        cmd,
-        check=True,
-        stdout=sys.stdout,
-        stderr=sys.stderr
-    )
+    if write_json:
+        cmd.append("--write-json")
+    if write_root:
+        cmd.append("--write-root")
+        if hist:
+            cmd.append("--hist-yaml")
+            cmd.append(hist)
+    subprocess.run(cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
 def get_flattened_json_path():
     """
@@ -54,6 +57,13 @@ def get_flattened_json_path():
     # Option: sort by mtime and pick the latest:
     flattened_files.sort(key=os.path.getmtime, reverse=True)
     return flattened_files[0]
+
+def get_flattened_root_path():
+    root_files = glob.glob("root/merged_*.root")
+    if not root_files:
+        raise FileNotFoundError("No merged ROOT files found in root/")
+    root_files.sort(key=os.path.getmtime, reverse=True)
+    return root_files[0]
 
 def get_output_dir():
     """
@@ -84,7 +94,7 @@ def get_work_dirs():
     """
     return [name for name in os.listdir("condor/") if os.path.isdir(os.path.join("condor", name))]
 
-def run_checkjobs_loop_parallel(no_resubmit=False, max_resubmits=3):
+def run_checkjobs_loop_parallel(no_resubmit=False, max_resubmits=3, check_json=False, check_root=False):
     """
     Check all work directories with checkJobs.py, resubmit failing jobs across
     all directories in one cycle, then wait once for all resubmitted jobs to finish.
@@ -108,6 +118,10 @@ def run_checkjobs_loop_parallel(no_resubmit=False, max_resubmits=3):
 
         for work_dir in work_dirs:
             check_cmd = ["python3", "python/checkJobs.py", work_dir]
+            if check_json:
+                check_cmd.append("--check-json")
+            if check_root:
+                check_cmd.append("--check-root")
             proc = subprocess.run(check_cmd, capture_output=True, text=True)
 
             # Print outputs (labeled)
@@ -161,8 +175,14 @@ def parse_args():
                    help="Path to YAML config file containing bin definitions")
     p.add_argument("--datasets-cfg", dest="datasets_cfg", type=str, default="config/datasets.yaml",
                    help="YAML config file containing dataset definitions")
+    p.add_argument("--hist-cfg", dest="hist_cfg", type=str, default="config/hist.yaml",
+                   help="YAML config file containing histogram definitions")
     p.add_argument("--stress_test", dest="stress_test", action="store_true",
                    help="Run stress test")
+    p.add_argument("--write-json", action="store_true",
+                   help="Generate JSON outputs")
+    p.add_argument("--write-root", action="store_true",
+                   help="Generate ROOT outputs")
     return p.parse_args()
 
 def main():
@@ -177,7 +197,8 @@ def main():
 
     # 2) Submit jobs and generate master_merge.sh
     print("[run_all] Submitting jobs...", flush=True)
-    submit_jobs(stress_test=args.stress_test,config=args.bins_cfg,datasets=args.datasets_cfg)
+    submit_jobs(stress_test=args.stress_test, config=args.bins_cfg, datasets=args.datasets_cfg,
+                hist=args.hist_cfg,write_json=args.write_json, write_root=args.write_root)
 
     # 3) Wait for jobs to finish
     print("[run_all] Waiting for condor jobs to finish...", flush=True)
@@ -185,14 +206,17 @@ def main():
 
     # 4) Run checkJobs.py loop to find/resubmit failed jobs (if any)
     print("[run_all] Checking for failed jobs and resubmitting if necessary...", flush=True)
-    ok = run_checkjobs_loop_parallel(no_resubmit=False, max_resubmits=args.max_resubmits)
+    ok = run_checkjobs_loop_parallel(no_resubmit=False, max_resubmits=args.max_resubmits, check_json=args.write_json, check_root=args.write_root)
     if not ok:
         print(f"[run_all] checkJobs step did not complete successfully. Aborting further steps.", file=sys.stderr)
         sys.exit(1)
 
     # 5) Run all merge scripts
     print("[run_all] Running master merge script", flush=True)
-    subprocess.run(["bash", "condor/master_merge.sh"], check=True, stdout=sys.stdout, stderr=sys.stderr)
+    if args.write_json:
+        subprocess.run(["bash", "condor/master_merge.sh"], check=True, stdout=sys.stdout, stderr=sys.stderr)
+    if args.write_root:
+        subprocess.run(["bash", "condor/run_hadd_all.sh"], check=True, stdout=sys.stdout, stderr=sys.stderr)
 
     # 6) Run BF.x on the flattened JSON
     flattened_json = get_flattened_json_path()

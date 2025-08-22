@@ -7,7 +7,7 @@ and, if there are failed jobs, writes a single data-driven resubmit file
 (with one `queue LogFile, Args from (...)` block) and optionally submits it.
 
 Usage:
-    python3 checkJobs.py <submit_name> [--root-dir CONDOR_DIR] [--no-submit] [--clean-json] [--cms-env PATH]
+    python3 checkJobs.py <submit_name> [--root-dir CONDOR_DIR] [--no-submit] [--cms-env PATH]
 
 Examples:
     python3 checkJobs.py manualExample1
@@ -22,7 +22,6 @@ def parse_args():
     p.add_argument("submit_name", help="Name of the submission folder (e.g. manualExample1).")
     p.add_argument("--root-dir", default="condor", help="Top-level condor directory (default: 'condor').")
     p.add_argument("--no-submit", action="store_true", help="Do not actually call condor_submit; just write the resubmit file.")
-    p.add_argument("--clean-json", action="store_true", help="Remove partial JSON outputs for failed jobs before resubmitting.")
     p.add_argument("--cms-env", default=DEFAULT_CMS_ENV, help=f"Path to cmsset_default.sh (default: {DEFAULT_CMS_ENV})")
     p.add_argument("--check-json", action="store_true", help="Check for JSON output files")
     p.add_argument("--check-root", action="store_true", help="Check for ROOT output files")
@@ -217,13 +216,6 @@ def main():
     if not failed:
         print("\nNo failed jobs to resubmit.")
         sys.exit(0)
-    
-    if args.clean_json:
-        for fjob in failed:
-            jp = os.path.join(json_dir, f"{fjob}.json")
-            if os.path.exists(jp):
-                os.remove(jp)
-                print(f"[checkJobs] Removed partial JSON: {jp}")
     
     # Single-queue resubmit: just reuse the original .sub
     resubmit_name = f"resubmit_failed_{submit_name}.sub"
