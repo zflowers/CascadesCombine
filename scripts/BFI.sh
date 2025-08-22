@@ -16,18 +16,15 @@ else
     exit 1
 fi
 
-# --- Make sure executable is runnable ---
 chmod +x BFI_condor.x
 
-# --- Helper to clean arguments ---
-clean_arg() {
-    echo "$1" | tr -d '\n' | tr -d '\r' | xargs
-}
+clean_arg() { echo "$1" | tr -d '\n' | tr -d '\r' | xargs; }
 
-# --- Parse arguments ---
 BIN=""
 ROOTFILE=""
 OUTPUT_JSON=""
+OUTPUT_HIST=""
+HIST_YAML=""
 CUTS=""
 LEP_CUTS=""
 PREDEF_CUTS=""
@@ -38,14 +35,16 @@ SMS_FILTERS=""
 while [[ $# -gt 0 ]]; do
     key="$1"
     case $key in
-        --bin) BIN=$(clean_arg "$2"); shift; shift;;
-        --file) ROOTFILE=$(clean_arg "$2"); shift; shift;;
-        --output) OUTPUT_JSON=$(clean_arg "$2"); shift; shift;;
-        --cuts) CUTS=$(clean_arg "$2"); shift; shift;;
-        --lep-cuts) LEP_CUTS=$(clean_arg "$2"); shift; shift;;
-        --predefined-cuts) PREDEF_CUTS=$(clean_arg "$2"); shift; shift;;
-        --sig-type) SIG_TYPE=$(clean_arg "$2"); shift; shift;;
-        --lumi) LUMI=$(clean_arg "$2"); shift; shift;;
+        --bin) BIN=$(clean_arg "$2"); shift 2;;
+        --file) ROOTFILE=$(clean_arg "$2"); shift 2;;
+        --output-json) OUTPUT_JSON=$(clean_arg "$2"); shift 2;;
+        --output-hist) OUTPUT_HIST=$(clean_arg "$2"); shift 2;;
+        --hist-yaml) HIST_YAML=$(clean_arg "$2"); shift 2;;
+        --cuts) CUTS=$(clean_arg "$2"); shift 2;;
+        --lep-cuts) LEP_CUTS=$(clean_arg "$2"); shift 2;;
+        --predefined-cuts) PREDEF_CUTS=$(clean_arg "$2"); shift 2;;
+        --sig-type) SIG_TYPE=$(clean_arg "$2"); shift 2;;
+        --lumi) LUMI=$(clean_arg "$2"); shift 2;;
         --sms-filters)
             shift
             SMS_FILTERS=""
@@ -53,28 +52,50 @@ while [[ $# -gt 0 ]]; do
                 SMS_FILTERS+="$1,"
                 shift
             done
-            # remove trailing comma
             SMS_FILTERS=${SMS_FILTERS%,}
             ;;
         *) echo "Unknown option $1"; shift;;
     esac
 done
 
-# --- Ensure output file is correct ---
-BASE=$(basename "$OUTPUT_JSON")
-OUTPUT_JSON="$BASE"
+# --- Auto-generate output filenames if not provided ---
+base_name=$(basename "$ROOTFILE" .root)
 
-# --- Run the executable ---
-CMD="./BFI_condor.x --bin \"$BIN\" --file \"$ROOTFILE\" --output \"$OUTPUT_JSON\""
-[[ -n "$CUTS" ]] && CMD="$CMD --cuts \"$CUTS\""
-[[ -n "$LEP_CUTS" ]] && CMD="$CMD --lep-cuts \"$LEP_CUTS\""
-[[ -n "$PREDEF_CUTS" ]] && CMD="$CMD --predefined-cuts \"$PREDEF_CUTS\""
-[[ -n "$SIG_TYPE" ]] && CMD="$CMD --sig-type $SIG_TYPE"
-[[ -n "$LUMI" ]] && CMD="$CMD --lumi $LUMI"
-[[ -n "$SMS_FILTERS" ]] && CMD="$CMD --sms-filters $SMS_FILTERS"
+if [[ -z "$OUTPUT_JSON" ]]; then
+    OUTPUT_JSON="${BIN}_${base_name}.json"
+fi
+if [[ -z "$OUTPUT_HIST" ]]; then
+    OUTPUT_HIST="${BIN}_${base_name}.root"
+fi
+
+# Force basenames to stay local
+OUTPUT_JSON=$(basename "$OUTPUT_JSON")
+OUTPUT_HIST=$(basename "$OUTPUT_HIST")
+[[ -n "$HIST_YAML" ]] && HIST_YAML=$(basename "$HIST_YAML")
+
+# --- Build command ---
+CMD=(./BFI_condor.x --bin "$BIN" --file "$ROOTFILE")
+
+# JSON output
+[[ -n "$OUTPUT_JSON" ]] && CMD+=(--output "$OUTPUT_JSON" --json)
+
+# Hist output + yaml
+[[ -n "$OUTPUT_HIST" ]] && CMD+=(--hist --hist-output "$OUTPUT_HIST")
+[[ -n "$HIST_YAML" ]] && CMD+=(--hist-yaml "$HIST_YAML")
+
+# Other args
+[[ -n "$CUTS" ]] && CMD+=(--cuts "$CUTS")
+[[ -n "$LEP_CUTS" ]] && CMD+=(--lep-cuts "$LEP_CUTS")
+[[ -n "$PREDEF_CUTS" ]] && CMD+=(--predefined-cuts "$PREDEF_CUTS")
+[[ -n "$SIG_TYPE" ]] && CMD+=(--t "$SIG_TYPE")
+[[ -n "$LUMI" ]] && CMD+=(--lumi "$LUMI")
+[[ -n "$SMS_FILTERS" ]] && CMD+=(--m "$SMS_FILTERS")
 
 # --- Echo and run ---
 echo "Running BFI_condor.x with arguments:"
-echo "$CMD"
-eval stdbuf -oL -eL $CMD
+printf ' %q' "${CMD[@]}"
+echo
+stdbuf -oL -eL "${CMD[@]}"
+
 echo "[$(date)] Job finished."
+

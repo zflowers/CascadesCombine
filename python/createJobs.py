@@ -33,22 +33,22 @@ def sanitize(s):
     return s[:200]
 
 def write_merge_script(bin_name, json_dir="json"):
-    """
-    Create a mergeJSONs.sh script in condor/{bin_name} that merges all JSONs in json_dir.
-    Args:
-        bin_name (str): The bin name (used to create condor/{bin_name}/mergeJSONs.sh)
-        json_dir (str): Directory containing JSONs (default 'json')
-    """
-
     merge_script_path = os.path.join(f'{CONDOR_DIR}/{bin_name}', "mergeJSONs.sh")
     with open(merge_script_path, "w") as f:
         f.write("#!/usr/bin/env bash\n")
         f.write("# Auto-generated merge script\n")
         f.write(f"./mergeJSONs.x {CONDOR_DIR}/{bin_name}/{bin_name} {json_dir}\n")
-
-    # Make the script executable
     os.chmod(merge_script_path, 0o755)
     print(f"[createJobs] Generated merge script: {merge_script_path}")
+
+def write_hadd_script(bin_name, root_dir="root"):
+    script_path = os.path.join(f'{CONDOR_DIR}/{bin_name}', "haddROOTs.sh")
+    with open(script_path, "w") as f:
+        f.write("#!/usr/bin/env bash\n")
+        f.write("# Auto-generated hadd script\n")
+        f.write(f"hadd -f {CONDOR_DIR}/{bin_name}/{bin_name}.root {CONDOR_DIR}/{bin_name}/{root_dir}/*.root\n")
+    os.chmod(script_path, 0o755)
+    print(f"[createJobs] Generated hadd script: {script_path}")
 
 CONDOR_HEADER = """
 universe                = vanilla
@@ -114,7 +114,6 @@ def build_jobs(tool, bin_name, cuts, lep_cuts, predef_cuts, sms_filters):
                     }
                     jobs.append(job)
             else:
-                # cascades or sms with no filters
                 job = {
                     **base,
                     "sig_type": sig_type,
@@ -126,7 +125,7 @@ def build_jobs(tool, bin_name, cuts, lep_cuts, predef_cuts, sms_filters):
 # ----------------------------------------
 # Condor submit file writing
 # ----------------------------------------
-def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, dryrun=False):
+def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, make_json=True, make_root=True, dryrun=False):
     bin_safe = sanitize(bin_name)
     bin_dir = CONDOR_DIR / bin_safe
     if bin_dir.exists():
@@ -139,7 +138,8 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, dryrun=Fa
     out_dir = bin_dir / "out"
     err_dir = bin_dir / "err"
     json_dir = bin_dir / "json"
-    for d in (log_dir, out_dir, err_dir, json_dir):
+    root_dir = bin_dir / "root"
+    for d in (log_dir, out_dir, err_dir, json_dir, root_dir):
         d.mkdir(parents=True, exist_ok=True)
 
     submit_path = bin_dir / f"{bin_safe}.sub"
@@ -148,13 +148,24 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, dryrun=Fa
     header = CONDOR_HEADER.format(cpus=cpus, memory=memory)
     submit_lines = [header]
 
-    # Logs go here (shared config, uses $(LogFile))
+    # Logs go here
     submit_lines.append(f"log    = {log_dir}/$(LogFile).log")
     submit_lines.append(f"output = {out_dir}/$(LogFile).out")
     submit_lines.append(f"error  = {err_dir}/$(LogFile).err")
 
-    submit_lines.append("transfer_output_files = $(LogFile).json")
-    submit_lines.append(f'transfer_output_remaps = "$(LogFile).json = {json_dir.as_posix()}/$(LogFile).json"')
+    # Dynamic transfer files
+    transfer_files = []
+    remaps = []
+    if make_json:
+        transfer_files.append("$(LogFile).json")
+        remaps.append(f'$(LogFile).json = {json_dir.as_posix()}/$(LogFile).json')
+    if make_root:
+        transfer_files.append("$(LogFile).root")
+        remaps.append(f'$(LogFile).root = {root_dir.as_posix()}/$(LogFile).root')
+
+    if transfer_files:
+        submit_lines.append("transfer_output_files = " + ", ".join(transfer_files))
+        submit_lines.append(f'transfer_output_remaps = "{"; ".join(remaps)}"')
 
     # Inline queue
     submit_lines.append("# Queue jobs with LogFile (used for log/out/err) and Args")
@@ -166,18 +177,19 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, dryrun=Fa
         fname_stem = job["fname_stem"]
         sig_type = job.get("sig_type", None)
         sms_filters = job.get("sms_filters", [])
-    
-        # include sms filter in base if present
+
         base = sanitize(f"{bin_name}_{ds}_{fname_stem}" + (f"_{sms_filters[0]}" if sms_filters else ""))
-    
-        # Pass plain filename (no leading ./) so Condor matches it to transfer_output_files
-        remote_json_arg = f"{base}.json"
-    
+
+        outputs = []
+        if make_json:
+            outputs.append(f"--output-json {base}.json")
+        if make_root:
+            outputs.append(f"--output-root {base}.root")
+
         args_list = [
-            f"--lumi {lumi}",
             f"--bin {bin_name}",
             f"--file {fpath}",
-            f"--output {remote_json_arg}",
+            *outputs,
             f"--cuts {job.get('cuts','')}",
             f"--lep-cuts {job.get('lep_cuts','')}",
             f"--predefined-cuts {job.get('predef_cuts','')}"
@@ -187,18 +199,16 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, dryrun=Fa
         if sms_filters:
             args_list.append("--sms-filters")
             args_list.append(sms_filters[0])
-    
+
         args_str = " ".join(a for a in args_list if a and not a.isspace())
         submit_lines.append(f'{base} "{args_str}"')
 
     submit_lines.append(")")
 
-    # Write .sub
     submit_content = "\n".join(submit_lines) + "\n"
     submit_path.write_text(submit_content)
     print(f"Wrote submit file: {submit_path}")
 
-    # Optional submit
     if not dryrun:
         proc = subprocess.run(
             f"source /cvmfs/cms.cern.ch/cmsset_default.sh && condor_submit {submit_path}",
@@ -211,7 +221,10 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, dryrun=Fa
             print("condor_submit failed:", proc.stderr)
         else:
             print(f"Submitted bin {bin_name} ({len(jobs)} jobs)")
-            write_merge_script(bin_name,json_dir)
+            if make_json:
+                write_merge_script(bin_name)
+            if make_root:
+                write_hadd_script(bin_name)
 
 # ----------------------------------------
 # Main
@@ -230,13 +243,13 @@ def main():
     parser.add_argument("--predefined-cuts", default="Cleaning")
     parser.add_argument("--cpus", default="1")
     parser.add_argument("--memory", default="1 GB")
-    parser.add_argument("--lumi", default=1.)
+    parser.add_argument("--lumi", type=float, default=1.)
     parser.add_argument("--dryrun", "--dry-run", action="store_true")
     args = parser.parse_args()
 
     tool = pySampleTool.SampleTool()
 
-    # Load datasets directly from args
+    # Load datasets
     tool.LoadBkgs(args.bkg_datasets)
     sms_filters = []
     if args.sms_filters:
@@ -245,7 +258,7 @@ def main():
         tool.LoadSigs(args.sig_datasets)
     else:
         tool.LoadSigs(args.sig_datasets)
-        sms_filters = pySampleTool.BFTool.GetFilterSignalsSMS();
+        sms_filters = pySampleTool.BFTool.GetFilterSignalsSMS()
 
     jobs = build_jobs(
         tool,
@@ -255,14 +268,18 @@ def main():
         args.predefined_cuts,
         sms_filters
     )
+
     write_submit_file(
         args.bin,
         jobs,
         cpus=args.cpus,
         memory=args.memory,
         lumi=args.lumi,
+        make_json=True,
+        make_root=True,
         dryrun=args.dryrun
     )
 
 if __name__ == "__main__":
     main()
+

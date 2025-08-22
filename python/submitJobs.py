@@ -3,34 +3,24 @@ import os, sys, argparse, subprocess, yaml
 from itertools import product
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from glob import glob
+import stat
 
 # -----------------------------
 # USER CONFIGURATION SECTION
 # -----------------------------
-
-# Base arguments
 cpus = "1"
 memory = "1 GB"
-
-# Defaults (can be overridden by CLI args)
 dryrun = False
 stress_test = False
 lumi = str(400.)
-
-# Maximum concurrent submissions
 max_workers = 4
-
-# Limit to first N jobs when submitting (None => no limit)
-limit_submit = None  # e.g., 10
+limit_submit = None  # limit number of job submissions (None=no limit)
 
 # -----------------------------
-# TEMPLATING / HELPERS
+# HELPERS
 # -----------------------------
-
 def write_flatten_script(bin_names, flatten_exe="./flattenJSONs.x", json_dir="json"):
-    """
-    Create a run_flatten.sh script that merges all JSONs for the given bins.
-    """
     os.makedirs("condor", exist_ok=True)
     os.makedirs(json_dir, exist_ok=True)
     output_name = "_".join(bin_names) if bin_names else "all"
@@ -40,7 +30,6 @@ def write_flatten_script(bin_names, flatten_exe="./flattenJSONs.x", json_dir="js
     with open(script_path, "w") as f:
         f.write("#!/usr/bin/env bash\n")
         f.write("# Auto-generated flatten script\n")
-        # build the command
         input_paths = [f"condor/{bin_name}" for bin_name in bin_names]
         f.write(f"{flatten_exe} {' '.join(input_paths)} {output_file}\n")
         f.write(f"echo 'Flattened JSON written to {output_file}'\n")
@@ -48,258 +37,187 @@ def write_flatten_script(bin_names, flatten_exe="./flattenJSONs.x", json_dir="js
     os.chmod(script_path, 0o755)
     print(f"[submitJobs] Generated flatten script: {script_path}")
 
+def write_bin_hadd_script(bin_name, root_dir="root"):
+    """
+    Generate a per-bin hadd script that merges all ROOT files for that bin.
+    Output: condor/{bin_name}/run_hadd.sh
+    """
+    bin_dir = Path("condor") / bin_name
+    hadd_dir = bin_dir / root_dir
+    hadd_dir.mkdir(parents=True, exist_ok=True)
+    
+    output_root = hadd_dir / f"hadded_{bin_name}.root"
+    input_files = sorted(glob(str(hadd_dir / "*.root")))
+
+    script_path = bin_dir / "run_hadd.sh"
+    with open(script_path, "w") as f:
+        f.write("#!/usr/bin/env bash\n")
+        f.write("# Auto-generated per-bin hadd script\n")
+        if input_files:
+            f.write(f"hadd -f {output_root} {' '.join(input_files)}\n")
+            f.write(f"echo 'Hadded ROOT for bin {bin_name} -> {output_root}'\n")
+        else:
+            f.write(f"echo 'No ROOT files found in {hadd_dir} to hadd.'\n")
+
+    st = os.stat(script_path)
+    os.chmod(script_path, st.st_mode | stat.S_IEXEC)
+    print(f"[submitJobs] Generated per-bin hadd script: {script_path}")
+    return script_path
+
+def write_master_hadd_script(bin_names, master_root_dir="root"):
+    master_script_path = Path("condor") / "run_hadd_all.sh"
+    master_root_dir_path = Path(master_root_dir)
+    master_root_dir_path.mkdir(parents=True, exist_ok=True)
+    final_root = master_root_dir_path / "hadded_allBins.root"
+
+    with open(master_script_path, "w") as f:
+        f.write("#!/usr/bin/env bash\n")
+        f.write("# Auto-generated master hadd script\n\n")
+        
+        # Call per-bin hadd scripts
+        for bin_name in bin_names:
+            f.write(f"bash condor/{bin_name}/run_hadd.sh\n")
+
+        # Collect per-bin hadded ROOTs
+        per_bin_roots = [f"condor/{bin_name}/{master_root_dir}/hadded_{bin_name}.root"
+                         for bin_name in bin_names]
+        f.write("existing_roots=()\n")
+        f.write("for f in " + " ".join(per_bin_roots) + "; do\n")
+        f.write("  if [ -f \"$f\" ]; then existing_roots+=(\"$f\"); fi\n")
+        f.write("done\n")
+        f.write("if [ ${#existing_roots[@]} -gt 0 ]; then\n")
+        f.write(f"  hadd -f {final_root} ${'{'}existing_roots[@]}\n")
+        f.write(f"  echo 'Final hadded ROOT -> {final_root}'\n")
+        f.write("else\n")
+        f.write("  echo 'No per-bin ROOT files found to hadd.'\n")
+        f.write("fi\n")
+
+    st = os.stat(master_script_path)
+    os.chmod(master_script_path, st.st_mode | stat.S_IEXEC)
+    print(f"[submitJobs] Generated master hadd script: {master_script_path}")
+    return master_script_path
+
 def load_datasets(cfg_path):
-    """Read dataset definitions from YAML."""
     with open(cfg_path, "r") as f:
         cfg = yaml.safe_load(f)
     bkg = cfg.get("datasets", {}).get("bkg", [])
     sig = cfg.get("datasets", {}).get("sig", [])
-    return bkg, sig
-
-def setup_master_merge_script(bin_names, flatten_sh="run_flatten.sh", json_dir="json"):
-    """
-    Create master_merge.sh to run all per-bin merges and then flatten into a single JSON.
-    """
-    os.makedirs("condor", exist_ok=True)
-    os.makedirs(json_dir, exist_ok=True)
-    master_script_path = "condor/master_merge.sh"
-
-    # Start fresh
-    with open(master_script_path, "w") as f:
-        f.write("#!/usr/bin/env bash\n")
-        f.write("# Auto-generated master merge script\n\n")
-    
-        # Step 1: Run all per-bin merge scripts
-        for bin_name in bin_names:
-            merge_script = f"condor/{bin_name}/mergeJSONs.sh"
-            f.write(f"bash {merge_script}\n")
-        
-        # Step 2: Call flatten on all merged bins
-        output_file = os.path.join(json_dir, f"flattened_{'_'.join(bin_names)}.json")
-        f.write(f"bash condor/{flatten_sh}\n")
-        f.write(f"echo 'Final flattened JSON written to {output_file}'\n")
-    
-    os.chmod(master_script_path, 0o755)
-    print(f"[submitJobs] Master merge script generated: {master_script_path}")
-    return master_script_path
+    sms_filters = cfg.get("sms_filters", [])
+    return bkg, sig, sms_filters
 
 def build_bin_name(base, shorthand, side, extra=None):
-    """Construct a unique bin name"""
     name = f"{base}_{shorthand}"
     if side:
         name += f"_{side}"
     if extra:
         name += f"_{extra}"
-    # sanitize: replace characters that might be awkward in names (optional)
-    name = name.replace(">", "gt").replace("<", "lt").replace("=", "eq").replace("+", "p")
-    name = name.replace(",", "").replace(" ", "")
-    return name
+    return name.replace(">", "gt").replace("<", "lt").replace("=", "eq").replace("+", "p").replace(",", "").replace(" ", "")
 
 def build_lep_cuts(shorthand, side):
-    """Build the lepton cut expression (simple expansion matching your C++ shorthand style)"""
     return shorthand + (f"_{side}" if side else "")
 
 def generate_bins_from_shorthands():
-    """
-    Generate a dict of bins from cartesian product of shorthands x sides.
-    Returns mapping: bin_name -> { "cuts": ..., "lep-cuts": ..., "predefined-cuts": ... }
-    """
     base_name = "TEST"
     base_cuts = "Nlep>=2;MET>=150"
     predefined_cuts = "Cleaning"
-    
-    shorthands = [
-        "=0Bronze",
-        "=2Pos",
-        "=2Gold",
-        ">=1OSSF",
-        "=1SSOF",
-        ">=2Mu",
-        ">=1Elec",
-        "<1SSSF",
-        ">=1Muon",
-    ]
-    
-    sides = [
-        "",
-        "a",
-        "b"
-    ]
-    
+    shorthands = ["=0Bronze","=2Pos","=2Gold",">=1OSSF","=1SSOF",">=2Mu",">=1Elec","<1SSSF",">=1Muon"]
+    sides = ["","a","b"]
     generated = {}
     for shorthand, side in product(shorthands, sides):
         bin_name = build_bin_name(base_name, shorthand, side)
         lep_cut = build_lep_cuts(shorthand, side)
-        generated[bin_name] = {
-            "cuts": base_cuts,
-            "lep-cuts": lep_cut,
-            "predefined-cuts": predefined_cuts
-        }
+        generated[bin_name] = {"cuts": base_cuts, "lep-cuts": lep_cut, "predefined-cuts": predefined_cuts}
     return generated
 
 def build_command(bin_name, cfg, bkg_datasets, sig_datasets, sms_filters):
-    """Construct the subprocess command to call createJobs.py"""
-    cuts = cfg.get("cuts", "")
-    lep_cuts = cfg.get("lep-cuts", "")
-    predefined = cfg.get("predefined-cuts", "")
-
     cmd = [
         "python3", "python/createJobs.py",
         "--bkg_datasets", *bkg_datasets,
         "--sig_datasets", *sig_datasets,
         "--bin", bin_name,
-        "--cuts", cuts,
-        "--lep-cuts", lep_cuts,
-        "--predefined-cuts", predefined,
+        "--cuts", cfg.get("cuts",""),
+        "--lep-cuts", cfg.get("lep-cuts",""),
+        "--predefined-cuts", cfg.get("predefined-cuts",""),
         "--cpus", cpus,
         "--memory", memory,
-        "--lumi", lumi,
+        "--lumi", lumi
     ]
-
-    # Add SMS filters if provided
     if sms_filters:
         cmd += ["--sms-filters", *sms_filters]
-
     if dryrun:
         cmd.append("--dryrun")
     return cmd
 
 def submit_job(cmd):
-    """Submit a single job via subprocess"""
     print("Submit command:", " ".join(cmd))
     if not dryrun:
         subprocess.run(cmd)
 
+# -----------------------------
+# MAIN
+# -----------------------------
 def main():
     global dryrun, stress_test, lumi
 
-    # CLI parsing
     parser = argparse.ArgumentParser(description="Submit BFI jobs with templated bins")
-    parser.add_argument("--dryrun", dest="dryrun", action="store_true",
-                        help="Enable dry-run mode")
-    parser.add_argument("--stress_test", dest="stress_test", action="store_true",
-                        help="Run stress test")
-    parser.add_argument("--lumi", dest="lumi", type=str, default=lumi,
-                        help="Lumi to scale events to")
-    parser.add_argument("--bins-cfg", dest="bins_cfg", type=str, default="config/examples.yaml",
-                        help="YAML config file containing bin definitions")
-    parser.add_argument("--datasets-cfg", dest="datasets_cfg", type=str,
-                        default="config/datasets.yaml",
-                        help="YAML config file containing dataset definitions")
-    parser.set_defaults(dryrun=dryrun, stress_test=stress_test)
+    parser.add_argument("--dryrun", action="store_true")
+    parser.add_argument("--stress_test", action="store_true")
+    parser.add_argument("--lumi", type=str, default=lumi)
+    parser.add_argument("--bins-cfg", type=str, default="config/examples.yaml")
+    parser.add_argument("--datasets-cfg", type=str, default="config/datasets.yaml")
     args = parser.parse_args()
 
     dryrun = args.dryrun
     stress_test = args.stress_test
     lumi = args.lumi
 
-    # Load dataset names from YAML
-    bkg_datasets, sig_datasets = load_datasets(args.datasets_cfg)
-    with open(args.datasets_cfg, "r") as f:
-        yaml_cfg = yaml.safe_load(f)
-    
-    sms_filters = yaml_cfg.get("sms_filters", [])
+    # Load datasets
+    bkg_datasets, sig_datasets, sms_filters = load_datasets(args.datasets_cfg)
 
+    # Load bins
+    bins_cfg_path = Path(args.bins_cfg)
     bins = {}
-    bins_cfg_path = args.bins_cfg
-    cfg_path = Path(bins_cfg_path)
-
-    # built-in default manual_bins (used only as fallback if YAML missing)
-    default_manual_bins = {
-        "manualExample1": {
-            "cuts": "Nlep>=2;MET>=150;PTISR>=200",
-            "lep-cuts": ">=1OSSF",
-            "predefined-cuts": "Cleaning",
-        }
-    }
-
-    if cfg_path.exists():
-        try:
-            with open(cfg_path) as f:
-                manual_bins = yaml.safe_load(f) or {}
-            # Normalize/flatten each bin entry
-            for name, cfg in list(manual_bins.items()):
-                if not isinstance(cfg, dict):
-                    print(f"[submitJobs] WARNING: bin '{name}' in YAML is not a mapping/dict; skipping.")
-                    manual_bins.pop(name, None)
-                    continue
-                # Ensure keys exist
-                cfg.setdefault("cuts", "")
-                cfg.setdefault("lep-cuts", "")
-                cfg.setdefault("predefined-cuts", "")
-
-                # Process lep-cuts: remove commented lines and join remaining lines
-                if isinstance(cfg["lep-cuts"], str):
-                    kept_lines = []
-                    for line in cfg["lep-cuts"].splitlines():
-                        if line.strip().startswith("#"):
-                            # skip commented lines
-                            continue
-                        kept_lines.append(line.rstrip())
-                    # join without newline to produce the compact shorthand expected by createJobs
-                    cfg["lep-cuts"] = "".join(kept_lines)
-            bins.update(manual_bins)
-            print(f"[submitJobs] Loaded {len(manual_bins)} bin(s) from YAML: {cfg_path}")
-        except Exception as e:
-            print(f"[submitJobs] ERROR loading YAML config: {e}")
-            print("[submitJobs] Falling back to built-in manual bins.")
-            bins.update(default_manual_bins)
+    if bins_cfg_path.exists():
+        with open(bins_cfg_path) as f:
+            manual_bins = yaml.safe_load(f) or {}
+        for k,v in manual_bins.items():
+            if isinstance(v, dict):
+                v.setdefault("cuts","")
+                v.setdefault("lep-cuts","")
+                v.setdefault("predefined-cuts","")
+        bins.update(manual_bins)
     else:
-        print(f"[submitJobs] WARNING: YAML config not found at {cfg_path}")
-        print("[submitJobs] Using built-in manual bins as fallback (you can supply --bins-cfg).")
-        bins.update(default_manual_bins)
+        bins.update({"manualExample1":{"cuts":"Nlep>=2;MET>=150;PTISR>=200","lep-cuts":">=1OSSF","predefined-cuts":"Cleaning"}})
 
-    # -----------------------------
-    # GENERATE STRESS-TEST TEMPLATED BINS
-    # -----------------------------
     if stress_test:
         gen = generate_bins_from_shorthands()
-        for k, v in gen.items():
-            if k in bins:
-                print(f"[TEMPLATE SKIP] Generated bin '{k}' collides with manual bin; skipping.")
-                continue
-            bins[k] = v
+        for k,v in gen.items():
+            if k not in bins:
+                bins[k]=v
 
-    # -----------------------------
-    # Build jobs
-    # -----------------------------
+    # Submit createJobs.py for each bin
     jobs = []
     print("\n===== BEGIN BIN DEFINITIONS =====\n")
     for bin_name, cfg in bins.items():
-        # ensure cfg has expected keys (defensive)
-        if not isinstance(cfg, dict):
-            print(f"[WARN] skipping malformed bin '{bin_name}'")
-            continue
-
         cmd = build_command(bin_name, cfg, bkg_datasets, sig_datasets, sms_filters)
         jobs.append(cmd)
-
-        print(f"[BIN-DEF] bin=\"{bin_name}\"")
-        print(f"          lep-cuts=\"{cfg.get('lep-cuts', '')}\"")
-        print(f"          cuts=\"{cfg.get('cuts', '')}\"")
-        print(f"          predefined-cuts=\"{cfg.get('predefined-cuts', '')}\"\n")
-
+        print(f"[BIN-DEF] bin={bin_name} cuts={cfg.get('cuts')} lep-cuts={cfg.get('lep-cuts')} predefined-cuts={cfg.get('predefined-cuts')}")
     print("===== END BIN DEFINITIONS =====\n")
 
-    # Summary
-    total_jobs = len(jobs)
-    print(f"Prepared {total_jobs} bin(s) for submission.")
-    if dryrun:
-        print("Dry-run mode enabled: no jobs will actually be submitted.")
-    if limit_submit is not None:
-        print(f"Limit enabled: will only submit first {limit_submit} job(s).")
-
-    # Apply limit if requested
     if limit_submit is not None:
         jobs = jobs[:limit_submit]
 
-    # Submit
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         executor.map(submit_job, jobs)
 
     if not dryrun:
+        # Generate flatten JSON
         write_flatten_script(list(bins.keys()))
-        setup_master_merge_script(list(bins.keys()))
+        # Generate per-bin hadd scripts
+        for bin_name in bins.keys():
+            write_bin_hadd_script(bin_name)
+        # Generate master hadd script
+        write_master_hadd_script(list(bins.keys()))
         print("\nAll submissions dispatched.\n")
 
 if __name__ == "__main__":
