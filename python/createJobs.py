@@ -41,14 +41,16 @@ def write_merge_script(bin_name, json_dir="json"):
     os.chmod(merge_script_path, 0o755)
     print(f"[createJobs] Generated merge script: {merge_script_path}")
 
-def write_hadd_script(bin_name, root_dir="root"):
-    script_path = os.path.join(f'{CONDOR_DIR}/{bin_name}', "haddROOTs.sh")
-    with open(script_path, "w") as f:
+def write_hadd_script(bin_name, condor_dir="condor", root_dir="root"):
+    hadd_script_path = os.path.join(condor_dir, bin_name, "haddROOTs.sh")
+    os.makedirs(os.path.dirname(hadd_script_path), exist_ok=True)
+    with open(hadd_script_path, "w") as f:
         f.write("#!/usr/bin/env bash\n")
-        f.write("# Auto-generated hadd script\n")
-        f.write(f"hadd -f {CONDOR_DIR}/{bin_name}/{bin_name}.root {CONDOR_DIR}/{bin_name}/{root_dir}/*.root\n")
-    os.chmod(script_path, 0o755)
-    print(f"[createJobs] Generated hadd script: {script_path}")
+        f.write("# Auto-generated per-bin hadd script\n")
+        f.write(f"hadd -f {condor_dir}/{bin_name}/{bin_name}.root "
+                f"{condor_dir}/{bin_name}/{root_dir}/*.root\n")
+    os.chmod(hadd_script_path, 0o755)
+    print(f"[createJobs] Generated hadd script: {hadd_script_path}")
 
 CONDOR_HEADER = """
 universe                = vanilla

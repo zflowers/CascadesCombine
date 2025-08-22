@@ -37,27 +37,34 @@ def write_flatten_script(bin_names, flatten_exe="./flattenJSONs.x", json_dir="js
     os.chmod(script_path, 0o755)
     print(f"[submitJobs] Generated flatten script: {script_path}")
 
-def write_master_hadd_script(bin_names, master_root_dir="root"):
-    master_script_path = Path("condor") / "run_hadd_all.sh"
-    master_root_dir_path = Path(master_root_dir)
-    master_root_dir_path.mkdir(parents=True, exist_ok=True)
-    final_root = master_root_dir_path / "hadded_allBins.root"
+def write_master_hadd_script(bin_names, condor_dir="condor", master_root_dir="root"):
+    """
+    Create a master hadd script that merges all per-bin ROOT files into one final ROOT
+    file named like: hadded_BIN1_BIN2_..._BINn.root
+    """
+    master_script_path = os.path.join(condor_dir, "run_hadd_all.sh")
+    os.makedirs(master_root_dir, exist_ok=True)
+
+    joined_bins = "_".join(bin_names)
+    final_root = os.path.join(master_root_dir, f"hadded_{joined_bins}.root")
 
     with open(master_script_path, "w") as f:
         f.write("#!/usr/bin/env bash\n")
         f.write("# Auto-generated master hadd script\n\n")
-        
-        # Call per-bin hadd scripts
-        for bin_name in bin_names:
-            f.write(f"bash condor/{bin_name}/run_hadd.sh\n")
 
-        # Collect per-bin hadded ROOTs
-        per_bin_roots = [f"condor/{bin_name}/{master_root_dir}/hadded_{bin_name}.root"
-                         for bin_name in bin_names]
+        # Call per-bin hadd scripts first
+        for bin_name in bin_names:
+            hadd_script = os.path.join(condor_dir, bin_name, "haddROOTs.sh")
+            f.write(f"bash {hadd_script}\n")
+
+        # Collect per-bin ROOT outputs
+        per_bin_roots = [os.path.join(condor_dir, bin_name, f"{bin_name}.root") for bin_name in bin_names]
         f.write("existing_roots=()\n")
         f.write("for f in " + " ".join(per_bin_roots) + "; do\n")
         f.write("  if [ -f \"$f\" ]; then existing_roots+=(\"$f\"); fi\n")
         f.write("done\n")
+
+        # Merge if at least one ROOT exists
         f.write("if [ ${#existing_roots[@]} -gt 0 ]; then\n")
         f.write(f"  hadd -f {final_root} ${{existing_roots[@]}}\n")
         f.write(f"  echo 'Final hadded ROOT -> {final_root}'\n")
@@ -65,39 +72,53 @@ def write_master_hadd_script(bin_names, master_root_dir="root"):
         f.write("  echo 'No per-bin ROOT files found to hadd.'\n")
         f.write("fi\n")
 
-    st = os.stat(master_script_path)
-    os.chmod(master_script_path, st.st_mode | stat.S_IEXEC)
+    os.chmod(master_script_path, 0o755)
     print(f"[submitJobs] Generated master hadd script: {master_script_path}")
     return master_script_path
 
-def setup_master_merge_script(bin_names, flatten_sh="run_flatten.sh", json_dir="json", hadd_sh="run_hadd_all.sh", root_dir="root", do_json=False, do_hadd=False):
+def setup_master_merge_script(
+    bin_names,
+    flatten_sh="run_flatten.sh",
+    json_dir="json",
+    hadd_sh="run_hadd_all.sh",
+    root_dir="root",
+    do_json=False,
+    do_hadd=False,
+    condor_dir="condor"
+):
     """
-    Create master_merge.sh to run all mergers.
+    Create master_merge.sh to run all mergers (JSON flattening + ROOT hadd).
+    Final output files include the spliced bin names.
     """
-    os.makedirs("condor", exist_ok=True)
-    master_script_path = "condor/master_merge.sh"
+    os.makedirs(condor_dir, exist_ok=True)
+    master_script_path = os.path.join(condor_dir, "master_merge.sh")
 
-    # Start fresh
+    joined_bins = "_".join(bin_names)
+
     with open(master_script_path, "w") as f:
         f.write("#!/usr/bin/env bash\n")
         f.write("# Auto-generated master merge script\n\n")
+
+        # --- JSON merging ---
         if do_json:
             os.makedirs(json_dir, exist_ok=True)
             for bin_name in bin_names:
-                merge_script = f"condor/{bin_name}/mergeJSONs.sh"
+                merge_script = os.path.join(condor_dir, bin_name, "mergeJSONs.sh")
                 f.write(f"bash {merge_script}\n")
-            output_file = os.path.join(json_dir, f"flattened_{'_'.join(bin_names)}.json")
-            f.write(f"bash condor/{flatten_sh}\n")
-            f.write(f"echo 'Final flattened JSON written to {output_file}'\n")
+            f.write(f"bash {os.path.join(condor_dir, flatten_sh)}\n")
+            f.write(f"echo 'Final flattened JSON written to {json_dir}/flattened_{joined_bins}.json'\n\n")
+
+        # --- ROOT hadd ---
         if do_hadd:
             os.makedirs(root_dir, exist_ok=True)
+            # Call per-bin hadd scripts
             for bin_name in bin_names:
-                merge_script = f"condor/{bin_name}/run_hadd.sh"
-                f.write(f"bash {merge_script}\n")
-            output_file = os.path.join(root_dir, f"hadd_output_{'_'.join(bin_names)}.root")
-            f.write(f"bash condor/{hadd_sh}\n")
-            f.write(f"echo 'Final hadd written to {output_file}\n")
-    
+                hadd_script = os.path.join(condor_dir, bin_name, "haddROOTs.sh")
+                f.write(f"bash {hadd_script}\n")
+            # Call master hadd script
+            f.write(f"bash {os.path.join(condor_dir, hadd_sh)}\n")
+            f.write(f"echo 'Final hadd written to {root_dir}/hadded_{joined_bins}.root'\n")
+
     os.chmod(master_script_path, 0o755)
     print(f"[submitJobs] Master merge script generated: {master_script_path}")
     return master_script_path

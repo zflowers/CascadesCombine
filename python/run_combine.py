@@ -214,11 +214,7 @@ def main():
 
     # 5) Run all merge scripts
     print("[run_all] Running master merge script", flush=True)
-    if args.make_json:
-        subprocess.run(["bash", "condor/master_merge.sh"], check=True, stdout=sys.stdout, stderr=sys.stderr)
-    if args.make_root:
-        subprocess.run(["bash", "condor/run_hadd_all.sh"], check=True, stdout=sys.stdout, stderr=sys.stderr)
-    sys.exit(0) # debug
+    subprocess.run(["bash", "condor/master_merge.sh"], check=True, stdout=sys.stdout, stderr=sys.stderr)
 
     if args.make_json:
         # 6) Run BF.x on the flattened JSON

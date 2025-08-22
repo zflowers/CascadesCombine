@@ -286,12 +286,13 @@ int main(int argc, char** argv) {
                 for(const auto &c:h.lepCuts) hnode=hnode.Filter(BFI->ExpandMacros(c));
                 for(const auto &c:h.predefCuts) hnode=hnode.Filter(BFI->ExpandMacros(c));
         
+                std::string hname = binName + "__" + sampleName + "__" + h.name;
                 if(h.type=="1D"){
-                    auto hist = hnode.Histo1D({h.name.c_str(),h.name.c_str(),h.nbins,h.xmin,h.xmax},h.expr,"weight_scaled");
+                    auto hist = hnode.Histo1D({hname.c_str(),hname.c_str(),h.nbins,h.xmin,h.xmax},h.expr,"weight_scaled");
                     hist->Write(); // <-- write to ROOT file
                     std::cout<<"[BFI_condor] Filled histogram: "<<h.name<<"\n";
                 }else if(h.type=="2D"){
-                    auto hist = hnode.Histo2D({h.name.c_str(),h.name.c_str(),h.nbins,h.xmin,h.xmax,h.nybins,h.ymin,h.ymax},
+                    auto hist = hnode.Histo2D({hname.c_str(),hname.c_str(),h.nbins,h.xmin,h.xmax,h.nybins,h.ymin,h.ymax},
                                               h.expr,h.yexpr,"weight_scaled");
                     hist->Write(); // <-- write to ROOT file
                     std::cout<<"[BFI_condor] Filled 2D histogram: "<<h.name<<"\n";
