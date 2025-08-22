@@ -53,15 +53,13 @@ def get_flattened_json_path():
     flattened_files = glob.glob("json/flattened_*.json")
     if not flattened_files:
         raise FileNotFoundError("No flattened JSON files found in json/")
-    # Pick the first (or the most recently modified) file
-    # Option: sort by mtime and pick the latest:
     flattened_files.sort(key=os.path.getmtime, reverse=True)
     return flattened_files[0]
 
 def get_flattened_root_path():
-    root_files = glob.glob("root/merged_*.root")
+    root_files = glob.glob("root/hadded_*.root")
     if not root_files:
-        raise FileNotFoundError("No merged ROOT files found in root/")
+        raise FileNotFoundError("No hadded ROOT files found in root/")
     root_files.sort(key=os.path.getmtime, reverse=True)
     return root_files[0]
 
@@ -234,6 +232,17 @@ def main():
         # 9) Collect significances
         print("[run_all] Collecting significances...", flush=True)
         subprocess.run(["python3", "-u", "macro/CollectSignificance.py", output_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
+
+    if args.make_root:
+        # 10) Plot histograms
+        print("[run_all] Plotting histograms from hadded ROOT file...", flush=True)
+        hadd_file = get_flattened_root_path()
+        subprocess.run(
+            ["./PlotHistograms.x", hadd_file],
+            check=True,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+        )
 
     print("[run_all] All steps completed.", flush=True)
     # end time

@@ -24,10 +24,11 @@ PYBIND_CXXFLAGS = $(CXXFLAGS) $(PYBIND_INCLUDES)
 
 # --- Source files ---
 SRCS = $(SRC_DIR)/main.cpp $(SRC_DIR)/SampleTool.cpp $(SRC_DIR)/BuildFitInput.cpp $(SRC_DIR)/JSONFactory.cpp
-SRCS_CONDOR = $(SRC_DIR)/BFI_condor.cpp $(SRC_DIR)/BuildFitInput.cpp $(SRC_DIR)/JSONFactory.cpp
+SRCS_CONDOR = $(SRC_DIR)/BFI_condor.cpp $(SRC_DIR)/BuildFitInput.cpp $(SRC_DIR)/JSONFactory.cpp $(SRC_DIR)/SampleTool.cpp
 CMSSWSRCS = $(SRC_DIR)/BFmain.cpp $(SRC_DIR)/BuildFit.cpp $(SRC_DIR)/JSONFactory.cpp
 SRCS_MERGE = $(SRC_DIR)/mergeJSONs.cpp $(SRC_DIR)/JSONFactory.cpp $(SRC_DIR)/SampleTool.cpp $(SRC_DIR)/BuildFitInput.cpp
 SRCS_FLATTEN = $(SRC_DIR)/flattenJSONs.cpp
+SRCS_PLOTTER = $(SRC_DIR)/PlotHistograms.cpp
 PYBIND_SRCS = $(SRC_DIR)/pySampleTool.cpp $(SRC_DIR)/SampleTool.cpp
 
 # --- Object files ---
@@ -37,6 +38,7 @@ CMSSWOBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJS_DIR)/%.o,$(CMSSWSRCS))
 MERGEOBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJS_DIR)/%.o,$(SRCS_MERGE))
 FLATTENOBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJS_DIR)/%.o,$(SRCS_FLATTEN))
 PYBIND_OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJS_DIR)/%.o,$(PYBIND_SRCS))
+PLOTTEROBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJS_DIR)/%.o,$(SRCS_PLOTTER))
 
 # --- Executables ---
 TARGET = $(BIN_DIR)/BFI.x
@@ -44,9 +46,10 @@ CMSSWTARGET = $(BIN_DIR)/BF.x
 CONDORTARGET = $(BIN_DIR)/BFI_condor.x
 MERGETARGET = $(BIN_DIR)/mergeJSONs.x
 FLATTENTARGET = $(BIN_DIR)/flattenJSONs.x
+PLOTTERTARGET = $(BIN_DIR)/PlotHistograms.x
 
 # --- Default target ---
-all: $(TARGET) $(CMSSWTARGET) $(CONDORTARGET) $(MERGETARGET) $(FLATTENTARGET) $(PYBIND_TARGET)
+all: $(TARGET) $(CMSSWTARGET) $(CONDORTARGET) $(MERGETARGET) $(FLATTENTARGET) $(PLOTTERTARGET) $(PYBIND_TARGET)
 
 # --- Executable targets ---
 $(TARGET): $(OBJS_DIR) $(OBJS)
@@ -63,6 +66,9 @@ $(MERGETARGET): $(OBJS_DIR) $(MERGEOBJS)
 
 $(FLATTENTARGET): $(OBJS_DIR) $(FLATTENOBJS)
 	$(CXX) $(FLATTENOBJS) -o $@ $(LDFLAGS) $(ROOTCFLAGS) $(LIBPATH)
+
+$(PLOTTERTARGET): $(OBJS_DIR) $(PLOTTEROBJS)
+	$(CXX) $(PLOTTEROBJS) -o $@ $(LDFLAGS) $(ROOTCFLAGS) $(LIBPATH)
 
 $(PYBIND_TARGET): $(OBJS_DIR) $(PYBIND_OBJS) | $(LIB_DIR)
 	$(CXX) -shared -std=c++17 -fPIC $(PYBIND_OBJS) -o $@ $(PYBIND_INCLUDES) $(LDFLAGS) $(ROOTCFLAGS)

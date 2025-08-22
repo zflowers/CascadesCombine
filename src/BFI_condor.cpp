@@ -8,6 +8,7 @@
 #include <getopt.h>
 #include <cmath>
 #include <memory>
+#include <filesystem>
 #include "TFile.h"
 #include "TH1D.h"
 #include "TH2D.h"
@@ -15,6 +16,8 @@
 #include "yaml-cpp/yaml.h"
 #include "BuildFitInput.h"
 #include "BuildFitTools.h"
+#include "SampleTool.h"
+namespace fs = std::filesystem;
 
 // ----------------------
 // Helpers
@@ -73,6 +76,26 @@ inline std::string GetSampleNameFromKey(const std::string& keyOrPath) {
     size_t dot = name.rfind(".root");
     if (dot != std::string::npos) name = name.substr(0, dot);
     return name;
+}
+
+inline std::string GetProcessNameFromKey(const std::string& keyOrPath) {
+    SampleTool ST;
+    ST.LoadAllFromMaster();
+
+    auto resolveGroup = [&ST](const std::string &Key) -> std::string {
+        std::string keyBase = fs::path(Key).filename().string();    
+        for (const auto &kv : ST.MasterDict) {       // kv.first = canonical group
+            for (const auto &entry : kv.second) {    // entry = full path
+                std::string entryBase = fs::path(entry).filename().string();
+                // Use starts-with match instead of find anywhere
+                if (keyBase.rfind(entryBase.substr(0, entryBase.find("_")), 0) == 0)
+                    return kv.first;
+            }
+        }
+        return keyBase; // fallback
+    };
+
+    return resolveGroup(keyOrPath);
 }
 
 static bool buildCutsForBin(BuildFitInput* bfi,
@@ -257,14 +280,23 @@ int main(int argc, char** argv) {
             return 6;
         }
     }
+    if(!smsFilters.empty()) BFTool::filterSignalsSMS=smsFilters;
 
     if(isSignal && sigType.empty())
         sigType=(rootFilePath.find("SMS")!=std::string::npos)?"sms":"cascades";
 
     std::map<std::string, std::map<std::string,std::array<double,3>>> fileResults;
     std::map<std::string,std::array<double,3>> totals;
+    std::string processName = "";
+    if(isSignal && sigType == "cascades")
+        processName = BFTool::GetSignalTokensCascades(rootFilePath);
+    else if(isSignal && sigType == "sms")
+        processName = GetProcessNameFromKey(rootFilePath) + "_" + BFTool::GetFilterSignalsSMS()[0];
+    else
+        processName = GetProcessNameFromKey(rootFilePath);
 
     auto processTree=[&](const std::string &tree_name, const std::string &key){
+        histFile->cd();
         ROOT::RDataFrame df(tree_name, rootFilePath);
         auto df_scaled = df.Define("weight_scaled",[Lumi](double w){return w*Lumi;},{"weight"})
                            .Define("weight_sq_scaled",[Lumi](double w){return w*w*Lumi*Lumi;},{"weight"});
@@ -286,15 +318,15 @@ int main(int argc, char** argv) {
                 for(const auto &c:h.lepCuts) hnode=hnode.Filter(BFI->ExpandMacros(c));
                 for(const auto &c:h.predefCuts) hnode=hnode.Filter(BFI->ExpandMacros(c));
         
-                std::string hname = binName + "__" + sampleName + "__" + h.name;
+                std::string hname = binName + "__" + processName + "__" + h.name;
                 if(h.type=="1D"){
                     auto hist = hnode.Histo1D({hname.c_str(),hname.c_str(),h.nbins,h.xmin,h.xmax},h.expr,"weight_scaled");
-                    hist->Write(); // <-- write to ROOT file
+                    if(hist->Write() == 0) std::cerr << "error writing: " << hname << std::endl; // <-- write to ROOT file
                     std::cout<<"[BFI_condor] Filled histogram: "<<h.name<<"\n";
                 }else if(h.type=="2D"){
                     auto hist = hnode.Histo2D({hname.c_str(),hname.c_str(),h.nbins,h.xmin,h.xmax,h.nybins,h.ymin,h.ymax},
                                               h.expr,h.yexpr,"weight_scaled");
-                    hist->Write(); // <-- write to ROOT file
+                    if(hist->Write() == 0) std::cerr << "error writing: " << hname << std::endl; // <-- write to ROOT file
                     std::cout<<"[BFI_condor] Filled 2D histogram: "<<h.name<<"\n";
                 }
             }
@@ -319,7 +351,6 @@ int main(int argc, char** argv) {
     if(!isSignal) processTree("KUAnalysis",sampleName);
     else if(sigType=="cascades") processTree("KUAnalysis",BFTool::GetSignalTokensCascades(rootFilePath));
     else if(sigType=="sms"){
-        if(!smsFilters.empty()) BFTool::filterSignalsSMS=smsFilters;
         for(const auto &tree_name:BFTool::GetSignalTokensSMS(rootFilePath))
             processTree(tree_name,tree_name);
     }else{std::cerr<<"[BFI_condor] Unknown sig-type: "<<sigType<<"\n"; delete BFI; return 4;}

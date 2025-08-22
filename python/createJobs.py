@@ -308,7 +308,7 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, make_json
         else:
             print(f"Submitted bin {bin_name} ({len(jobs)} jobs)")
             if make_json:
-                write_merge_script(bin_name)
+                write_merge_script(bin_name,json_dir)
             if make_root:
                 write_hadd_script(bin_name)
 
