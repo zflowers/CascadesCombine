@@ -166,10 +166,46 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, make_json
     submit_lines.append(f"output = {out_dir}/$(LogFile).out")
     submit_lines.append(f"error  = {err_dir}/$(LogFile).err")
 
-    # Build per-job outputs and transfer input files
+    # Build per-job inputs collection (global)
     all_inputs = set(["BFI_condor.x"])
     all_remaps = []
 
+    # helper: flatten multi-line YAML literal blocks into a single-line string
+    def _flatten_field(value):
+        if value is None:
+            return ""
+        s = str(value)
+        # Split lines, strip each, remove empty lines, join with single space
+        parts = [line.strip() for line in s.splitlines() if line.strip()]
+        joined = " ".join(parts)
+        # escape any literal double-quotes inside the value so they don't break the submit file
+        joined = joined.replace('"', '\\"')
+        return joined
+
+    # ----
+    # Add per-job outputs (use $(LogFile) placeholders) once, globally,
+    # so condor knows each job will produce these outputs.
+    per_job_outputs = []
+    if make_json:
+        per_job_outputs.append("$(LogFile).json")
+    if make_root:
+        per_job_outputs.append("$(LogFile).root")
+
+    if per_job_outputs:
+        submit_lines.append("transfer_output_files = " + ", ".join(per_job_outputs))
+
+        # Remap these per-job outputs into the desired subdirectories
+        remap_entries = []
+        if make_json:
+            remap_entries.append(f"$(LogFile).json = {json_dir.as_posix()}/$(LogFile).json")
+        if make_root:
+            remap_entries.append(f"$(LogFile).root = {root_dir.as_posix()}/$(LogFile).root")
+
+        # Single transfer_output_remaps line (avoid f-string brace pitfalls)
+        submit_lines.append('transfer_output_remaps = "' + "; ".join(remap_entries) + '"')
+
+    # ----
+    # Build each job's args and per-job remap entries (kept for compatibility)
     for job in jobs:
         ds = job["dataset"]
         fpath = job["filepath"]
@@ -181,7 +217,7 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, make_json
 
         outputs = []
 
-        # JSON
+        # JSON (per-job local json filename and remap entry kept)
         if make_json:
             local_json = f"{base}.json"
             outputs.append("--json")
@@ -189,14 +225,14 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, make_json
             job["remap_outputs"] = job.get("remap_outputs", [])
             job["remap_outputs"].append(f"{local_json} = json/{local_json}")
 
-        # ROOT / histograms
+        # ROOT / histograms (per-job local root filename and remap entry kept)
         if make_root:
             local_root = f"{base}.root"
             outputs.append("--hist")
             outputs.append(f"--root-output {local_root}")
             job["remap_outputs"] = job.get("remap_outputs", [])
             job["remap_outputs"].append(f"{local_root} = root/{local_root}")
-            # Include YAML file if defined
+            # Include YAML file if defined (transfer input)
             hist_yaml_file = job.get("hist_yaml", "")
             if hist_yaml_file:
                 outputs.append(f"--hist-yaml {os.path.basename(hist_yaml_file)}")
@@ -206,41 +242,47 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, make_json
         # Ensure BFI_condor.x is in transfer_input_files
         job.setdefault("transfer_input_files", []).append("BFI_condor.x")
 
-        # Collect remaps
+        # Collect remaps for bookkeeping (not used to produce transfer_output_files)
         all_remaps.extend(job.get("remap_outputs", []))
 
-        # Args string for this job
+        # Flatten possible multi-line fields and build args_list
+        cuts_flat = _flatten_field(job.get("cuts", ""))
+        lep_cuts_flat = _flatten_field(job.get("lep_cuts", ""))
+        predef_flat = _flatten_field(job.get("predef_cuts", ""))
+
         args_list = [
             f"--bin {bin_name}",
             f"--file {fpath}",
             *outputs,
-            f"--cuts {job.get('cuts','')}",
-            f"--lep-cuts {job.get('lep_cuts','')}",
-            f"--predefined-cuts {job.get('predef_cuts','')}"
         ]
+        # Add the (now single-line) fields only if they're non-empty
+        if cuts_flat:
+            args_list.append(f"--cuts {cuts_flat}")
+        if lep_cuts_flat:
+            args_list.append(f"--lep-cuts {lep_cuts_flat}")
+        if predef_flat:
+            args_list.append(f"--predefined-cuts {predef_flat}")
+
         if sig_type:
             args_list.append(f"--sig-type {sig_type}")
         if sms_filters:
             args_list.append("--sms-filters")
             args_list.append(sms_filters[0])
 
+        # Join into single-line args_str
         args_str = " ".join(a for a in args_list if a and not a.isspace())
         job["args_str"] = args_str
         job["base"] = base
 
-    # Write transfer_input_files and remaps (global for the submit file)
+    # Write transfer_input_files (global)
     submit_lines.append("transfer_input_files = " + ", ".join(sorted(all_inputs)))
-    if all_remaps:
-        submit_lines.append(
-            "transfer_output_files = " + ", ".join(sorted(set(f.split(" = ")[0] for f in all_remaps)))
-        )
-        submit_lines.append(f'transfer_output_remaps = "{"; ".join(all_remaps)}"')
 
     # Queue jobs
     submit_lines.append("# Queue jobs with LogFile (used for log/out/err) and Args")
     submit_lines.append("queue LogFile, Args from (")
 
     for job in jobs:
+        # job["args_str"] is guaranteed to be a single line now
         submit_lines.append(f'{job["base"]} "{job["args_str"]}"')
 
     submit_lines.append(")")

@@ -21,23 +21,29 @@
 // ----------------------
 
 static void usage(const char* me) {
-    std::cerr << "Usage: " << me 
-              << " --bin BINNAME --file ROOTFILE --output OUT.json "
-                 "[--cuts CUT1;CUT2;...] [--lep-cuts LEPCUT1;LEPCUT2;...] "
+    std::cerr << "Usage: " << me
+              << " --bin BINNAME --file ROOTFILE [--json-output OUT.json] "
+                 "[--root-output OUT.root] [--cuts CUT1;CUT2;...] [--lep-cuts LEPCUT1;LEPCUT2;...] "
                  "[--predefined-cuts NAME1;NAME2;...] [--hist] [--hist-yaml HISTS.yaml] [--json]\n\n";
     std::cerr << "Required arguments:\n";
-    std::cerr << "  --bin        Name of the bin to process (e.g. TEST)\n";
-    std::cerr << "  --file       Path to one ROOT file to process\n";
-    std::cerr << "  --output     Path to write partial JSON output\n\n";
+    std::cerr << "  --bin           Name of the bin to process (e.g. TEST)\n";
+    std::cerr << "  --file          Path to one ROOT file to process\n\n";
     std::cerr << "Optional arguments:\n";
-    std::cerr << "  --cuts               Semicolon-separated list of normal tree cuts "
+    std::cerr << "  --json-output      Path to write partial JSON output\n";
+    std::cerr << "  --root-output      Path to write ROOT/histogram output\n";
+    std::cerr << "  --cuts             Semicolon-separated list of normal tree cuts "
                  "(e.g. MET>=150;PTISR>=250)\n";
-    std::cerr << "  --lep-cuts           Semicolon-separated list of cuts for BuildLeptonCut\n";
-    std::cerr << "  --predefined-cuts    Semicolon-separated list of predefined cuts\n";
-    std::cerr << "  --hist               Fill histograms\n";
-    std::cerr << "  --hist-yaml          YAML file defining histogram expressions\n";
-    std::cerr << "  --json               Write JSON yields\n";
-    std::cerr << "  --help               Display this help message\n";
+    std::cerr << "  --lep-cuts         Semicolon-separated list of lepton cuts for BuildLeptonCut\n";
+    std::cerr << "  --predefined-cuts  Semicolon-separated list of predefined cuts\n";
+    std::cerr << "  --hist             Fill histograms\n";
+    std::cerr << "  --hist-yaml        YAML file defining histogram expressions\n";
+    std::cerr << "  --json             Write JSON yields\n";
+    std::cerr << "  --signal           Mark this dataset as signal\n";
+    std::cerr << "  --sig-type TYPE    Specify signal type (sets --signal automatically)\n";
+    std::cerr << "  --lumi VALUE       Integrated luminosity to scale yields\n";
+    std::cerr << "  --sample-name NAME Optional name of the sample\n";
+    std::cerr << "  --sms-filters LIST Comma-separated list of SMS filters\n";
+    std::cerr << "  --help             Display this help message\n";
 }
 
 // Split strings by ';' or ',' (for backward compatibility)
@@ -276,9 +282,9 @@ int main(int argc, char** argv) {
             auto histDefs = loadHistogramsYAML(histYamlPath,BFI);
             for(auto &h: histDefs){
                 ROOT::RDF::RNode hnode = node;
-                for(const auto &c:h.cuts) hnode=hnode.Filter(c);
-                for(const auto &c:h.lepCuts) hnode=hnode.Filter(c);
-                for(const auto &c:h.predefCuts) hnode=hnode.Filter(c);
+                for(const auto &c:h.cuts) hnode=hnode.Filter(BFI->ExpandMacros(c));
+                for(const auto &c:h.lepCuts) hnode=hnode.Filter(BFI->ExpandMacros(c));
+                for(const auto &c:h.predefCuts) hnode=hnode.Filter(BFI->ExpandMacros(c));
         
                 if(h.type=="1D"){
                     auto hist = hnode.Histo1D({h.name.c_str(),h.name.c_str(),h.nbins,h.xmin,h.xmax},h.expr,"weight_scaled");

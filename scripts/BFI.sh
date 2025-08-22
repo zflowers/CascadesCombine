@@ -31,20 +31,35 @@ PREDEF_CUTS=""
 SIG_TYPE=""
 LUMI=""
 SMS_FILTERS=""
+JSON_FLAG=""
+HIST_FLAG=""
 
+# --- Parse arguments ---
 while [[ $# -gt 0 ]]; do
     key="$1"
     case $key in
         --bin) BIN=$(clean_arg "$2"); shift 2;;
         --file) ROOTFILE=$(clean_arg "$2"); shift 2;;
-        --output-json) OUTPUT_JSON=$(clean_arg "$2"); shift 2;;
-        --output-hist) OUTPUT_HIST=$(clean_arg "$2"); shift 2;;
+
+        # Standalone flags
+        --json) JSON_FLAG="--json"; shift;;
+        --hist) HIST_FLAG="--hist"; shift;;
+
+        # Output filenames
+        --json-output) OUTPUT_JSON=$(clean_arg "$2"); shift 2;;
+        --root-output) OUTPUT_HIST=$(clean_arg "$2"); shift 2;;
         --hist-yaml) HIST_YAML=$(clean_arg "$2"); shift 2;;
+
+        # Cuts
         --cuts) CUTS=$(clean_arg "$2"); shift 2;;
         --lep-cuts) LEP_CUTS=$(clean_arg "$2"); shift 2;;
         --predefined-cuts) PREDEF_CUTS=$(clean_arg "$2"); shift 2;;
+
+        # Other options
         --sig-type) SIG_TYPE=$(clean_arg "$2"); shift 2;;
         --lumi) LUMI=$(clean_arg "$2"); shift 2;;
+
+        # Multi-value argument
         --sms-filters)
             shift
             SMS_FILTERS=""
@@ -54,13 +69,13 @@ while [[ $# -gt 0 ]]; do
             done
             SMS_FILTERS=${SMS_FILTERS%,}
             ;;
+
         *) echo "Unknown option $1"; shift;;
     esac
 done
 
 # --- Auto-generate output filenames if not provided ---
 base_name=$(basename "$ROOTFILE" .root)
-
 if [[ -z "$OUTPUT_JSON" ]]; then
     OUTPUT_JSON="${BIN}_${base_name}.json"
 fi
@@ -73,29 +88,27 @@ OUTPUT_JSON=$(basename "$OUTPUT_JSON")
 OUTPUT_HIST=$(basename "$OUTPUT_HIST")
 [[ -n "$HIST_YAML" ]] && HIST_YAML=$(basename "$HIST_YAML")
 
-# --- Build command ---
-CMD=(./BFI_condor.x --bin "$BIN" --file "$ROOTFILE")
+# --- Build command as a single quoted string ---
+CMD="./BFI_condor.x --bin \"$BIN\" --file \"$ROOTFILE\""
 
-# JSON output
-[[ -n "$OUTPUT_JSON" ]] && CMD+=(--output "$OUTPUT_JSON" --json)
+[[ -n "$JSON_FLAG" ]] && CMD="$CMD $JSON_FLAG"
+[[ -n "$OUTPUT_JSON" ]] && CMD="$CMD --json-output \"$OUTPUT_JSON\""
 
-# Hist output + yaml
-[[ -n "$OUTPUT_HIST" ]] && CMD+=(--hist --hist-output "$OUTPUT_HIST")
-[[ -n "$HIST_YAML" ]] && CMD+=(--hist-yaml "$HIST_YAML")
+[[ -n "$HIST_FLAG" ]] && CMD="$CMD $HIST_FLAG"
+[[ -n "$OUTPUT_HIST" ]] && CMD="$CMD --root-output \"$OUTPUT_HIST\""
+[[ -n "$HIST_YAML" ]] && CMD="$CMD --hist-yaml \"$HIST_YAML\""
 
-# Other args
-[[ -n "$CUTS" ]] && CMD+=(--cuts "$CUTS")
-[[ -n "$LEP_CUTS" ]] && CMD+=(--lep-cuts "$LEP_CUTS")
-[[ -n "$PREDEF_CUTS" ]] && CMD+=(--predefined-cuts "$PREDEF_CUTS")
-[[ -n "$SIG_TYPE" ]] && CMD+=(--t "$SIG_TYPE")
-[[ -n "$LUMI" ]] && CMD+=(--lumi "$LUMI")
-[[ -n "$SMS_FILTERS" ]] && CMD+=(--m "$SMS_FILTERS")
+[[ -n "$CUTS" ]] && CMD="$CMD --cuts \"$CUTS\""
+[[ -n "$LEP_CUTS" ]] && CMD="$CMD --lep-cuts \"$LEP_CUTS\""
+[[ -n "$PREDEF_CUTS" ]] && CMD="$CMD --predefined-cuts \"$PREDEF_CUTS\""
+
+[[ -n "$SIG_TYPE" ]] && CMD="$CMD --sig-type \"$SIG_TYPE\""
+[[ -n "$LUMI" ]] && CMD="$CMD --lumi \"$LUMI\""
+[[ -n "$SMS_FILTERS" ]] && CMD="$CMD --sms-filters \"$SMS_FILTERS\""
 
 # --- Echo and run ---
-echo "Running BFI_condor.x with arguments:"
-printf ' %q' "${CMD[@]}"
-echo
-stdbuf -oL -eL "${CMD[@]}"
+echo "Running BFI_condor.x with command:"
+echo "$CMD"
+eval "$CMD"
 
 echo "[$(date)] Job finished."
-

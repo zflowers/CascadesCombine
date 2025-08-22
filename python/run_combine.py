@@ -27,7 +27,7 @@ def wait_for_jobs():
     monitor = CondorJobCountMonitor(threshold=1, verbose=False)
     monitor.wait_until_jobs_below()
 
-def submit_jobs(stress_test, config, datasets, hist, write_json=False, write_root=False):
+def submit_jobs(stress_test, config, datasets, hist, make_json=False, make_root=False):
     """
     Runs submitJobs.py to generate Condor scripts and merge scripts.
     Must create `master_merge.sh` with all merge commands.
@@ -36,10 +36,10 @@ def submit_jobs(stress_test, config, datasets, hist, write_json=False, write_roo
 
     if stress_test:
         cmd.append("--stress_test")
-    if write_json:
-        cmd.append("--write-json")
-    if write_root:
-        cmd.append("--write-root")
+    if make_json:
+        cmd.append("--make-json")
+    if make_root:
+        cmd.append("--make-root")
         if hist:
             cmd.append("--hist-yaml")
             cmd.append(hist)
@@ -179,9 +179,9 @@ def parse_args():
                    help="YAML config file containing histogram definitions")
     p.add_argument("--stress_test", dest="stress_test", action="store_true",
                    help="Run stress test")
-    p.add_argument("--write-json", action="store_true",
+    p.add_argument("--make-json", action="store_true",
                    help="Generate JSON outputs")
-    p.add_argument("--write-root", action="store_true",
+    p.add_argument("--make-root", action="store_true",
                    help="Generate ROOT outputs")
     return p.parse_args()
 
@@ -191,14 +191,15 @@ def main():
     start_time = time.time()
 
     # 1) Compile framework
-    print("[run_all] Building binaries...", flush=True)
+    print("[run_all] Cleaning binaries...", flush=True)
     clean_binaries()
+    print("[run_all] Building binaries...", flush=True)
     build_binaries()
 
     # 2) Submit jobs and generate master_merge.sh
     print("[run_all] Submitting jobs...", flush=True)
     submit_jobs(stress_test=args.stress_test, config=args.bins_cfg, datasets=args.datasets_cfg,
-                hist=args.hist_cfg,write_json=args.write_json, write_root=args.write_root)
+                hist=args.hist_cfg,make_json=args.make_json, make_root=args.make_root)
 
     # 3) Wait for jobs to finish
     print("[run_all] Waiting for condor jobs to finish...", flush=True)
@@ -206,35 +207,37 @@ def main():
 
     # 4) Run checkJobs.py loop to find/resubmit failed jobs (if any)
     print("[run_all] Checking for failed jobs and resubmitting if necessary...", flush=True)
-    ok = run_checkjobs_loop_parallel(no_resubmit=False, max_resubmits=args.max_resubmits, check_json=args.write_json, check_root=args.write_root)
+    ok = run_checkjobs_loop_parallel(no_resubmit=False, max_resubmits=args.max_resubmits, check_json=args.make_json, check_root=args.make_root)
     if not ok:
         print(f"[run_all] checkJobs step did not complete successfully. Aborting further steps.", file=sys.stderr)
         sys.exit(1)
 
     # 5) Run all merge scripts
     print("[run_all] Running master merge script", flush=True)
-    if args.write_json:
+    if args.make_json:
         subprocess.run(["bash", "condor/master_merge.sh"], check=True, stdout=sys.stdout, stderr=sys.stderr)
-    if args.write_root:
+    if args.make_root:
         subprocess.run(["bash", "condor/run_hadd_all.sh"], check=True, stdout=sys.stdout, stderr=sys.stderr)
+    sys.exit(0) # debug
 
-    # 6) Run BF.x on the flattened JSON
-    flattened_json = get_flattened_json_path()
-    output_dir = get_output_dir()
-    print(f"[run_all] Running BF.x with input {flattened_json} & output {output_dir}", flush=True)
-    subprocess.run(["./BF.x", flattened_json, output_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
+    if args.make_json:
+        # 6) Run BF.x on the flattened JSON
+        flattened_json = get_flattened_json_path()
+        output_dir = get_output_dir()
+        print(f"[run_all] Running BF.x with input {flattened_json} & output {output_dir}", flush=True)
+        subprocess.run(["./BF.x", flattened_json, output_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
 
-    # 7) Run combine
-    print("[run_all] Launching combine jobs...", flush=True)
-    subprocess.run(["bash", "macro/launchCombine.sh", output_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
+        # 7) Run combine
+        print("[run_all] Launching combine jobs...", flush=True)
+        subprocess.run(["bash", "macro/launchCombine.sh", output_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
 
-    # 8) Print yields
-    print(f"[run_all] Yields for {args.bins_cfg}")
-    print_events(flattened_json)
+        # 8) Print yields
+        print(f"[run_all] Yields for {args.bins_cfg}")
+        print_events(flattened_json)
 
-    # 9) Collect significances
-    print("[run_all] Collecting significances...", flush=True)
-    subprocess.run(["python3", "-u", "macro/CollectSignificance.py", output_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
+        # 9) Collect significances
+        print("[run_all] Collecting significances...", flush=True)
+        subprocess.run(["python3", "-u", "macro/CollectSignificance.py", output_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
 
     print("[run_all] All steps completed.", flush=True)
     # end time
