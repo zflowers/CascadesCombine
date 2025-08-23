@@ -77,7 +77,7 @@ getenv                  = True
 # ----------------------------------------
 # Job building
 # ----------------------------------------
-def build_jobs(tool, bin_name, cuts, lep_cuts, predef_cuts, sms_filters, hist_yaml_file=None):
+def build_jobs(tool, bin_name, cuts, lep_cuts, predef_cuts, user_cuts, sms_filters, hist_yaml_file=None):
     """
     Build the job list for Condor submission.
     
@@ -87,6 +87,7 @@ def build_jobs(tool, bin_name, cuts, lep_cuts, predef_cuts, sms_filters, hist_ya
         cuts           : str, event selection cuts
         lep_cuts       : str, lepton-specific cuts
         predef_cuts    : str, predefined cuts
+        user_cuts      : str, user cuts
         sms_filters    : list of SMS filters to apply
         hist_yaml_file : optional str, path to histogram YAML to pass to each job
     """
@@ -100,6 +101,7 @@ def build_jobs(tool, bin_name, cuts, lep_cuts, predef_cuts, sms_filters, hist_ya
             "cuts": cuts,
             "lep_cuts": lep_cuts,
             "predef_cuts": predef_cuts,
+            "user_cuts": user_cuts,
             "hist_yaml": hist_yaml_file,
         }
 
@@ -251,6 +253,7 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, make_json
         cuts_flat = _flatten_field(job.get("cuts", ""))
         lep_cuts_flat = _flatten_field(job.get("lep_cuts", ""))
         predef_flat = _flatten_field(job.get("predef_cuts", ""))
+        user_flat = _flatten_field(job.get("user_cuts", ""))
 
         args_list = [
             f"--bin {bin_name}",
@@ -264,6 +267,8 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, make_json
             args_list.append(f"--lep-cuts {lep_cuts_flat}")
         if predef_flat:
             args_list.append(f"--predefined-cuts {predef_flat}")
+        if user_flat:
+            args_list.append(f"--user-cuts {user_flat}")
 
         if sig_type:
             args_list.append(f"--sig-type {sig_type}")
@@ -327,6 +332,7 @@ def main():
     parser.add_argument("--cuts", default="Nlep>=2;MET>=150")
     parser.add_argument("--lep-cuts", default=">=1OSSF")
     parser.add_argument("--predefined-cuts", default="Cleaning")
+    parser.add_argument("--user-cuts", default="")
     parser.add_argument("--cpus", default="1")
     parser.add_argument("--memory", default="1 GB")
     parser.add_argument("--lumi", type=float, default=1.)
@@ -358,6 +364,7 @@ def main():
         args.cuts,
         args.lep_cuts,
         args.predefined_cuts,
+        args.user_cuts,
         sms_filters,
         hist_yaml_file=args.hist_yaml
     )

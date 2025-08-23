@@ -1,8 +1,8 @@
 #include "BuildFitInput.h"
 
 BuildFitInput::BuildFitInput(){
-	ROOT::EnableImplicitMT();
-	std::cout<<"Enabled MT \n";
+	//ROOT::EnableImplicitMT();
+	//std::cout<<"Enabled MT \n";
 }
 
 void BuildFitInput::LoadBkg_KeyValue(const std::string& key, const stringlist& bkglist, const double& Lumi) {
@@ -1104,6 +1104,15 @@ std::map<std::string, CutDef> BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node
     // -----------------------------------------------------------------
     // Example 3: Combined lepton-jet cut (pT + deltaR)
     // -----------------------------------------------------------------
+    node = node.Define("p4_lep0", [](const std::vector<double> &pt,
+                                 const std::vector<double> &eta,
+                                 const std::vector<double> &phi,
+                                 const std::vector<double> &mass) {
+        TLorentzVector v;
+        if (!pt.empty()) v.SetPtEtaPhiM(pt[0], eta[0], phi[0], mass[0]);
+        return v;
+    }, {"PT_lep","Eta_lep","Phi_lep","M_lep"});
+
     node = node.Define("DeltaR_lep0_jet0", [](const TLorentzVector &l0, const TLorentzVector &j0) {
         return l0.DeltaR(j0);
     }, {"p4_lep0","p4_jet0"});

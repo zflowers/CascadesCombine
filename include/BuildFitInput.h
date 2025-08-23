@@ -4,6 +4,7 @@
 #include <ROOT/RDataFrame.hxx>
 #include <ROOT/RVec.hxx>
 #include "Math/Vector4Dfwd.h"
+#include "TInterpreter.h"
 
 using namespace std;
 using ROOT::RDF::RNode;
@@ -120,5 +121,24 @@ class BuildFitInput{
     static BuildFitInput::Registrar _registrar_##funcname( \
         cutname, [](BuildFitInput* obj){ return obj->funcname(); } \
     )
+
+// Register helper functions with ROOT's Cling interpreter
+inline void RegisterSafeHelpers() {
+    gInterpreter->Declare(R"(
+        #include "ROOT/RVec.hxx"
+        #include <cmath>
+
+        // --- Safe division ---
+        inline double SafeDiv(double num, double den, double def = 0.0) {
+            return (den != 0.0) ? num / den : def;
+        }
+
+        // --- Safe index ---
+        template <typename T>
+        inline T SafeIndex(const ROOT::RVec<T>& vec, unsigned idx, T def = -1) {
+            return (idx < vec.size()) ? vec[idx] : def;
+        }
+    )");
+}
 #endif
 using CutDef = BuildFitInput::BuildFitInputCutDef;

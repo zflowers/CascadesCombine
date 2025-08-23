@@ -146,13 +146,14 @@ def generate_bins_from_shorthands():
     base_name = "TEST"
     base_cuts = "Nlep>=2;MET>=150"
     predefined_cuts = "Cleaning"
+    user_cuts = ""
     shorthands = ["=0Bronze","=2Pos","=2Gold",">=1OSSF","=1SSOF",">=2Mu",">=1Elec","<1SSSF",">=1Muon"]
     sides = ["","a","b"]
     generated = {}
     for shorthand, side in product(shorthands, sides):
         bin_name = build_bin_name(base_name, shorthand, side)
         lep_cut = build_lep_cuts(shorthand, side)
-        generated[bin_name] = {"cuts": base_cuts, "lep-cuts": lep_cut, "predefined-cuts": predefined_cuts}
+        generated[bin_name] = {"cuts": base_cuts, "lep-cuts": lep_cut, "predefined-cuts": predefined_cuts, "user-cuts": user_cuts}
     return generated
 
 def build_command(bin_name, cfg, bkg_datasets, sig_datasets, sms_filters, make_json, make_root, hist_yaml):
@@ -164,6 +165,7 @@ def build_command(bin_name, cfg, bkg_datasets, sig_datasets, sms_filters, make_j
         "--cuts", cfg.get("cuts",""),
         "--lep-cuts", cfg.get("lep-cuts",""),
         "--predefined-cuts", cfg.get("predefined-cuts",""),
+        "--user-cuts", cfg.get("user-cuts",""),
         "--cpus", cpus,
         "--memory", memory,
         "--lumi", lumi
@@ -198,8 +200,8 @@ def main():
     parser.add_argument("--dryrun", action="store_true")
     parser.add_argument("--stress_test", action="store_true")
     parser.add_argument("--lumi", type=str, default=lumi)
-    parser.add_argument("--bins-cfg", type=str, default="config/examples.yaml")
-    parser.add_argument("--datasets-cfg", type=str, default="config/datasets.yaml")
+    parser.add_argument("--bins-cfg", type=str, default="config/bin_cfgs/examples.yaml")
+    parser.add_argument("--datasets-cfg", type=str, default="config/dataset_cfgs/datasets.yaml")
     parser.add_argument("--make-json", action="store_true", help="Create JSON output")
     parser.add_argument("--make-root", action="store_true", help="Create ROOT output")
     parser.add_argument("--hist-yaml", type=str, default=None, help="YAML file for histogram configuration")
@@ -229,9 +231,10 @@ def main():
                 v.setdefault("cuts","")
                 v.setdefault("lep-cuts","")
                 v.setdefault("predefined-cuts","")
+                v.setdefault("user-cuts","")
         bins.update(manual_bins)
     else:
-        bins.update({"manualExample1":{"cuts":"Nlep>=2;MET>=150;PTISR>=200","lep-cuts":">=1OSSF","predefined-cuts":"Cleaning"}})
+        bins.update({"manualExample1":{"cuts":"Nlep>=2;MET>=150;PTISR>=200","lep-cuts":">=1OSSF","predefined-cuts":"Cleaning","user-cuts":""}})
 
     if stress_test:
         gen = generate_bins_from_shorthands()
@@ -245,7 +248,7 @@ def main():
     for bin_name, cfg in bins.items():
         cmd = build_command(bin_name, cfg, bkg_datasets, sig_datasets, sms_filters, make_json, make_root, args.hist_yaml)
         jobs.append(cmd)
-        print(f"[BIN-DEF] bin={bin_name} cuts={cfg.get('cuts')} lep-cuts={cfg.get('lep-cuts')} predefined-cuts={cfg.get('predefined-cuts')}")
+        print(f"[BIN-DEF] bin={bin_name} cuts={cfg.get('cuts')} lep-cuts={cfg.get('lep-cuts')} predefined-cuts={cfg.get('predefined-cuts')} user-cuts={cfg.get('user-cuts')}")
     print("===== END BIN DEFINITIONS =====\n")
 
     if limit_submit is not None:

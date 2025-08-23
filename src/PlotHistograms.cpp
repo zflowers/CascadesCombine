@@ -32,6 +32,36 @@ string outputDir = "plots/";
 // ----------------------
 // Helpers
 // ----------------------
+void copyConfigsToOutput(const std::string &outputDir,
+                         const std::string &histCfg,
+                         const std::string &datasetCfg,
+                         const std::string &binsCfg) 
+{
+    // Make sure the output directory exists
+    if (gSystem->AccessPathName(outputDir.c_str())) {
+        gSystem->mkdir(outputDir.c_str(), true); // true = recursive
+    }
+
+    // Copy files
+    if (!histCfg.empty()) {
+        if (gSystem->CopyFile(histCfg.c_str(), (outputDir + "/" + histCfg).c_str(), true) != 0) {
+            std::cerr << "[ERROR] Failed to copy " << histCfg << std::endl;
+        }
+    }
+
+    if (!datasetCfg.empty()) {
+        if (gSystem->CopyFile(datasetCfg.c_str(), (outputDir + "/" + datasetCfg).c_str(), true) != 0) {
+            std::cerr << "[ERROR] Failed to copy " << datasetCfg << std::endl;
+        }
+    }
+
+    if (!binsCfg.empty()) {
+        if (gSystem->CopyFile(binsCfg.c_str(), (outputDir + "/" + binsCfg).c_str(), true) != 0) {
+            std::cerr << "[ERROR] Failed to copy " << binsCfg << std::endl;
+        }
+    }
+}
+
 struct HistId { string bin; string proc; string var; };
 
 HistId ParseHistName(const string &name) {
@@ -326,8 +356,59 @@ void Plot_Stack(const string& hname,
 // Main
 // ----------------------
 int main(int argc, char* argv[]) {
-    if (argc < 2) {
-        cerr << "Usage: " << argv[0] << " input.root" << endl;
+    // --- Argument parsing ---
+    std::string inputFile;
+    std::string histCfg;
+    std::string datasetCfg;
+    std::string binsCfg;
+
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+
+        if (arg == "-i" || arg == "--input") {
+            if (i + 1 < argc) {
+                inputFile = argv[++i];
+            } else {
+                cerr << "[ERROR] Missing value for " << arg << endl;
+                return 1;
+            }
+        } else if (arg == "-h" || arg == "--hist") {
+            if (i + 1 < argc) {
+                histCfg = argv[++i];
+            } else {
+                cerr << "[ERROR] Missing value for " << arg << endl;
+                return 1;
+            }
+        } else if (arg == "-d" || arg == "--dataset") {
+            if (i + 1 < argc) {
+                datasetCfg = argv[++i];
+            } else {
+                cerr << "[ERROR] Missing value for " << arg << endl;
+                return 1;
+            }
+        } else if (arg == "-b" || arg == "--bins") {
+            if (i + 1 < argc) {
+                binsCfg = argv[++i];
+            } else {
+                cerr << "[ERROR] Missing value for " << arg << endl;
+                return 1;
+            }
+        } else if (arg == "--help") {
+            cout << "Usage: " << argv[0] << " [options]\n"
+                 << "Options:\n"
+                 << "  -i, --input    <file.root>     Input ROOT file (required)\n"
+                 << "  -h, --hist     <hist.yaml>     Histogram config YAML file\n"
+                 << "  -d, --dataset  <dataset.yaml>  Dataset config YAML file\n"
+                 << "  -b, --bins     <bins.yaml>     Bin config YAML file\n"
+                 << "  --help                        Show this help message\n";
+            return 0;
+        } else {
+            cerr << "[ERROR] Unknown argument: " << arg << endl;
+            return 1;
+        }
+    }
+    if (inputFile.empty()) {
+        cerr << "[ERROR] No input ROOT file provided. Use -i <file.root>.\n";
         return 1;
     }
 
@@ -385,6 +466,7 @@ int main(int argc, char* argv[]) {
     // make output dirs
     gSystem->mkdir(outputDir.c_str(), kTRUE);
     gSystem->mkdir((outputDir+"pdfs").c_str(), kTRUE);
+    copyConfigsToOutput(outputDir, histCfg, datasetCfg, binsCfg);
 
     // build output root file name
     TString baseName = gSystem->BaseName(inputFileName);

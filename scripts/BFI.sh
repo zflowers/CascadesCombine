@@ -28,6 +28,7 @@ HIST_YAML=""
 CUTS=""
 LEP_CUTS=""
 PREDEF_CUTS=""
+USER_CUTS=""
 SIG_TYPE=""
 LUMI=""
 SMS_FILTERS=""
@@ -54,6 +55,7 @@ while [[ $# -gt 0 ]]; do
         --cuts) CUTS=$(clean_arg "$2"); shift 2;;
         --lep-cuts) LEP_CUTS=$(clean_arg "$2"); shift 2;;
         --predefined-cuts) PREDEF_CUTS=$(clean_arg "$2"); shift 2;;
+        --user-cuts) USER_CUTS=$(clean_arg "$2"); shift 2;;
 
         # Other options
         --sig-type) SIG_TYPE=$(clean_arg "$2"); shift 2;;
@@ -101,6 +103,7 @@ CMD="./BFI_condor.x --bin \"$BIN\" --file \"$ROOTFILE\""
 [[ -n "$CUTS" ]] && CMD="$CMD --cuts \"$CUTS\""
 [[ -n "$LEP_CUTS" ]] && CMD="$CMD --lep-cuts \"$LEP_CUTS\""
 [[ -n "$PREDEF_CUTS" ]] && CMD="$CMD --predefined-cuts \"$PREDEF_CUTS\""
+[[ -n "$USER_CUTS" ]] && CMD="$CMD --user-cuts \"$USER_CUTS\""
 
 [[ -n "$SIG_TYPE" ]] && CMD="$CMD --sig-type \"$SIG_TYPE\""
 [[ -n "$LUMI" ]] && CMD="$CMD --lumi \"$LUMI\""

@@ -169,11 +169,11 @@ def parse_args():
     p = argparse.ArgumentParser(description="Top-level workflow runner")
     p.add_argument("--max-resubmits", type=int, default=3,
                    help="Max resubmit cycles to attempt")
-    p.add_argument("--bins-cfg", dest="bins_cfg", type=str, default="config/examples.yaml",
+    p.add_argument("--bins-cfg", dest="bins_cfg", type=str, default="config/bin_cfgs/bin_examples.yaml",
                    help="Path to YAML config file containing bin definitions")
-    p.add_argument("--datasets-cfg", dest="datasets_cfg", type=str, default="config/datasets.yaml",
+    p.add_argument("--datasets-cfg", dest="datasets_cfg", type=str, default="config/dataset_cfgs/datasets.yaml",
                    help="YAML config file containing dataset definitions")
-    p.add_argument("--hist-cfg", dest="hist_cfg", type=str, default="config/hist.yaml",
+    p.add_argument("--hist-cfg", dest="hist_cfg", type=str, default="config/hist_cfgs/hist_examples.yaml",
                    help="YAML config file containing histogram definitions")
     p.add_argument("--stress_test", dest="stress_test", action="store_true",
                    help="Run stress test")
@@ -222,7 +222,13 @@ def main():
         print("[run_all] Plotting histograms from hadded ROOT file...", flush=True)
         hadd_file = get_flattened_root_path()
         subprocess.run(
-            ["./PlotHistograms.x", hadd_file],
+            [
+              "./PlotHistograms.x", 
+              "-i", hadd_file,
+              "-h", args.hist_cfg,
+              "-d", args.datasets_cfg,
+              "-b", args.bins_cfg
+            ],
             check=True,
             stdout=sys.stdout,
             stderr=sys.stderr,
