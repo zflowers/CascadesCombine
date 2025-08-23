@@ -412,7 +412,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    TString inputFileName = argv[1];
+    TString inputFileName = inputFile;
     TFile* inFile = TFile::Open(inputFileName, "READ");
     if (!inFile || inFile->IsZombie()) {
         cerr << "Error: cannot open input file " << inputFileName << endl;
