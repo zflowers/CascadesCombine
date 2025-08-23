@@ -12,6 +12,8 @@
 #include <regex> // for regex matching
 #include <memory>
 #include <utility>
+#include <unordered_map>
+#include <functional>
 
 // ROOT includes
 #include <TFile.h>
@@ -19,6 +21,7 @@
 #include <TKey.h>
 #include <TClass.h>
 #include <TCollection.h>
+#include <TLorentzVector.h>
 
 typedef std::vector<std::string> stringlist;
 

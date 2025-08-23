@@ -199,6 +199,7 @@ def main():
     submit_jobs(stress_test=args.stress_test, config=args.bins_cfg, datasets=args.datasets_cfg,
                 hist=args.hist_cfg,make_json=args.make_json, make_root=args.make_root)
 
+    condor_time_start = time.time()
     # 3) Wait for jobs to finish
     print("[run_all] Waiting for condor jobs to finish...", flush=True)
     wait_for_jobs()
@@ -209,32 +210,15 @@ def main():
     if not ok:
         print(f"[run_all] checkJobs step did not complete successfully. Aborting further steps.", file=sys.stderr)
         sys.exit(1)
+    condor_time_end = time.time()
+    condor_time_seconds = condor_time_end - condor_time_start
 
     # 5) Run all merge scripts
     print("[run_all] Running master merge script", flush=True)
     subprocess.run(["bash", "condor/master_merge.sh"], check=True, stdout=sys.stdout, stderr=sys.stderr)
 
-    if args.make_json:
-        # 6) Run BF.x on the flattened JSON
-        flattened_json = get_flattened_json_path()
-        output_dir = get_output_dir()
-        print(f"[run_all] Running BF.x with input {flattened_json} & output {output_dir}", flush=True)
-        subprocess.run(["./BF.x", flattened_json, output_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
-
-        # 7) Run combine
-        print("[run_all] Launching combine jobs...", flush=True)
-        subprocess.run(["bash", "macro/launchCombine.sh", output_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
-
-        # 8) Print yields
-        print(f"[run_all] Yields for {args.bins_cfg}")
-        print_events(flattened_json)
-
-        # 9) Collect significances
-        print("[run_all] Collecting significances...", flush=True)
-        subprocess.run(["python3", "-u", "macro/CollectSignificance.py", output_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
-
     if args.make_root:
-        # 10) Plot histograms
+        # 6) Plot histograms
         print("[run_all] Plotting histograms from hadded ROOT file...", flush=True)
         hadd_file = get_flattened_root_path()
         subprocess.run(
@@ -244,20 +228,37 @@ def main():
             stderr=sys.stderr,
         )
 
+    if args.make_json:
+        # 7) Run BF.x on the flattened JSON
+        flattened_json = get_flattened_json_path()
+        output_dir = get_output_dir()
+        print(f"[run_all] Running BF.x with input {flattened_json} & output {output_dir}", flush=True)
+        subprocess.run(["./BF.x", flattened_json, output_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
+
+        # 8) Run combine
+        print("[run_all] Launching combine jobs...", flush=True)
+        subprocess.run(["bash", "macro/launchCombine.sh", output_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
+
+        # 9) Print yields
+        print(f"[run_all] Yields for {args.bins_cfg}")
+        print_events(flattened_json)
+
+        # 10) Collect significances
+        print("[run_all] Collecting significances...", flush=True)
+        subprocess.run(["python3", "-u", "macro/CollectSignificance.py", output_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
+
     print("[run_all] All steps completed.", flush=True)
     # end time
     end_time = time.time()
 
-    # total time in seconds
+    # total time
     total_time_seconds = end_time - start_time
-    # total time in minutes
-    total_time_minutes = total_time_seconds / 60
-    # total time in hours
-    total_time_hours = total_time_minutes / 60
-
+    condor_time_end = time.time()
+    condor_time_seconds = condor_time_end - condor_time_start
+    print("Time for condor processing: {:.2f} seconds = {:.2f} minutes = {:.2f} hours".format(
+        condor_time_seconds, condor_time_seconds/60, condor_time_seconds/3600), flush=True)
     print("Total time: {0:.2f} seconds = {1:.2f} minutes = {2:.2f} hours".format(
-        total_time_seconds, total_time_minutes, total_time_hours))
+        total_time_seconds, total_time_seconds/60, total_time_seconds/3600), flush=True)
 
 if __name__ == "__main__":
     main()
-

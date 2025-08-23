@@ -13,6 +13,7 @@
 #include "TH1D.h"
 #include "TH2D.h"
 #include "TROOT.h"
+#include "TLorentzVector.h"
 #include "yaml-cpp/yaml.h"
 #include "BuildFitInput.h"
 #include "BuildFitTools.h"
@@ -112,10 +113,11 @@ static bool buildCutsForBin(BuildFitInput* bfi,
         if (!builtCut.empty()) outCuts.push_back(builtCut);
     }
     for (const auto &pcut : predefinedCuts) {
-        if (pcut == "Cleaning") outCuts.push_back(bfi->GetCleaningCut());
-        else if (pcut == "Zstar") outCuts.push_back(bfi->GetZstarCut());
-        else if (pcut == "noZstar") outCuts.push_back(bfi->GetnoZstarCut());
-        else std::cerr << "[BFI_condor] Unknown predefined cut: " << pcut << "\n";
+        std::string cut;
+        if (bfi->GetCutByName(pcut, cut))
+          outCuts.push_back(cut);
+        else
+          std::cerr << "[BFI_condor] Unknown predefined cut: " << pcut << "\n";
     }
     return true;
 }
@@ -203,6 +205,214 @@ static std::vector<HistDef> loadHistogramsYAML(const std::string &yamlPath, Buil
     return hists;
 }
 
+// Match your existing HistDef type (same fields used by YAML loader)
+static std::vector<HistDef> loadHistogramsUser(ROOT::RDF::RNode &node) {
+    std::vector<HistDef> hdefs;
+
+    // ---------------------------------------------------------------------
+    // Step 1: Build TLorentzVectors for the leading leptons from vector branches
+    // ---------------------------------------------------------------------
+    // We assume the tree stores lepton kinematics as vectors:
+    //   vector<double>  *PT_lep, *Eta_lep, *Phi_lep, *M_lep
+    //
+    // For safety we check vector sizes before accessing indices.
+    // p4_lep0 and p4_lep1 are TLorentzVector objects for the leading and
+    // sub-leading leptons respectively (by ordering already present in the vectors).
+    node = node
+        .Define("p4_lep0", [](const std::vector<double> &pt,
+                              const std::vector<double> &eta,
+                              const std::vector<double> &phi,
+                              const std::vector<double> &mass) {
+                // Construct TLV for lepton 0 if present; otherwise returns a zero TLV.
+                TLorentzVector v;
+                if (!pt.empty() && pt.size() == eta.size() && eta.size() == phi.size() && phi.size() == mass.size()) {
+                    // safe access to [0]
+                    v.SetPtEtaPhiM(pt[0], eta[0], phi[0], mass[0]);
+                }
+                return v;
+            }, {"PT_lep","Eta_lep","Phi_lep","M_lep"})
+        .Define("p4_lep1", [](const std::vector<double> &pt,
+                              const std::vector<double> &eta,
+                              const std::vector<double> &phi,
+                              const std::vector<double> &mass) {
+                // Construct TLV for lepton 1 if present; otherwise returns a zero TLV.
+                TLorentzVector v;
+                if (pt.size() > 1 && pt.size() == eta.size() && eta.size() == phi.size() && phi.size() == mass.size()) {
+                    // safe access to [1]
+                    v.SetPtEtaPhiM(pt[1], eta[1], phi[1], mass[1]);
+                }
+                return v;
+            }, {"PT_lep","Eta_lep","Phi_lep","M_lep"});
+
+    // ---------------------------------------------------------------------
+    // Step 2: Calculate invariant mass of the leading two leptons (M_ll)
+    // ---------------------------------------------------------------------
+    // This defines a column "M_ll" computed from the two TLVs. If either TLV
+    // is zero (insufficient leptons) the TLV addition yields a zero mass (0).
+    node = node.Define("M_ll", [](const TLorentzVector &l0, const TLorentzVector &l1){
+                return (l0 + l1).M();
+            }, {"p4_lep0","p4_lep1"});
+
+    // ---------------------------------------------------------------------
+    // Step 3: Extract charges and flavors for the first two leptons (convenience)
+    // ---------------------------------------------------------------------
+    // These are convenience columns for users who want to filter on charge/flavor.
+    // They are defensive: if the vector doesn't have enough entries we return 0.
+    node = node
+        .Define("Q_lep0", [](const std::vector<int> &charge){
+                return charge.empty() ? 0 : charge[0];
+            }, {"Charge_lep"})
+        .Define("Q_lep1", [](const std::vector<int> &charge){
+                return (charge.size() > 1) ? charge[1] : 0;
+            }, {"Charge_lep"})
+        // Flavor encoding function: 1 = electron, 2 = muon, 0 = other/unknown.
+        // We keep flavors simple and explicit so it's straightforward to filter on.
+        .Define("F_lep0", [](const std::vector<int> &pdgid){
+                if (pdgid.empty()) return 0;
+                int id = std::abs(pdgid[0]);
+                return (id == 11 ? 1 : (id == 13 ? 2 : 0));
+            }, {"PDGID_lep"})
+        .Define("F_lep1", [](const std::vector<int> &pdgid){
+                if (pdgid.size() < 2) return 0;
+                int id = std::abs(pdgid[1]);
+                return (id == 11 ? 1 : (id == 13 ? 2 : 0));
+            }, {"PDGID_lep"});
+
+    // ---------------------------------------------------------------------
+    // Step 4: Define OSSF boolean robustly (explicitly check vector sizes)
+    // ---------------------------------------------------------------------
+    // IMPORTANT: instead of relying on the convenience Q/F columns above,
+    // we compute OSSF_pair directly from the vectors to be *explicitly*
+    // robust for events with <2 leptons.
+    //
+    // OSSF_pair = true when:
+    //   - there are at least two leptons (vectors have size >= 2)
+    //   - the first two leptons are opposite sign (q0 * q1 < 0)
+    //   - the first two leptons have the same flavor (both electrons or both muons)
+    node = node.Define("OSSF_pair",
+            [](const std::vector<int> &charge, const std::vector<int> &pdgid) -> bool {
+                // must have at least two leptons
+                if (charge.size() < 2 || pdgid.size() < 2) return false;
+
+                int q0 = charge[0], q1 = charge[1];
+                int id0 = std::abs(pdgid[0]), id1 = std::abs(pdgid[1]);
+
+                // require electron-electron or muon-muon
+                bool sameFlavor = (id0 == 11 && id1 == 11) || (id0 == 13 && id1 == 13);
+                bool oppositeSign = (q0 * q1 < 0);
+
+                return (sameFlavor && oppositeSign);
+            }, {"Charge_lep","PDGID_lep"});
+
+    // ---------------------------------------------------------------------
+    // Step 5: Define HT_eta24 / MET ratio safely
+    // ---------------------------------------------------------------------
+    // Add a derived column "HTeta24_over_MET". Protect against MET==0.
+    node = node.Define("HTeta24_over_MET", [](double HT_eta24, double MET) {
+                if (MET == 0.0) return 0.0; // avoid divide-by-zero; choose safe default
+                return HT_eta24 / MET;
+            }, {"HT_eta24","MET"});
+
+    // ---------------------------------------------------------------------
+    // Step 6: Build HistDefs to return (do NOT fill/write here)
+    // ---------------------------------------------------------------------
+    // 1) 1D histogram for M_ll but restricted to OSSF pairs. We express that
+    //    restriction by adding "OSSF_pair" to the histogram-specific cuts;
+    //    the main histogram loop will apply this cut as node.Filter(BFI->ExpandMacros(...)).
+    HistDef h1;
+    h1.name = "M_ll_lead2_OSSF";
+    h1.type = "1D";
+    h1.expr = "M_ll";          // histogram the M_ll column (computed above)
+    h1.nbins = 50;
+    h1.xmin = 0;
+    h1.xmax = 200;
+    // The main loop will interpret these strings as filters, so use the column name:
+    // it will call node = node.Filter(BFI->ExpandMacros("OSSF_pair"));
+    h1.cuts = {"OSSF_pair"};
+    h1.lepCuts = {};
+    h1.predefCuts = {};
+    hdefs.push_back(h1);
+
+    // 2) 2D histogram: M_ll (x) vs HTeta24_over_MET (y)
+    //    This uses the derived ratio defined above; main loop will validate axes.
+    HistDef h2;
+    h2.name = "M_ll_lead2_vs_HTeta24overMET";
+    h2.type = "2D";
+    h2.expr = "M_ll";               // X-axis: invariant mass of leading two leptons
+    h2.yexpr = "HTeta24_over_MET";   // Y-axis: derived HT/MET ratio
+    h2.nbins = 50;
+    h2.xmin = 0;
+    h2.xmax = 500;
+    h2.nybins = 50;
+    h2.ymin = 0;
+    h2.ymax = 5;
+    h2.cuts = {};       // no extra event-level cuts here (hist loop may also apply global cuts)
+    h2.lepCuts = {};
+    h2.predefCuts = {};
+    hdefs.push_back(h2);
+
+    // Return the user-provided histogram definitions. The main loop will:
+    //   - apply h.cuts / h.lepCuts / h.predefCuts (via BFI->ExpandMacros)
+    //   - perform derived-variable validation for 2D axes
+    //   - call Histo1D/Histo2D to fill and write histograms
+    return hdefs;
+}
+
+// ----------------------
+// Derived variables
+// ----------------------
+struct DerivedVar {
+    std::string name; // variable name to be created in the RDataFrame
+    std::string expr; // expression to define it (ROOT/C++ expression)
+};
+
+static std::vector<DerivedVar> loadDerivedVariablesYAML(const std::string &yamlPath) {
+    std::vector<DerivedVar> vars;
+    YAML::Node root = YAML::LoadFile(yamlPath);
+    if(!root["derived_variables"]) return vars;
+
+    for(const auto &vnode : root["derived_variables"]) {
+        DerivedVar dv;
+        dv.name = vnode["name"].as<std::string>();
+        dv.expr = vnode["expr"].as<std::string>();
+        vars.push_back(dv);
+    }
+    return vars;
+}
+
+// --------------------------------------------------
+// Helper to validate a single derived variable
+// --------------------------------------------------
+static bool ValidateDerivedVar(ROOT::RDF::RNode node, const DerivedVar &dv) {
+    try {
+        // Define a temporary column
+        ROOT::RDF::RNode tmpNode = node.Define(dv.name + "_test", dv.expr);
+
+        // Restrict to first entry only
+        auto firstEntry = tmpNode.Filter("Entry$ < 1");
+
+        // Try as double
+        try {
+            auto valsD = firstEntry.Take<double>(dv.name + "_test").GetValue();
+            return true; // success if no exception
+        } catch (...) {
+            // Try as int
+            try {
+                auto valsI = firstEntry.Take<int>(dv.name + "_test").GetValue();
+                return true;
+            } catch (...) {
+                std::cerr << "[BFI_condor] WARNING: Derived variable '" << dv.name
+                          << "' could not be validated. Expression: " << dv.expr << "\n";
+                return false;
+            }
+        }
+    } catch (...) {
+        std::cerr << "[BFI_condor] WARNING: Exception validating derived variable '"
+                  << dv.name << "' Expression: " << dv.expr << "\n";
+        return false;
+    }
+}
+
 // ----------------------
 // Main
 // ----------------------
@@ -270,6 +480,7 @@ int main(int argc, char** argv) {
     if(!buildCutsForBin(BFI,cutsVec,lepCutsVec,predefCutsVec,finalCuts)){std::cerr<<"[BFI_condor] Failed to build final cuts\n"; delete BFI; return 2;}
     std::vector<std::string> finalCutsExpanded;
     for(const auto &c : finalCuts) finalCutsExpanded.push_back(BFI->ExpandMacros(c));
+    std::vector<std::string> selectedUserCuts;// = {"M_jj_gt_100", "HT_over_MET_gt_1p5"}; // fix this to load from argument
 
     std::unique_ptr<TFile> histFile;
     if(doHist && !histOutputPath.empty()){
@@ -298,8 +509,12 @@ int main(int argc, char** argv) {
     auto processTree=[&](const std::string &tree_name, const std::string &key){
         histFile->cd();
         ROOT::RDataFrame df(tree_name, rootFilePath);
+    
+        // Scale weights
         auto df_scaled = df.Define("weight_scaled",[Lumi](double w){return w*Lumi;},{"weight"})
                            .Define("weight_sq_scaled",[Lumi](double w){return w*w*Lumi*Lumi;},{"weight"});
+    
+        // Lepton counts / kinematics
         auto df_with_lep = BFI->DefineLeptonPairCounts(df_scaled,"");
         df_with_lep = BFI->DefineLeptonPairCounts(df_with_lep,"A");
         df_with_lep = BFI->DefineLeptonPairCounts(df_with_lep,"B");
@@ -307,39 +522,84 @@ int main(int argc, char** argv) {
         df_with_lep = BFI->DefinePairKinematics(df_with_lep,"A");
         df_with_lep = BFI->DefinePairKinematics(df_with_lep,"B");
 
+        std::vector<DerivedVar> derivedVars;
+        if(doHist && !histYamlPath.empty()){
+            derivedVars = loadDerivedVariablesYAML(histYamlPath);
+        }
+    
+        for (const auto &dv : derivedVars) {
+            ValidateDerivedVar(df_with_lep, dv);
+        }
+    
+        // --- Define derived variables (once) ---
+        for(const auto &dv : derivedVars){
+            try{
+                df_with_lep = df_with_lep.Define(dv.name, dv.expr);
+            }catch(const std::exception &e){
+                std::cerr << "[BFI_condor] WARNING: Failed to define derived variable '"
+                          << dv.name << "' Expression: " << dv.expr
+                          << " Exception: " << e.what() << "\n";
+            }
+        }
+    
+        // --- Apply final event selection cuts ---
         ROOT::RDF::RNode node=df_with_lep;
         for(const auto &c: finalCutsExpanded) node=node.Filter(c);
 
+        // --- Apply user-defined cuts from BuildFitInput ---
+        auto allUserCuts = BuildFitInput::loadCutsUser(node);
+        for (const auto &cutName : selectedUserCuts) {
+            auto it = allUserCuts.find(cutName);
+            if (it != allUserCuts.end()) {
+                node = node.Filter(it->second.expression);
+            } else {
+                std::cerr << "[BFI_condor] Warning: user cut '" << cutName << "' not found!" << std::endl;
+            }
+        }
+    
+        // --- Histograms ---
         if(doHist && !histYamlPath.empty()){
             auto histDefs = loadHistogramsYAML(histYamlPath,BFI);
+            auto userHists = loadHistogramsUser(node);
+            histDefs.insert(histDefs.end(), userHists.begin(), userHists.end());
             for(auto &h: histDefs){
                 ROOT::RDF::RNode hnode = node;
                 for(const auto &c:h.cuts) hnode=hnode.Filter(BFI->ExpandMacros(c));
                 for(const auto &c:h.lepCuts) hnode=hnode.Filter(BFI->ExpandMacros(c));
                 for(const auto &c:h.predefCuts) hnode=hnode.Filter(BFI->ExpandMacros(c));
-        
                 std::string hname = binName + "__" + processName + "__" + h.name;
                 if(h.type=="1D"){
                     auto hist = hnode.Histo1D({hname.c_str(),hname.c_str(),h.nbins,h.xmin,h.xmax},h.expr,"weight_scaled");
-                    if(hist->Write() == 0) std::cerr << "error writing: " << hname << std::endl; // <-- write to ROOT file
+                    if(hist->Write() == 0) std::cerr << "error writing: " << hname << std::endl;
                     std::cout<<"[BFI_condor] Filled histogram: "<<h.name<<"\n";
                 }else if(h.type=="2D"){
+                    bool xValid = true, yValid = true;
+                    for (const auto &dv : derivedVars) {
+                        if (dv.name == h.expr) xValid = ValidateDerivedVar(node, dv);
+                        if (dv.name == h.yexpr) yValid = ValidateDerivedVar(node, dv);
+                    }
+                    if (!xValid || !yValid) {
+                        std::cerr << "[BFI_condor] Skipping 2D histogram '" << h.name
+                                  << "' due to invalid derived variables.\n";
+                        continue;
+                    }
                     auto hist = hnode.Histo2D({hname.c_str(),hname.c_str(),h.nbins,h.xmin,h.xmax,h.nybins,h.ymin,h.ymax},
                                               h.expr,h.yexpr,"weight_scaled");
-                    if(hist->Write() == 0) std::cerr << "error writing: " << hname << std::endl; // <-- write to ROOT file
+                    if(hist->Write() == 0) std::cerr << "error writing: " << hname << std::endl;
                     std::cout<<"[BFI_condor] Filled 2D histogram: "<<h.name<<"\n";
                 }
             }
         }
-
+    
+        // --- JSON output ---
         if(doJSON){
             auto cnt = node.Count();
             auto sumW = node.Sum<double>("weight_scaled");
             auto sumW2 = node.Sum<double>("weight_sq_scaled");
             unsigned long long n_entries = cnt.GetValue();
             double sW = sumW.GetValue();
-            double sW2 = sumW2.GetValue();
-            double err = (sW2>=0)?std::sqrt(sW2):0.0;
+            double sW2Val = sumW2.GetValue();
+            double err = (sW2Val>=0)?std::sqrt(sW2Val):0.0;
             fileResults[key][rootFilePath] = {(double)n_entries,sW,err};
             auto &tot=totals[key];
             tot[0]+= (double)n_entries;

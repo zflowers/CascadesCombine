@@ -1018,6 +1018,14 @@ void BuildFitInput::PrintBins(int verbosity){
 	}
 }
 
+std::unordered_map<std::string, BuildFitInput::CutFn> BuildFitInput::cutMap_;
+bool BuildFitInput::GetCutByName(const std::string& name, std::string& out) {
+    auto it = cutMap_.find(name);
+    if (it == cutMap_.end()) return false;
+    out = it->second(this);
+    return true;
+}
+
 std::string BuildFitInput::GetCleaningCut(){
         return "(PTCM <= 200.) && "
 	"( (PTCM <= -500.*sqrt( ((-2.777*pow(fabs(dphiCMI),2) + 1.388*fabs(dphiCMI) + 0.8264) > 0 ? "
@@ -1027,12 +1035,85 @@ std::string BuildFitInput::GetCleaningCut(){
 	"(-1.5625*pow(fabs(dphiCMI),2) + 7.8125*fabs(dphiCMI) - 8.766) : 0) ) + 600.) || "
 	"(-1.5625*pow(fabs(dphiCMI),2) + 7.8125*fabs(dphiCMI) - 8.766 <= 0.) )";
 }
+REGISTER_CUT(BuildFitInput, GetCleaningCut, "Cleaning");
 std::string BuildFitInput::GetZstarCut(){
         return "((" + BuildLeptonCut(">=1OSSF","a") + " || " +
                BuildLeptonCut(">=1OSSF","b") + ") || "
                + "(Nlep==2 && " +
                BuildLeptonCut(">=1OSSF") + "))";
 }
+REGISTER_CUT(BuildFitInput, GetZstarCut, "Zstar");
 std::string BuildFitInput::GetnoZstarCut(){
         return "!"+GetZstarCut();
 }
+REGISTER_CUT(BuildFitInput, GetnoZstarCut, "noZstar");
+
+// ---------------------------------------------------------------------
+// Example: User-defined cuts loader
+// ---------------------------------------------------------------------
+std::map<std::string, CutDef> BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node) {
+    std::map<string,CutDef> cuts;
+
+    // -----------------------------------------------------------------
+    // Example 1: Invariant mass of leading two jets > 100 GeV
+    // -----------------------------------------------------------------
+    node = node
+        .Define("p4_jet0", [](const std::vector<double> &pt,
+                               const std::vector<double> &eta,
+                               const std::vector<double> &phi,
+                               const std::vector<double> &mass) {
+            TLorentzVector v;
+            if (!pt.empty() && pt.size() == eta.size() && eta.size() == phi.size() && phi.size() == mass.size())
+                v.SetPtEtaPhiM(pt[0], eta[0], phi[0], mass[0]);
+            return v;
+        }, {"PT_jet","Eta_jet","Phi_jet","M_jet"})
+        .Define("p4_jet1", [](const std::vector<double> &pt,
+                               const std::vector<double> &eta,
+                               const std::vector<double> &phi,
+                               const std::vector<double> &mass) {
+            TLorentzVector v;
+            if (pt.size() > 1 && pt.size() == eta.size() && eta.size() == phi.size() && phi.size() == mass.size())
+                v.SetPtEtaPhiM(pt[1], eta[1], phi[1], mass[1]);
+            return v;
+        }, {"PT_jet","Eta_jet","Phi_jet","M_jet"});
+
+    node = node.Define("M_jj", [](const TLorentzVector &j0, const TLorentzVector &j1) {
+        return (j0 + j1).M();
+    }, {"p4_jet0", "p4_jet1"});
+
+    CutDef cut1;
+    cut1.name = "M_jj_gt_100";
+    cut1.columns = {"M_jj"};
+    cut1.expression = "M_jj > 100";
+    cuts[cut1.name] = cut1;
+
+    // -----------------------------------------------------------------
+    // Example 2: HT_eta24 / MET ratio > 1.5
+    // -----------------------------------------------------------------
+    node = node.Define("HT_eta24_over_MET", [](double HT_eta24, double MET) {
+        if (MET == 0.0) return 0.0;
+        return HT_eta24 / MET;
+    }, {"HT_eta24","MET"});
+
+    CutDef cut2;
+    cut2.name = "HT_eta24_over_MET_gt_1p5";
+    cut2.columns = {"HT_eta24_over_MET"};
+    cut2.expression = "HT_eta24_over_MET > 1.5";
+    cuts[cut2.name] = cut2;
+
+    // -----------------------------------------------------------------
+    // Example 3: Combined lepton-jet cut (pT + deltaR)
+    // -----------------------------------------------------------------
+    node = node.Define("DeltaR_lep0_jet0", [](const TLorentzVector &l0, const TLorentzVector &j0) {
+        return l0.DeltaR(j0);
+    }, {"p4_lep0","p4_jet0"});
+
+    CutDef cut3;
+    cut3.name = "lep0_pt25_jet0_pt30_dR0p4";
+    cut3.columns = {"PT_lep","PT_jet","DeltaR_lep0_jet0"};
+    cut3.expression = "(PT_lep[0] > 25) && (PT_jet[0] > 30) && (DeltaR_lep0_jet0 > 0.4)";
+    cuts[cut3.name] = cut3;
+
+    return cuts;
+}
+

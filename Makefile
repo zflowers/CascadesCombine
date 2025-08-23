@@ -28,7 +28,7 @@ SRCS_CONDOR = $(SRC_DIR)/BFI_condor.cpp $(SRC_DIR)/BuildFitInput.cpp $(SRC_DIR)/
 CMSSWSRCS = $(SRC_DIR)/BFmain.cpp $(SRC_DIR)/BuildFit.cpp $(SRC_DIR)/JSONFactory.cpp
 SRCS_MERGE = $(SRC_DIR)/mergeJSONs.cpp $(SRC_DIR)/JSONFactory.cpp $(SRC_DIR)/SampleTool.cpp $(SRC_DIR)/BuildFitInput.cpp
 SRCS_FLATTEN = $(SRC_DIR)/flattenJSONs.cpp
-SRCS_PLOTTER = $(SRC_DIR)/PlotHistograms.cpp
+SRCS_PLOTTER = $(SRC_DIR)/PlotHistograms.cpp $(SRC_DIR)/SampleTool.cpp
 PYBIND_SRCS = $(SRC_DIR)/pySampleTool.cpp $(SRC_DIR)/SampleTool.cpp
 
 # --- Object files ---

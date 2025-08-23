@@ -67,6 +67,11 @@ class BuildFitInput{
 	void ConstructBkgBinObjects( countmap countResults, summap sumResults, errormap errorResults );
 	void AddSigToBinObjects( countmap countResults, summap sumResults, errormap errorResults, std::map<std::string, Bin*>& analysisbins);
 	void PrintBins(int verbosity=1);
+
+        //helpers cut objects
+        using CutFn = std::function<std::string(BuildFitInput*)>;
+        static const std::unordered_map<std::string, CutFn>& GetCutMap() { return cutMap_; }
+        bool GetCutByName(const std::string& name, std::string& out);
         std::string GetCleaningCut();
 	std::string GetZstarCut();
 	std::string GetnoZstarCut();
@@ -96,6 +101,24 @@ class BuildFitInput{
 	std::string BuildLeptonCut(const std::string& shorthand, const std::string& side = "");
 	ROOT::RDF::RNode DefineLeptonPairCounts(ROOT::RDF::RNode rdf, const std::string& side = "");
 	ROOT::RDF::RNode DefinePairKinematics(ROOT::RDF::RNode rdf, const std::string& side = "");
+        struct Registrar {
+                Registrar(const std::string& name, CutFn fn) {
+                    cutMap_[name] = fn;
+                }
+            };
+        struct BuildFitInputCutDef {
+            std::string name;                   // user-defined name for the cut
+            std::vector<std::string> columns;   // columns needed to compute/apply the cut
+            std::string expression;             // string to be used in node.Filter(...)
+        };
+        static std::map<string, BuildFitInputCutDef> loadCutsUser(ROOT::RDF::RNode &node);
 
+    private:
+        static std::unordered_map<std::string, CutFn> cutMap_;
 };
+#define REGISTER_CUT(classname, funcname, cutname) \
+    static BuildFitInput::Registrar _registrar_##funcname( \
+        cutname, [](BuildFitInput* obj){ return obj->funcname(); } \
+    )
 #endif
+using CutDef = BuildFitInput::BuildFitInputCutDef;
