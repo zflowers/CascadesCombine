@@ -67,3 +67,25 @@ histograms:
     lep-cuts: ""
     predefined-cuts: ""
     user-cuts: ""
+
+  - name: den__METtrigger # example denominator for TEff
+    type: "1D"
+    expr: "MET"
+    nbins: 64
+    xmin: 0
+    xmax: 500
+    cuts: ""
+    lep-cut: ""
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: num__METtrigger # example numerator for TEff
+    type: "1D"
+    expr: "MET"
+    nbins: 64
+    xmin: 0
+    xmax: 500
+    cuts: "METtrigger==1"
+    lep-cut: ""
+    predefined-cuts: ""
+    user-cuts: ""
