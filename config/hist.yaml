@@ -63,7 +63,7 @@ histograms:
     nbins: 15
     xmin: 0
     xmax: 150
-    cuts: "RISR>=0.5"
+    cuts: "RISR>=0.6"
     lep-cuts: "=2Gold"
     predefined-cuts: "Cleaning"
 
