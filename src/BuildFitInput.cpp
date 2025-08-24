@@ -244,6 +244,8 @@ static inline std::string trim_copy(const std::string &s) {
 }
 
 std::string BuildFitInput::BuildLeptonCut(const std::string& shorthand_in, const std::string& side) {
+    // return empty string if somehow a commented out string made it here
+    if(shorthand_in[0] == '#') return "";
     // maps
     std::map<std::string,int> qualMap   = {{"Gold",0}, {"Silver",1}, {"Bronze",2}};
     std::map<std::string,int> chargeMap = {{"Pos",1}, {"Neg",0}};
@@ -1052,34 +1054,21 @@ REGISTER_CUT(BuildFitInput, GetnoZstarCut, "noZstar");
 // Example: User-defined cuts loader
 // ---------------------------------------------------------------------
 std::map<std::string, CutDef> BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node) {
-    std::map<string,CutDef> cuts;
+    std::map<std::string, CutDef> cuts;
 
-    // -----------------------------------------------------------------
-    // Example 1: Invariant mass of leading two jets > 100 GeV
-    // -----------------------------------------------------------------
-    node = node
-        .Define("p4_jet0", [](const std::vector<double> &pt,
-                               const std::vector<double> &eta,
-                               const std::vector<double> &phi,
-                               const std::vector<double> &mass) {
-            TLorentzVector v;
-            if (!pt.empty() && pt.size() == eta.size() && eta.size() == phi.size() && phi.size() == mass.size())
-                v.SetPtEtaPhiM(pt[0], eta[0], phi[0], mass[0]);
-            return v;
-        }, {"PT_jet","Eta_jet","Phi_jet","M_jet"})
-        .Define("p4_jet1", [](const std::vector<double> &pt,
-                               const std::vector<double> &eta,
-                               const std::vector<double> &phi,
-                               const std::vector<double> &mass) {
-            TLorentzVector v;
-            if (pt.size() > 1 && pt.size() == eta.size() && eta.size() == phi.size() && phi.size() == mass.size())
-                v.SetPtEtaPhiM(pt[1], eta[1], phi[1], mass[1]);
-            return v;
-        }, {"PT_jet","Eta_jet","Phi_jet","M_jet"});
-
-    node = node.Define("M_jj", [](const TLorentzVector &j0, const TLorentzVector &j1) {
+    // Example 1: invariant mass of leading two jets -> M_jj (double)
+    node = node.Define("M_jj", [](const std::vector<double> &pt,
+                                  const std::vector<double> &eta,
+                                  const std::vector<double> &phi,
+                                  const std::vector<double> &mass) {
+        // Return -1.0 if not enough jets
+        if (pt.size() < 2 || eta.size() < 2 || phi.size() < 2 || mass.size() < 2) return -1.0;
+        // compute using temporary TLorentzVector locally (we only return a double)
+        TLorentzVector j0, j1;
+        j0.SetPtEtaPhiM(pt[0], eta[0], phi[0], mass[0]);
+        j1.SetPtEtaPhiM(pt[1], eta[1], phi[1], mass[1]);
         return (j0 + j1).M();
-    }, {"p4_jet0", "p4_jet1"});
+    }, {"PT_jet","Eta_jet","Phi_jet","M_jet"});
 
     CutDef cut1;
     cut1.name = "M_jj_gt_100";
@@ -1088,7 +1077,7 @@ std::map<std::string, CutDef> BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node
     cuts[cut1.name] = cut1;
 
     // -----------------------------------------------------------------
-    // Example 2: HT_eta24 / MET ratio > 1.5
+    // Example 2: HT_eta24 / MET ratio > 1.5  (keeps your original logic)
     // -----------------------------------------------------------------
     node = node.Define("HT_eta24_over_MET", [](double HT_eta24, double MET) {
         if (MET == 0.0) return 0.0;
@@ -1103,25 +1092,69 @@ std::map<std::string, CutDef> BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node
 
     // -----------------------------------------------------------------
     // Example 3: Combined lepton-jet cut (pT + deltaR)
+    // We compute DeltaR between leading lepton and leading jet directly as a double.
     // -----------------------------------------------------------------
-    node = node.Define("p4_lep0", [](const std::vector<double> &pt,
-                                 const std::vector<double> &eta,
-                                 const std::vector<double> &phi,
-                                 const std::vector<double> &mass) {
-        TLorentzVector v;
-        if (!pt.empty()) v.SetPtEtaPhiM(pt[0], eta[0], phi[0], mass[0]);
-        return v;
-    }, {"PT_lep","Eta_lep","Phi_lep","M_lep"});
+    node = node.Define("DeltaR_lep0_jet0", [](const std::vector<double> &eta_lep,
+                                             const std::vector<double> &phi_lep,
+                                             const std::vector<double> &eta_jet,
+                                             const std::vector<double> &phi_jet) {
+        // If either leading object is missing, return a large value (so typical >0.4 checks fail)
+        if (eta_lep.empty() || phi_lep.empty() || eta_jet.empty() || phi_jet.empty()) return 999.0;
+        const double eta1 = eta_lep[0];
+        const double phi1 = phi_lep[0];
+        const double eta2 = eta_jet[0];
+        const double phi2 = phi_jet[0];
 
-    node = node.Define("DeltaR_lep0_jet0", [](const TLorentzVector &l0, const TLorentzVector &j0) {
-        return l0.DeltaR(j0);
-    }, {"p4_lep0","p4_jet0"});
+        double deta = eta1 - eta2;
+        double dphi = phi1 - phi2;
+        // canonicalize dphi into [-pi, pi]
+        constexpr double PI = 3.14159265358979323846;
+        while (dphi > PI)  dphi -= 2.0 * PI;
+        while (dphi <= -PI) dphi += 2.0 * PI;
+
+        return std::sqrt(deta * deta + dphi * dphi);
+    }, {"Eta_lep","Phi_lep","Eta_jet","Phi_jet"});
 
     CutDef cut3;
     cut3.name = "lep0_pt25_jet0_pt30_dR0p4";
+    // note: keeping PT_lep and PT_jet in columns because the expression uses indexing on those
     cut3.columns = {"PT_lep","PT_jet","DeltaR_lep0_jet0"};
     cut3.expression = "(PT_lep[0] > 25) && (PT_jet[0] > 30) && (DeltaR_lep0_jet0 > 0.4)";
     cuts[cut3.name] = cut3;
+
+    // -----------------------------------------------------------------------------
+    // Store 4-vectors as ROOT::Math::PtEtaPhiMVector (replaces TLV for RDataFrame)
+    // How to create 4-vector columns (less recommended for simple cuts)
+    // -----------------------------------------------------------------------------
+    /*
+    node = node
+        .Define("p4_jet0_vect", [](const std::vector<double> &pt,
+                                   const std::vector<double> &eta,
+                                   const std::vector<double> &phi,
+                                   const std::vector<double> &mass) {
+            ROOT::Math::PtEtaPhiMVector v;
+            if (!pt.empty() && pt.size() == eta.size() && eta.size() == phi.size() && phi.size() == mass.size()) {
+                v.SetPtEtaPhiM(pt[0], eta[0], phi[0], mass[0]);
+            }
+            return v;
+        }, {"PT_jet","Eta_jet","Phi_jet","M_jet"})
+        .Define("p4_jet1_vect", [](const std::vector<double> &pt,
+                                   const std::vector<double> &eta,
+                                   const std::vector<double> &phi,
+                                   const std::vector<double> &mass) {
+            ROOT::Math::PtEtaPhiMVector v;
+            if (pt.size() > 1 && pt.size() == eta.size() && eta.size() == phi.size() && phi.size() == mass.size()) {
+                v.SetPtEtaPhiM(pt[1], eta[1], phi[1], mass[1]);
+            }
+            return v;
+        }, {"PT_jet","Eta_jet","Phi_jet","M_jet"});
+
+    node = node.Define("M_jj_vect", [](const ROOT::Math::PtEtaPhiMVector &j0,
+                                       const ROOT::Math::PtEtaPhiMVector &j1) {
+        return (j0 + j1).M();
+    }, {"p4_jet0_vect", "p4_jet1_vect"});
+    // Used *_vect in the names to avoid conflicts with the scalar-versions above.
+    */
 
     return cuts;
 }

@@ -12,6 +12,7 @@
 #include <TPad.h>
 #include <TStyle.h>
 #include <TEfficiency.h>
+#include <TGraphAsymmErrors.h>
 
 #include <map>
 #include <vector>
@@ -170,6 +171,51 @@ void Plot_Hist2D(TH2* h) {
 }
 
 // ----------------------
+// Plot Eff
+// ----------------------
+void Plot_Eff(TEfficiency* e){
+  string title = e->GetName();
+  TCanvas* can = (TCanvas*) new TCanvas(("can_eff_"+title).c_str(),("can_"+title).c_str(),700.,600);
+  can->SetLeftMargin(0.15); can->SetRightMargin(0.18); can->SetBottomMargin(0.15);
+  can->SetGridx(); can->SetGridy();
+  can->Draw();
+  can->cd();
+  e->Draw("AP");
+  gPad->Update();
+  e->GetPaintedGraph()->GetXaxis()->CenterTitle();
+  e->GetPaintedGraph()->GetXaxis()->SetTitleFont(42);
+  e->GetPaintedGraph()->GetXaxis()->SetTitleSize(0.06);
+  e->GetPaintedGraph()->GetXaxis()->SetTitleOffset(1.06);
+  e->GetPaintedGraph()->GetXaxis()->SetLabelFont(42);
+  e->GetPaintedGraph()->GetXaxis()->SetLabelSize(0.05);
+  double xmin = e->GetTotalHistogram()->GetXaxis()->GetXmin();
+  double xmax = e->GetTotalHistogram()->GetXaxis()->GetXmax();
+  if(xmin < 0) xmin = xmin*1.1;
+  else xmin = xmin*0.9;
+  if(xmax > 0) xmax = xmax*1.1;
+  else xmax = xmax*0.9;
+  e->GetPaintedGraph()->GetXaxis()->SetRangeUser(xmin,xmax);
+  //e->GetPaintedGraph()->GetXaxis()->SetTitle(g_Xname.c_str());
+  e->GetPaintedGraph()->GetYaxis()->CenterTitle();
+  e->GetPaintedGraph()->GetYaxis()->SetTitleFont(42);
+  e->GetPaintedGraph()->GetYaxis()->SetTitleSize(0.06);
+  e->GetPaintedGraph()->GetYaxis()->SetTitleOffset(1.12);
+  e->GetPaintedGraph()->GetYaxis()->SetLabelFont(42);
+  e->GetPaintedGraph()->GetYaxis()->SetLabelSize(0.05);
+  e->GetPaintedGraph()->GetYaxis()->SetRangeUser(0.,1.05);
+  //e->GetPaintedGraph()->GetYaxis()->SetRangeUser(0.9*h->GetMinimum(0.0),1.1*h->GetMaximum());
+
+  TLatex l; l.SetTextFont(42); l.SetNDC();
+  l.SetTextSize(0.035); l.DrawLatex(0.65,0.943,"SampleName");
+  l.SetTextSize(0.04); l.DrawLatex(0.01,0.943,"#bf{CMS} Simulation Preliminary");
+  l.SetTextSize(0.045); l.DrawLatex(0.7,0.04,"binName");
+  TString pdfName = Form("%spdfs/%s.pdf", outputDir.c_str(), title.c_str());
+  can->SaveAs(pdfName);
+  if (outFile) { outFile->cd(); can->Write(0, TObject::kWriteDelete); }
+  delete can;
+}
+
+// ----------------------
 // Plot stack
 // ----------------------
 void Plot_Stack(const string& hname,
@@ -254,6 +300,7 @@ int main(int argc, char* argv[]) {
     TKey* key;
     while((key=(TKey*)next())){
         TObject* obj=key->ReadObj(); if(!obj) continue;
+        if(std::string(obj->GetName()).find("CutFlow") != std::string::npos) continue; // skip doing stuff with CutFlow for now while it's new
         if(obj->InheritsFrom(TH1::Class())){
             TH1* hIn=(TH1*)obj;
             HistId id=ParseHistName(hIn->GetName());
@@ -310,13 +357,7 @@ int main(int argc, char* argv[]) {
             string denKey="den__"+procName;
             if(denHists.count(denKey)){
                 TEfficiency* eff=new TEfficiency(*nume.second,*denHists[denKey]);
-                TString canvName=Form("can_eff_%s", procName.c_str());
-                TCanvas* can=new TCanvas(canvName,canvName,700,600);
-                eff->Draw();
-                TString pdfName=Form("%spdfs/%s.pdf",outputDir.c_str(),canvName.Data());
-                can->SaveAs(pdfName);
-                if(outFile){ outFile->cd(); eff->Write(procName.c_str()); can->Write(); }
-                delete can;
+                Plot_Eff(eff);
             }
         }
     }

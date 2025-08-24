@@ -4,6 +4,7 @@
 #include <ROOT/RDataFrame.hxx>
 #include <ROOT/RVec.hxx>
 #include "Math/Vector4Dfwd.h"
+#include "Math/PxPyPzE4D.h"
 #include "TInterpreter.h"
 
 using namespace std;

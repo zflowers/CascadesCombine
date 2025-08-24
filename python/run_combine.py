@@ -24,8 +24,12 @@ def wait_for_jobs():
     Block until current user's Condor job count is below the monitor threshold.
     Uses CondorJobCountMonitor to check the current user's jobs.
     """
+    idle_time_start = time.time()
     monitor = CondorJobCountMonitor(threshold=1, verbose=False)
+    idle_time_end = time.time()
+    monitor.wait_until_no_idle_jobs()
     monitor.wait_until_jobs_below()
+    return idle_time_end - idle_time_start
 
 def submit_jobs(stress_test, config, datasets, hist, make_json=False, make_root=False):
     """
@@ -202,7 +206,7 @@ def main():
     condor_time_start = time.time()
     # 3) Wait for jobs to finish
     print("[run_all] Waiting for condor jobs to finish...", flush=True)
-    wait_for_jobs()
+    idle_time_seconds = wait_for_jobs()
 
     # 4) Run checkJobs.py loop to find/resubmit failed jobs (if any)
     print("[run_all] Checking for failed jobs and resubmitting if necessary...", flush=True)
@@ -219,16 +223,17 @@ def main():
 
     if args.make_root:
         # 6) Plot histograms
-        print("[run_all] Plotting histograms from hadded ROOT file...", flush=True)
         hadd_file = get_flattened_root_path()
-        subprocess.run(
-            [
+        plot_cmd = [
               "./PlotHistograms.x", 
               "-i", hadd_file,
               "-h", args.hist_cfg,
               "-d", args.datasets_cfg,
               "-b", args.bins_cfg
-            ],
+            ]
+        print("[run_all] Plotting histograms with command:"," ".join(plot_cmd), flush=True)
+        subprocess.run(
+            plot_cmd,
             check=True,
             stdout=sys.stdout,
             stderr=sys.stderr,
@@ -261,6 +266,8 @@ def main():
     total_time_seconds = end_time - start_time
     condor_time_end = time.time()
     condor_time_seconds = condor_time_end - condor_time_start
+    print("Time for condor jobs to match: {:.2f} seconds = {:.2f} minutes = {:.2f} hours".format(
+        idle_time_seconds, idle_time_seconds/60, idle_time_seconds/3600), flush=True)
     print("Time for condor processing: {:.2f} seconds = {:.2f} minutes = {:.2f} hours".format(
         condor_time_seconds, condor_time_seconds/60, condor_time_seconds/3600), flush=True)
     print("Total time: {0:.2f} seconds = {1:.2f} minutes = {2:.2f} hours".format(

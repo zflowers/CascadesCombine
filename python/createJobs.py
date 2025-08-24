@@ -146,7 +146,7 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, make_json
     bin_safe = sanitize(bin_name)
     bin_dir = CONDOR_DIR / bin_safe
     if bin_dir.exists():
-        print("Removing dir:", bin_dir.name)
+        print("[createJobs] Removing existing condor dir:", bin_dir.name)
         shutil.rmtree(bin_dir)
     bin_dir.mkdir(parents=True, exist_ok=True)
 
@@ -297,7 +297,7 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, make_json
     # Write file
     submit_content = "\n".join(submit_lines) + "\n"
     submit_path.write_text(submit_content)
-    print(f"Wrote submit file: {submit_path}")
+    print(f"[createJobs] Wrote submit file: {submit_path}")
 
     # Submit if not dryrun
     if not dryrun:
