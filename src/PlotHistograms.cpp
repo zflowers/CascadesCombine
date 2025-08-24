@@ -144,7 +144,9 @@ void Plot_Hist1D(TH1* h) {
     l.SetTextSize(0.04); l.DrawLatex(0.01,0.943,"#bf{CMS} Simulation Preliminary");
     l.SetTextSize(0.045); l.DrawLatex(0.7,0.04,"binName");
     TString pdfName = Form("%spdfs/%s.pdf", outputDir.c_str(), title.c_str());
+    gErrorIgnoreLevel = 1001;
     can->SaveAs(pdfName);
+    gErrorIgnoreLevel = 0;
     if (outFile) { outFile->cd(); can->Write(0, TObject::kWriteDelete); }
     delete can;
 }
@@ -157,7 +159,9 @@ void Plot_Hist2D(TH2* h) {
     string title = h->GetName();
     TCanvas* can = new TCanvas(("can_"+title).c_str(), ("can_"+title).c_str(), 700, 600);
     can->SetLeftMargin(0.15); can->SetRightMargin(0.18); can->SetBottomMargin(0.15);
+    gErrorIgnoreLevel = 1001;
     can->SetGridx(); can->SetGridy(); can->SetLogz();
+    gErrorIgnoreLevel = 0;
     h->Draw("COLZ");
     h->GetZaxis()->SetTitle(("N_{events} / "+std::to_string(int(Lumi))+" fb^{-1}").c_str());
     TLatex l; l.SetTextFont(42); l.SetNDC();
@@ -165,7 +169,9 @@ void Plot_Hist2D(TH2* h) {
     l.SetTextSize(0.04); l.DrawLatex(0.01,0.943,"#bf{CMS} Simulation Preliminary");
     l.SetTextSize(0.045); l.DrawLatex(0.7,0.04,"binName");
     TString pdfName = Form("%spdfs/%s.pdf", outputDir.c_str(), title.c_str());
+    gErrorIgnoreLevel = 1001;
     can->SaveAs(pdfName);
+    gErrorIgnoreLevel = 0;
     if (outFile) { outFile->cd(); can->Write(0, TObject::kWriteDelete); }
     delete can;
 }
@@ -174,45 +180,47 @@ void Plot_Hist2D(TH2* h) {
 // Plot Eff
 // ----------------------
 void Plot_Eff(TEfficiency* e){
-  string title = e->GetName();
-  TCanvas* can = (TCanvas*) new TCanvas(("can_eff_"+title).c_str(),("can_"+title).c_str(),700.,600);
-  can->SetLeftMargin(0.15); can->SetRightMargin(0.18); can->SetBottomMargin(0.15);
-  can->SetGridx(); can->SetGridy();
-  can->Draw();
-  can->cd();
-  e->Draw("AP");
-  gPad->Update();
-  e->GetPaintedGraph()->GetXaxis()->CenterTitle();
-  e->GetPaintedGraph()->GetXaxis()->SetTitleFont(42);
-  e->GetPaintedGraph()->GetXaxis()->SetTitleSize(0.06);
-  e->GetPaintedGraph()->GetXaxis()->SetTitleOffset(1.06);
-  e->GetPaintedGraph()->GetXaxis()->SetLabelFont(42);
-  e->GetPaintedGraph()->GetXaxis()->SetLabelSize(0.05);
-  double xmin = e->GetTotalHistogram()->GetXaxis()->GetXmin();
-  double xmax = e->GetTotalHistogram()->GetXaxis()->GetXmax();
-  if(xmin < 0) xmin = xmin*1.1;
-  else xmin = xmin*0.9;
-  if(xmax > 0) xmax = xmax*1.1;
-  else xmax = xmax*0.9;
-  e->GetPaintedGraph()->GetXaxis()->SetRangeUser(xmin,xmax);
-  //e->GetPaintedGraph()->GetXaxis()->SetTitle(g_Xname.c_str());
-  e->GetPaintedGraph()->GetYaxis()->CenterTitle();
-  e->GetPaintedGraph()->GetYaxis()->SetTitleFont(42);
-  e->GetPaintedGraph()->GetYaxis()->SetTitleSize(0.06);
-  e->GetPaintedGraph()->GetYaxis()->SetTitleOffset(1.12);
-  e->GetPaintedGraph()->GetYaxis()->SetLabelFont(42);
-  e->GetPaintedGraph()->GetYaxis()->SetLabelSize(0.05);
-  e->GetPaintedGraph()->GetYaxis()->SetRangeUser(0.,1.05);
-  //e->GetPaintedGraph()->GetYaxis()->SetRangeUser(0.9*h->GetMinimum(0.0),1.1*h->GetMaximum());
+    string title = e->GetName();
+    TCanvas* can = (TCanvas*) new TCanvas(("can_eff_"+title).c_str(),("can_"+title).c_str(),700.,600);
+    can->SetLeftMargin(0.15); can->SetRightMargin(0.18); can->SetBottomMargin(0.15);
+    can->SetGridx(); can->SetGridy();
+    can->Draw();
+    can->cd();
+    e->Draw("AP");
+    gPad->Update();
+    e->GetPaintedGraph()->GetXaxis()->CenterTitle();
+    e->GetPaintedGraph()->GetXaxis()->SetTitleFont(42);
+    e->GetPaintedGraph()->GetXaxis()->SetTitleSize(0.06);
+    e->GetPaintedGraph()->GetXaxis()->SetTitleOffset(1.06);
+    e->GetPaintedGraph()->GetXaxis()->SetLabelFont(42);
+    e->GetPaintedGraph()->GetXaxis()->SetLabelSize(0.05);
+    double xmin = e->GetTotalHistogram()->GetXaxis()->GetXmin();
+    double xmax = e->GetTotalHistogram()->GetXaxis()->GetXmax();
+    if(xmin < 0) xmin = xmin*1.1;
+    else xmin = xmin*0.9;
+    if(xmax > 0) xmax = xmax*1.1;
+    else xmax = xmax*0.9;
+    e->GetPaintedGraph()->GetXaxis()->SetRangeUser(xmin,xmax);
+    //e->GetPaintedGraph()->GetXaxis()->SetTitle(g_Xname.c_str());
+    e->GetPaintedGraph()->GetYaxis()->CenterTitle();
+    e->GetPaintedGraph()->GetYaxis()->SetTitleFont(42);
+    e->GetPaintedGraph()->GetYaxis()->SetTitleSize(0.06);
+    e->GetPaintedGraph()->GetYaxis()->SetTitleOffset(1.12);
+    e->GetPaintedGraph()->GetYaxis()->SetLabelFont(42);
+    e->GetPaintedGraph()->GetYaxis()->SetLabelSize(0.05);
+    e->GetPaintedGraph()->GetYaxis()->SetRangeUser(0.,1.05);
+    //e->GetPaintedGraph()->GetYaxis()->SetRangeUser(0.9*h->GetMinimum(0.0),1.1*h->GetMaximum());
 
-  TLatex l; l.SetTextFont(42); l.SetNDC();
-  l.SetTextSize(0.035); l.DrawLatex(0.65,0.943,"SampleName");
-  l.SetTextSize(0.04); l.DrawLatex(0.01,0.943,"#bf{CMS} Simulation Preliminary");
-  l.SetTextSize(0.045); l.DrawLatex(0.7,0.04,"binName");
-  TString pdfName = Form("%spdfs/%s.pdf", outputDir.c_str(), title.c_str());
-  can->SaveAs(pdfName);
-  if (outFile) { outFile->cd(); can->Write(0, TObject::kWriteDelete); }
-  delete can;
+    TLatex l; l.SetTextFont(42); l.SetNDC();
+    l.SetTextSize(0.035); l.DrawLatex(0.65,0.943,"SampleName");
+    l.SetTextSize(0.04); l.DrawLatex(0.01,0.943,"#bf{CMS} Simulation Preliminary");
+    l.SetTextSize(0.045); l.DrawLatex(0.7,0.04,"binName");
+    TString pdfName = Form("%spdfs/%s.pdf", outputDir.c_str(), title.c_str());
+    gErrorIgnoreLevel = 1001;
+    can->SaveAs(pdfName);
+    gErrorIgnoreLevel = 0;
+    if (outFile) { outFile->cd(); can->Write(0, TObject::kWriteDelete); }
+    delete can;
 }
 
 // ----------------------
@@ -239,7 +247,9 @@ void Plot_Stack(const string& hname,
 
     string canvas_name = "can_stack_" + hname;
     TCanvas* can = new TCanvas(canvas_name.c_str(), canvas_name.c_str(), 1200, 700);
+    gErrorIgnoreLevel = 1001;
     can->SetGridx(); can->SetGridy(); can->SetLogy();
+    gErrorIgnoreLevel = 0;
     TH1* axisHist = !allHists.empty() ? allHists.front() : nullptr;
     if (!axisHist) return;
     axisHist->Draw("HIST");
@@ -265,7 +275,8 @@ void Plot_Stack(const string& hname,
     leg->Draw();
 
     if(outFile){ outFile->cd(); can->Write(0, TObject::kWriteDelete); }
-    TString stackPdf = Form("%spdfs/%s.pdf", outputDir.c_str(), hname.c_str()); can->SaveAs(stackPdf);
+    TString stackPdf = Form("%spdfs/%s.pdf", outputDir.c_str(), hname.c_str());
+    gErrorIgnoreLevel = 1001; can->SaveAs(stackPdf); gErrorIgnoreLevel = 0;
 
     delete can; if(h_BKG) delete h_BKG; if(h_DATA) delete h_DATA;
 }
@@ -289,6 +300,7 @@ int main(int argc, char* argv[]) {
     TString inputFileName=inputFile;
     TFile* inFile=TFile::Open(inputFileName,"READ");
     if(!inFile||inFile->IsZombie()){ cerr<<"Error: cannot open input "<<inputFileName<<endl; return 1; }
+    gStyle->SetOptStat(0); gStyle->SetOptTitle(0);
 
     SampleTool tool; tool.LoadAllFromMaster();
 
@@ -300,7 +312,7 @@ int main(int argc, char* argv[]) {
     TKey* key;
     while((key=(TKey*)next())){
         TObject* obj=key->ReadObj(); if(!obj) continue;
-        if(std::string(obj->GetName()).find("CutFlow") != std::string::npos) continue; // skip doing stuff with CutFlow for now while it's new
+        if(std::string(obj->GetName()).find("CutFlow") != std::string::npos){ std::cout << "found cutflow hist: " << obj->GetName() << std::endl; continue; } // skip doing stuff with CutFlow for now while it's new
         if(obj->InheritsFrom(TH1::Class())){
             TH1* hIn=(TH1*)obj;
             HistId id=ParseHistName(hIn->GetName());
