@@ -1,7 +1,7 @@
 #include "HistTools.h"
 #include "TLorentzVector.h"
 
-// Match existing HistDef type
+// User existing HistDef type
 static std::vector<HistDef> loadHistogramsUser(ROOT::RDF::RNode &node) {
     std::vector<HistDef> hdefs;
     // ---------------------------------------------------------------------
@@ -10,7 +10,7 @@ static std::vector<HistDef> loadHistogramsUser(ROOT::RDF::RNode &node) {
     // We assume the tree stores lepton kinematics as vectors:
     //   vector<double>  *PT_lep, *Eta_lep, *Phi_lep, *M_lep
     //
-    // For safety we check vector sizes before accessing indices.
+    // For safety, we check vector sizes before accessing indices.
     // My_p4_lep0 and My_p4_lep1 are TLorentzVector objects for the leading and
     // sub-leading leptons respectively (by ordering already present in the trees).
     node = node
@@ -113,7 +113,7 @@ static std::vector<HistDef> loadHistogramsUser(ROOT::RDF::RNode &node) {
     // ---------------------------------------------------------------------
     // 1) 1D histogram for M_ll but restricted to OSSF pairs. We express that
     //    restriction by adding "OSSF_pair" to the histogram-specific cuts;
-    //    the main histogram loop will apply this cut as node.Filter(BFI->ExpandMacros(...)).
+    //    the main histogram loop will apply the cut to the node.
     HistDef h1;
     h1.name = "M_ll_lead2_OSSF";
     h1.type = "1D";
@@ -131,7 +131,7 @@ static std::vector<HistDef> loadHistogramsUser(ROOT::RDF::RNode &node) {
     hdefs.push_back(h1);
 
     // 2) 2D histogram: M_ll (x) vs HTeta24_over_MET (y)
-    //    This uses the derived ratio defined above; main loop will validate axes.
+    //    This uses the derived ratio defined above
     HistDef h2;
     h2.name = "M_ll_lead2_vs_HTeta24overMET";
     h2.type = "2D";

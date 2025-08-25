@@ -178,7 +178,7 @@ bool ValidateAndRecordAppliedUserCuts(ROOT::RDF::RNode hnode,
                 break;
             }
         }
-        if (!ok) return false;            // if a required column for this user-cut fails → drop the histogram
+        if (!ok) return false; // if a required column for this user-cut fails -> drop the histogram
         // apply the validated user-cut and record that we applied it
         hnode = hnode.Filter(uci.expr);
         uci.applied = true;

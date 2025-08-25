@@ -72,20 +72,20 @@ void BuildFitInput::LoadSig_KeyValue(const std::string& key, const stringlist& s
 }
 
 void BuildFitInput::LoadBkg_byMap( map< std::string, stringlist>& BkgDict, const double& Lumi){
-	
-	for (const auto& pair : BkgDict) {
-		std::cout<<"Loading RDataFrame for: "<<pair.first<<"\n";
-		LoadBkg_KeyValue( pair.first, pair.second, Lumi);
-	}
+    
+    for (const auto& pair : BkgDict) {
+        std::cout<<"Loading RDataFrame for: "<<pair.first<<"\n";
+        LoadBkg_KeyValue( pair.first, pair.second, Lumi);
+    }
 
 }
 void BuildFitInput::LoadSig_byMap( map< std::string, stringlist>& SigDict, const double& Lumi){
-	
-	for (const auto& pair : SigDict) {
-		std::cout<<"Loading RDataFrame for: "<<pair.first<<"\n";
-		LoadSig_KeyValue( pair.first, pair.second, Lumi);
-	}
-	
+    
+    for (const auto& pair : SigDict) {
+        std::cout<<"Loading RDataFrame for: "<<pair.first<<"\n";
+        LoadSig_KeyValue( pair.first, pair.second, Lumi);
+    }
+    
 }
 
 inline bool ColumnExists(ROOT::RDF::RNode rdf, const std::string& name) {
@@ -806,7 +806,7 @@ void BuildFitInput::ReportRegions(int verbosity,
                                   countmap &countResults,
                                   summap &sumResults,
                                   errormap &errorResults,
-				  bool DoSig)
+                  bool DoSig)
 {
 
     countResults.clear();
@@ -858,26 +858,26 @@ void BuildFitInput::ReportRegions(int verbosity,
 }
 
 void BuildFitInput::ReportRegions(int verbosity){
-	std::cout<<"Reporting bkg nodes ...  \n";
-	for (const auto& it : _base_rdf_BkgDict){
-		if( verbosity > 0 ){
-			std::cout<<it.first<<": \n";
-			(it.second)->Report()->Print();
-			std::cout<<"\n";
-		}else{
-			(it.second)->Report();
-		}
-	}
-	std::cout<<"Reporting sig nodes ... \n";
-	for (const auto& it : _base_rdf_SigDict){
-		if( verbosity > 0 ){
-			std::cout<<it.first<<": \n";
-			(it.second)->Report()->Print();
-			std::cout<<"\n";
-		}else{
-			(it.second)->Report();
-		}
-	}
+    std::cout<<"Reporting bkg nodes ...  \n";
+    for (const auto& it : _base_rdf_BkgDict){
+        if( verbosity > 0 ){
+            std::cout<<it.first<<": \n";
+            (it.second)->Report()->Print();
+            std::cout<<"\n";
+        }else{
+            (it.second)->Report();
+        }
+    }
+    std::cout<<"Reporting sig nodes ... \n";
+    for (const auto& it : _base_rdf_SigDict){
+        if( verbosity > 0 ){
+            std::cout<<it.first<<": \n";
+            (it.second)->Report()->Print();
+            std::cout<<"\n";
+        }else{
+            (it.second)->Report();
+        }
+    }
 }
 
 void BuildFitInput::PrintCountReports(const countmap& countResults) {
@@ -918,33 +918,33 @@ void BuildFitInput::FullReport(const countmap& countResults,
 }
 
 std::map<std::string, Process*> BuildFitInput::CombineBkgs( std::map<std::string, Process*>& bkgProcs ){
-	//build the set of backgrounds
-	std::map<std::string, Process*> combinedBkgProcs{};
-	for( const auto& it : bkgProcs){
-		std::string procname = it.first;
-		
-		//check for key, if it doesn't exist create it
-		procname = BFTool::SplitString( procname, "_")[0] ;
-		if( combinedBkgProcs.find(procname) == combinedBkgProcs.end()){
-			//key was not found, make a new proc and put it in the map
-			Process* newproc = new Process(procname, 0, 0 ,0);
-			combinedBkgProcs[procname] = newproc;
-		}
-		
-		//if it is in there already, add up the  pieces with the existing components
-		combinedBkgProcs[procname]->Add(bkgProcs[it.first]);
-		
-	}
-	for( const auto& it: combinedBkgProcs){//loop back through and sqrt the errors
-		combinedBkgProcs[it.first]->FixError();
-	}
-	return combinedBkgProcs;
+    //build the set of backgrounds
+    std::map<std::string, Process*> combinedBkgProcs{};
+    for( const auto& it : bkgProcs){
+        std::string procname = it.first;
+        
+        //check for key, if it doesn't exist create it
+        procname = BFTool::SplitString( procname, "_")[0] ;
+        if( combinedBkgProcs.find(procname) == combinedBkgProcs.end()){
+            //key was not found, make a new proc and put it in the map
+            Process* newproc = new Process(procname, 0, 0 ,0);
+            combinedBkgProcs[procname] = newproc;
+        }
+        
+        //if it is in there already, add up the  pieces with the existing components
+        combinedBkgProcs[procname]->Add(bkgProcs[it.first]);
+        
+    }
+    for( const auto& it: combinedBkgProcs){//loop back through and sqrt the errors
+        combinedBkgProcs[it.first]->FixError();
+    }
+    return combinedBkgProcs;
 }
 
 void BuildFitInput::CreateBin(const std::string& binname){
-	Bin* bin = new Bin();
-	bin->binname = binname;
-	analysisbins[binname] = bin;
+    Bin* bin = new Bin();
+    bin->binname = binname;
+    analysisbins[binname] = bin;
 }
 
 // Overload: takes vector of cut strings
@@ -996,25 +996,25 @@ void BuildFitInput::AddSigToBinObjects(countmap countResults,
 }
 
 void BuildFitInput::PrintBins(int verbosity){
-	for(const auto& it: analysisbins){
-		std::cout<<"Bin: "<< it.second->binname << "\n";
-		//loop over raw bkg procs
-		if(verbosity >= 3){
-			for(const auto& it2: it.second->bkgProcs ){
-				std::cout<<"   "<<it2.second->procname<<" "<< it2.second->nevents <<" "<<it2.second->wnevents<<" "<<it2.second->staterror<<"\n";
-			}
-		}
-		if(verbosity > 0){
-			for(const auto& it2: it.second->combinedProcs){
-				std::cout<<"   "<< it2.second->procname<<" "<<it2.second->nevents <<" "<<it2.second->wnevents<<" "<<it2.second->staterror<<"\n";
-			}	
-		}
-		if(verbosity >= 1){
-			for(const auto& it2: it.second->signals){
-				std::cout<<"   "<< it2.second->procname<<" "<<it2.second->nevents <<" "<<it2.second->wnevents<<" "<<it2.second->staterror<<"\n";
-			}	
-		}
-	}
+    for(const auto& it: analysisbins){
+        std::cout<<"Bin: "<< it.second->binname << "\n";
+        //loop over raw bkg procs
+        if(verbosity >= 3){
+            for(const auto& it2: it.second->bkgProcs ){
+                std::cout<<"   "<<it2.second->procname<<" "<< it2.second->nevents <<" "<<it2.second->wnevents<<" "<<it2.second->staterror<<"\n";
+            }
+        }
+        if(verbosity > 0){
+            for(const auto& it2: it.second->combinedProcs){
+                std::cout<<"   "<< it2.second->procname<<" "<<it2.second->nevents <<" "<<it2.second->wnevents<<" "<<it2.second->staterror<<"\n";
+            }    
+        }
+        if(verbosity >= 1){
+            for(const auto& it2: it.second->signals){
+                std::cout<<"   "<< it2.second->procname<<" "<<it2.second->nevents <<" "<<it2.second->wnevents<<" "<<it2.second->staterror<<"\n";
+            }    
+        }
+    }
 }
 
 std::unordered_map<std::string, BuildFitInput::CutFn> BuildFitInput::cutMap_;
@@ -1027,12 +1027,12 @@ bool BuildFitInput::GetCutByName(const std::string& name, std::string& out) {
 
 std::string BuildFitInput::GetCleaningCut(){
         return "(PTCM <= 200.) && "
-	"( (PTCM <= -500.*sqrt( ((-2.777*pow(fabs(dphiCMI),2) + 1.388*fabs(dphiCMI) + 0.8264) > 0 ? "
-	"(-2.777*pow(fabs(dphiCMI),2) + 1.388*fabs(dphiCMI) + 0.8264) : 0) ) + 575.) || "
-	"(-2.777*pow(fabs(dphiCMI),2) + 1.388*fabs(dphiCMI) + 0.8264 <= 0.) ) && "
-	"( (PTCM <= -500.*sqrt( ((-1.5625*pow(fabs(dphiCMI),2) + 7.8125*fabs(dphiCMI) - 8.766) > 0 ? "
-	"(-1.5625*pow(fabs(dphiCMI),2) + 7.8125*fabs(dphiCMI) - 8.766) : 0) ) + 600.) || "
-	"(-1.5625*pow(fabs(dphiCMI),2) + 7.8125*fabs(dphiCMI) - 8.766 <= 0.) )";
+    "( (PTCM <= -500.*sqrt( ((-2.777*pow(fabs(dphiCMI),2) + 1.388*fabs(dphiCMI) + 0.8264) > 0 ? "
+    "(-2.777*pow(fabs(dphiCMI),2) + 1.388*fabs(dphiCMI) + 0.8264) : 0) ) + 575.) || "
+    "(-2.777*pow(fabs(dphiCMI),2) + 1.388*fabs(dphiCMI) + 0.8264 <= 0.) ) && "
+    "( (PTCM <= -500.*sqrt( ((-1.5625*pow(fabs(dphiCMI),2) + 7.8125*fabs(dphiCMI) - 8.766) > 0 ? "
+    "(-1.5625*pow(fabs(dphiCMI),2) + 7.8125*fabs(dphiCMI) - 8.766) : 0) ) + 600.) || "
+    "(-1.5625*pow(fabs(dphiCMI),2) + 7.8125*fabs(dphiCMI) - 8.766 <= 0.) )";
 }
 REGISTER_CUT(BuildFitInput, GetCleaningCut, "Cleaning");
 std::string BuildFitInput::GetZstarCut(){

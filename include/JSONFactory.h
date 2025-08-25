@@ -1,6 +1,6 @@
-
 #ifndef JSONFACT_H
 #define JSONFACT_H
+
 #include "nlohmann/json.hpp" // JSON lib
 #include "BuildFitTools.h"
 #include <vector>

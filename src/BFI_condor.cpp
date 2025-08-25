@@ -308,7 +308,7 @@ int main(int argc, char** argv) {
     
         // --- JSON output ---
         if(doJSON){
-	    ROOT::EnableImplicitMT();
+            ROOT::EnableImplicitMT();
             auto json_node = node;
             auto cnt = json_node.Count();
             auto sumW = json_node.Sum<double>("weight_scaled");

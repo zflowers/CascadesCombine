@@ -135,43 +135,43 @@ SampleTool::SampleTool(){
 }
 
 void SampleTool::LoadBkgs( const stringlist& bkglist ){
-	for( long unsigned int i=0; i<bkglist.size(); i++){
-		//check if background exists
-		if( MasterDict.count(bkglist[i]) == 0 ){
-			std::cout<<"Bkg: "<<bkglist[i]<<" not found ... skipping ...\n";
-			continue;
-		} 
-		BkgDict[bkglist[i]] = MasterDict[bkglist[i]];		
-	}
+    for( long unsigned int i=0; i<bkglist.size(); i++){
+        //check if background exists
+        if( MasterDict.count(bkglist[i]) == 0 ){
+            std::cout<<"Bkg: "<<bkglist[i]<<" not found ... skipping ...\n";
+            continue;
+        } 
+        BkgDict[bkglist[i]] = MasterDict[bkglist[i]];        
+    }
 }
 void SampleTool::LoadSigs( const stringlist& siglist ){
-	for( long unsigned int i=0; i<siglist.size(); i++){
-		if( MasterDict.count(siglist[i]) == 0 ){
-			std::cout<<"Sig: "<<siglist[i]<<" not found ... skipping ...\n";
-			continue;
-		}
-		SigDict[siglist[i]] = MasterDict[siglist[i]];
-	}
-	//build signal keys
-	stringlist s_strings{};
-	for(long unsigned int i=0; i<siglist.size(); i++){
-		std::vector< std::string > keylist{};
-		s_strings = SigDict[siglist[i]];
-		for( long unsigned int j=0; j< s_strings.size(); j++){
-                        if(s_strings[j].find("X_Cascades") != std::string::npos) 
-			  SignalKeys.push_back( BFTool::GetSignalTokensCascades( s_strings[j] ) );
-                        else if(s_strings[j].find("X_SMS") != std::string::npos){
-                          stringlist sms_temp = BFTool::GetSignalTokensSMS( s_strings[j] );
-                          stringlist sms_filters_tmp;
-                          for (const auto& sms_entry : sms_temp){
-			    SignalKeys.push_back( sms_entry );
-			    sms_filters_tmp.push_back( sms_entry );
-                          }
-			  if (BFTool::filterSignalsSMS.empty())
-                            BFTool::SetFilterSignalsSMS(sms_filters_tmp);
-                        }
-		}
-	}
+    for( long unsigned int i=0; i<siglist.size(); i++){
+        if( MasterDict.count(siglist[i]) == 0 ){
+            std::cout<<"Sig: "<<siglist[i]<<" not found ... skipping ...\n";
+            continue;
+        }
+        SigDict[siglist[i]] = MasterDict[siglist[i]];
+    }
+    //build signal keys
+    stringlist s_strings{};
+    for(long unsigned int i=0; i<siglist.size(); i++){
+        std::vector< std::string > keylist{};
+        s_strings = SigDict[siglist[i]];
+        for( long unsigned int j=0; j< s_strings.size(); j++){
+            if(s_strings[j].find("X_Cascades") != std::string::npos) 
+                SignalKeys.push_back( BFTool::GetSignalTokensCascades( s_strings[j] ) );
+            else if(s_strings[j].find("X_SMS") != std::string::npos){
+                stringlist sms_temp = BFTool::GetSignalTokensSMS( s_strings[j] );
+                stringlist sms_filters_tmp;
+                for (const auto& sms_entry : sms_temp){
+                    SignalKeys.push_back( sms_entry );
+                    sms_filters_tmp.push_back( sms_entry );
+                }
+                if (BFTool::filterSignalsSMS.empty())
+                    BFTool::SetFilterSignalsSMS(sms_filters_tmp);
+            }
+        }
+    }
 }
 
 void SampleTool::LoadAllBkgs() {
@@ -198,25 +198,19 @@ void SampleTool::LoadAllFromMaster() {
 }
 
 void SampleTool::PrintDict( map<string,stringlist>& d ){
-	for(auto it = d.cbegin(); it != d.cend(); ++it){
- 	std::cout << "key:"<< it->first << ":\n";
- 	stringlist str = it->second;
- 	for (std::vector<string>::iterator it2 = str.begin(); it2 != str.end(); ++it2) {
+    for(auto it = d.cbegin(); it != d.cend(); ++it){
+     std::cout << "key:"<< it->first << ":\n";
+     stringlist str = it->second;
+     for (std::vector<string>::iterator it2 = str.begin(); it2 != str.end(); ++it2) {
   std::cout << *it2 << " \n";
- 	}
- 	
-	}
-	std::cout<<"\n";
-	
+     }
+     
+    }
+    std::cout<<"\n";
+    
 }
 
 void SampleTool::PrintKeys( stringlist sl ){
-	
-	for( long unsigned int i = 0; i<sl.size(); i++){
-		std::cout<<sl[i]<<"\n";
-	}
-
+    for( long unsigned int i = 0; i<sl.size(); i++)
+        std::cout<<sl[i]<<"\n";
 }
-
-
-

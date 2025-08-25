@@ -194,5 +194,4 @@ inline bool BFTool::ContainsAnySubstring(const std::string& mainString, const st
     return false; 
 }
 
-
 #endif

@@ -38,4 +38,3 @@ int main(int argc, char** argv) {
     delete j; // clean up
     return 0;
 }
-
