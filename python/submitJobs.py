@@ -12,7 +12,6 @@ import stat
 cpus = "1"
 memory = "1 GB"
 dryrun = False
-stress_test = False
 lumi = str(400.)
 max_workers = 4
 limit_submit = None  # limit number of job submissions (None=no limit)
@@ -123,6 +122,16 @@ def setup_master_merge_script(
     print(f"[submitJobs] Master merge script generated: {master_script_path}")
     return master_script_path
 
+def strip_inline_comments(s):
+    if not isinstance(s, str):
+        return s
+    lines = []
+    for line in s.splitlines():
+        line = line.split("#", 1)[0].rstrip()
+        if line.strip():
+            lines.append(line)
+    return "\n".join(lines)
+
 def load_datasets(cfg_path):
     with open(cfg_path, "r") as f:
         cfg = yaml.safe_load(f)
@@ -141,20 +150,6 @@ def build_bin_name(base, shorthand, side, extra=None):
 
 def build_lep_cuts(shorthand, side):
     return shorthand + (f"_{side}" if side else "")
-
-def generate_bins_from_shorthands():
-    base_name = "TEST"
-    base_cuts = "Nlep>=2;MET>=150"
-    predefined_cuts = "Cleaning"
-    user_cuts = ""
-    shorthands = ["=0Bronze","=2Pos","=2Gold",">=1OSSF","=1SSOF",">=2Mu",">=1Elec","<1SSSF",">=1Muon"]
-    sides = ["","a","b"]
-    generated = {}
-    for shorthand, side in product(shorthands, sides):
-        bin_name = build_bin_name(base_name, shorthand, side)
-        lep_cut = build_lep_cuts(shorthand, side)
-        generated[bin_name] = {"cuts": base_cuts, "lep-cuts": lep_cut, "predefined-cuts": predefined_cuts, "user-cuts": user_cuts}
-    return generated
 
 def build_command(bin_name, cfg, bkg_datasets, sig_datasets, sms_filters, make_json, make_root, hist_yaml):
     cmd = [
@@ -194,11 +189,10 @@ def submit_job(cmd):
 # MAIN
 # -----------------------------
 def main():
-    global dryrun, stress_test, lumi
+    global dryrun, lumi
 
     parser = argparse.ArgumentParser(description="Submit BFI jobs with templated bins")
     parser.add_argument("--dryrun", action="store_true")
-    parser.add_argument("--stress_test", action="store_true")
     parser.add_argument("--lumi", type=str, default=lumi)
     parser.add_argument("--bins-cfg", type=str, default="config/bin_cfgs/examples.yaml")
     parser.add_argument("--datasets-cfg", type=str, default="config/dataset_cfgs/datasets.yaml")
@@ -214,7 +208,6 @@ def main():
         make_json = True
 
     dryrun = args.dryrun
-    stress_test = args.stress_test
     lumi = args.lumi
 
     # Load datasets
@@ -225,22 +218,12 @@ def main():
     bins = {}
     if bins_cfg_path.exists():
         with open(bins_cfg_path) as f:
-            manual_bins = yaml.safe_load(f) or {}
-        for k,v in manual_bins.items():
-            if isinstance(v, dict):
-                v.setdefault("cuts","")
-                v.setdefault("lep-cuts","")
-                v.setdefault("predefined-cuts","")
-                v.setdefault("user-cuts","")
-        bins.update(manual_bins)
-    else:
-        bins.update({"manualExample1":{"cuts":"Nlep>=2;MET>=150;PTISR>=200","lep-cuts":">=1OSSF","predefined-cuts":"Cleaning","user-cuts":""}})
-
-    if stress_test:
-        gen = generate_bins_from_shorthands()
-        for k,v in gen.items():
-            if k not in bins:
-                bins[k]=v
+            bins = yaml.safe_load(f) or {}
+            for k, v in bins.items():
+                if isinstance(v, dict):
+                    for key in ("cuts", "lep-cuts", "predefined-cuts", "user-cuts"):
+                        v.setdefault(key, "")
+                        v[key] = strip_inline_comments(v[key])
 
     # Submit createJobs.py for each bin
     jobs = []

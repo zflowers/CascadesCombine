@@ -31,15 +31,13 @@ def wait_for_jobs():
     monitor.wait_until_jobs_below()
     return idle_time_end - idle_time_start
 
-def submit_jobs(stress_test, config, datasets, hist, make_json=False, make_root=False):
+def submit_jobs(config, datasets, hist, make_json=False, make_root=False):
     """
     Runs submitJobs.py to generate Condor scripts and merge scripts.
     Must create `master_merge.sh` with all merge commands.
     """
     cmd = ["python3", "python/submitJobs.py", "--bins-cfg", config, "--datasets-cfg", datasets]
 
-    if stress_test:
-        cmd.append("--stress_test")
     if make_json:
         cmd.append("--make-json")
     if make_root:
@@ -96,7 +94,7 @@ def get_work_dirs():
     """
     return [name for name in os.listdir("condor/") if os.path.isdir(os.path.join("condor", name))]
 
-def run_checkjobs_loop_parallel(no_resubmit=False, max_resubmits=3, check_json=False, check_root=False):
+def run_checkjobs_loop_parallel(no_resubmit=False, max_resubmits=1, check_json=False, check_root=False):
     """
     Check all work directories with checkJobs.py, resubmit failing jobs across
     all directories in one cycle, then wait once for all resubmitted jobs to finish.
@@ -189,6 +187,14 @@ def parse_args():
 
 def main():
     args = parse_args()
+    bins_cfg = args.bins_cfg
+    hist_cfg = args.hist_cfg
+    datasets_cfg = args.datasets_cfg
+    if args.stress_test:
+        print("Running stress test. Using stress yamls instead of loaded arg yamls")
+        bins_cfg = "config/bin_cfgs/bin_stress.yaml"
+        hist_cfg = "config/hist_cfgs/hist_stress.yaml"
+        datasets_cfg = "config/dataset_cfgs/dataset_stress.yaml"
 
     start_time = time.time()
 
@@ -200,8 +206,8 @@ def main():
 
     # 2) Submit jobs and generate master_merge.sh
     print("[run_all] Submitting jobs...", flush=True)
-    submit_jobs(stress_test=args.stress_test, config=args.bins_cfg, datasets=args.datasets_cfg,
-                hist=args.hist_cfg,make_json=args.make_json, make_root=args.make_root)
+    submit_jobs(config=bins_cfg, datasets=datasets_cfg,
+                hist=hist_cfg,make_json=args.make_json, make_root=args.make_root)
 
     condor_time_start = time.time()
     # 3) Wait for jobs to finish

@@ -1,9 +1,8 @@
 #ifndef BFI_H
 #define BFI_H
-#include "BuildFitTools.h"//Bin and process source
+#include "BuildFitTools.h"
 #include "Math/Vector4Dfwd.h"
 #include "Math/PxPyPzE4D.h"
-#include "TInterpreter.h"
 
 using namespace std;
 using ROOT::RDF::RNode;
@@ -13,8 +12,6 @@ typedef ROOT::RDF::RNode RN;
 typedef std::vector<std::string> stringlist;
 typedef std::pair<std::string,std::string> proc_cut_pair;
 typedef std::map< proc_cut_pair, std::unique_ptr<RN> > nodemap;
-//typedef std::map< proc_cut_pair, ROOT::RDF::RResultPtr<long long unsigned int> > countmap;
-//typedef std::map< proc_cut_pair, ROOT::RDF::RResultPtr<double> > summap;
 typedef std::map<proc_cut_pair, double> errormap;
 typedef std::map<proc_cut_pair, double> countmap;
 typedef std::map<proc_cut_pair, double> summap;
@@ -123,23 +120,4 @@ class BuildFitInput{
     static BuildFitInput::Registrar _registrar_##funcname( \
         cutname, [](BuildFitInput* obj){ return obj->funcname(); } \
     )
-
-// Register helper functions with ROOT's Cling interpreter
-inline void RegisterSafeHelpers() {
-    gInterpreter->Declare(R"(
-        #include "ROOT/RVec.hxx"
-        #include <cmath>
-
-        // --- Safe division ---
-        inline double SafeDiv(double num, double den, double def = 0.0) {
-            return (den != 0.0) ? num / den : def;
-        }
-
-        // --- Safe index ---
-        template <typename T>
-        inline T SafeIndex(const ROOT::RVec<T>& vec, unsigned idx, T def = -1) {
-            return (idx < vec.size()) ? vec[idx] : def;
-        }
-    )");
-}
 #endif

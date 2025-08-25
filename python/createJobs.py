@@ -179,8 +179,12 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, make_json
         if value is None:
             return ""
         s = str(value)
-        # Split lines, strip each, remove empty lines, join with single space
-        parts = [line.strip() for line in s.splitlines() if line.strip()]
+        parts = []
+        for line in s.splitlines():
+            # remove comments starting with '#'
+            line = line.split("#", 1)[0].strip()
+            if line:  # skip empty lines
+                parts.append(line)
         joined = " ".join(parts)
         # escape any literal double-quotes inside the value so they don't break the submit file
         joined = joined.replace('"', '\\"')

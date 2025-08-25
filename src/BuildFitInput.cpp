@@ -1,8 +1,6 @@
 #include "BuildFitInput.h"
 
 BuildFitInput::BuildFitInput(){
-	//ROOT::EnableImplicitMT();
-	//std::cout<<"Enabled MT \n";
 }
 
 void BuildFitInput::LoadBkg_KeyValue(const std::string& key, const stringlist& bkglist, const double& Lumi) {
@@ -55,6 +53,7 @@ void BuildFitInput::LoadSig_KeyValue(const std::string& key, const stringlist& s
             auto df_scaled = df
                 .Define("weight_scaled", [Lumi](double w){ return w * Lumi; }, {"weight"})
                 .Define("weight_sq_scaled", [Lumi](double w){ return (w*Lumi)*(w*Lumi); }, {"weight"});
+                //.Define("weight_sq_scaled", [Lumi](double w2){ return w2 * Lumi * Lumi; }, {"weight2"});
 
             // Define lepton pair counts for all sides
             //auto df_with_lep = df_scaled;  // debug temp
@@ -253,7 +252,7 @@ std::string BuildFitInput::BuildLeptonCut(const std::string& shorthand_in, const
     // make a mutable copy
     std::string shorthand = shorthand_in;
 
-    // split first token (count/type) from extraCuts using | instead of comma
+    // split first token (count/type) from extraCuts using |
     std::vector<std::string> tokens;
     {
         size_t sep = shorthand.find('|');
@@ -316,7 +315,7 @@ std::string BuildFitInput::BuildLeptonCut(const std::string& shorthand_in, const
         int n = std::stoi(match[2]);
         std::string prop = match[3];
         int val = qualMap[prop];
-        // LepQual_lep[_A/_B/_All] exist (we standardize on LepQual_lep_X names)
+        // LepQual_lep[_A/_B/_All] exist (standardize on LepQual_lep_X names)
         std::string branch = "LepQual_lep" + sideSuffix;
         return "(SUM(" + branch + "==" + std::to_string(val) + ")" + op + std::to_string(n) + ")";
     }
@@ -346,7 +345,7 @@ std::string BuildFitInput::BuildLeptonCut(const std::string& shorthand_in, const
     // 5) pair counts (possibly with extra pair-level cuts)
     // Accept forms: ">=1OSSF" or ">=1OSSF_a" (the latter already stripped if found)
     {
-        // For pair parsing we also want to capture if first token included a suffix (we already handled suffix earlier).
+        // For pair parsing we also want to capture if first token included a suffix (already handled suffix earlier).
         std::regex pairFullRgx(R"(^\s*(>=|<=|=|<|>)(\d+)(OSSF|OSOF|SSSF|SSOF)\s*$)", std::regex::icase);
         if (std::regex_match(first, match, pairFullRgx)) {
             std::string op = match[1]; if (op == "=") op = "==";
@@ -425,7 +424,7 @@ std::string BuildFitInput::BuildLeptonCut(const std::string& shorthand_in, const
             std::string branch = "Flavor_lep" + sideSuffix;
             return "(SUM(" + branch + "==" + std::to_string(code) + ")" + op + std::to_string(n) + ")";
         } else {
-            // "All" — use absolute PDGID
+            // "All" use absolute PDGID
             int pdg = (flavor == "Elec" || flavor == "elec") ? 11 : 13;
             return "(SUM(abs(PDGID_lep)==" + std::to_string(pdg) + ")" + op + std::to_string(n) + ")";
         }
@@ -464,7 +463,7 @@ ROOT::RDF::RNode BuildFitInput::DefineLeptonPairCounts(ROOT::RDF::RNode rdf, con
             return qual;
         }, {"LepQual_lep", indexBranch});
 
-        // also expose kinematics for the side (needed to compute pair masses / ΔR)
+        // also expose kinematics for the side (needed to compute pair masses / dR)
         rdf = rdf.Define("PT_lep_" + side, [=](const std::vector<double>& PT, const std::vector<int>& idx){
             ROOT::RVec<double> v(idx.size());
             for (size_t ii = 0; ii < idx.size(); ++ii) v[ii] = PT[idx[ii]];
@@ -549,7 +548,6 @@ ROOT::RDF::RNode BuildFitInput::DefineLeptonPairCounts(ROOT::RDF::RNode rdf, con
             return pairLambda(f,c,[](int fi,int fj,int ci,int cj){ return fi!=fj && ci==cj; });
         }, {flavorVar, chargeVar});
 
-        // keep counts for backward compatibility
         rdf = rdf.Define(prefix + "NumOSSFPairs", [=](const ROOT::RVec<std::pair<int,int>>& pairs){ return (int)pairs.size(); }, {prefix + "OSSFPairs"});
         rdf = rdf.Define(prefix + "NumOSOFPairs", [=](const ROOT::RVec<std::pair<int,int>>& pairs){ return (int)pairs.size(); }, {prefix + "OSOFPairs"});
         rdf = rdf.Define(prefix + "NumSSSFPairs", [=](const ROOT::RVec<std::pair<int,int>>& pairs){ return (int)pairs.size(); }, {prefix + "SSSFPairs"});
@@ -850,7 +848,6 @@ void BuildFitInput::ReportRegions(int verbosity,
         }
     };
 
-
     if(DoSig){
       std::cout << "Processing Sig nodes...\n";
       processNodes(_base_rdf_SigDict);
@@ -1051,10 +1048,10 @@ std::string BuildFitInput::GetnoZstarCut(){
 REGISTER_CUT(BuildFitInput, GetnoZstarCut, "noZstar");
 
 // --------------------------------------------------
-// BuildFitInput::ValidateUserCut
-// Uses the same style as ValidateDerivedVar: creates a tmp node, ensures columns exist,
-// defines a temporary test column for the cut expression, and uses the TryValidateType
-// machinery to JIT-check the cut on a small number of events (with recursive nCheck).
+// Creates a tmp node, ensures columns exist, defines a temporary test 
+// column for the cut expression, and uses the TryValidateType
+// machinery to JIT-check the cut on a small number of events.
+// Recursively checks up to the maximum number of events (maxCheck)
 // --------------------------------------------------
 bool BuildFitInput::ValidateUserCut(ROOT::RDF::RNode node,
                                     const CutDef &cut,
@@ -1115,9 +1112,9 @@ BuildFitInput::ValidateCuts(ROOT::RDF::RNode node,
     return valid;
 }
 
-// ---------------------------------------------------------------------
+// -------------------------------------
 // Example: User-defined cuts loader
-// ---------------------------------------------------------------------
+// -------------------------------------
 ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<std::string, CutDef>& ValidCuts){
 
     std::map<std::string, CutDef> cuts;
@@ -1142,7 +1139,7 @@ ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<st
     cuts[cut1.name] = cut1;
 
     // -----------------------------------------------------------------
-    // Example 2: HT_eta24 / MET ratio > 1.5  (keeps your original logic)
+    // Example 2: HT_eta24 / MET ratio > 1.5 
     // -----------------------------------------------------------------
     node = node.Define("HT_eta24_over_MET", [](double HT_eta24, double MET) {
         if (MET == 0.0) return 0.0;
