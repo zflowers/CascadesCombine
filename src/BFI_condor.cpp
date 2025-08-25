@@ -28,7 +28,7 @@ static void usage(const char* me) {
     std::cerr << "  --hist             Fill histograms\n";
     std::cerr << "  --hist-yaml        YAML file defining histogram expressions\n";
     std::cerr << "  --json             Write JSON yields\n";
-    std::cerr << "  --signal           Mark this dataset as signal\n";
+    std::cerr << "  --signal           Mark this process as signal\n";
     std::cerr << "  --sig-type TYPE    Specify signal type (sets --signal automatically)\n";
     std::cerr << "  --lumi VALUE       Integrated luminosity to scale yields\n";
     std::cerr << "  --sample-name NAME Optional name of the sample\n";

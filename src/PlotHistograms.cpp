@@ -5,16 +5,16 @@
 // Main
 // ----------------------
 int main(int argc, char* argv[]) {
-    string inputFile, histCfg, datasetCfg, binsCfg;
+    string inputFile, histCfg, processCfg, binsCfg;
     for(int i=1;i<argc;++i){
         string arg=argv[i];
         if(arg=="-i"||arg=="--input"){ if(i+1<argc) inputFile=argv[++i]; else{ cerr<<"[ERROR] Missing "<<arg<<endl; return 1;} }
         else if(arg=="-h"||arg=="--hist"){ if(i+1<argc) histCfg=argv[++i]; else{ cerr<<"[ERROR] Missing "<<arg<<endl; return 1;} }
-        else if(arg=="-d"||arg=="--dataset"){ if(i+1<argc) datasetCfg=argv[++i]; else{ cerr<<"[ERROR] Missing "<<arg<<endl; return 1;} }
+        else if(arg=="-d"||arg=="--process"){ if(i+1<argc) processCfg=argv[++i]; else{ cerr<<"[ERROR] Missing "<<arg<<endl; return 1;} }
         else if(arg=="-b"||arg=="--bins"){ if(i+1<argc) binsCfg=argv[++i]; else{ cerr<<"[ERROR] Missing "<<arg<<endl; return 1;} }
         // lumi used when filling histograms upstream; doesn't rescale, just need for labels
         else if(arg=="-l"||arg=="--lumi"){ if(i+1<argc) lumi=std::stoi(argv[++i]); else{ lumi = 1.;} }
-        else if(arg=="--help"){ cout<<"[PlotHistograms] Usage: "<<argv[0]<<" [options]\n -i <file.root>\n -h <hist.yaml>\n -d <dataset.yaml>\n -b <bins.yaml>\n"; return 0; }
+        else if(arg=="--help"){ cout<<"[PlotHistograms] Usage: "<<argv[0]<<" [options]\n -i <file.root>\n -h <hist.yaml>\n -d <process.yaml>\n -b <bins.yaml>\n"; return 0; }
         else{ cerr<<"[ERROR] Unknown arg "<<arg<<endl; return 1;}
     }
     if(inputFile.empty()){ cerr<<"[ERROR] No input ROOT file provided.\n"; return 1; }
@@ -96,7 +96,7 @@ int main(int argc, char* argv[]) {
 
     gSystem->mkdir(outputDir.c_str(), kTRUE);
     gSystem->mkdir((outputDir+"pdfs").c_str(), kTRUE);
-    copyConfigsToOutput(outputDir,histCfg,datasetCfg,binsCfg);
+    copyConfigsToOutput(outputDir,histCfg,processCfg,binsCfg);
 
     TString baseName=gSystem->BaseName(inputFileName); baseName.ReplaceAll(".root","");
     TString outRootName=Form("%soutput_%s.root",outputDir.c_str(),baseName.Data());

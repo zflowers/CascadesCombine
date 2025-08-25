@@ -95,7 +95,7 @@ def build_jobs(tool, bin_name, cuts, lep_cuts, predef_cuts, user_cuts, sms_filte
 
     def make_base_job(ds, fpath):
         return {
-            "dataset": ds,
+            "process": ds,
             "filepath": fpath,
             "fname_stem": Path(fpath).stem,
             "cuts": cuts,
@@ -215,7 +215,7 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, make_json
     # ----
     # Build each job's args and per-job remap entries (kept for compatibility)
     for job in jobs:
-        ds = job["dataset"]
+        ds = job["process"]
         fpath = job["filepath"]
         fname_stem = job["fname_stem"]
         sig_type = job.get("sig_type", None)
@@ -327,10 +327,10 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, make_json
 # ----------------------------------------
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--bkg_datasets", nargs="+", default=[],
-                        help="List of background dataset names")
-    parser.add_argument("--sig_datasets", nargs="+", default=[],
-                        help="List of signal dataset names")
+    parser.add_argument("--bkg_processes", nargs="+", default=[],
+                        help="List of background process names")
+    parser.add_argument("--sig_processes", nargs="+", default=[],
+                        help="List of signal process names")
     parser.add_argument("--sms-filters", nargs="*", default=[],
                         help="Optional list of SMS trees to filter; empty means no filtering")
     parser.add_argument("--bin", default="TEST")
@@ -352,15 +352,15 @@ def main():
 
     tool = pySampleTool.SampleTool()
 
-    # Load datasets
-    tool.LoadBkgs(args.bkg_datasets)
+    # Load processes
+    tool.LoadBkgs(args.bkg_processes)
     sms_filters = []
     if args.sms_filters:
         sms_filters = args.sms_filters
         pySampleTool.BFTool.SetFilterSignalsSMS(sms_filters)
-        tool.LoadSigs(args.sig_datasets)
+        tool.LoadSigs(args.sig_processes)
     else:
-        tool.LoadSigs(args.sig_datasets)
+        tool.LoadSigs(args.sig_processes)
         sms_filters = pySampleTool.BFTool.GetFilterSignalsSMS()
 
     jobs = build_jobs(

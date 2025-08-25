@@ -131,11 +131,11 @@ def strip_inline_comments(s):
             lines.append(line)
     return "\n".join(lines)
 
-def load_datasets(cfg_path):
+def load_processes(cfg_path):
     with open(cfg_path, "r") as f:
         cfg = yaml.safe_load(f)
-    bkg = cfg.get("datasets", {}).get("bkg", [])
-    sig = cfg.get("datasets", {}).get("sig", [])
+    bkg = cfg.get("processes", {}).get("bkg", [])
+    sig = cfg.get("processes", {}).get("sig", [])
     sms_filters = cfg.get("sms_filters", [])
     return bkg, sig, sms_filters
 
@@ -150,11 +150,11 @@ def build_bin_name(base, shorthand, side, extra=None):
 def build_lep_cuts(shorthand, side):
     return shorthand + (f"_{side}" if side else "")
 
-def build_command(bin_name, cfg, bkg_datasets, sig_datasets, sms_filters, make_json, make_root, hist_yaml, lumi):
+def build_command(bin_name, cfg, bkg_processes, sig_processes, sms_filters, make_json, make_root, hist_yaml, lumi):
     cmd = [
         "python3", "python/createJobs.py",
-        "--bkg_datasets", *bkg_datasets,
-        "--sig_datasets", *sig_datasets,
+        "--bkg_processes", *bkg_processes,
+        "--sig_processes", *sig_processes,
         "--bin", bin_name,
         "--cuts", cfg.get("cuts","").replace('\n',''),
         "--lep-cuts", cfg.get("lep-cuts","").replace('\n',''),
@@ -194,7 +194,7 @@ def main():
     parser.add_argument("--dryrun", action="store_true")
     parser.add_argument("--lumi", type=str, default="1.")
     parser.add_argument("--bins-cfg", type=str, default="config/bin_cfgs/examples.yaml")
-    parser.add_argument("--datasets-cfg", type=str, default="config/dataset_cfgs/datasets.yaml")
+    parser.add_argument("--processes-cfg", type=str, default="config/process_cfgs/processes.yaml")
     parser.add_argument("--make-json", action="store_true", help="Create JSON output")
     parser.add_argument("--make-root", action="store_true", help="Create ROOT output")
     parser.add_argument("--hist-yaml", type=str, default=None, help="YAML file for histogram configuration")
@@ -209,8 +209,8 @@ def main():
     dryrun = args.dryrun
     lumi = args.lumi
 
-    # Load datasets
-    bkg_datasets, sig_datasets, sms_filters = load_datasets(args.datasets_cfg)
+    # Load processes
+    bkg_processes, sig_processes, sms_filters = load_processes(args.processes_cfg)
 
     # Load bins
     bins_cfg_path = Path(args.bins_cfg)
@@ -228,7 +228,7 @@ def main():
     jobs = []
     print("\n===== BEGIN BIN DEFINITIONS =====\n")
     for bin_name, cfg in bins.items():
-        cmd = build_command(bin_name, cfg, bkg_datasets, sig_datasets, sms_filters, make_json, make_root, args.hist_yaml, lumi)
+        cmd = build_command(bin_name, cfg, bkg_processes, sig_processes, sms_filters, make_json, make_root, args.hist_yaml, lumi)
         jobs.append(cmd)
         print(f"[BIN-DEF] bin={bin_name} cuts={cfg.get('cuts')} lep-cuts={cfg.get('lep-cuts')} predefined-cuts={cfg.get('predefined-cuts')} user-cuts={cfg.get('user-cuts')}")
     print("===== END BIN DEFINITIONS =====\n")

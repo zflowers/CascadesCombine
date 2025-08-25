@@ -31,12 +31,12 @@ def wait_for_jobs():
     monitor.wait_until_jobs_below()
     return idle_time_end - idle_time_start
 
-def submit_jobs(config, datasets, hist, make_json=False, make_root=False, lumi="1."):
+def submit_jobs(config, processes, hist, make_json=False, make_root=False, lumi="1."):
     """
     Runs submitJobs.py to generate Condor scripts and merge scripts.
     Must create `master_merge.sh` with all merge commands.
     """
-    cmd = ["python3", "python/submitJobs.py", "--bins-cfg", config, "--datasets-cfg", datasets, "--lumi", lumi]
+    cmd = ["python3", "python/submitJobs.py", "--bins-cfg", config, "--processes-cfg", processes, "--lumi", lumi]
 
     if make_json:
         cmd.append("--make-json")
@@ -173,8 +173,8 @@ def parse_args():
                    help="Max resubmit cycles to attempt")
     p.add_argument("--bins-cfg", dest="bins_cfg", type=str, default="config/bin_cfgs/bin_examples.yaml",
                    help="Path to YAML config file containing bin definitions")
-    p.add_argument("--datasets-cfg", dest="datasets_cfg", type=str, default="config/dataset_cfgs/datasets.yaml",
-                   help="YAML config file containing dataset definitions")
+    p.add_argument("--processes-cfg", dest="processes_cfg", type=str, default="config/process_cfgs/processes.yaml",
+                   help="YAML config file containing process definitions")
     p.add_argument("--hist-cfg", dest="hist_cfg", type=str, default="config/hist_cfgs/hist_examples.yaml",
                    help="YAML config file containing histogram definitions")
     p.add_argument("--stress_test", dest="stress_test", action="store_true",
@@ -191,12 +191,12 @@ def main():
     args = parse_args()
     bins_cfg = args.bins_cfg
     hist_cfg = args.hist_cfg
-    datasets_cfg = args.datasets_cfg
+    processes_cfg = args.processes_cfg
     if args.stress_test:
         print("Running stress test. Using stress yamls instead of loaded arg yamls")
         bins_cfg = "config/bin_cfgs/bin_stress.yaml"
         hist_cfg = "config/hist_cfgs/hist_stress.yaml"
-        datasets_cfg = "config/dataset_cfgs/dataset_stress.yaml"
+        processes_cfg = "config/process_cfgs/process_stress.yaml"
 
     start_time = time.time()
 
@@ -208,7 +208,7 @@ def main():
 
     # 2) Submit jobs and generate master_merge.sh
     print("[run_all] Submitting jobs...", flush=True)
-    submit_jobs(config=bins_cfg, datasets=datasets_cfg,
+    submit_jobs(config=bins_cfg, processes=processes_cfg,
                 hist=hist_cfg,make_json=args.make_json, make_root=args.make_root, lumi=args.lumi)
 
     condor_time_start = time.time()
@@ -236,7 +236,7 @@ def main():
               "./PlotHistograms.x", 
               "-i", hadd_file,
               "-h", args.hist_cfg,
-              "-d", args.datasets_cfg,
+              "-d", args.processes_cfg,
               "-b", args.bins_cfg,
               "-l", args.lumi 
             ]
