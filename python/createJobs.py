@@ -252,6 +252,7 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, make_json
         # Flatten possible multi-line fields and build args_list
         cuts_flat = _flatten_field(job.get("cuts", ""))
         lep_cuts_flat = _flatten_field(job.get("lep_cuts", ""))
+        lep_cuts_flat = lep_cuts_flat.replace(" ","")
         predef_flat = _flatten_field(job.get("predef_cuts", ""))
         user_flat = _flatten_field(job.get("user_cuts", ""))
 

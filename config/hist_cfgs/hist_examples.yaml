@@ -1,13 +1,13 @@
 derived_variables:
-  - name: M_ratio
+  - name: MV_ratio
     expr: "SafeDiv(MVa, MVb, 0.0)" # MVa / MVb; default to 0 if MVb == 0
   - name: PT3_lep
     expr: "SafeIndex(PT_lep, 2, -1.0)" # third leading lep pt; default to -1 for events with less than 3 leps
 
 histograms:
-  - name: M_ratio_vs_PT3
+  - name: MV_ratio_vs_PT3
     type: "2D"
-    expr: "M_ratio"    # X-axis
+    expr: "MV_ratio"    # X-axis
     yexpr: "PT3_lep"   # Y-axis
     nbins: 20
     xmin: 0
@@ -15,32 +15,37 @@ histograms:
     nybins: 20
     ymin: 0
     ymax: 200
+    x_title: "MVa/MVb"
+    y_title: "p_{T}^{3l}"
     cuts: ""
     lep-cuts: ""
     predefined-cuts: ""
     user-cuts: ""
 
-  - name: M_ratio
+  - name: MV_ratio
     type: "1D"
-    expr: "M_ratio"
+    expr: "MV_ratio"
     nbins: 20
     xmin: 0
     xmax: 2
+    x_title: "MVa/MVb"
     cuts: ""
     lep-cuts: ""
     predefined-cuts: ""
     user-cuts: ""
 
-  - name: PTISR_vs_RISR
+  - name: RISR_vs_PTISR
     type: "2D"
-    expr: "PTISR"
-    yexpr: "RISR"
-    nbins: 20
-    xmin: 250
-    xmax: 800
-    nybins: 64
-    ymin: 0
-    ymax: 1
+    expr: "RISR"
+    yexpr: "PTISR"
+    nbins: 64
+    xmin: 0
+    xmax: 1
+    nybins: 20
+    ymin: 250
+    ymax: 800
+    x_title: "R_{ISR}"
+    y_title: "p_{T}^{ISR}"
     cuts: ""
     lep-cuts: ""
     predefined-cuts: ""
@@ -52,6 +57,7 @@ histograms:
     nbins: 64
     xmin: 0
     xmax: 150
+    x_title: "M_{#perp} for R_{ISR}>=0.85"
     cuts: "RISR>=0.85"
     lep-cuts: ""
     predefined-cuts: ""
@@ -63,6 +69,7 @@ histograms:
     nbins: 64
     xmin: 0
     xmax: 150
+    x_title: "M_{#perp} for R_{ISR}<0.85"
     cuts: "RISR<0.85"
     lep-cuts: ""
     predefined-cuts: ""
@@ -74,6 +81,8 @@ histograms:
     nbins: 64
     xmin: 0
     xmax: 500
+    x_title: "MET"
+    y_title: "METtrig Eff"
     cuts: ""
     lep-cut: ""
     predefined-cuts: ""
@@ -85,6 +94,8 @@ histograms:
     nbins: 64
     xmin: 0
     xmax: 500
+    x_title: "MET"
+    y_title: "METtrig Eff"
     cuts: "METtrigger==1"
     lep-cut: ""
     predefined-cuts: ""

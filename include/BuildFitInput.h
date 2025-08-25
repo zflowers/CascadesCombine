@@ -1,8 +1,6 @@
 #ifndef BFI_H
 #define BFI_H
 #include "BuildFitTools.h"//Bin and process source
-#include <ROOT/RDataFrame.hxx>
-#include <ROOT/RVec.hxx>
 #include "Math/Vector4Dfwd.h"
 #include "Math/PxPyPzE4D.h"
 #include "TInterpreter.h"
@@ -20,6 +18,12 @@ typedef std::map< proc_cut_pair, std::unique_ptr<RN> > nodemap;
 typedef std::map<proc_cut_pair, double> errormap;
 typedef std::map<proc_cut_pair, double> countmap;
 typedef std::map<proc_cut_pair, double> summap;
+
+struct CutDef {
+    std::string name;                   // user-defined name for the cut
+    std::vector<std::string> columns;   // columns needed to compute/apply the cut
+    std::string expression;             // string to be used in node.Filter(...)
+};
 
 class BuildFitInput{
 	
@@ -108,12 +112,9 @@ class BuildFitInput{
                     cutMap_[name] = fn;
                 }
             };
-        struct BuildFitInputCutDef {
-            std::string name;                   // user-defined name for the cut
-            std::vector<std::string> columns;   // columns needed to compute/apply the cut
-            std::string expression;             // string to be used in node.Filter(...)
-        };
-        static std::map<string, BuildFitInputCutDef> loadCutsUser(ROOT::RDF::RNode &node);
+        static ROOT::RDF::RNode loadCutsUser(ROOT::RDF::RNode &node, std::map<std::string, CutDef>& cuts);
+        static bool ValidateUserCut(ROOT::RDF::RNode node, const CutDef &cut, unsigned nCheck = 50, unsigned maxCheck = 5000);
+        static std::map<std::string, CutDef> ValidateCuts(ROOT::RDF::RNode node, const std::map<std::string, CutDef>& cuts, unsigned nCheck = 50, unsigned maxCheck = 5000);
 
     private:
         static std::unordered_map<std::string, CutFn> cutMap_;
@@ -142,4 +143,3 @@ inline void RegisterSafeHelpers() {
     )");
 }
 #endif
-using CutDef = BuildFitInput::BuildFitInputCutDef;

@@ -16,7 +16,6 @@
 #include "TLorentzVector.h"
 #include "yaml-cpp/yaml.h"
 #include "BuildFitInput.h"
-#include "BuildFitTools.h"
 #include "SampleTool.h"
 namespace fs = std::filesystem;
 
@@ -177,14 +176,14 @@ static bool writePartialJSON(const std::string& outPath,
     return true;
 }
 
-// Parse YAML histograms
 struct HistDef {
-    std::string name, expr, yexpr, type;
+    std::string name, expr, yexpr, type, x_title, y_title;
     int nbins=0, nybins=0;
     double xmin=0, xmax=0, ymin=0, ymax=0;
     std::vector<std::string> cuts, lepCuts, predefCuts, userCuts;
 };
 
+// Parse YAML histograms
 static std::vector<HistDef> loadHistogramsYAML(const std::string &yamlPath, BuildFitInput* BFI) {
     std::vector<HistDef> hists;
     YAML::Node root = YAML::LoadFile(yamlPath);
@@ -196,7 +195,9 @@ static std::vector<HistDef> loadHistogramsYAML(const std::string &yamlPath, Buil
         h.nbins = hnode["nbins"].as<int>();
         h.xmin = hnode["xmin"].as<double>();
         h.xmax = hnode["xmax"].as<double>();
+        h.x_title = hnode["x_title"].as<std::string>();
         if (h.type == "2D") {
+            h.y_title = hnode["y_title"].as<std::string>();
             h.yexpr = hnode["yexpr"].as<std::string>();
             h.nybins = hnode["nybins"].as<int>();
             h.ymin = hnode["ymin"].as<double>();
@@ -343,6 +344,7 @@ static std::vector<HistDef> loadHistogramsUser(ROOT::RDF::RNode &node) {
     h1.nbins = 50;
     h1.xmin = 0;
     h1.xmax = 200;
+    h1.x_title = "M_{ll} for OSSF pair of lead leps";
     // The main loop will interpret these strings as filters, so use the column name:
     // it will call node = node.Filter(BFI->ExpandMacros("OSSF_pair"));
     h1.cuts = {"OSSF_pair"};
@@ -364,6 +366,8 @@ static std::vector<HistDef> loadHistogramsUser(ROOT::RDF::RNode &node) {
     h2.nybins = 50;
     h2.ymin = 0;
     h2.ymax = 5;
+    h2.x_title = "M_{ll} for OSSF pair of lead leps";
+    h2.y_title = "HT/MET";
     h2.cuts = {};       // no extra event-level cuts here (hist loop may also apply global cuts)
     h2.lepCuts = {};
     h2.predefCuts = {};
@@ -377,14 +381,6 @@ static std::vector<HistDef> loadHistogramsUser(ROOT::RDF::RNode &node) {
     return hdefs;
 }
 
-// ----------------------
-// Derived variables
-// ----------------------
-struct DerivedVar {
-    std::string name; // variable name to be created in the RDataFrame
-    std::string expr; // expression to define it (ROOT/C++ expression)
-};
-
 static std::vector<DerivedVar> loadDerivedVariablesYAML(const std::string &yamlPath) {
     std::vector<DerivedVar> vars;
     YAML::Node root = YAML::LoadFile(yamlPath);
@@ -397,167 +393,6 @@ static std::vector<DerivedVar> loadDerivedVariablesYAML(const std::string &yamlP
         vars.push_back(dv);
     }
     return vars;
-}
-
-// --------------------------------------------------
-// Type-detection helper: container-like detection
-// --------------------------------------------------
-template <typename, typename = void>
-struct has_value_type : std::false_type {};
-
-template <typename T>
-struct has_value_type<T, std::void_t<typename T::value_type>> : std::true_type {};
-
-// --------------------------------------------------
-// TryValidateType: attempt to Take<T> over the first nCheck events
-// - node is the tmpNode (the Define was already done on it)
-// - Recurses with larger nCheck when results are sparse (empty / all-NaN for floats)
-// - Returns true if the type T is compatible (even if sparse); false only when Take<T> throws
-// --------------------------------------------------
-template <typename T>
-static bool TryValidateType(ROOT::RDF::RNode node,
-                            const DerivedVar &dv,
-                            unsigned nCheck = 50,
-                            unsigned maxCheck = 5000) {
-    try {
-        // create a subset for this attempt (so recursion with larger nCheck works)
-        auto subset = node.Range(0, static_cast<long>(nCheck));
-
-        // This will throw if T is not compatible with the column type (caught below)
-        auto vals = subset.Take<T>(dv.name + "_test").GetValue();
-
-        // If we reached here, the column can be interpreted as T.
-        // Now decide whether the data are "sparse" and we should retry with more events.
-
-        // --- scalar floating point (e.g. double) ---
-        if constexpr (std::is_floating_point_v<T>) {
-            bool anyFinite = std::any_of(vals.begin(), vals.end(), [](auto v){ return std::isfinite(v); });
-            if (!anyFinite) {
-                if (nCheck < maxCheck) {
-                    unsigned next = std::min(nCheck * 2u, maxCheck);
-                    return TryValidateType<T>(node, dv, next, maxCheck);
-                } else {
-                    std::cerr << "[BFI_condor] WARNING: '" << dv.name
-                              << "' evaluated as " << typeid(T).name()
-                              << " but produced no finite values in first " << maxCheck << " events (sparse data).\n";
-                }
-            }
-            return true; // type compatible
-        }
-
-        // --- container-like (e.g. ROOT::VecOps::RVec<Inner>) ---
-        else if constexpr (has_value_type<T>::value) {
-            using Inner = typename T::value_type;
-            if constexpr (std::is_floating_point_v<Inner>) {
-                bool anyFiniteInner = false;
-                for (const auto &container : vals) {
-                    for (const auto &inner : container) {
-                        if (std::isfinite(inner)) { anyFiniteInner = true; break; }
-                    }
-                    if (anyFiniteInner) break;
-                }
-                if (!anyFiniteInner) {
-                    if (nCheck < maxCheck) {
-                        unsigned next = std::min(nCheck * 2u, maxCheck);
-                        return TryValidateType<T>(node, dv, next, maxCheck);
-                    } else {
-                        std::cerr << "[BFI_condor] WARNING: '" << dv.name
-                                  << "' evaluated as container of " << typeid(Inner).name()
-                                  << " but produced no finite inner values in first " << maxCheck << " events (sparse data).\n";
-                    }
-                }
-                return true;
-            } else {
-                // inner is not floating (int/bool etc.)
-                if (vals.empty()) {
-                    if (nCheck < maxCheck) {
-                        unsigned next = std::min(nCheck * 2u, maxCheck);
-                        return TryValidateType<T>(node, dv, next, maxCheck);
-                    } else {
-                        std::cerr << "[BFI_condor] WARNING: '" << dv.name
-                                  << "' evaluated as container type " << typeid(T).name()
-                                  << " but returned empty sequence in first " << maxCheck << " events (sparse data).\n";
-                    }
-                }
-                return true;
-            }
-        }
-
-        // --- non-floating scalar (int, bool, etc.) ---
-        else {
-            if (vals.empty()) {
-                if (nCheck < maxCheck) {
-                    unsigned next = std::min(nCheck * 2u, maxCheck);
-                    return TryValidateType<T>(node, dv, next, maxCheck);
-                } else {
-                    std::cerr << "[BFI_condor] WARNING: '" << dv.name
-                              << "' evaluated as " << typeid(T).name()
-                              << " but returned empty vector in first " << maxCheck << " events (sparse data).\n";
-                }
-            }
-            return true;
-        }
-
-    } catch (const std::exception &e) {
-        // Take<T> threw — T is incompatible with the column type (or some other error)
-        // Return false to allow caller to try the next candidate type.
-        return false;
-    } catch (...) {
-        return false;
-    }
-}
-
-// --------------------------------------------------
-// ValidateDerivedVar: try a set of candidate scalar/vector types
-// --------------------------------------------------
-static bool ValidateDerivedVar(ROOT::RDF::RNode node,
-                               const DerivedVar &dv,
-                               unsigned nCheck = 50,
-                               unsigned maxCheck = 5000) {
-    try {
-        // Define temporary test column (tmpNode holds the Define)
-        ROOT::RDF::RNode tmpNode = node.Define(dv.name + "_test", dv.expr);
-
-        // Try candidate scalar types first (order matters a bit: prefer double/float)
-        if (TryValidateType<double>(tmpNode, dv, nCheck, maxCheck)) return true;
-        if (TryValidateType<float>(tmpNode, dv, nCheck, maxCheck))  return true;
-        if (TryValidateType<int>(tmpNode, dv, nCheck, maxCheck))    return true;
-        if (TryValidateType<unsigned int>(tmpNode, dv, nCheck, maxCheck)) return true;
-        if (TryValidateType<long long>(tmpNode, dv, nCheck, maxCheck))    return true;
-        if (TryValidateType<unsigned long long>(tmpNode, dv, nCheck, maxCheck)) return true;
-        if (TryValidateType<bool>(tmpNode, dv, nCheck, maxCheck))   return true;
-
-        // Try container types (ROOT::VecOps::RVec<T>)
-        if (TryValidateType<ROOT::VecOps::RVec<double>>(tmpNode, dv, nCheck, maxCheck)) return true;
-        if (TryValidateType<ROOT::VecOps::RVec<float>>(tmpNode, dv, nCheck, maxCheck))  return true;
-        if (TryValidateType<ROOT::VecOps::RVec<int>>(tmpNode, dv, nCheck, maxCheck))    return true;
-        if (TryValidateType<ROOT::VecOps::RVec<unsigned int>>(tmpNode, dv, nCheck, maxCheck)) return true;
-        if (TryValidateType<ROOT::VecOps::RVec<long long>>(tmpNode, dv, nCheck, maxCheck))    return true;
-        if (TryValidateType<ROOT::VecOps::RVec<unsigned long long>>(tmpNode, dv, nCheck, maxCheck)) return true;
-        if (TryValidateType<ROOT::VecOps::RVec<bool>>(tmpNode, dv, nCheck, maxCheck))   return true;
-
-        // Nothing matched: emit hints and fail
-        std::cerr << "[BFI_condor] ERROR validating '" << dv.name
-                  << "' from expression: " << dv.expr << "\n";
-        if (dv.expr.find("/") != std::string::npos &&
-            dv.expr.find("SafeDiv") == std::string::npos) {
-            std::cerr << "  HINT: Expression contains '/', consider using SafeDiv(num, den, def)\n";
-        }
-        if (dv.expr.find("[") != std::string::npos &&
-            dv.expr.find("SafeIndex") == std::string::npos) {
-            std::cerr << "  HINT: Expression uses indexing '[]', consider using SafeIndex(vec, idx, defaultVal)\n";
-        }
-
-        return false;
-
-    } catch (const std::exception &e) {
-        std::cerr << "[BFI_condor] WARNING: Exception validating '" << dv.name
-                  << "': " << e.what() << "\n";
-        return false;
-    } catch (...) {
-        std::cerr << "[BFI_condor] WARNING: Unknown exception validating '" << dv.name << "'\n";
-        return false;
-    }
 }
 
 static bool ValidateDerivedVarNode(ROOT::RDF::RNode node, const DerivedVar &dv, unsigned nCheck = 50) {
@@ -667,10 +502,14 @@ void FillHistFromPlan(const ROOT::RDF::RNode &node,
 
     if (h.type == "1D") {
         auto hist = hnode.Histo1D({hname.c_str(), hname.c_str(), h.nbins, h.xmin, h.xmax}, h.expr, "weight_scaled");
+        hist->GetXaxis()->SetTitle(h.x_title.c_str());
+        hist->GetYaxis()->SetTitle(h.y_title.empty() ? "Events" : h.y_title.c_str());
         if (hist->Write() == 0) std::cerr << "error writing: " << hname << std::endl;
     } else if (h.type == "2D") {
         auto hist = hnode.Histo2D({hname.c_str(), hname.c_str(), h.nbins, h.xmin, h.xmax, h.nybins, h.ymin, h.ymax},
                                   h.expr, h.yexpr, "weight_scaled");
+        hist->GetXaxis()->SetTitle(h.x_title.c_str());
+        hist->GetYaxis()->SetTitle(h.y_title.empty() ? "Events" : h.y_title.c_str());
         if (hist->Write() == 0) std::cerr << "error writing: " << hname << std::endl;
     }
 }
@@ -786,80 +625,64 @@ int main(int argc, char** argv) {
         df_with_lep = BFI->DefinePairKinematics(df_with_lep,"A");
         df_with_lep = BFI->DefinePairKinematics(df_with_lep,"B");
 
+        // --- Define node to apply final event selection cuts ---
+        ROOT::RDF::RNode node = df_with_lep;
+        
+        // --- Define any other derived variables from YAML ---
         std::vector<DerivedVar> derivedVars;
         if(doHist && !histYamlPath.empty()){
             derivedVars = loadDerivedVariablesYAML(histYamlPath);
         }
-    
+        
+        // --- Validate derived variables ---
         for (const auto &dv : derivedVars) {
-            ValidateDerivedVarNode(df_with_lep, dv);
+            ValidateDerivedVarNode(node, dv);
         }
-    
-        // --- Define derived variables after checking ---
+        
+        // --- Define derived variables ---
         for(const auto &dv : derivedVars){
             try{
-                df_with_lep = df_with_lep.Define(dv.name, dv.expr);
+                node = node.Define(dv.name, dv.expr);
             }catch(const std::exception &e){
                 std::cerr << "[BFI_condor] WARNING: Failed to define derived variable '"
                           << dv.name << "' Expression: " << dv.expr
                           << " Exception: " << e.what() << "\n";
             }
         }
-
-        // --- Define node to apply final event selection cuts ---
-        ROOT::RDF::RNode node = df_with_lep;
         
-        // --- Load user cuts ---
-        auto allUserCuts = BuildFitInput::loadCutsUser(node);
-        
-        // --- Validate user cuts ---
-        struct ValidUserCut { std::string name, expanded; };
-        std::vector<ValidUserCut> validUserCuts;
-        validUserCuts.reserve(userCutsVec.size());
-        
+        // --- Load all user cuts ---
+        std::map<std::string, CutDef> allUserCuts;
+        node = BuildFitInput::loadCutsUser(node, allUserCuts);
+        // --- Select which user cuts to keep ---
+        std::vector<DerivedVar> validUserCuts;
         for (const auto &cutName : userCutsVec) {
             auto it = allUserCuts.find(cutName);
             if (it == allUserCuts.end()) {
-                std::cerr << "[BFI_condor] WARNING: User cut '" << cutName << "' not found\n";
+                std::cerr << "[BFI_condor] Requested cut not found: " << cutName << "\n";
                 continue;
             }
             const auto &cut = it->second;
-        
-            bool ok = true;
-            for (const auto &col : cut.columns) {
-                DerivedVar dv; dv.name = col; dv.expr = col;
-                if (!ValidateDerivedVarNode(df_with_lep, dv)) {
-                    std::cerr << "[BFI_condor] WARNING: Skipping user cut '"
-                              << cutName << "' due to invalid derived variable '"
-                              << col << "'\n";
-                    ok = false;
-                    break;
-                }
-            }
-            if (!ok) continue;
-        
             std::string expanded = BFI->ExpandMacros(cut.expression);
-            if (expanded.empty()) continue;
-        
-            validUserCuts.push_back({cutName, expanded});
+            if (!expanded.empty())
+                validUserCuts.push_back({cutName, expanded});
         }
-        
+
         if(doHist){
             // --- Build ordered cuts list ---
             std::vector<std::string> cutsOrdered;
             std::vector<std::string> cutLabels;
             for (const auto &c : finalCutsExpanded) { if (!c.empty()) { cutsOrdered.push_back(c); cutLabels.push_back(c); } }
-            for (const auto &uc : validUserCuts) { cutsOrdered.push_back(uc.expanded); cutLabels.push_back(uc.name); }
+            for (const auto &uc : validUserCuts) { cutsOrdered.push_back(uc.expr); cutLabels.push_back(uc.name); }
             const int Ncuts = static_cast<int>(cutsOrdered.size());
             
             // --- Book single CutFlow histogram (Ncuts+1 bins: 0..Ncuts) ---
-            std::string cfName = processName + std::string("_CutFlow");
+            std::string cfName = binName + "__" + processName + "__CutFlow";
             auto hist_CutFlow = std::make_shared<TH1D>(cfName.c_str(), cfName.c_str(), Ncuts + 1, 0.0, double(Ncuts + 1));
             //hist_CutFlow->Sumw2();
             
             // --- Dummy total events (bin 0) ---
             // Count() returns an RResultPtr; force evaluation with GetValue()
-            double totalEvents = static_cast<double>(df_with_lep.Count().GetValue());
+            double totalEvents = static_cast<double>(node.Count().GetValue());
             hist_CutFlow->SetBinContent(0, totalEvents);
             hist_CutFlow->SetBinError(0, std::sqrt(totalEvents));
             
@@ -867,7 +690,7 @@ int main(int argc, char** argv) {
             if (Ncuts > 0) {
                 auto make_pass_name = [&](int i){ return processName + std::string("_pass_") + std::to_string(i+1); };
             
-                ROOT::RDF::RNode defNode = df_with_lep;
+                ROOT::RDF::RNode defNode = node;
                 for (int i = 0; i < Ncuts; ++i) {
                     std::string expr = (i == 0) ? ("(" + cutsOrdered[0] + ")")
                                                 : (make_pass_name(i-1) + " && (" + cutsOrdered[i] + ")");
@@ -919,14 +742,12 @@ int main(int argc, char** argv) {
 
         // --- Apply filters to node ---
         for (const auto &c : finalCutsExpanded) if (!c.empty()) node = node.Filter(c);
-        for (const auto &vc : validUserCuts) node = node.Filter(vc.expanded);
+        for (const auto &vc : validUserCuts) node = node.Filter(vc.expr);
     
         // --- Histograms ---
         if(doHist && !histYamlPath.empty()){
             // --- prepare histDefs as before ---
-            std::cout << "Loading histogramsUser \n";
             auto userHists = loadHistogramsUser(node);
-            std::cout << "Loaded histogramsUser \n";
             auto histDefs = loadHistogramsYAML(histYamlPath, BFI);
             histDefs.insert(histDefs.end(), userHists.begin(), userHists.end());
             

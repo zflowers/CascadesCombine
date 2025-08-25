@@ -26,8 +26,8 @@ def wait_for_jobs():
     """
     idle_time_start = time.time()
     monitor = CondorJobCountMonitor(threshold=1, verbose=False)
-    idle_time_end = time.time()
     monitor.wait_until_no_idle_jobs()
+    idle_time_end = time.time()
     monitor.wait_until_jobs_below()
     return idle_time_end - idle_time_start
 

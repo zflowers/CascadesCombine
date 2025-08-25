@@ -1050,12 +1050,77 @@ std::string BuildFitInput::GetnoZstarCut(){
 }
 REGISTER_CUT(BuildFitInput, GetnoZstarCut, "noZstar");
 
+// --------------------------------------------------
+// BuildFitInput::ValidateUserCut
+// Uses the same style as ValidateDerivedVar: creates a tmp node, ensures columns exist,
+// defines a temporary test column for the cut expression, and uses the TryValidateType
+// machinery to JIT-check the cut on a small number of events (with recursive nCheck).
+// --------------------------------------------------
+bool BuildFitInput::ValidateUserCut(ROOT::RDF::RNode node,
+                                    const CutDef &cut,
+                                    unsigned nCheck,
+                                    unsigned maxCheck) {
+    try {
+        // work on a copy of the node so we don't modify the caller's chain
+        ROOT::RDF::RNode tmpNode = node;
+
+        // Ensure columns named in the cut have a placeholder if missing.
+        // (Usually these columns will have been defined by loadCutsUser already
+        //  so this is mostly a safety net.)
+        auto colNames = tmpNode.GetColumnNames();
+        for (const auto &col : cut.columns) {
+            if (std::find(colNames.begin(), colNames.end(), col) == colNames.end()) {
+                // define a simple dummy scalar to allow expression compilation.
+                // If user expects a vector here, the detailed TryValidateType will detect
+                // type mismatch and reject the cut.
+                tmpNode = tmpNode.Define(col, [](){ return 0.0; });
+            }
+        }
+
+        // Wrap the cut expression into a DerivedVar so we can reuse the derived-var validator
+        DerivedVar dv;
+        dv.name = cut.name + "_test";
+        dv.expr = cut.expression;
+
+        // Validate via the same machinery (tries multiple types / containers, recurses if sparse)
+        return ValidateDerivedVar(tmpNode, dv, nCheck, maxCheck);
+
+    } catch (const std::exception &e) {
+        std::cerr << "[BuildFitInput] Exception validating user cut '" << cut.name
+                  << "': " << e.what() << "\n";
+        return false;
+    } catch (...) {
+        std::cerr << "[BuildFitInput] Unknown exception validating user cut '" << cut.name << "'\n";
+        return false;
+    }
+}
+
+std::map<std::string, CutDef>
+BuildFitInput::ValidateCuts(ROOT::RDF::RNode node,
+                            const std::map<std::string, CutDef>& cuts,
+                            unsigned nCheck,
+                            unsigned maxCheck) {
+    std::map<std::string, CutDef> valid;
+
+    for (const auto& kv : cuts) {
+        const auto& cut = kv.second;
+        if (BuildFitInput::ValidateUserCut(node, cut, nCheck, maxCheck)) {
+            valid[kv.first] = cut;
+        } else {
+            std::cerr << "[BuildFitInput] Cut '" << cut.name
+                      << "' is invalid and will not be available.\n";
+        }
+    }
+
+    return valid;
+}
+
 // ---------------------------------------------------------------------
 // Example: User-defined cuts loader
 // ---------------------------------------------------------------------
-std::map<std::string, CutDef> BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node) {
-    std::map<std::string, CutDef> cuts;
+ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<std::string, CutDef>& ValidCuts){
 
+    std::map<std::string, CutDef> cuts;
     // Example 1: invariant mass of leading two jets -> M_jj (double)
     node = node.Define("M_jj", [](const std::vector<double> &pt,
                                   const std::vector<double> &eta,
@@ -1091,35 +1156,48 @@ std::map<std::string, CutDef> BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node
     cuts[cut2.name] = cut2;
 
     // -----------------------------------------------------------------
-    // Example 3: Combined lepton-jet cut (pT + deltaR)
-    // We compute DeltaR between leading lepton and leading jet directly as a double.
+    // Example 3: Combined lepton-jet cut (pT + DeltaR)
+    // Compute DeltaR using TLorentzVector::DeltaR, return double
+    // Also define leading pT columns to avoid unsafe indexing
     // -----------------------------------------------------------------
-    node = node.Define("DeltaR_lep0_jet0", [](const std::vector<double> &eta_lep,
+    
+    // Leading lepton pT
+    node = node.Define("PT_lep0", [](const std::vector<double> &pt){
+        return pt.empty() ? 0.0 : pt[0];
+    }, {"PT_lep"});
+    
+    // Leading jet pT
+    node = node.Define("PT_jet0", [](const std::vector<double> &pt){
+        return pt.empty() ? 0.0 : pt[0];
+    }, {"PT_jet"});
+    
+    // DeltaR between leading lepton and leading jet
+    node = node.Define("DeltaR_lep0_jet0", [](const std::vector<double> &pt_lep,
+                                             const std::vector<double> &eta_lep,
                                              const std::vector<double> &phi_lep,
+                                             const std::vector<double> &m_lep,
+                                             const std::vector<double> &pt_jet,
                                              const std::vector<double> &eta_jet,
-                                             const std::vector<double> &phi_jet) {
-        // If either leading object is missing, return a large value (so typical >0.4 checks fail)
-        if (eta_lep.empty() || phi_lep.empty() || eta_jet.empty() || phi_jet.empty()) return 999.0;
-        const double eta1 = eta_lep[0];
-        const double phi1 = phi_lep[0];
-        const double eta2 = eta_jet[0];
-        const double phi2 = phi_jet[0];
-
-        double deta = eta1 - eta2;
-        double dphi = phi1 - phi2;
-        // canonicalize dphi into [-pi, pi]
-        constexpr double PI = 3.14159265358979323846;
-        while (dphi > PI)  dphi -= 2.0 * PI;
-        while (dphi <= -PI) dphi += 2.0 * PI;
-
-        return std::sqrt(deta * deta + dphi * dphi);
-    }, {"Eta_lep","Phi_lep","Eta_jet","Phi_jet"});
-
+                                             const std::vector<double> &phi_jet,
+                                             const std::vector<double> &m_jet) {
+        if(pt_lep.empty() || eta_lep.empty() || phi_lep.empty() || m_lep.empty() ||
+           pt_jet.empty() || eta_jet.empty() || phi_jet.empty() || m_jet.empty()) {
+            return 999.0; // safe fallback
+        }
+    
+        TLorentzVector lep, jet;
+        lep.SetPtEtaPhiM(pt_lep[0], eta_lep[0], phi_lep[0], m_lep[0]);
+        jet.SetPtEtaPhiM(pt_jet[0], eta_jet[0], phi_jet[0], m_jet[0]);
+    
+        return lep.DeltaR(jet);
+    }, {"PT_lep","Eta_lep","Phi_lep","M_lep",
+        "PT_jet","Eta_jet","Phi_jet","M_jet"});
+    
+    // Define the user cut using only doubles, safe for validation
     CutDef cut3;
     cut3.name = "lep0_pt25_jet0_pt30_dR0p4";
-    // note: keeping PT_lep and PT_jet in columns because the expression uses indexing on those
-    cut3.columns = {"PT_lep","PT_jet","DeltaR_lep0_jet0"};
-    cut3.expression = "(PT_lep[0] > 25) && (PT_jet[0] > 30) && (DeltaR_lep0_jet0 > 0.4)";
+    cut3.columns = {"PT_lep0","PT_jet0","DeltaR_lep0_jet0"};
+    cut3.expression = "(PT_lep0 > 25) && (PT_jet0 > 30) && (DeltaR_lep0_jet0 > 0.4)";
     cuts[cut3.name] = cut3;
 
     // -----------------------------------------------------------------------------
@@ -1156,6 +1234,13 @@ std::map<std::string, CutDef> BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node
     // Used *_vect in the names to avoid conflicts with the scalar-versions above.
     */
 
-    return cuts;
+    // Validate the cuts that the user wrote
+    ValidCuts = ValidateCuts(node, cuts);
+    for (const auto &kv : cuts) {
+        if (!ValidCuts.count(kv.first)) {
+            std::cerr << "[BuildFitInput loadUserCuts WARN] User cut \"" << kv.first
+                      << "\" failed validation and will be ignored.\n";
+        }
+    }
+    return node;
 }
-
