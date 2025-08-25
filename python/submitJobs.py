@@ -12,7 +12,6 @@ import stat
 cpus = "1"
 memory = "1 GB"
 dryrun = False
-lumi = str(400.)
 max_workers = 4
 limit_submit = None  # limit number of job submissions (None=no limit)
 
@@ -151,7 +150,7 @@ def build_bin_name(base, shorthand, side, extra=None):
 def build_lep_cuts(shorthand, side):
     return shorthand + (f"_{side}" if side else "")
 
-def build_command(bin_name, cfg, bkg_datasets, sig_datasets, sms_filters, make_json, make_root, hist_yaml):
+def build_command(bin_name, cfg, bkg_datasets, sig_datasets, sms_filters, make_json, make_root, hist_yaml, lumi):
     cmd = [
         "python3", "python/createJobs.py",
         "--bkg_datasets", *bkg_datasets,
@@ -189,11 +188,11 @@ def submit_job(cmd):
 # MAIN
 # -----------------------------
 def main():
-    global dryrun, lumi
+    global dryrun
 
     parser = argparse.ArgumentParser(description="Submit BFI jobs with templated bins")
     parser.add_argument("--dryrun", action="store_true")
-    parser.add_argument("--lumi", type=str, default=lumi)
+    parser.add_argument("--lumi", type=str, default="1.")
     parser.add_argument("--bins-cfg", type=str, default="config/bin_cfgs/examples.yaml")
     parser.add_argument("--datasets-cfg", type=str, default="config/dataset_cfgs/datasets.yaml")
     parser.add_argument("--make-json", action="store_true", help="Create JSON output")
@@ -229,7 +228,7 @@ def main():
     jobs = []
     print("\n===== BEGIN BIN DEFINITIONS =====\n")
     for bin_name, cfg in bins.items():
-        cmd = build_command(bin_name, cfg, bkg_datasets, sig_datasets, sms_filters, make_json, make_root, args.hist_yaml)
+        cmd = build_command(bin_name, cfg, bkg_datasets, sig_datasets, sms_filters, make_json, make_root, args.hist_yaml, lumi)
         jobs.append(cmd)
         print(f"[BIN-DEF] bin={bin_name} cuts={cfg.get('cuts')} lep-cuts={cfg.get('lep-cuts')} predefined-cuts={cfg.get('predefined-cuts')} user-cuts={cfg.get('user-cuts')}")
     print("===== END BIN DEFINITIONS =====\n")

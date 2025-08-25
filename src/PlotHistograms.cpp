@@ -12,6 +12,8 @@ int main(int argc, char* argv[]) {
         else if(arg=="-h"||arg=="--hist"){ if(i+1<argc) histCfg=argv[++i]; else{ cerr<<"[ERROR] Missing "<<arg<<endl; return 1;} }
         else if(arg=="-d"||arg=="--dataset"){ if(i+1<argc) datasetCfg=argv[++i]; else{ cerr<<"[ERROR] Missing "<<arg<<endl; return 1;} }
         else if(arg=="-b"||arg=="--bins"){ if(i+1<argc) binsCfg=argv[++i]; else{ cerr<<"[ERROR] Missing "<<arg<<endl; return 1;} }
+        // lumi used when filling histograms upstream; doesn't rescale, just need for labels
+        else if(arg=="-l"||arg=="--lumi"){ if(i+1<argc) lumi=std::stoi(argv[++i]); else{ lumi = 1.;} }
         else if(arg=="--help"){ cout<<"[PlotHistograms] Usage: "<<argv[0]<<" [options]\n -i <file.root>\n -h <hist.yaml>\n -d <dataset.yaml>\n -b <bins.yaml>\n"; return 0; }
         else{ cerr<<"[ERROR] Unknown arg "<<arg<<endl; return 1;}
     }
@@ -21,6 +23,7 @@ int main(int argc, char* argv[]) {
     TFile* inFile=TFile::Open(inputFileName,"READ");
     if(!inFile||inFile->IsZombie()){ cerr<<"Error: cannot open input "<<inputFileName<<endl; return 1; }
     gStyle->SetOptStat(0); gStyle->SetOptTitle(0);
+    loadFormatMaps();
 
     SampleTool tool; tool.LoadAllFromMaster();
 

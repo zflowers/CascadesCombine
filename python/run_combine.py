@@ -31,12 +31,12 @@ def wait_for_jobs():
     monitor.wait_until_jobs_below()
     return idle_time_end - idle_time_start
 
-def submit_jobs(config, datasets, hist, make_json=False, make_root=False):
+def submit_jobs(config, datasets, hist, make_json=False, make_root=False, lumi="1."):
     """
     Runs submitJobs.py to generate Condor scripts and merge scripts.
     Must create `master_merge.sh` with all merge commands.
     """
-    cmd = ["python3", "python/submitJobs.py", "--bins-cfg", config, "--datasets-cfg", datasets]
+    cmd = ["python3", "python/submitJobs.py", "--bins-cfg", config, "--datasets-cfg", datasets, "--lumi", lumi]
 
     if make_json:
         cmd.append("--make-json")
@@ -183,6 +183,8 @@ def parse_args():
                    help="Generate JSON outputs")
     p.add_argument("--make-root", action="store_true",
                    help="Generate ROOT outputs")
+    p.add_argument("--lumi", dest="lumi", type=str, default="400.0",
+                   help="Lumi to scale everything to (default is 400.0)")
     return p.parse_args()
 
 def main():
@@ -207,7 +209,7 @@ def main():
     # 2) Submit jobs and generate master_merge.sh
     print("[run_all] Submitting jobs...", flush=True)
     submit_jobs(config=bins_cfg, datasets=datasets_cfg,
-                hist=hist_cfg,make_json=args.make_json, make_root=args.make_root)
+                hist=hist_cfg,make_json=args.make_json, make_root=args.make_root, lumi=args.lumi)
 
     condor_time_start = time.time()
     # 3) Wait for jobs to finish
@@ -235,7 +237,8 @@ def main():
               "-i", hadd_file,
               "-h", args.hist_cfg,
               "-d", args.datasets_cfg,
-              "-b", args.bins_cfg
+              "-b", args.bins_cfg,
+              "-l", args.lumi 
             ]
         print("[run_all] Plotting histograms with command:"," ".join(plot_cmd), flush=True)
         subprocess.run(

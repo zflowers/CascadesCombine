@@ -1,192 +1,4 @@
-#include <TFile.h>
-#include <TH1.h>
-#include <TH2.h>
-#include <TKey.h>
-#include <TCanvas.h>
-#include <TSystem.h>
-#include <TString.h>
-#include <TLatex.h>
-#include <TLegend.h>
-#include <TCollection.h>
-#include <TPad.h>
-#include <TStyle.h>
-#include <TEfficiency.h>
-#include <TGraphAsymmErrors.h>
-
-#include <map>
-#include <vector>
-#include <string>
-#include <iostream>
-#include <algorithm>
-#include <cstdio>
-#include <set>
-
-#include "SampleTool.h"
-
-using namespace std;
-
-// global out root file pointer
-TFile* outFile = nullptr;
-int Lumi = 1;
-string outputDir = "plots/";
-
-// ----------------------
-// Helpers
-// ----------------------
-void copyConfigsToOutput(const std::string &outputDir,
-                         const std::string &histCfg,
-                         const std::string &datasetCfg,
-                         const std::string &binsCfg) 
-{
-    if (gSystem->AccessPathName(outputDir.c_str())) {
-        gSystem->mkdir(outputDir.c_str(), true); 
-    }
-    if (!histCfg.empty()) gSystem->CopyFile(histCfg.c_str(), (outputDir + "/" + histCfg).c_str(), true);
-    if (!datasetCfg.empty()) gSystem->CopyFile(datasetCfg.c_str(), (outputDir + "/" + datasetCfg).c_str(), true);
-    if (!binsCfg.empty()) gSystem->CopyFile(binsCfg.c_str(), (outputDir + "/" + binsCfg).c_str(), true);
-}
-
-void SetMinimumBinContent(TH1* h, double minVal) {
-    if (!h) return;
-    int nb = h->GetNbinsX();
-    for (int i = 1; i <= nb; ++i) {
-        double c = h->GetBinContent(i);
-        if (c < minVal) h->SetBinContent(i, minVal);
-    }
-}
-
-void GetMinMaxIntegral(const vector<TH1*>& vect, double &hmin, double &hmax) {
-    hmin = 1e99; hmax = 0.;
-    for (auto h : vect) {
-        if (!h) continue;
-        int nb = h->GetNbinsX();
-        double localmin = 1e99;
-        for (int i = 1; i <= nb; ++i) {
-            double c = h->GetBinContent(i);
-            if (c > 0. && c < localmin) localmin = c;
-            if (c > hmax) hmax = c;
-        }
-        if (localmin < hmin) hmin = localmin;
-    }
-    if (hmin > 1e98) hmin = 0.;
-}
-
-int getColorForIndex(int i) {
-    static int palette[] = {kAzure-3, kGreen+2, kOrange-3, kViolet-4, kCyan+2, kMagenta-9, kYellow+2, kBlue+1};
-    int n = sizeof(palette)/sizeof(int);
-    return palette[i % n];
-}
-
-struct HistId { string bin; string proc; string var; };
-
-HistId ParseHistName(const string &name) {
-    string s = name;
-    size_t sem = s.find(';');
-    if (sem != string::npos) s = s.substr(0, sem);
-    if (s.rfind("can_", 0) == 0) s = s.substr(4);
-    if (s.rfind("c_", 0) == 0) s = s.substr(2);
-    HistId out{"", "", ""};
-    size_t first = s.find("__");
-    if (first == string::npos) { out.var = s; return out; }
-    size_t second = s.find("__", first + 2);
-    if (second == string::npos) { out.bin = s.substr(0, first); out.var = s.substr(first + 2); return out; }
-    out.bin = s.substr(0, first);
-    out.proc = s.substr(first + 2, second - (first + 2));
-    out.var = s.substr(second + 2);
-    return out;
-}
-
-// Return just the process name from the hist title
-std::string ExtractProcName(const std::string &histName) {
-    HistId id = ParseHistName(histName);
-    return id.proc;
-}
-
-// Return true if the histogram belongs to a signal sample
-bool IsSignalHist(const std::string &histName, const SampleTool &tool) {
-    HistId id = ParseHistName(histName);
-    for (const auto &sigKey : tool.SignalKeys) {
-        if (id.proc.find(sigKey) != std::string::npos) {
-            return true;
-        }
-    }
-    return false;
-}
-
-// Return true if the histogram belongs to a background sample
-bool IsBkgHist(const std::string &histName, const SampleTool &tool) {
-    HistId id = ParseHistName(histName);
-    return tool.BkgDict.count(id.proc) > 0;
-}
-
-template<typename T>
-T* GetHistClone(TFile *f, const string &name) {
-    T* h = dynamic_cast<T*>(f->Get(name.c_str()));
-    if (!h) return nullptr;
-    T* clone = dynamic_cast<T*>(h->Clone());
-    clone->SetDirectory(nullptr);
-    return clone;
-}
-
-// --------------------------------------------------
-// Sort background histograms and process names by total yield (descending)
-// --------------------------------------------------
-static void SortBackgroundsByYield(
-    std::vector<TH1*>& bkgHists,
-    std::vector<std::string>& bkgProcs)
-{
-    if(bkgHists.empty() || bkgHists.size() != bkgProcs.size()) return;
-
-    // Create vector of pairs {integral, index}
-    std::vector<std::pair<double,int>> yields_idx;
-    for(size_t i=0;i<bkgHists.size();++i)
-        yields_idx.push_back({bkgHists[i]->Integral(), (int)i});
-
-    // Sort descending
-    std::sort(yields_idx.rbegin(), yields_idx.rend());
-
-    // Reorder histograms and process names
-    std::vector<TH1*> sortedHists;
-    std::vector<std::string> sortedProcs;
-    for(auto &p : yields_idx){
-        sortedHists.push_back(bkgHists[p.second]);
-        sortedProcs.push_back(bkgProcs[p.second]);
-    }
-
-    bkgHists.swap(sortedHists);
-    bkgProcs.swap(sortedProcs);
-}
-
-// --------------------------------------------------
-// Sort cutflow histograms and process names by last-bin yield (descending)
-// --------------------------------------------------
-static void SortCutFlowsByLastBin(
-    std::vector<TH1*>& cutflowHists,
-    std::vector<std::string>& cutflowProcs)
-{
-    if(cutflowHists.empty() || cutflowHists.size() != cutflowProcs.size()) return;
-
-    // Create vector of pairs {last-bin content, index}
-    std::vector<std::pair<double,int>> yields_idx;
-    for(size_t i=0;i<cutflowHists.size();++i){
-        int lastBin = cutflowHists[i]->GetNbinsX();
-        yields_idx.push_back({cutflowHists[i]->GetBinContent(lastBin), (int)i});
-    }
-
-    // Sort descending
-    std::sort(yields_idx.rbegin(), yields_idx.rend());
-
-    // Reorder histograms and process names
-    std::vector<TH1*> sortedHists;
-    std::vector<std::string> sortedProcs;
-    for(auto &p : yields_idx){
-        sortedHists.push_back(cutflowHists[p.second]);
-        sortedProcs.push_back(cutflowProcs[p.second]);
-    }
-
-    cutflowHists.swap(sortedHists);
-    cutflowProcs.swap(sortedProcs);
-}
+#include "PlottingHelpers.h"
 
 // ----------------------
 // Plot 1D
@@ -200,12 +12,12 @@ void Plot_Hist1D(TH1* h) {
     h->Draw("HIST");
     h->GetXaxis()->CenterTitle();
     h->GetYaxis()->CenterTitle();
-    h->GetYaxis()->SetTitle(("N_{events} / "+std::to_string(int(Lumi))+" fb^{-1}").c_str());
+    h->GetYaxis()->SetTitle(("N_{events} / "+std::to_string(int(lumi))+" fb^{-1}").c_str());
     h->GetYaxis()->SetRangeUser(0.0, 1.1*h->GetMaximum());
     TLatex l; l.SetTextFont(42); l.SetNDC();
-    l.SetTextSize(0.035); l.DrawLatex(0.57,0.943,"sampleName");
+    l.SetTextSize(0.035); l.DrawLatex(0.57,0.943,ExtractProcName(title).c_str());
     l.SetTextSize(0.04); l.DrawLatex(0.01,0.943,"#bf{CMS} Simulation Preliminary");
-    l.SetTextSize(0.045); l.DrawLatex(0.7,0.04,"binName");
+    l.SetTextSize(0.045); l.DrawLatex(0.7,0.04,ExtractBinName(title).c_str());
     TString pdfName = Form("%spdfs/%s.pdf", outputDir.c_str(), title.c_str());
     gErrorIgnoreLevel = 1001;
     can->SaveAs(pdfName);
@@ -226,11 +38,11 @@ void Plot_Hist2D(TH2* h) {
     can->SetGridx(); can->SetGridy(); can->SetLogz();
     gErrorIgnoreLevel = 0;
     h->Draw("COLZ");
-    h->GetZaxis()->SetTitle(("N_{events} / "+std::to_string(int(Lumi))+" fb^{-1}").c_str());
+    h->GetZaxis()->SetTitle(("N_{events} / "+std::to_string(int(lumi))+" fb^{-1}").c_str());
     TLatex l; l.SetTextFont(42); l.SetNDC();
-    l.SetTextSize(0.035); l.DrawLatex(0.65,0.943,"SampleName");
+    l.SetTextSize(0.035); l.DrawLatex(0.65,0.943,ExtractProcName(title).c_str());
     l.SetTextSize(0.04); l.DrawLatex(0.01,0.943,"#bf{CMS} Simulation Preliminary");
-    l.SetTextSize(0.045); l.DrawLatex(0.7,0.04,"binName");
+    l.SetTextSize(0.045); l.DrawLatex(0.7,0.04,ExtractBinName(title).c_str());
     TString pdfName = Form("%spdfs/%s.pdf", outputDir.c_str(), title.c_str());
     gErrorIgnoreLevel = 1001;
     can->SaveAs(pdfName);
@@ -275,9 +87,9 @@ void Plot_Eff(TEfficiency* e){
     //e->GetPaintedGraph()->GetYaxis()->SetRangeUser(0.9*h->GetMinimum(0.0),1.1*h->GetMaximum());
 
     TLatex l; l.SetTextFont(42); l.SetNDC();
-    l.SetTextSize(0.035); l.DrawLatex(0.65,0.943,"SampleName");
+    l.SetTextSize(0.035); l.DrawLatex(0.65,0.943,ExtractProcName(title).c_str());
     l.SetTextSize(0.04); l.DrawLatex(0.01,0.943,"#bf{CMS} Simulation Preliminary");
-    l.SetTextSize(0.045); l.DrawLatex(0.7,0.04,"binName");
+    l.SetTextSize(0.045); l.DrawLatex(0.7,0.04,ExtractBinName(title).c_str());
     TString pdfName = Form("%spdfs/%s.pdf", outputDir.c_str(), title.c_str());
     gErrorIgnoreLevel = 1001;
     can->SaveAs(pdfName);
@@ -319,21 +131,21 @@ void Plot_Stack(const string& hname,
     axisHist->GetYaxis()->SetRangeUser(max(0.9*hmin, 1e-6), 1.1*hmax);
 
     for (size_t i = 0; i < bkgHists.size(); ++i) { TH1* h = bkgHists[i]; if (!h || h->GetEntries()==0) continue;
-        h->SetLineColor(kBlack); h->SetLineWidth(1); h->SetFillColor(getColorForIndex((int)i)); h->SetFillStyle(1001);
+        h->SetLineColor(kBlack); h->SetLineWidth(1); h->SetFillColor(m_Color[ExtractProcName(bkgHists[i]->GetName())]); h->SetFillStyle(1001);
         h->Draw("SAME HIST"); }
 
     if (h_BKG) { h_BKG->SetLineWidth(3); h_BKG->SetLineColor(kRed); h_BKG->Draw("SAME HIST"); }
 
     for (size_t i = 0; i < sigHists.size(); ++i) { TH1* h = sigHists[i]; if (!h || h->GetEntries()==0) continue;
-        h->SetLineWidth(3); h->SetLineStyle(7); h->SetLineColor(getColorForIndex((int)i + 10));
+        h->SetLineWidth(3); h->SetLineStyle(7); h->SetLineColor(m_Color[ExtractProcName(sigHists[i]->GetName())]);
         h->Scale(signal_boost); h->Draw("SAME HIST"); }
 
     if (h_DATA) { h_DATA->SetMarkerStyle(20); h_DATA->SetMarkerSize(0.8); h_DATA->SetLineColor(kBlack); h_DATA->Draw("SAME E"); }
 
     TLegend* leg = new TLegend(0.7,0.7,0.9,0.9);
     if (h_BKG) leg->AddEntry(h_BKG,"SM total","F");
-    for (size_t i=0;i<bkgHists.size();++i) if(bkgHists[i]) leg->AddEntry(bkgHists[i],Form("Bkg %zu",i),"F");
-    for (size_t i=0;i<sigHists.size();++i) if(sigHists[i]) leg->AddEntry(sigHists[i],Form("Sig %zu",i),"L");
+    for (size_t i=0;i<bkgHists.size();++i) if(bkgHists[i]) leg->AddEntry(bkgHists[i],ExtractProcName(bkgHists[i]->GetName()).c_str(),"F");
+    for (size_t i=0;i<sigHists.size();++i) if(sigHists[i]) leg->AddEntry(sigHists[i],ExtractProcName(sigHists[i]->GetName()).c_str(),"L");
     if(h_DATA) leg->AddEntry(h_DATA,"Data","P");
     leg->Draw();
 
@@ -395,7 +207,7 @@ void Plot_CutFlow(const std::string &hname,
         TH1* h = bkgHists[i]; if (!h || h->GetEntries()==0) continue;
         h->SetLineColor(kBlack);
         h->SetLineWidth(1);
-        h->SetFillColor(getColorForIndex((int)i));
+        h->SetFillColor(m_Color[ExtractProcName(bkgHists[i]->GetName())]);
         h->SetFillStyle(1001);
         h->Draw("SAME HIST");
     }
@@ -412,7 +224,7 @@ void Plot_CutFlow(const std::string &hname,
         h->Scale(signal_boost);
         h->SetLineWidth(3);
         h->SetLineStyle(7);
-        h->SetLineColor(getColorForIndex((int)i + 10));
+        h->SetLineColor(m_Color[ExtractProcName(sigHists[i]->GetName())]);
         h->Draw("SAME HIST");
     }
 
@@ -424,15 +236,18 @@ void Plot_CutFlow(const std::string &hname,
         h_DATA->Draw("SAME E");
     }
 
-    // Legend
+    // Add Legend
     TLegend* leg = new TLegend(0.7,0.7,0.9,0.9);
     if (h_BKG) leg->AddEntry(h_BKG,"SM total","F");
-    for (size_t i=0;i<bkgHists.size();++i) if(bkgHists[i]) leg->AddEntry(bkgHists[i],Form("Bkg %zu",i),"F");
+    for (size_t i=0;i<bkgHists.size();++i) if(bkgHists[i]) leg->AddEntry(bkgHists[i],ExtractProcName(bkgHists[i]->GetName()).c_str(),"F");
     for (size_t i=0;i<sigHists.size();++i) if(sigHists[i]) {
-        if(signal_boost!=1.0)
-            leg->AddEntry(sigHists[i],Form("Sig %zu × %.0f",i,signal_boost),"L");
-        else
-            leg->AddEntry(sigHists[i],Form("Sig %zu",i),"L");
+        std::string tmp_label = ExtractProcName(sigHists[i]->GetName());
+        if (signal_boost != 1.0) {
+            std::ostringstream boost_str;
+            boost_str << std::setprecision(3) << std::defaultfloat << signal_boost;
+            tmp_label += " * " + boost_str.str();
+        }
+        leg->AddEntry(sigHists[i], tmp_label.c_str(), "L");
     }
     if (h_DATA) leg->AddEntry(h_DATA,"Data","P");
     leg->Draw();
@@ -448,4 +263,3 @@ void Plot_CutFlow(const std::string &hname,
     if(h_BKG) delete h_BKG;
     if(h_DATA) delete h_DATA;
 }
-

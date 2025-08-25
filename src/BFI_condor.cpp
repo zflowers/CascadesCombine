@@ -204,10 +204,11 @@ int main(int argc, char** argv) {
             //hist_CutFlow->Sumw2();
             
             // --- Dummy total events (bin 0) ---
+            // Turn off to speed up processing
             // Count() returns an RResultPtr; force evaluation with GetValue()
-            double totalEvents = static_cast<double>(node.Count().GetValue());
-            hist_CutFlow->SetBinContent(0, totalEvents);
-            hist_CutFlow->SetBinError(0, std::sqrt(totalEvents));
+            // double totalEvents = static_cast<double>(node.Count().GetValue());
+            // hist_CutFlow->SetBinContent(0, totalEvents);
+            // hist_CutFlow->SetBinError(0, std::sqrt(totalEvents));
             
             // --- Only build cumulative CutFlow if there are cuts ---
             if (Ncuts > 0) {
