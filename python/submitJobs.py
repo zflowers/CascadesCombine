@@ -6,9 +6,9 @@ from pathlib import Path
 from glob import glob
 import stat
 
-# -----------------------------
-# USER CONFIGURATION SECTION
-# -----------------------------
+# ---------------------------------
+# DEFAULT CONFIGURATION PARAMETERS
+# ---------------------------------
 cpus = "1"
 memory = "1 GB"
 dryrun = False
@@ -16,9 +16,9 @@ lumi = str(400.)
 max_workers = 4
 limit_submit = None  # limit number of job submissions (None=no limit)
 
-# -----------------------------
+# ---------------------------------
 # HELPERS
-# -----------------------------
+# ---------------------------------
 def write_flatten_script(bin_names, flatten_exe="./flattenJSONs.x", json_dir="json"):
     os.makedirs("condor", exist_ok=True)
     os.makedirs(json_dir, exist_ok=True)

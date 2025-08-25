@@ -7,22 +7,19 @@ and, if there are failed jobs, writes a single data-driven resubmit file
 (with one `queue LogFile, Args from (...)` block) and optionally submits it.
 
 Usage:
-    python3 checkJobs.py <submit_name> [--root-dir CONDOR_DIR] [--no-submit] [--cms-env PATH]
+    call from python/submitJobs.py
 
-Examples:
-    python3 checkJobs.py manualExample1
 """
 import argparse, os, re, subprocess, sys, glob, shutil
 from typing import Dict, Tuple, List
 
-DEFAULT_CMS_ENV = "/cvmfs/cms.cern.ch/cmsset_default.sh"
+CMS_ENV = "/cvmfs/cms.cern.ch/cmsset_default.sh"
 
 def parse_args():
     p = argparse.ArgumentParser(description="Check and resubmit Condor jobs (single-queue resubmit).")
     p.add_argument("submit_name", help="Name of the submission folder (e.g. manualExample1).")
     p.add_argument("--root-dir", default="condor", help="Top-level condor directory (default: 'condor').")
     p.add_argument("--no-submit", action="store_true", help="Do not actually call condor_submit; just write the resubmit file.")
-    p.add_argument("--cms-env", default=DEFAULT_CMS_ENV, help=f"Path to cmsset_default.sh (default: {DEFAULT_CMS_ENV})")
     p.add_argument("--check-json", action="store_true", help="Check for JSON output files")
     p.add_argument("--check-root", action="store_true", help="Check for ROOT output files")
     return p.parse_args()
@@ -234,7 +231,7 @@ def main():
         sys.exit(0)
     
     # Submit using CMS environment
-    submit_cmd = f"source {args.cms_env} && condor_submit {resubmit_path}"
+    submit_cmd = f"source {CMS_ENV} && condor_submit {resubmit_path}"
     print(f"[checkJobs] Submitting resubmit file with:\n  {submit_cmd}\n")
     proc = subprocess.run(submit_cmd, shell=True, executable="/bin/bash", capture_output=True, text=True)
     

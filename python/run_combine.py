@@ -94,7 +94,7 @@ def get_work_dirs():
     """
     return [name for name in os.listdir("condor/") if os.path.isdir(os.path.join("condor", name))]
 
-def run_checkjobs_loop_parallel(no_resubmit=False, max_resubmits=1, check_json=False, check_root=False):
+def run_checkjobs_loop_parallel(no_resubmit=False, max_resubmits=3, check_json=False, check_root=False):
     """
     Check all work directories with checkJobs.py, resubmit failing jobs across
     all directories in one cycle, then wait once for all resubmitted jobs to finish.
