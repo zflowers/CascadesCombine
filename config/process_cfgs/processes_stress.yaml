@@ -1,4 +1,4 @@
-datasets:
+processes:
   bkg:
     - ttbar
     - ST
