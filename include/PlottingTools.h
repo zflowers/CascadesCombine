@@ -9,11 +9,11 @@ void Plot_Hist1D(TH1* h) {
     TCanvas* can = new TCanvas(("can_"+title).c_str(), ("can_"+title).c_str(), 700, 600);
     can->SetLeftMargin(0.15); can->SetRightMargin(0.18); can->SetBottomMargin(0.15);
     can->SetGridx(); can->SetGridy();
-    h->Draw("HIST");
+    DrawLogSmart(h, "HIST");
     h->GetXaxis()->CenterTitle();
     h->GetYaxis()->CenterTitle();
     h->GetYaxis()->SetTitle(("N_{events} / "+std::to_string(int(lumi))+" fb^{-1}").c_str());
-    h->GetYaxis()->SetRangeUser(0.0, 1.1*h->GetMaximum());
+    h->GetYaxis()->SetRangeUser(h->GetMinimum()*0.9, 1.1*h->GetMaximum());
     TLatex l; l.SetTextFont(42); l.SetNDC();
     l.SetTextSize(0.035); l.DrawLatex(0.57,0.943,ExtractProcName(title).c_str());
     l.SetTextSize(0.04); l.DrawLatex(0.01,0.943,"#bf{CMS} Simulation Preliminary");
@@ -34,10 +34,8 @@ void Plot_Hist2D(TH2* h) {
     string title = h->GetName();
     TCanvas* can = new TCanvas(("can_"+title).c_str(), ("can_"+title).c_str(), 700, 600);
     can->SetLeftMargin(0.15); can->SetRightMargin(0.18); can->SetBottomMargin(0.15);
-    gErrorIgnoreLevel = 1001;
-    can->SetGridx(); can->SetGridy(); can->SetLogz();
-    gErrorIgnoreLevel = 0;
-    h->Draw("COLZ");
+    can->SetGridx(); can->SetGridy();
+    DrawLogSmart(h, "COLZ");
     h->GetZaxis()->SetTitle(("N_{events} / "+std::to_string(int(lumi))+" fb^{-1}").c_str());
     TLatex l; l.SetTextFont(42); l.SetNDC();
     l.SetTextSize(0.035); l.DrawLatex(0.65,0.943,ExtractProcName(title).c_str());
@@ -61,7 +59,7 @@ void Plot_Eff(TEfficiency* e){
     can->SetGridx(); can->SetGridy();
     can->Draw();
     can->cd();
-    e->Draw("AP");
+    DrawLogSmart(e, "AP");
     gPad->Update();
     e->GetPaintedGraph()->GetXaxis()->CenterTitle();
     e->GetPaintedGraph()->GetXaxis()->SetTitleFont(42);
@@ -84,7 +82,6 @@ void Plot_Eff(TEfficiency* e){
     e->GetPaintedGraph()->GetYaxis()->SetLabelFont(42);
     e->GetPaintedGraph()->GetYaxis()->SetLabelSize(0.05);
     e->GetPaintedGraph()->GetYaxis()->SetRangeUser(0.,1.05);
-    //e->GetPaintedGraph()->GetYaxis()->SetRangeUser(0.9*h->GetMinimum(0.0),1.1*h->GetMaximum());
 
     TLatex l; l.SetTextFont(42); l.SetNDC();
     l.SetTextSize(0.035); l.DrawLatex(0.65,0.943,ExtractProcName(title).c_str());
@@ -107,7 +104,7 @@ void Plot_Stack(const string& hname,
                 TH1* dataHist = nullptr,
                 double signal_boost = 1.0)
 {
-    if (bkgHists.empty() && sigHists.empty() && !dataHist) return;
+    if (bkgHists.empty() && (sigHists.empty() || !dataHist)) return;
     vector<TH1*> allHists = bkgHists; allHists.insert(allHists.end(), sigHists.begin(), sigHists.end());
     if (dataHist) allHists.push_back(dataHist);
     double hmin, hmax; GetMinMaxIntegral(allHists, hmin, hmax);
@@ -122,25 +119,24 @@ void Plot_Stack(const string& hname,
 
     string canvas_name = "can_stack_" + hname;
     TCanvas* can = new TCanvas(canvas_name.c_str(), canvas_name.c_str(), 1200, 700);
-    gErrorIgnoreLevel = 1001;
-    can->SetGridx(); can->SetGridy(); can->SetLogy();
-    gErrorIgnoreLevel = 0;
+    can->SetGridx(); can->SetGridy();
     TH1* axisHist = !allHists.empty() ? allHists.front() : nullptr;
     if (!axisHist) return;
-    axisHist->Draw("HIST");
+    DrawLogSmart(axisHist, "HIST");
     axisHist->GetYaxis()->SetRangeUser(max(0.9*hmin, 1e-6), 1.1*hmax);
 
     for (size_t i = 0; i < bkgHists.size(); ++i) { TH1* h = bkgHists[i]; if (!h || h->GetEntries()==0) continue;
         h->SetLineColor(kBlack); h->SetLineWidth(1); h->SetFillColor(m_Color[ExtractProcName(bkgHists[i]->GetName())]); h->SetFillStyle(1001);
-        h->Draw("SAME HIST"); }
+        DrawLogSmart(h, "SAME HIST"); }
 
-    if (h_BKG) { h_BKG->SetLineWidth(3); h_BKG->SetLineColor(kRed); h_BKG->Draw("SAME HIST"); }
+    if (h_BKG) { h_BKG->SetLineWidth(3); h_BKG->SetLineColor(kRed); DrawLogSmart(h_BKG, "SAME HIST"); }
 
     for (size_t i = 0; i < sigHists.size(); ++i) { TH1* h = sigHists[i]; if (!h || h->GetEntries()==0) continue;
+        SetMinimumBinContent(h, 1.e-6);
         h->SetLineWidth(3); h->SetLineStyle(7); h->SetLineColor(m_Color[ExtractProcName(sigHists[i]->GetName())]);
-        h->Scale(signal_boost); h->Draw("SAME HIST"); }
+        h->Scale(signal_boost); DrawLogSmart(h, "SAME HIST"); }
 
-    if (h_DATA) { h_DATA->SetMarkerStyle(20); h_DATA->SetMarkerSize(0.8); h_DATA->SetLineColor(kBlack); h_DATA->Draw("SAME E"); }
+    if (h_DATA) { h_DATA->SetMarkerStyle(20); h_DATA->SetMarkerSize(0.8); h_DATA->SetLineColor(kBlack); DrawLogSmart(h_DATA, "SAME E"); }
 
     TLegend* leg = new TLegend(0.7,0.7,0.9,0.9);
     if (h_BKG) leg->AddEntry(h_BKG,"SM total","F");
@@ -165,7 +161,7 @@ void Plot_CutFlow(const std::string &hname,
                        TH1* dataHist,
                        double signal_boost)
 {
-    if (bkgHists.empty() && sigHists.empty() && !dataHist) return;
+    if (bkgHists.empty() && (sigHists.empty() || !dataHist)) return;
 
     // Collect all hists for range finding
     vector<TH1*> allHists = bkgHists;
@@ -192,9 +188,7 @@ void Plot_CutFlow(const std::string &hname,
     // Canvas
     string canvas_name = "can_cutflow_" + hname;
     TCanvas* can = new TCanvas(canvas_name.c_str(), canvas_name.c_str(), 1200, 700);
-    gErrorIgnoreLevel = 1001;
-    can->SetGridx(); can->SetGridy(); can->SetLogy();
-    gErrorIgnoreLevel = 0;
+    can->SetGridx(); can->SetGridy();
 
     // Axis from first available hist
     TH1* axisHist = !allHists.empty() ? allHists.front() : nullptr;
@@ -254,7 +248,7 @@ void Plot_CutFlow(const std::string &hname,
 
     // Save
     if(outFile){ outFile->cd(); can->Write(0, TObject::kWriteDelete); }
-    TString pdfOut = Form("%spdfs/%s_cutflow.pdf", outputDir.c_str(), hname.c_str());
+    TString pdfOut = Form("%spdfs/%s.pdf", outputDir.c_str(), hname.c_str());
     gErrorIgnoreLevel = 1001;
     can->SaveAs(pdfOut);
     gErrorIgnoreLevel = 0;

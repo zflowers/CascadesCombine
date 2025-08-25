@@ -22,6 +22,7 @@
 #include <TPad.h>
 #include <TStyle.h>
 #include <TEfficiency.h>
+#include <TGraph.h>
 #include <TGraphAsymmErrors.h>
 
 #include "SampleTool.h"
@@ -117,24 +118,24 @@ void loadFormatMaps(){
   m_Title["DY"] = "DY";
   m_Color["DY"] = 7021;
   //m_Color["DY"] = 8006;
-  
-  m_Title["Cascades_180"] = "Cascades 180";
-  m_Color["Cascades_180"] = 7040; // 7072 might look better...?
-  m_Title["Cascades_220"] = "Cascades 220";
-  m_Color["Cascades_220"] = 7071;
-  m_Title["Cascades_220_SMS"] = "Cascades 220 SMS";
-  m_Color["Cascades_220_SMS"] = 7071;
-  //m_Color["Cascades_220"] = 8007;
-  m_Title["Cascades_260"] = "Cascades 260";
-  m_Color["Cascades_260"] = 7041;
-  m_Title["Cascades_260_SMS"] = "Cascades 260 SMS";
-  m_Color["Cascades_260_SMS"] = 7041;
-  //m_Color["Cascades_260"] = 8008;
-  m_Title["Cascades_270"] = "Cascades 270";
-  m_Color["Cascades_270"] = 7061;
-  m_Title["Cascades_270_SMS"] = "Cascades 270 SMS";
-  m_Color["Cascades_270_SMS"] = 7061;
-  //m_Color["Cascades_270"] = 8009;
+
+  m_Title["Cascades_300_300_289_260_240_220_220_209_200_190_180"] = "Cascades 180";
+  m_Color["Cascades_300_300_289_260_240_220_220_209_200_190_180"] = 7040; // 7072 might look better...?
+  m_Title["Cascades_300_300_289_260_240_220"] = "Cascades 220";
+  m_Color["Cascades_300_300_289_260_240_220"] = 7071;
+  m_Title["Cascades_300_300_289_260_240_220_SMS"] = "Cascades 220 SMS";
+  m_Color["Cascades_300_300_289_260_240_220_SMS"] = 7071;
+  //m_Color["Cascades_300_300_289_260_240_220"] = 8007;
+  m_Title["Cascades_300_300_289_280_270_260"] = "Cascades 260";
+  m_Color["Cascades_300_300_289_280_270_260"] = 7041;
+  m_Title["Cascades_300_300_289_280_270_260_SMS"] = "Cascades 260 SMS";
+  m_Color["Cascades_300_300_289_280_270_260_SMS"] = 7041;
+  //m_Color["Cascades_300_300_289_280_270_260"] = 8008;
+  m_Title["Cascades_300_300_289_280_275_270"] = "Cascades 270";
+  m_Color["Cascades_300_300_289_280_275_270"] = 7061;
+  m_Title["Cascades_300_300_289_280_275_270_SMS"] = "Cascades 270 SMS";
+  m_Color["Cascades_300_300_289_280_275_270_SMS"] = 7061;
+  //m_Color["Cascades_300_300_289_280_275_270"] = 8009;
 
   m_Title["T1bbbb_1500_SMS"] = "T1bbbb 1500";
   m_Color["T1bbbb_1500_SMS"] = 7071;
@@ -325,3 +326,92 @@ static void SortCutFlowsByLastBin(
     cutflowProcs.swap(sortedProcs);
 }
 
+// ------------------ TH1 ------------------
+void DrawLog(TH1* h, const char* opt = "",
+             double fallbackMin = 1e-3, double rangeFactor = 1.1) {
+    if (!h) return;
+    double max = h->GetMaximum();
+    if (max <= 0) {
+        std::cerr << "TH1 has no positive entries\n";
+        h->Draw(opt);
+        return;
+    }
+    if (h->GetMinimum() <= 0) h->SetMinimum(fallbackMin);
+    h->Draw(opt);
+    gPad->SetLogy(1);
+    h->SetMaximum(max * rangeFactor);
+    gPad->Update();
+}
+
+// ------------------ TH2 ------------------
+void DrawLog(TH2* h, const char* opt = "",
+             double fallbackMin = 1e-3, double rangeFactor = 1.1) {
+    if (!h) return;
+    double max = h->GetMaximum();
+    if (max <= 0) {
+        std::cerr << "TH2 has no positive entries\n";
+        h->Draw(opt);
+        return;
+    }
+    if (h->GetMinimum() <= 0) h->SetMinimum(fallbackMin);
+    h->Draw(opt);
+    gPad->SetLogz(1);
+    h->SetMaximum(max * rangeFactor);
+    gPad->Update();
+}
+
+// ------------------ TEfficiency ------------------
+void DrawLog(TEfficiency* e, const char* opt = "",
+             double fallbackMin = 1e-3, double rangeFactor = 1.1) {
+    if (!e) return;
+    double ymin = 1e30, ymax = -1e30;
+    for (int i = 1; i <= e->GetTotalHistogram()->GetNbinsX(); ++i) {
+        double val = e->GetEfficiency(i);
+        if (val > 0) {
+            ymin = std::min(ymin, val);
+            ymax = std::max(ymax, val);
+        }
+    }
+    if (ymax <= 0 || ymin <= 0) {
+        std::cerr << "TEfficiency has no positive values\n";
+        e->Draw(opt);
+        return;
+    }
+    e->Draw(opt);
+    gPad->SetLogy(1);
+    gPad->Update();
+    e->GetPaintedGraph()->GetYaxis()->SetRangeUser(
+        std::max(ymin / rangeFactor, fallbackMin), ymax * rangeFactor);
+}
+
+// ------------------ TGraph / TGraphAsymmErrors ------------------
+void DrawLog(TGraph* g, const char* opt = "AP",
+             double fallbackMin = 1e-3, double rangeFactor = 1.1) {
+    if (!g) return;
+    double ymin = 1e30, ymax = -1e30;
+    for (int i = 0; i < g->GetN(); ++i) {
+        double x, y;
+        g->GetPoint(i, x, y);
+        if (y > 0) {
+            ymin = std::min(ymin, y);
+            ymax = std::max(ymax, y);
+        }
+    }
+    if (ymax <= 0 || ymin <= 0 || ymin > ymax) {
+        std::cerr << "TGraph has no positive points\n";
+        g->Draw(opt);
+        return;
+    }
+    g->Draw(opt);
+    gPad->SetLogy(1);
+    gPad->Update();
+    g->GetYaxis()->SetRangeUser(
+        std::max(ymin / rangeFactor, fallbackMin), ymax * rangeFactor);
+}
+
+// ------------------ Smart Dispatcher ------------------
+template <typename T>
+void DrawLogSmart(T* obj, const char* opt = "",
+                  double fallbackMin = 1e-3, double rangeFactor = 1.1) {
+    DrawLog(obj, opt, fallbackMin, rangeFactor);
+}

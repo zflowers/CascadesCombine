@@ -52,7 +52,7 @@ int main(int argc, char* argv[]) {
         // - For CutFlow histograms prefer grouping by bin: "<bin>__CutFlow"
         // - For other histograms follow existing "<bin>__<var>" or "<var>" behavior
         string groupKey;
-        bool isCutFlow = (hname.find("CutFlow") != string::npos);
+        bool isCutFlow = id.var == "CutFlow";
         if(isCutFlow){
             if(!id.bin.empty()){
                 groupKey = id.bin + "__CutFlow";
@@ -102,7 +102,7 @@ int main(int argc, char* argv[]) {
     TString outRootName=Form("%soutput_%s.root",outputDir.c_str(),baseName.Data());
     outFile=new TFile(outRootName,"RECREATE");
 
-    // Main plotting loop: handles normal hists and CutFlow hists (tagged with "__CutFlow")
+    // Main plotting loop
     for(auto &gpair : groups){
         string groupKey = gpair.first;
         auto &procmap = gpair.second;
@@ -118,11 +118,13 @@ int main(int argc, char* argv[]) {
         for(auto &pp : procmap){
             TH1* h = pp.second;
             if(!h) continue;
-            HistId id = ParseHistName(pp.first);
-            const string& proc = id.proc;
+            const string& proc = pp.first;
         
             if(proc=="data"||proc=="Data") { dataHist = h; continue; }
-            if(tool.BkgDict.count(proc)) { bkgHists.push_back(h); bkgProcs.push_back(proc); }
+            if(tool.BkgDict.count(proc)) {
+                bkgHists.push_back(h); 
+                bkgProcs.push_back(proc); 
+            }
             else if(find(tool.SignalKeys.begin(), tool.SignalKeys.end(), proc) != tool.SignalKeys.end()) { 
                 sigHists.push_back(h); sigProcs.push_back(proc); 
             }
@@ -133,16 +135,18 @@ int main(int argc, char* argv[]) {
         if(!isCutFlow){
             // Individual plots for 1D/2D histograms
             for(auto &pp : procmap){
-                if(pp.first.find("num__")!=string::npos) continue;
-                else if(pp.first.find("den__")!=string::npos) continue;
                 TH1* h = pp.second; if(!h) continue;
+                if(string(h->GetName()).find("num__")!=string::npos) continue;
+                if(string(h->GetName()).find("den__")!=string::npos) continue;
                 if(h->InheritsFrom(TH2::Class())) Plot_Hist2D(dynamic_cast<TH2*>(h));
                 else Plot_Hist1D(h);
             }
         
             // Plot stack
-            if(!bkgHists.empty() || !sigHists.empty() || dataHist)
+            if(!bkgHists.empty() || !sigHists.empty() || dataHist){
+                if(groupKey.find("num__")!=string::npos || groupKey.find("den__")!=string::npos) continue;
                 Plot_Stack(groupKey, bkgHists, sigHists, dataHist, 1.0);
+            }
         
             // TEfficiency
             map<string, TH1*> numHists, denHists;
@@ -160,7 +164,6 @@ int main(int argc, char* argv[]) {
             }
         
         } else {
-            // CutFlow plot
             // Sort backgrounds by last-bin before calling Plot_CutFlow
             SortCutFlowsByLastBin(bkgHists, bkgProcs);
             if(!bkgHists.empty() || !sigHists.empty() || dataHist)
