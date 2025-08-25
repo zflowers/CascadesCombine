@@ -15,7 +15,7 @@ void Plot_Hist1D(TH1* h) {
     h->GetYaxis()->SetTitle(("N_{events} / "+std::to_string(int(lumi))+" fb^{-1}").c_str());
     h->GetYaxis()->SetRangeUser(h->GetMinimum()*0.9, 1.1*h->GetMaximum());
     TLatex l; l.SetTextFont(42); l.SetNDC();
-    l.SetTextSize(0.035); l.DrawLatex(0.57,0.943,ExtractProcName(title).c_str());
+    l.SetTextSize(0.035); l.DrawLatex(0.57,0.943,m_Title[ExtractProcName(title)].c_str());
     l.SetTextSize(0.04); l.DrawLatex(0.01,0.943,"#bf{CMS} Simulation Preliminary");
     l.SetTextSize(0.045); l.DrawLatex(0.7,0.04,ExtractBinName(title).c_str());
     TString pdfName = Form("%spdfs/%s.pdf", outputDir.c_str(), title.c_str());
@@ -36,9 +36,11 @@ void Plot_Hist2D(TH2* h) {
     can->SetLeftMargin(0.15); can->SetRightMargin(0.18); can->SetBottomMargin(0.15);
     can->SetGridx(); can->SetGridy();
     DrawLogSmart(h, "COLZ");
+    h->GetXaxis()->CenterTitle();
+    h->GetYaxis()->CenterTitle();
     h->GetZaxis()->SetTitle(("N_{events} / "+std::to_string(int(lumi))+" fb^{-1}").c_str());
     TLatex l; l.SetTextFont(42); l.SetNDC();
-    l.SetTextSize(0.035); l.DrawLatex(0.65,0.943,ExtractProcName(title).c_str());
+    l.SetTextSize(0.035); l.DrawLatex(0.65,0.943,m_Title[ExtractProcName(title)].c_str());
     l.SetTextSize(0.04); l.DrawLatex(0.01,0.943,"#bf{CMS} Simulation Preliminary");
     l.SetTextSize(0.045); l.DrawLatex(0.7,0.04,ExtractBinName(title).c_str());
     TString pdfName = Form("%spdfs/%s.pdf", outputDir.c_str(), title.c_str());
@@ -84,7 +86,7 @@ void Plot_Eff(TEfficiency* e){
     e->GetPaintedGraph()->GetYaxis()->SetRangeUser(0.,1.05);
 
     TLatex l; l.SetTextFont(42); l.SetNDC();
-    l.SetTextSize(0.035); l.DrawLatex(0.65,0.943,ExtractProcName(title).c_str());
+    l.SetTextSize(0.035); l.DrawLatex(0.65,0.943,m_Title[ExtractProcName(title)].c_str());
     l.SetTextSize(0.04); l.DrawLatex(0.01,0.943,"#bf{CMS} Simulation Preliminary");
     l.SetTextSize(0.045); l.DrawLatex(0.7,0.04,ExtractBinName(title).c_str());
     TString pdfName = Form("%spdfs/%s.pdf", outputDir.c_str(), title.c_str());
@@ -188,6 +190,14 @@ void Plot_CutFlow(const std::string &hname,
     // Canvas
     string canvas_name = "can_cutflow_" + hname;
     TCanvas* can = new TCanvas(canvas_name.c_str(), canvas_name.c_str(), 1200, 700);
+    double hlo = 0.09;
+    double hhi = 0.22;
+    double hbo = 0.15;
+    double hto = 0.07;
+    can->SetLeftMargin(hlo);
+    can->SetRightMargin(hhi);
+    can->SetBottomMargin(hbo);
+    can->SetTopMargin(hto);
     can->SetGridx(); can->SetGridy();
 
     // Axis from first available hist
@@ -195,6 +205,19 @@ void Plot_CutFlow(const std::string &hname,
     if (!axisHist) return;
     axisHist->Draw("HIST");
     axisHist->GetYaxis()->SetRangeUser(max(0.9*hmin, 1e-6), 1.1*hmax);
+    axisHist->GetXaxis()->CenterTitle();
+    axisHist->GetXaxis()->SetTitleFont(42);
+    axisHist->GetXaxis()->SetTitleSize(0.05);
+    axisHist->GetXaxis()->SetTitleOffset(1.0);
+    axisHist->GetXaxis()->SetLabelFont(42);
+    axisHist->GetXaxis()->SetLabelSize(0.04);
+    axisHist->GetXaxis()->SetTickSize(0.);
+    axisHist->GetYaxis()->CenterTitle();
+    axisHist->GetYaxis()->SetTitleFont(42);
+    axisHist->GetYaxis()->SetTitleSize(0.04);
+    axisHist->GetYaxis()->SetTitleOffset(0.9);
+    axisHist->GetYaxis()->SetLabelFont(42);
+    axisHist->GetYaxis()->SetLabelSize(0.035);
 
     // Draw bkg
     for (size_t i = 0; i < bkgHists.size(); ++i) {
@@ -231,7 +254,12 @@ void Plot_CutFlow(const std::string &hname,
     }
 
     // Add Legend
-    TLegend* leg = new TLegend(0.7,0.7,0.9,0.9);
+    TLegend* leg = new TLegend(1.-hhi+0.01, 1.- (bkgHists.size()+sigHists.size()+2)*(1.-0.49)/9., 0.98, 1.-hto-0.005);
+    leg->SetTextFont(132);
+    leg->SetTextSize(0.042);
+    leg->SetFillColor(kWhite);
+    leg->SetLineColor(kWhite);
+    leg->SetShadowColor(kWhite);
     if (h_BKG) leg->AddEntry(h_BKG,"SM total","F");
     for (size_t i=0;i<bkgHists.size();++i) if(bkgHists[i]) leg->AddEntry(bkgHists[i],ExtractProcName(bkgHists[i]->GetName()).c_str(),"F");
     for (size_t i=0;i<sigHists.size();++i) if(sigHists[i]) {
@@ -245,6 +273,13 @@ void Plot_CutFlow(const std::string &hname,
     }
     if (h_DATA) leg->AddEntry(h_DATA,"Data","P");
     leg->Draw();
+
+    TLatex l;
+    l.SetNDC();
+    l.SetTextSize(0.04);
+    l.SetTextFont(42);
+    l.DrawLatex(0.1,0.943,"#bf{#it{CMS}} Internal 13 TeV Simulation");
+    l.SetTextSize(0.045); l.DrawLatex(0.7,0.04,ExtractBinName(string(axisHist->GetName())).c_str());
 
     // Save
     if(outFile){ outFile->cd(); can->Write(0, TObject::kWriteDelete); }

@@ -151,8 +151,8 @@ int main(int argc, char* argv[]) {
             // TEfficiency
             map<string, TH1*> numHists, denHists;
             for(const auto &pp : procmap){
-                if(pp.first.find("num__")!=string::npos) numHists[pp.first]=pp.second;
-                else if(pp.first.find("den__")!=string::npos) denHists[pp.first]=pp.second;
+                if(string(pp.second->GetName()).find("num__")!=string::npos) numHists[pp.first]=pp.second;
+                else if(string(pp.second->GetName()).find("den__")!=string::npos) denHists[pp.first]=pp.second;
             }
             for(const auto &nume : numHists){
                 string procName = nume.first; procName.replace(0,5,"");

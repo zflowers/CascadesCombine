@@ -33,8 +33,8 @@ using namespace std;
 TFile* outFile = nullptr;
 int lumi = 1;
 string outputDir = "plots/";
-map<string,string>          m_Title;
-map<string,int>             m_Color;
+map<string,string> m_Title;
+map<string,int>    m_Color;
 
 // ----------------------
 // Helpers

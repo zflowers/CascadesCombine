@@ -194,7 +194,10 @@ int main(int argc, char** argv) {
             // --- Build ordered cuts list ---
             std::vector<std::string> cutsOrdered;
             std::vector<std::string> cutLabels;
-            for (const auto &c : finalCutsExpanded) { if (!c.empty()) { cutsOrdered.push_back(c); cutLabels.push_back(c); } }
+            for (const auto &c : finalCutsExpanded) { if (!c.empty()) { cutsOrdered.push_back(c); } }
+            for (const auto &cl : cutsVec) { cutLabels.push_back(cl); }
+            for (const auto &cl : lepCutsVec) { cutLabels.push_back(cl); }
+            for (const auto &cl : predefCutsVec) { cutLabels.push_back(cl); }
             for (const auto &uc : validUserCuts) { cutsOrdered.push_back(uc.expr); cutLabels.push_back(uc.name); }
             const int Ncuts = static_cast<int>(cutsOrdered.size());
             
