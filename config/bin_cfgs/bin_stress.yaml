@@ -19,138 +19,123 @@ stressSuperBin2L: # Example SuperBin in 2L
   #J/Psi Veto: =1OSSF|mass![3.,3.2];
   predefined-cuts: "Cleaning"
   user-cuts: ""
-STRESS_=0Bronze:
-  cuts: Nlep>=2;MET>=150
+STRESS_e0Bronze:
+  cuts: 'Nlep>=2;MET>=150'
   lep-cuts: =0Bronze
-  predefined-cuts: Cleaning
+  predefined-cuts: 'Cleaning'
   user-cuts: ''
-STRESS_=0Bronzea:
-  cuts: Nlep>=2;MET>=150
-  lep-cuts: =0Bronze
-  predefined-cuts: Cleaning
+STRESS_e0Bronze_a:
+  cuts: 'Nlep>=2;MET>=150'
+  lep-cuts: =0Bronze_a
+  predefined-cuts: 'Cleaning'
   user-cuts: ''
-STRESS_=0Bronzeb:
-  cuts: Nlep>=2;MET>=150
-  lep-cuts: =0Bronze
-  predefined-cuts: Cleaning
+STRESS_e0Bronze_b:
+  cuts: 'Nlep>=2;MET>=150'
+  lep-cuts: =0Bronze_b
+  predefined-cuts: 'Cleaning'
   user-cuts: ''
-STRESS_=2Pos:
-  cuts: Nlep>=2;MET>=150
+STRESS_e2Pos:
+  cuts: 'Nlep>=2;MET>=150'
   lep-cuts: =2Pos
-  predefined-cuts: Cleaning
+  predefined-cuts: 'Cleaning'
   user-cuts: ''
-STRESS_=2Posa:
-  cuts: Nlep>=2;MET>=150
-  lep-cuts: =2Pos
-  predefined-cuts: Cleaning
+STRESS_e2Pos_a:
+  cuts: 'Nlep>=2;MET>=150'
+  lep-cuts: =2Pos_a
+  predefined-cuts: 'Cleaning'
   user-cuts: ''
-STRESS_=2Posb:
-  cuts: Nlep>=2;MET>=150
-  lep-cuts: =2Pos
-  predefined-cuts: Cleaning
+STRESS_e2Pos_b:
+  cuts: 'Nlep>=2;MET>=150'
+  lep-cuts: =2Pos_b
+  predefined-cuts: 'Cleaning'
   user-cuts: ''
-STRESS_=2Gold:
-  cuts: Nlep>=2;MET>=150
+STRESS_e2Gold:
+  cuts: 'Nlep>=2;MET>=150'
   lep-cuts: =2Gold
-  predefined-cuts: Cleaning
+  predefined-cuts: 'Cleaning'
   user-cuts: ''
-STRESS_=2Golda:
-  cuts: Nlep>=2;MET>=150
-  lep-cuts: =2Gold
-  predefined-cuts: Cleaning
+STRESS_e2Gold_a:
+  cuts: 'Nlep>=2;MET>=150'
+  lep-cuts: =2Gold_a
+  predefined-cuts: 'Cleaning'
   user-cuts: ''
-STRESS_=2Goldb:
-  cuts: Nlep>=2;MET>=150
-  lep-cuts: =2Gold
-  predefined-cuts: Cleaning
+STRESS_e2Gold_b:
+  cuts: 'Nlep>=2;MET>=150'
+  lep-cuts: =2Gold_b
+  predefined-cuts: 'Cleaning'
   user-cuts: ''
-STRESS_>=1OSSF:
-  cuts: Nlep>=2;MET>=150
+STRESS_ge1OSSF:
+  cuts: 'Nlep>=2;MET>=150'
   lep-cuts: '>=1OSSF'
-  predefined-cuts: Cleaning
+  predefined-cuts: 'Cleaning'
   user-cuts: ''
-STRESS_>=1OSSFa:
-  cuts: Nlep>=2;MET>=150
-  lep-cuts: '>=1OSSF'
-  predefined-cuts: Cleaning
+STRESS_ge1OSSF_a:
+  cuts: 'Nlep>=2;MET>=150'
+  lep-cuts: '>=1OSSF_a'
+  predefined-cuts: 'Cleaning'
   user-cuts: ''
-STRESS_>=1OSSFb:
-  cuts: Nlep>=2;MET>=150
-  lep-cuts: '>=1OSSF'
-  predefined-cuts: Cleaning
+STRESS_ge1OSSF_b:
+  cuts: 'Nlep>=2;MET>=150'
+  lep-cuts: '>=1OSSF_b'
+  predefined-cuts: 'Cleaning'
   user-cuts: ''
-STRESS_=1SSOF:
-  cuts: Nlep>=2;MET>=150
+STRESS_e1SSOF:
+  cuts: 'Nlep>=2;MET>=150'
   lep-cuts: =1SSOF
-  predefined-cuts: Cleaning
+  predefined-cuts: 'Cleaning'
   user-cuts: ''
-STRESS_=1SSOFa:
-  cuts: Nlep>=2;MET>=150
-  lep-cuts: =1SSOF
-  predefined-cuts: Cleaning
+STRESS_e1SSOF_a:
+  cuts: 'Nlep>=2;MET>=150'
+  lep-cuts: =1SSOF_a
+  predefined-cuts: 'Cleaning'
   user-cuts: ''
-STRESS_=1SSOFb:
-  cuts: Nlep>=2;MET>=150
-  lep-cuts: =1SSOF
-  predefined-cuts: Cleaning
+STRESS_e1SSOF_b:
+  cuts: 'Nlep>=2;MET>=150'
+  lep-cuts: =1SSOF_b
+  predefined-cuts: 'Cleaning'
   user-cuts: ''
-STRESS_>=2Mu:
-  cuts: Nlep>=2;MET>=150
+STRESS_ge2Mu:
+  cuts: 'Nlep>=2;MET>=150'
   lep-cuts: '>=2Mu'
-  predefined-cuts: Cleaning
+  predefined-cuts: 'Cleaning'
   user-cuts: ''
-STRESS_>=2Mua:
-  cuts: Nlep>=2;MET>=150
-  lep-cuts: '>=2Mu'
-  predefined-cuts: Cleaning
+STRESS_ge2Mu_a:
+  cuts: 'Nlep>=2;MET>=150'
+  lep-cuts: '>=2Mu_a'
+  predefined-cuts: 'Cleaning'
   user-cuts: ''
-STRESS_>=2Mub:
-  cuts: Nlep>=2;MET>=150
-  lep-cuts: '>=2Mu'
-  predefined-cuts: Cleaning
+STRESS_ge2Mu_b:
+  cuts: 'Nlep>=2;MET>=150'
+  lep-cuts: '>=2Mu_b'
+  predefined-cuts: 'Cleaning'
   user-cuts: ''
-STRESS_>=1Elec:
-  cuts: Nlep>=2;MET>=150
+STRESS_ge1Elec:
+  cuts: 'Nlep>=2;MET>=150'
   lep-cuts: '>=1Elec'
-  predefined-cuts: Cleaning
+  predefined-cuts: 'Cleaning'
   user-cuts: ''
-STRESS_>=1Eleca:
-  cuts: Nlep>=2;MET>=150
-  lep-cuts: '>=1Elec'
-  predefined-cuts: Cleaning
+STRESS_ge1Elec_a:
+  cuts: 'Nlep>=2;MET>=150'
+  lep-cuts: '>=1Elec_a'
+  predefined-cuts: 'Cleaning'
   user-cuts: ''
-STRESS_>=1Elecb:
-  cuts: Nlep>=2;MET>=150
-  lep-cuts: '>=1Elec'
-  predefined-cuts: Cleaning
+STRESS_ge1Elec_b:
+  cuts: 'Nlep>=2;MET>=150'
+  lep-cuts: '>=1Elec_b'
+  predefined-cuts: 'Cleaning'
   user-cuts: ''
-STRESS_<1SSSF:
-  cuts: Nlep>=2;MET>=150
+STRESS_l1SSSF:
+  cuts: 'Nlep>=2;MET>=150'
   lep-cuts: <1SSSF
-  predefined-cuts: Cleaning
+  predefined-cuts: 'Cleaning'
   user-cuts: ''
-STRESS_<1SSSFa:
-  cuts: Nlep>=2;MET>=150
-  lep-cuts: <1SSSF
-  predefined-cuts: Cleaning
+STRESS_l1SSSF_a:
+  cuts: 'Nlep>=2;MET>=150'
+  lep-cuts: <1SSSF_a
+  predefined-cuts: 'Cleaning'
   user-cuts: ''
-STRESS_<1SSSFb:
-  cuts: Nlep>=2;MET>=150
-  lep-cuts: <1SSSF
-  predefined-cuts: Cleaning
-  user-cuts: ''
-STRESS_>=1Muon:
-  cuts: Nlep>=2;MET>=150
-  lep-cuts: '>=1Muon'
-  predefined-cuts: Cleaning
-  user-cuts: ''
-STRESS_>=1Muona:
-  cuts: Nlep>=2;MET>=150
-  lep-cuts: '>=1Muon'
-  predefined-cuts: Cleaning
-  user-cuts: ''
-STRESS_>=1Muonb:
-  cuts: Nlep>=2;MET>=150
-  lep-cuts: '>=1Muon'
-  predefined-cuts: Cleaning
+STRESS_l1SSSF_b:
+  cuts: 'Nlep>=2;MET>=150'
+  lep-cuts: '<1SSSF_b'
+  predefined-cuts: 'Cleaning'
   user-cuts: ''
