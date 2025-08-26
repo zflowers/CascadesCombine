@@ -32,8 +32,7 @@ inline std::string GetProcessNameFromKey(const std::string& keyOrPath) {
         for (const auto &kv : ST.MasterDict) {       // kv.first = canonical group
             for (const auto &entry : kv.second) {    // entry = full path
                 std::string entryBase = fs::path(entry).filename().string();
-                // Use starts-with match instead of find anywhere
-                if (keyBase.rfind(entryBase.substr(0, entryBase.find("_")), 0) == 0)
+                if (keyBase == entryBase)
                     return kv.first;
             }
         }

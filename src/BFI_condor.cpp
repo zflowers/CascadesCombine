@@ -133,12 +133,12 @@ int main(int argc, char** argv) {
         processName = GetProcessNameFromKey(rootFilePath);
 
     auto processTree=[&](const std::string &tree_name, const std::string &key){
-        histFile->cd();
+        if(doHist) histFile->cd();
         ROOT::RDataFrame df(tree_name, rootFilePath);
     
         // Scale weights
         auto df_scaled = df.Define("weight_scaled",[Lumi](double w){return w*Lumi;},{"weight"})
-                           .Define("weight_sq_scaled",[Lumi](double w){return w*w*Lumi*Lumi;},{"weight"});
+                           .Define("weight_sq_scaled", [Lumi](double w2){ return w2 * Lumi * Lumi; }, {"weight2"});
     
         // Lepton counts / kinematics
         auto df_with_lep = BFI->DefineLeptonPairCounts(df_scaled,"");
@@ -203,18 +203,23 @@ int main(int argc, char** argv) {
             
             // --- Book single CutFlow histogram (Ncuts+1 bins: 0..Ncuts) ---
             std::string cfName = binName + "__" + processName + "__CutFlow";
-            auto hist_CutFlow = std::make_shared<TH1D>(cfName.c_str(), cfName.c_str(), Ncuts + 1, 0.0, double(Ncuts + 1));
-            //hist_CutFlow->Sumw2();
+            auto hist_CutFlow = std::make_shared<TH1D>(cfName.c_str(), cfName.c_str(), Ncuts+1, 0.0, double(Ncuts+1));
+            hist_CutFlow->Sumw2();
             
-            // --- Dummy total events (bin 0) ---
-            // Turn off to speed up processing
-            // Count() returns an RResultPtr; force evaluation with GetValue()
-            // double totalEvents = static_cast<double>(node.Count().GetValue());
-            // hist_CutFlow->SetBinContent(0, totalEvents);
-            // hist_CutFlow->SetBinError(0, std::sqrt(totalEvents));
+            // --- Total events from NTUPLES ---
+            auto sumW_NoCuts = node.Sum<double>("weight_scaled");
+            auto sumW2_NoCuts = node.Sum<double>("weight_sq_scaled");
+            double sW_NoCuts = sumW_NoCuts.GetValue();
+            double sW2_NoCuts = sumW2_NoCuts.GetValue();
+            double err_NoCuts = (sW2_NoCuts>=0)?std::sqrt(sW2_NoCuts):0.0;
+            hist_CutFlow->SetBinContent(0, sW_NoCuts);
+            hist_CutFlow->SetBinError(0, err_NoCuts);
+            hist_CutFlow->SetBinContent(1, sW_NoCuts);
+            hist_CutFlow->SetBinError(1, err_NoCuts);
+            hist_CutFlow->GetXaxis()->SetBinLabel(1, "NTUPLES");
             
             // --- Only build cumulative CutFlow if there are cuts ---
-            if (Ncuts > 0) {
+            if (Ncuts > 1) {
                 auto make_pass_name = [&](int i){ return processName + std::string("_pass_") + std::to_string(i+1); };
             
                 ROOT::RDF::RNode defNode = node;
@@ -236,19 +241,19 @@ int main(int argc, char** argv) {
                 // Fill Histo1D once (use .c_str())
                 std::string histNameTmp = processName + std::string("_npassed_tmp");
                 auto r_h_npassed = defNode.Histo1D(
-                    { histNameTmp.c_str(), histNameTmp.c_str(), Ncuts + 1, 0.0, double(Ncuts + 1) },
+                    { histNameTmp.c_str(), histNameTmp.c_str(), Ncuts, 0.0, double(Ncuts) },
                     npassed_col.c_str(),
                     "weight_scaled"
                 );
             
                 // Execute once and get the TH1D by value (copy)
-                auto h_npassed = r_h_npassed.GetValue(); // h_npassed is a TH1D (value copy)
+                auto h_npassed = r_h_npassed.GetValue();
             
                 // Fill classical CutFlow: bins 1..Ncuts = events surviving cut1..cutN
-                for (int i = 1; i <= Ncuts; ++i) {
+                for (int i = 2; i <= Ncuts+1; ++i) {
                     double surv = 0.0;
                     double surv_err2 = 0.0;
-                    for (int k = i; k <= Ncuts; ++k) {
+                    for (int k = i-1; k <= Ncuts; ++k) {
                         // mapping: npassed == k is stored in histogram bin index (k + 1)
                         int rootBin = k + 1;
                         double c = h_npassed.GetBinContent(rootBin);
@@ -259,7 +264,7 @@ int main(int argc, char** argv) {
                     hist_CutFlow->SetBinContent(i, surv);
                     hist_CutFlow->SetBinError(i, std::sqrt(surv_err2));
             
-                    std::string lbl = (i - 1 < (int)cutLabels.size()) ? cutLabels[i - 1] : ("Cut_" + std::to_string(i));
+                    std::string lbl = (i - 2 < (int)cutLabels.size()) ? cutLabels[i - 2] : ("Cut_" + std::to_string(i-1));
                     hist_CutFlow->GetXaxis()->SetBinLabel(i, lbl.c_str());
                 }
             }
@@ -299,6 +304,7 @@ int main(int argc, char** argv) {
             // --- FILL PASS (MT ON) ---
             ROOT::EnableImplicitMT(); // turn on multi-threading once
             
+            std::cout << "[BFI_condor] Filling histograms\n";
             for (size_t i = 0; i < N; ++i) {
                 if (!keep[i]) continue;
                 const auto &h = histDefs[i];
@@ -306,12 +312,12 @@ int main(int argc, char** argv) {
             
                 // Use the recorded plan; appliedUserCuts were stored in validation
                 FillHistFromPlan(node, plans[i], h, hname);
-                std::cout << "[BFI_condor] Filled histogram: " << h.name << "\n";
             }
         }
     
         // --- JSON output ---
         if(doJSON){
+            std::cout << "[BFI_condor] Filling json\n";
             ROOT::EnableImplicitMT();
             auto json_node = node;
             auto cnt = json_node.Count();
@@ -333,7 +339,7 @@ int main(int argc, char** argv) {
     else if(sigType=="cascades") processTree("KUAnalysis",BFTool::GetSignalTokensCascades(rootFilePath));
     else if(sigType=="sms"){
         for(const auto &tree_name:BFTool::GetSignalTokensSMS(rootFilePath))
-            processTree(tree_name,tree_name);
+            processTree(tree_name,processName);
     }else{std::cerr<<"[BFI_condor] Unknown sig-type: "<<sigType<<"\n"; delete BFI; return 4;}
 
     for(auto &kv: totals) kv.second[2]=std::sqrt(kv.second[2]);

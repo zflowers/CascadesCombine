@@ -29,12 +29,18 @@
 
 using namespace std;
 
-// global out root file pointer
+// globals
+
 TFile* outFile = nullptr;
 int lumi = 1;
 string outputDir = "plots/";
 map<string,string> m_Title;
 map<string,int>    m_Color;
+
+double hlo = 0.09;
+double hhi = 0.22;
+double hbo = 0.15;
+double hto = 0.07;
 
 // ----------------------
 // Helpers
@@ -77,6 +83,48 @@ void GetMinMaxIntegral(const vector<TH1*>& vect, double &hmin, double &hmax) {
     if (hmin > 1e98) hmin = 0.;
 }
 
+
+const TColor rf_blue0(7000,0.749,0.78,0.933);
+const TColor rf_blue1(7001,0.424,0.467,0.651);
+const TColor rf_blue2(7002,0.255,0.302,0.522);
+const TColor rf_blue3(7003,0.114,0.165,0.396);
+const TColor rf_blue4(7004,0.024,0.063,0.251);
+const TColor rf_green0(7010,0.737,0.949,0.784);
+const TColor rf_green1(7011,0.435,0.722,0.498);
+const TColor rf_green2(7012,0.239,0.576,0.314);
+const TColor rf_green3(7013,0.082,0.439,0.161);
+const TColor rf_green4(7014,0,0.275,0.063);
+const TColor rf_red0(7020,1,0.796,0.776);
+const TColor rf_red1(7021,0.957,0.612,0.576);
+const TColor rf_red2(7022,0.765,0.361,0.318);
+const TColor rf_red3(7023,0.58,0.157,0.11);
+const TColor rf_red4(7024,0.365,0.035,0);
+const TColor rf_yellow0(7030,1,0.933,0.776);
+const TColor rf_yellow1(7031,0.957,0.843,0.576);
+const TColor rf_yellow2(7032,0.765,0.631,0.318);
+const TColor rf_yellow3(7033,0.58,0.443,0.11);
+const TColor rf_yellow4(7034,0.365,0.259,0);
+const TColor rf_purple0(7040,0.937,0.729,0.898);
+const TColor rf_purple1(7041,0.753,0.478,0.702);
+const TColor rf_purple2(7042,0.6,0.286,0.541);
+const TColor rf_purple3(7043,0.42,0.075,0.353);
+const TColor rf_purple4(7044,0.196,0,0.161);
+const TColor rf_cyan0(7050,0.714,0.898,0.918);
+const TColor rf_cyan1(7051,0.424,0.639,0.659);
+const TColor rf_cyan2(7052,0.247,0.49,0.51);
+const TColor rf_cyan3(7053,0.067,0.329,0.357);
+const TColor rf_cyan4(7054,0,0.153,0.169);
+const TColor rf_orange0(7060,1,0.882,0.776);
+const TColor rf_orange1(7061,1,0.808,0.639);
+const TColor rf_orange2(7062,0.839,0.608,0.4);
+const TColor rf_orange3(7063,0.584,0.329,0.106);
+const TColor rf_orange4(7064,0.275,0.129,0);
+const TColor rf_lime0(7070,0.941,0.992,0.769);
+const TColor rf_lime1(7071,0.882,0.961,0.612);
+const TColor rf_lime2(7072,0.706,0.8,0.38);
+const TColor rf_lime3(7073,0.455,0.557,0.098);
+const TColor rf_lime4(7074,0.204,0.263,0);
+
 void loadFormatMaps(){
 
   m_Title["ttbar"] = "t #bar{t} + X";
@@ -107,6 +155,10 @@ void loadFormatMaps(){
   m_Color["Wjets"] = 7001;
   //m_Color["Wjets"] = 8001; 
   
+  m_Title["Gjets"] = "#gamma + jets";
+  m_Color["Gjets"] = 7051;
+  //m_Color["Gjets"] = 8002; 
+
   m_Title["QCD"] = "QCD multijets";
   m_Color["QCD"] = 7023;
   //m_Color["QCD"] = 8007;
@@ -136,6 +188,11 @@ void loadFormatMaps(){
   m_Title["Cascades_300_300_289_280_275_270_SMS"] = "Cascades 270 SMS";
   m_Color["Cascades_300_300_289_280_275_270_SMS"] = 7061;
   //m_Color["Cascades_300_300_289_280_275_270"] = 8009;
+
+  m_Title["SMS_TChiWZ_Sandwich"] = "TChiWZ 300, 295, 290";
+  m_Color["SMS_TChiWZ_Sandwich"] = 7043;
+  m_Title["SMS_TChiWZ"] = "TChiWZ 300, 300, 290";
+  m_Color["SMS_TChiWZ"] = 7072;
 
   m_Title["T1bbbb_1500_SMS"] = "T1bbbb 1500";
   m_Color["T1bbbb_1500_SMS"] = 7071;
@@ -269,16 +326,16 @@ T* GetHistClone(TFile *f, const string &name) {
 // --------------------------------------------------
 // Sort background histograms and process names by total yield (descending)
 // --------------------------------------------------
-static void SortBackgroundsByYield(
-    std::vector<TH1*>& bkgHists,
-    std::vector<std::string>& bkgProcs)
+static void SortByYield(
+    std::vector<TH1*>& Hists,
+    std::vector<std::string>& Procs)
 {
-    if(bkgHists.empty() || bkgHists.size() != bkgProcs.size()) return;
+    if(Hists.empty() || Hists.size() != Procs.size()) return;
 
     // Create vector of pairs {integral, index}
     std::vector<std::pair<double,int>> yields_idx;
-    for(size_t i=0;i<bkgHists.size();++i)
-        yields_idx.push_back({bkgHists[i]->Integral(), (int)i});
+    for(size_t i=0;i<Hists.size();++i)
+        yields_idx.push_back({Hists[i]->Integral(), (int)i});
 
     // Sort descending
     std::sort(yields_idx.rbegin(), yields_idx.rend());
@@ -287,12 +344,12 @@ static void SortBackgroundsByYield(
     std::vector<TH1*> sortedHists;
     std::vector<std::string> sortedProcs;
     for(auto &p : yields_idx){
-        sortedHists.push_back(bkgHists[p.second]);
-        sortedProcs.push_back(bkgProcs[p.second]);
+        sortedHists.push_back(Hists[p.second]);
+        sortedProcs.push_back(Procs[p.second]);
     }
 
-    bkgHists.swap(sortedHists);
-    bkgProcs.swap(sortedProcs);
+    Hists.swap(sortedHists);
+    Procs.swap(sortedProcs);
 }
 
 // --------------------------------------------------
@@ -332,7 +389,7 @@ void DrawLog(TH1* h, const char* opt = "",
     if (!h) return;
     double max = h->GetMaximum();
     if (max <= 0) {
-        std::cerr << "TH1 has no positive entries\n";
+        // std::cerr << "TH1: " << h->GetName() << " has no positive entries\n";
         h->Draw(opt);
         return;
     }
@@ -349,7 +406,7 @@ void DrawLog(TH2* h, const char* opt = "",
     if (!h) return;
     double max = h->GetMaximum();
     if (max <= 0) {
-        std::cerr << "TH2 has no positive entries\n";
+        // std::cerr << "TH2: " << h->GetName() << " has no positive entries\n";
         h->Draw(opt);
         return;
     }
@@ -373,7 +430,7 @@ void DrawLog(TEfficiency* e, const char* opt = "",
         }
     }
     if (ymax <= 0 || ymin <= 0) {
-        std::cerr << "TEfficiency has no positive values\n";
+        // std::cerr << "TEfficiency: " << e->GetName() << " has no positive values\n";
         e->Draw(opt);
         return;
     }
@@ -398,7 +455,7 @@ void DrawLog(TGraph* g, const char* opt = "AP",
         }
     }
     if (ymax <= 0 || ymin <= 0 || ymin > ymax) {
-        std::cerr << "TGraph has no positive points\n";
+        // std::cerr << "TGraph: " << g->GetName() << " has no positive points\n";
         g->Draw(opt);
         return;
     }

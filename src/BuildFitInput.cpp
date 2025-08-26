@@ -12,8 +12,7 @@ void BuildFitInput::LoadBkg_KeyValue(const std::string& key, const stringlist& b
         // Define scaled weight (w * Lumi) and squared weight
         auto df_scaled = df
             .Define("weight_scaled", [Lumi](double w){ return w * Lumi; }, {"weight"})
-            .Define("weight_sq_scaled", [Lumi](double w){ return (w*Lumi)*(w*Lumi); }, {"weight"});
-            //.Define("weight_sq_scaled", [Lumi](double w2){ return w2 * Lumi * Lumi; }, {"weight2"});
+            .Define("weight_sq_scaled", [Lumi](double w2){ return w2 * Lumi * Lumi; }, {"weight2"});
 
 
         // Define lepton pair counts for all sides
@@ -100,8 +99,8 @@ inline bool ColumnExists(ROOT::RDF::RNode rdf, const std::string& name) {
 ROOT::RDF::RNode BuildFitInput::DefinePairKinematics(ROOT::RDF::RNode rdf, const std::string& side) {
     // Determine side-specific index branch
     std::string indexBranch;
-    if (side == "A")      indexBranch = "index_lep_a";
-    else if (side == "B") indexBranch = "index_lep_b";
+    if (side == "A")      indexBranch = "index_lep_a_LEP"; // LEP only RJR tree
+    else if (side == "B") indexBranch = "index_lep_b_LEP"; // LEP only RJR tree
 
     std::string sideSuffix = "";
     std::string pairPrefix = "";
@@ -439,8 +438,8 @@ std::string BuildFitInput::BuildLeptonCut(const std::string& shorthand_in, const
 
 ROOT::RDF::RNode BuildFitInput::DefineLeptonPairCounts(ROOT::RDF::RNode rdf, const std::string& side) {
     std::string indexBranch;
-    if (side == "A")      indexBranch = "index_lep_a";
-    else if (side == "B") indexBranch = "index_lep_b";
+    if (side == "A")      indexBranch = "index_lep_a_LEP"; // LEP only RJR tree
+    else if (side == "B") indexBranch = "index_lep_b_LEP"; // LEP only RJR tree
     // else "" => all leptons
 
     // --- define side-specific flattened vectors (flavour, charge, quality)

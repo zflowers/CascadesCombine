@@ -18,7 +18,7 @@ void Plot_Hist1D(TH1* h) {
     l.SetTextSize(0.035); l.DrawLatex(0.57,0.943,m_Title[ExtractProcName(title)].c_str());
     l.SetTextSize(0.04); l.DrawLatex(0.01,0.943,"#bf{CMS} Simulation Preliminary");
     l.SetTextSize(0.045); l.DrawLatex(0.7,0.04,ExtractBinName(title).c_str());
-    TString pdfName = Form("%spdfs/%s.pdf", outputDir.c_str(), title.c_str());
+    TString pdfName = Form("%spdfs/%s/%s.pdf", outputDir.c_str(), ExtractBinName(title).c_str(), title.c_str());
     gErrorIgnoreLevel = 1001;
     can->SaveAs(pdfName);
     gErrorIgnoreLevel = 0;
@@ -36,14 +36,13 @@ void Plot_Hist2D(TH2* h) {
     can->SetLeftMargin(0.15); can->SetRightMargin(0.18); can->SetBottomMargin(0.15);
     can->SetGridx(); can->SetGridy();
     DrawLogSmart(h, "COLZ");
-    h->GetXaxis()->CenterTitle();
-    h->GetYaxis()->CenterTitle();
+    h->GetXaxis()->CenterTitle(); h->GetYaxis()->CenterTitle();
     h->GetZaxis()->SetTitle(("N_{events} / "+std::to_string(int(lumi))+" fb^{-1}").c_str());
     TLatex l; l.SetTextFont(42); l.SetNDC();
     l.SetTextSize(0.035); l.DrawLatex(0.65,0.943,m_Title[ExtractProcName(title)].c_str());
     l.SetTextSize(0.04); l.DrawLatex(0.01,0.943,"#bf{CMS} Simulation Preliminary");
     l.SetTextSize(0.045); l.DrawLatex(0.7,0.04,ExtractBinName(title).c_str());
-    TString pdfName = Form("%spdfs/%s.pdf", outputDir.c_str(), title.c_str());
+    TString pdfName = Form("%spdfs/%s/%s.pdf", outputDir.c_str(), ExtractBinName(title).c_str(), title.c_str());
     gErrorIgnoreLevel = 1001;
     can->SaveAs(pdfName);
     gErrorIgnoreLevel = 0;
@@ -89,7 +88,7 @@ void Plot_Eff(TEfficiency* e){
     l.SetTextSize(0.035); l.DrawLatex(0.65,0.943,m_Title[ExtractProcName(title)].c_str());
     l.SetTextSize(0.04); l.DrawLatex(0.01,0.943,"#bf{CMS} Simulation Preliminary");
     l.SetTextSize(0.045); l.DrawLatex(0.7,0.04,ExtractBinName(title).c_str());
-    TString pdfName = Form("%spdfs/%s.pdf", outputDir.c_str(), title.c_str());
+    TString pdfName = Form("%spdfs/%s/%s.pdf", outputDir.c_str(), ExtractBinName(title).c_str(), title.c_str());
     gErrorIgnoreLevel = 1001;
     can->SaveAs(pdfName);
     gErrorIgnoreLevel = 0;
@@ -101,8 +100,8 @@ void Plot_Eff(TEfficiency* e){
 // Plot stack
 // ----------------------
 void Plot_Stack(const string& hname,
-                const vector<TH1*>& bkgHists,
-                const vector<TH1*>& sigHists,
+                vector<TH1*>& bkgHists,
+                vector<TH1*>& sigHists,
                 TH1* dataHist = nullptr,
                 double signal_boost = 1.0)
 {
@@ -112,15 +111,30 @@ void Plot_Stack(const string& hname,
     double hmin, hmax; GetMinMaxIntegral(allHists, hmin, hmax);
     if (hmin <= 0.) hmin = 1.e-1;
 
+    int stack_index = 0;
     TH1D* h_BKG = nullptr;
-    for (auto* h : bkgHists) { if (!h) continue; SetMinimumBinContent(h, 1.e-6); 
-        if (!h_BKG) h_BKG = (TH1D*) h->Clone("TOT_BKG"); else h_BKG->Add(h); }
-
+    for (auto* h : bkgHists) {
+        if (!h) continue;
+        SetMinimumBinContent(h, 1.e-6); 
+        if (!h_BKG) { 
+            h_BKG = (TH1D*) h->Clone("TOT_BKG"); 
+        } else {
+            for(int k = 0; k < stack_index; k++){
+              bkgHists[k]->Add(h);
+            }
+            h_BKG->Add(h);
+        }
+        stack_index++;
+    }
     TH1D* h_DATA = nullptr;
     if (dataHist) h_DATA = (TH1D*) dataHist->Clone("TOT_DATA");
 
     string canvas_name = "can_stack_" + hname;
     TCanvas* can = new TCanvas(canvas_name.c_str(), canvas_name.c_str(), 1200, 700);
+    can->SetLeftMargin(hlo);
+    can->SetRightMargin(hhi);
+    can->SetBottomMargin(hbo);
+    can->SetTopMargin(hto);
     can->SetGridx(); can->SetGridy();
     TH1* axisHist = !allHists.empty() ? allHists.front() : nullptr;
     if (!axisHist) return;
@@ -140,15 +154,28 @@ void Plot_Stack(const string& hname,
 
     if (h_DATA) { h_DATA->SetMarkerStyle(20); h_DATA->SetMarkerSize(0.8); h_DATA->SetLineColor(kBlack); DrawLogSmart(h_DATA, "SAME E"); }
 
-    TLegend* leg = new TLegend(0.7,0.7,0.9,0.9);
+    TLegend* leg = new TLegend(1.-hhi+0.01, 1.- (bkgHists.size()+sigHists.size()+2)*(1.-0.49)/9., 0.98, 1.-hto-0.005);
+    leg->SetTextFont(132);
+    leg->SetTextSize(0.042);
+    leg->SetFillColor(kWhite);
+    leg->SetLineColor(kWhite);
+    leg->SetShadowColor(kWhite);
     if (h_BKG) leg->AddEntry(h_BKG,"SM total","F");
     for (size_t i=0;i<bkgHists.size();++i) if(bkgHists[i]) leg->AddEntry(bkgHists[i],ExtractProcName(bkgHists[i]->GetName()).c_str(),"F");
-    for (size_t i=0;i<sigHists.size();++i) if(sigHists[i]) leg->AddEntry(sigHists[i],ExtractProcName(sigHists[i]->GetName()).c_str(),"L");
+    for (size_t i=0;i<sigHists.size();++i) if(sigHists[i]) {
+        std::string tmp_label = ExtractProcName(sigHists[i]->GetName());
+        if (signal_boost != 1.0) {
+            std::ostringstream boost_str;
+            boost_str << std::setprecision(3) << std::defaultfloat << signal_boost;
+            tmp_label += " * " + boost_str.str();
+        }
+        leg->AddEntry(sigHists[i], tmp_label.c_str(), "L");
+    }
     if(h_DATA) leg->AddEntry(h_DATA,"Data","P");
     leg->Draw();
 
     if(outFile){ outFile->cd(); can->Write(0, TObject::kWriteDelete); }
-    TString stackPdf = Form("%spdfs/%s.pdf", outputDir.c_str(), hname.c_str());
+    TString stackPdf = Form("%spdfs/%s/%s.pdf", outputDir.c_str(), ExtractBinName(bkgHists[0]->GetName()).c_str(), canvas_name.c_str());
     gErrorIgnoreLevel = 1001; can->SaveAs(stackPdf); gErrorIgnoreLevel = 0;
 
     delete can; if(h_BKG) delete h_BKG; if(h_DATA) delete h_DATA;
@@ -190,10 +217,6 @@ void Plot_CutFlow(const std::string &hname,
     // Canvas
     string canvas_name = "can_cutflow_" + hname;
     TCanvas* can = new TCanvas(canvas_name.c_str(), canvas_name.c_str(), 1200, 700);
-    double hlo = 0.09;
-    double hhi = 0.22;
-    double hbo = 0.15;
-    double hto = 0.07;
     can->SetLeftMargin(hlo);
     can->SetRightMargin(hhi);
     can->SetBottomMargin(hbo);
@@ -283,7 +306,7 @@ void Plot_CutFlow(const std::string &hname,
 
     // Save
     if(outFile){ outFile->cd(); can->Write(0, TObject::kWriteDelete); }
-    TString pdfOut = Form("%spdfs/%s.pdf", outputDir.c_str(), hname.c_str());
+    TString pdfOut = Form("%spdfs/%s/%s.pdf", outputDir.c_str(), ExtractBinName(string(axisHist->GetName())).c_str(), hname.c_str());
     gErrorIgnoreLevel = 1001;
     can->SaveAs(pdfOut);
     gErrorIgnoreLevel = 0;

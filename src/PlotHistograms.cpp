@@ -96,6 +96,8 @@ int main(int argc, char* argv[]) {
 
     gSystem->mkdir(outputDir.c_str(), kTRUE);
     gSystem->mkdir((outputDir+"pdfs").c_str(), kTRUE);
+    for(const auto& bin : uniqueBinNames)
+        gSystem->mkdir((outputDir+"pdfs/"+bin).c_str(), kTRUE);
     copyConfigsToOutput(outputDir,histCfg,processCfg,binsCfg);
 
     TString baseName=gSystem->BaseName(inputFileName); baseName.ReplaceAll(".root","");
@@ -130,7 +132,7 @@ int main(int argc, char* argv[]) {
             }
         }
         
-        SortBackgroundsByYield(bkgHists, bkgProcs);
+        SortByYield(bkgHists, bkgProcs);
         
         if(!isCutFlow){
             // Individual plots for 1D/2D histograms
@@ -144,7 +146,8 @@ int main(int argc, char* argv[]) {
         
             // Plot stack
             if(!bkgHists.empty() || !sigHists.empty() || dataHist){
-                if(groupKey.find("num__")!=string::npos || groupKey.find("den__")!=string::npos) continue;
+                if(groupKey.find("num__")!=string::npos || groupKey.find("den__")!=string::npos) continue; // don't stack efficiency inputs
+                if(bkgHists[0]->InheritsFrom(TH2::Class())) continue; // don't stack TH2s
                 Plot_Stack(groupKey, bkgHists, sigHists, dataHist, 1.0);
             }
         

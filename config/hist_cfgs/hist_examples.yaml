@@ -8,7 +8,7 @@ histograms:
   - name: MV_ratio_vs_PT3
     type: "2D"
     expr: "MV_ratio"    # X-axis
-    yexpr: "PT3_lep"   # Y-axis
+    yexpr: "PT3_lep"    # Y-axis
     nbins: 20
     xmin: 0
     xmax: 2

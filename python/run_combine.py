@@ -275,7 +275,7 @@ def main():
     total_time_seconds = end_time - start_time
     condor_time_end = time.time()
     condor_time_seconds = condor_time_end - condor_time_start
-    print("Time for condor jobs to match: {:.2f} seconds = {:.2f} minutes = {:.2f} hours".format(
+    print("Time for all condor jobs to start running: {:.2f} seconds = {:.2f} minutes = {:.2f} hours".format(
         idle_time_seconds, idle_time_seconds/60, idle_time_seconds/3600), flush=True)
     print("Time for condor processing: {:.2f} seconds = {:.2f} minutes = {:.2f} hours".format(
         condor_time_seconds, condor_time_seconds/60, condor_time_seconds/3600), flush=True)
