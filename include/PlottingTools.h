@@ -257,6 +257,7 @@ void Plot_CutFlow(const std::string &hname,
     if (h_BKG) {
         h_BKG->SetLineWidth(3);
         h_BKG->SetLineColor(kRed);
+        h_BKG->SetMarkerColor(kRed);
         h_BKG->Draw("SAME");
     }
 
@@ -286,8 +287,8 @@ void Plot_CutFlow(const std::string &hname,
     leg->SetFillColor(kWhite);
     leg->SetLineColor(kWhite);
     leg->SetShadowColor(kWhite);
-    if (h_BKG) leg->AddEntry(h_BKG,"SM total","F");
-    for (size_t i=0;i<bkgHists.size();++i) if(bkgHists[i]) leg->AddEntry(bkgHists[i],m_Title[ExtractProcName(bkgHists[i]->GetName())].c_str(),"F");
+    if (h_BKG) leg->AddEntry(h_BKG,"SM total","L");
+    for (size_t i=0;i<bkgHists.size();++i) if(bkgHists[i]) leg->AddEntry(bkgHists[i],m_Title[ExtractProcName(bkgHists[i]->GetName())].c_str(),"L");
     for (size_t i=0;i<sigHists.size();++i) if(sigHists[i]) {
         std::string tmp_label = m_Title[ExtractProcName(sigHists[i]->GetName())];
         if (signal_boost != 1.0) {
