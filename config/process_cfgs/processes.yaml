@@ -10,5 +10,5 @@ processes:
 
   sig:
     - Cascades
-    #- SMS_TChiWZ
-    #- SMS_TChiWZ_Sandwich
+    - SMS_TChiWZ
+    - SMS_TChiWZ_Sandwich
