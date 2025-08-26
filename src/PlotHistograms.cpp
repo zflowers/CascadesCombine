@@ -127,9 +127,9 @@ int main(int argc, char* argv[]) {
                 bkgHists.push_back(h); 
                 bkgProcs.push_back(proc); 
             }
-            else if(find(tool.SignalKeys.begin(), tool.SignalKeys.end(), proc) != tool.SignalKeys.end()) { 
-                sigHists.push_back(h); sigProcs.push_back(proc); 
-            }
+            else if(find(tool.SignalKeys.begin(), tool.SignalKeys.end(), proc) != tool.SignalKeys.end() 
+                || proc.find("SMS") != std::string::npos || proc.find("Cascades") != std::string::npos)
+              sigHists.push_back(h); sigProcs.push_back(proc); 
         }
         
         SortByYield(bkgHists, bkgProcs);

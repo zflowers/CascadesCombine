@@ -173,16 +173,27 @@ void loadFormatMaps(){
 
   m_Title["Cascades_300_300_289_260_240_220_220_209_200_190_180"] = "Cascades 180";
   m_Color["Cascades_300_300_289_260_240_220_220_209_200_190_180"] = 7040; // 7072 might look better...?
+  m_Title["Cascades_209_220_209_200_190_180"] = "Cascades 180";
+  m_Color["Cascades_209_220_209_200_190_180"] = 7040; // 7072 might look better...?
+
+  m_Title["Cascades_300_300_289_260_240_220"] = "Cascades 220";
+  m_Color["Cascades_300_300_289_260_240_220"] = 7071;
   m_Title["Cascades_300_300_289_260_240_220"] = "Cascades 220";
   m_Color["Cascades_300_300_289_260_240_220"] = 7071;
   m_Title["Cascades_300_300_289_260_240_220_SMS"] = "Cascades 220 SMS";
   m_Color["Cascades_300_300_289_260_240_220_SMS"] = 7071;
   //m_Color["Cascades_300_300_289_260_240_220"] = 8007;
+
   m_Title["Cascades_300_300_289_280_270_260"] = "Cascades 260";
   m_Color["Cascades_300_300_289_280_270_260"] = 7041;
+  m_Title["Cascades_289_300_289_280_270_260"] = "Cascades 260";
+  m_Color["Cascades_289_300_289_280_270_260"] = 7041;
   m_Title["Cascades_300_300_289_280_270_260_SMS"] = "Cascades 260 SMS";
   m_Color["Cascades_300_300_289_280_270_260_SMS"] = 7041;
   //m_Color["Cascades_300_300_289_280_270_260"] = 8008;
+
+  m_Title["Cascades_300_300_289_280_275_270"] = "Cascades 270";
+  m_Color["Cascades_300_300_289_280_275_270"] = 7061;
   m_Title["Cascades_300_300_289_280_275_270"] = "Cascades 270";
   m_Color["Cascades_300_300_289_280_275_270"] = 7061;
   m_Title["Cascades_300_300_289_280_275_270_SMS"] = "Cascades 270 SMS";
@@ -262,20 +273,32 @@ void loadFormatMaps(){
 
 struct HistId { string bin; string proc; string var; };
 
-HistId ParseHistName(const string &name) {
-    string s = name;
+HistId ParseHistName(const std::string &name) {
+    std::string s = name;
+    // strip ";..." suffix
     size_t sem = s.find(';');
-    if (sem != string::npos) s = s.substr(0, sem);
+    if (sem != std::string::npos)
+        s = s.substr(0, sem);
+    // strip leading "can_" or "c_"
     if (s.rfind("can_", 0) == 0) s = s.substr(4);
-    if (s.rfind("c_", 0) == 0) s = s.substr(2);
+    else if (s.rfind("c_", 0) == 0) s = s.substr(2);
     HistId out{"", "", ""};
+    // split by "__"
     size_t first = s.find("__");
-    if (first == string::npos) { out.var = s; return out; }
+    if (first == std::string::npos) {
+        out.var = s;
+        return out;
+    }
     size_t second = s.find("__", first + 2);
-    if (second == string::npos) { out.bin = s.substr(0, first); out.var = s.substr(first + 2); return out; }
-    out.bin = s.substr(0, first);
+    if (second == std::string::npos) {
+        // only one "__" -> treat as bin + var
+        out.bin = s.substr(0, first);
+        out.var = s.substr(first + 2);
+        return out;
+    }
+    out.bin  = s.substr(0, first);
     out.proc = s.substr(first + 2, second - (first + 2));
-    out.var = s.substr(second + 2);
+    out.var  = s.substr(second + 2);  // keep full "den__X" or "num__X"
     return out;
 }
 

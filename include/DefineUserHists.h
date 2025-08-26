@@ -139,10 +139,10 @@ static std::vector<HistDef> loadHistogramsUser(ROOT::RDF::RNode &node) {
     h2.yexpr = "HTeta24_over_MET";   // Y-axis: derived HT/MET ratio
     h2.nbins = 50;
     h2.xmin = 0;
-    h2.xmax = 500;
+    h2.xmax = 100;
     h2.nybins = 50;
     h2.ymin = 0;
-    h2.ymax = 5;
+    h2.ymax = 3;
     h2.x_title = "M_{ll} for OSSF pair of lead leps";
     h2.y_title = "HT/MET";
     h2.cuts = {};       // no extra event-level cuts here (hist loop may also apply global cuts)

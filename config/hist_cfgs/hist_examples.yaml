@@ -12,9 +12,9 @@ histograms:
     nbins: 20
     xmin: 0
     xmax: 2
-    nybins: 20
+    nybins: 50
     ymin: 0
-    ymax: 200
+    ymax: 50
     x_title: "MVa/MVb"
     y_title: "p_{T}^{3l}"
     cuts: ""

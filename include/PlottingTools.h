@@ -161,9 +161,9 @@ void Plot_Stack(const string& hname,
     leg->SetLineColor(kWhite);
     leg->SetShadowColor(kWhite);
     if (h_BKG) leg->AddEntry(h_BKG,"SM total","F");
-    for (size_t i=0;i<bkgHists.size();++i) if(bkgHists[i]) leg->AddEntry(bkgHists[i],ExtractProcName(bkgHists[i]->GetName()).c_str(),"F");
+    for (size_t i=0;i<bkgHists.size();++i) if(bkgHists[i]) leg->AddEntry(bkgHists[i],m_Title[ExtractProcName(bkgHists[i]->GetName())].c_str(),"F");
     for (size_t i=0;i<sigHists.size();++i) if(sigHists[i]) {
-        std::string tmp_label = ExtractProcName(sigHists[i]->GetName());
+        std::string tmp_label = m_Title[ExtractProcName(sigHists[i]->GetName())];
         if (signal_boost != 1.0) {
             std::ostringstream boost_str;
             boost_str << std::setprecision(3) << std::defaultfloat << signal_boost;
@@ -199,7 +199,7 @@ void Plot_CutFlow(const std::string &hname,
 
     double hmin, hmax;
     GetMinMaxIntegral(allHists, hmin, hmax);
-    if (hmin <= 0.) hmin = 1.e-1;
+    if (hmin <= 0.) hmin = 1.e-4;
 
     // Total background
     TH1D* h_BKG = nullptr;
@@ -222,11 +222,12 @@ void Plot_CutFlow(const std::string &hname,
     can->SetBottomMargin(hbo);
     can->SetTopMargin(hto);
     can->SetGridx(); can->SetGridy();
+    can->SetLogy();
 
     // Axis from first available hist
     TH1* axisHist = !allHists.empty() ? allHists.front() : nullptr;
     if (!axisHist) return;
-    axisHist->Draw("HIST");
+    axisHist->Draw("");
     axisHist->GetYaxis()->SetRangeUser(max(0.9*hmin, 1e-6), 1.1*hmax);
     axisHist->GetXaxis()->CenterTitle();
     axisHist->GetXaxis()->SetTitleFont(42);
@@ -247,25 +248,27 @@ void Plot_CutFlow(const std::string &hname,
         TH1* h = bkgHists[i]; if (!h || h->GetEntries()==0) continue;
         h->SetLineColor(kBlack);
         h->SetLineWidth(1);
-        h->SetFillColor(m_Color[ExtractProcName(bkgHists[i]->GetName())]);
+        h->SetLineColor(m_Color[ExtractProcName(bkgHists[i]->GetName())]);
+        h->SetMarkerColor(m_Color[ExtractProcName(bkgHists[i]->GetName())]);
         h->SetFillStyle(1001);
-        h->Draw("SAME HIST");
+        h->Draw("SAME");
     }
 
     if (h_BKG) {
         h_BKG->SetLineWidth(3);
         h_BKG->SetLineColor(kRed);
-        h_BKG->Draw("SAME HIST");
+        h_BKG->Draw("SAME");
     }
 
     // Draw signals
     for (size_t i = 0; i < sigHists.size(); ++i) {
         TH1* h = sigHists[i]; if (!h || h->GetEntries()==0) continue;
         h->Scale(signal_boost);
-        h->SetLineWidth(3);
+        h->SetLineWidth(1);
         h->SetLineStyle(7);
         h->SetLineColor(m_Color[ExtractProcName(sigHists[i]->GetName())]);
-        h->Draw("SAME HIST");
+        h->SetMarkerColor(m_Color[ExtractProcName(sigHists[i]->GetName())]);
+        h->Draw("SAME");
     }
 
     // Data
@@ -284,9 +287,9 @@ void Plot_CutFlow(const std::string &hname,
     leg->SetLineColor(kWhite);
     leg->SetShadowColor(kWhite);
     if (h_BKG) leg->AddEntry(h_BKG,"SM total","F");
-    for (size_t i=0;i<bkgHists.size();++i) if(bkgHists[i]) leg->AddEntry(bkgHists[i],ExtractProcName(bkgHists[i]->GetName()).c_str(),"F");
+    for (size_t i=0;i<bkgHists.size();++i) if(bkgHists[i]) leg->AddEntry(bkgHists[i],m_Title[ExtractProcName(bkgHists[i]->GetName())].c_str(),"F");
     for (size_t i=0;i<sigHists.size();++i) if(sigHists[i]) {
-        std::string tmp_label = ExtractProcName(sigHists[i]->GetName());
+        std::string tmp_label = m_Title[ExtractProcName(sigHists[i]->GetName())];
         if (signal_boost != 1.0) {
             std::ostringstream boost_str;
             boost_str << std::setprecision(3) << std::defaultfloat << signal_boost;
