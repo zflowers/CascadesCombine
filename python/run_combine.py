@@ -196,7 +196,7 @@ def main():
         print("Running stress test. Using stress yamls instead of loaded arg yamls")
         bins_cfg = "config/bin_cfgs/bin_stress.yaml"
         hist_cfg = "config/hist_cfgs/hist_stress.yaml"
-        processes_cfg = "config/process_cfgs/process_stress.yaml"
+        processes_cfg = "config/process_cfgs/processes_stress.yaml"
 
     start_time = time.time()
 
