@@ -261,6 +261,7 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, make_json
         user_flat = _flatten_field(job.get("user_cuts", ""))
 
         args_list = [
+            f"--lumi {lumi}",
             f"--bin {bin_name}",
             f"--file {fpath}",
             *outputs,

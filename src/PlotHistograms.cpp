@@ -104,6 +104,8 @@ int main(int argc, char* argv[]) {
     TString outRootName=Form("%soutput_%s.root",outputDir.c_str(),baseName.Data());
     outFile=new TFile(outRootName,"RECREATE");
 
+    // maps for TEff inputs
+    map<HistId, TH1*> numHists, denHists;
     // Main plotting loop
     for(auto &gpair : groups){
         string groupKey = gpair.first;
@@ -145,6 +147,15 @@ int main(int argc, char* argv[]) {
                 else Plot_Hist1D(h);
             }
         
+            // TEfficiency
+            for(const auto &pp : procmap){
+                TH1* h = pp.second; if(!h) continue;
+                std::string hname = h->GetName();
+                HistId hId = ParseHistName(hname);
+                if(string(pp.second->GetName()).find("num__")!=string::npos) numHists[hId]=pp.second;
+                else if(string(pp.second->GetName()).find("den__")!=string::npos) denHists[hId]=pp.second;
+            }
+        
             // Plot stack
             if(!bkgHists.empty() || !sigHists.empty() || dataHist){
                 if(groupKey.find("num__")!=string::npos || groupKey.find("den__")!=string::npos) continue; // don't stack efficiency inputs
@@ -152,26 +163,34 @@ int main(int argc, char* argv[]) {
                 Plot_Stack(groupKey, bkgHists, sigHists, dataHist, 1.0);
             }
         
-            // TEfficiency
-            map<string, TH1*> numHists, denHists;
-            for(const auto &pp : procmap){
-                if(string(pp.second->GetName()).find("num__")!=string::npos) numHists[pp.first]=pp.second;
-                else if(string(pp.second->GetName()).find("den__")!=string::npos) denHists[pp.first]=pp.second;
-            }
-            for(const auto &nume : numHists){
-                string procName = nume.first; procName.replace(0,5,"");
-                string denKey = "den__"+procName;
-                if(denHists.count(denKey)){
-                    TEfficiency* eff = new TEfficiency(*nume.second,*denHists[denKey]);
-                    Plot_Eff(eff);
-                }
-            }
-        
         } else {
             // Sort backgrounds by last-bin before calling Plot_CutFlow
             SortCutFlowsByLastBin(bkgHists, bkgProcs);
             if(!bkgHists.empty() || !sigHists.empty() || dataHist)
                 Plot_CutFlow(groupKey, bkgHists, sigHists, dataHist, 1.0);
+        }
+    }
+
+    // Plot TEffs after collecting numerators and denominators
+    for(const auto &nume : numHists){
+        string denName = nume.second->GetName();
+        size_t start_pos = 0;
+        while ((start_pos = denName.find("__num__", start_pos)) != std::string::npos) {
+            denName.replace(start_pos, 7, "__den__");
+            start_pos += 7; // Move past the replaced substring
+        }
+        HistId denID = ParseHistName(denName);
+        if(denHists.count(denID)){
+            gErrorIgnoreLevel = 1001;
+            TEfficiency* eff = new TEfficiency(*nume.second,*denHists[denID]);
+            gErrorIgnoreLevel = 0;
+            string effName = denName;
+            start_pos = 0;
+            while ((start_pos = effName.find("_den__", start_pos)) != std::string::npos) {
+                effName.replace(start_pos, 6, "");
+            }
+            eff->SetName(effName.c_str());
+            Plot_Eff(eff);
         }
     }
 

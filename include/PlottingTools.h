@@ -60,7 +60,8 @@ void Plot_Eff(TEfficiency* e){
     can->SetGridx(); can->SetGridy();
     can->Draw();
     can->cd();
-    DrawLogSmart(e, "AP");
+    e->SetStatisticOption(TEfficiency::kFNormal); // assume effs were made from weighted hists
+    e->Draw("AP");
     gPad->Update();
     e->GetPaintedGraph()->GetXaxis()->CenterTitle();
     e->GetPaintedGraph()->GetXaxis()->SetTitleFont(42);

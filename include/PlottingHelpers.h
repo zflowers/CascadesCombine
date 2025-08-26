@@ -271,7 +271,12 @@ void loadFormatMaps(){
 
 }
 
-struct HistId { string bin; string proc; string var; };
+struct HistId {
+    string bin; string proc; string var; 
+    bool operator<(const HistId& other) const {
+        return std::tie(bin, proc, var) < std::tie(other.bin, other.proc, other.var);
+    }
+};
 
 HistId ParseHistName(const std::string &name) {
     std::string s = name;
@@ -298,7 +303,7 @@ HistId ParseHistName(const std::string &name) {
     }
     out.bin  = s.substr(0, first);
     out.proc = s.substr(first + 2, second - (first + 2));
-    out.var  = s.substr(second + 2);  // keep full "den__X" or "num__X"
+    out.var  = s.substr(second + 2); 
     return out;
 }
 
