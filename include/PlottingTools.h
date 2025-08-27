@@ -557,13 +557,13 @@ void Plot_EventCount2D(TH2* h, const std::string &mode,
 
         if(mode=="Zbi" && iy==totalRow){
           // Draw white box behind Total Bkg text
-          double xpad = 0.01*(xup-xlow);
-          double ypad = 0.12*(yup-ylow);
-          TBox box(xlow+xpad, ylow+ypad, xup-xpad, yup-ypad);
-          box.SetFillColor(kWhite);
-          box.SetLineColor(kBlack);
-          box.SetFillStyle(1001);
-          box.Draw("same"); // draw on top of COLZ
+          double xpad = 0.003*(xup-xlow);
+          double ypad = 0.006*(yup-ylow);
+          TBox* box = new TBox(xlow+xpad, ylow+ypad, xup-xpad, yup-ypad);
+          box->SetFillColor(kWhite);
+          box->SetLineColor(kBlack);
+          box->SetFillStyle(1001);
+          box->Draw("F same");
           tex.SetTextColor(kBlack);
         } else {
           tex.SetTextColor(kRed);
@@ -578,13 +578,13 @@ void Plot_EventCount2D(TH2* h, const std::string &mode,
     // Re-apply axis labels & formatting
     h->GetXaxis()->CenterTitle();
     h->GetXaxis()->SetTitleFont(42); h->GetXaxis()->SetTitleSize(0.06); h->GetXaxis()->SetTitleOffset(1.06);
-    h->GetXaxis()->SetLabelFont(42); h->GetXaxis()->SetLabelSize(0.03);
+    h->GetXaxis()->SetLabelFont(42); h->GetXaxis()->SetLabelSize(0.045);
     h->GetYaxis()->CenterTitle();
-    h->GetYaxis()->SetTitleFont(42); h->GetYaxis()->SetTitleSize(0.06); h->GetYaxis()->SetTitleOffset(1.12);
-    h->GetYaxis()->SetLabelFont(42); h->GetYaxis()->SetLabelSize(0.025);
+    h->GetYaxis()->SetTitleFont(42); h->GetYaxis()->SetTitleSize(0.06); h->GetYaxis()->SetTitleOffset(1.1);
+    h->GetYaxis()->SetLabelFont(42); h->GetYaxis()->SetLabelSize(0.035);
     h->GetZaxis()->CenterTitle();
-    h->GetZaxis()->SetTitleFont(42); h->GetZaxis()->SetTitleSize(0.025); h->GetZaxis()->SetTitleOffset(1.08);
-    h->GetZaxis()->SetLabelFont(42); h->GetZaxis()->SetLabelSize(0.025);
+    h->GetZaxis()->SetTitleFont(42); h->GetZaxis()->SetTitleSize(0.035); h->GetZaxis()->SetTitleOffset(1.03);
+    h->GetZaxis()->SetLabelFont(42); h->GetZaxis()->SetLabelSize(0.03);
 
     // Z-axis title
     if(mode == "yield")
@@ -597,6 +597,10 @@ void Plot_EventCount2D(TH2* h, const std::string &mode,
       h->GetZaxis()->SetTitle("Z_{bi} for signal in category");
     else
       h->GetZaxis()->SetTitle("Yield");
+
+    TLatex l; l.SetNDC(); l.SetTextFont(42);
+    l.SetTextSize(0.04);
+    l.DrawLatex(0.13, 0.947, "#bf{CMS} Simulation Preliminary");
 
     // Save canvas
     TString pdfName = Form("%s/pdfs/CutFlow2D_%s.pdf", outputDir.c_str(), mode.c_str());

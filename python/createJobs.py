@@ -315,7 +315,7 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, make_json
             text=True
         )
         if proc.returncode != 0:
-            print("condor_submit failed:", proc.stderr)
+            print("condor_submit failed:", proc.stdout, proc.stderr)
         else:
             print(f"Submitted bin {bin_name} ({len(jobs)} jobs)")
             if make_json:

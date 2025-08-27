@@ -1,6 +1,6 @@
 derived_variables:
   - name: MV_ratio
-    expr: "SafeDiv(MVa, MVb, 0.0)" # MVa / MVb; default to 0 if MVb == 0
+    expr: "SafeDiv(MVa, MVb, 0.0)"     # MVa / MVb; default to 0 if MVb == 0
   - name: PT3_lep
     expr: "SafeIndex(PT_lep, 2, -1.0)" # third leading lep pt; default to -1 for events with less than 3 leps
 

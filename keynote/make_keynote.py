@@ -414,9 +414,9 @@ def main():
     make_applescript_call_show('false')
     print("Making summary yield slides")
     summary_pdfs = [
-        (base_dir / top_level / "pdfs/CutFlow2D_SoverSqrtB.pdf", "S / √B"),
-        (base_dir / top_level / "pdfs/CutFlow2D_SoB.pdf", "S / B"),
         (base_dir / top_level / "pdfs/CutFlow2D_yield.pdf", "Yield"),
+        (base_dir / top_level / "pdfs/CutFlow2D_SoB.pdf", "S / B"),
+        (base_dir / top_level / "pdfs/CutFlow2D_SoverSqrtB.pdf", "S / √B"),
         (base_dir / top_level / "pdfs/CutFlow2D_Zbi.pdf", "Zbi"),
     ]
     add_summary_slides(summary_pdfs)
