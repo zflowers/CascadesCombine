@@ -155,14 +155,15 @@ void Plot_Stack(const string& hname,
 
     if (h_DATA) { h_DATA->SetMarkerStyle(20); h_DATA->SetMarkerSize(0.8); h_DATA->SetLineColor(kBlack); DrawLogSmart(h_DATA, "SAME E"); }
 
+    // Add Legend
     TLegend* leg = new TLegend(1.-hhi+0.01, 1.- (bkgHists.size()+sigHists.size()+2)*(1.-0.49)/9., 0.98, 1.-hto-0.005);
     leg->SetTextFont(132);
     leg->SetTextSize(0.042);
     leg->SetFillColor(kWhite);
     leg->SetLineColor(kWhite);
     leg->SetShadowColor(kWhite);
-    if (h_BKG) leg->AddEntry(h_BKG,"SM total","F");
-    for (size_t i=0;i<bkgHists.size();++i) if(bkgHists[i]) leg->AddEntry(bkgHists[i],m_Title[ExtractProcName(bkgHists[i]->GetName())].c_str(),"F");
+    if (h_BKG) leg->AddEntry(h_BKG,"SM total","L");
+    for (size_t i=0;i<bkgHists.size();++i) if(bkgHists[i]) leg->AddEntry(bkgHists[i],m_Title[ExtractProcName(bkgHists[i]->GetName())].c_str(),"L");
     for (size_t i=0;i<sigHists.size();++i) if(sigHists[i]) {
         std::string tmp_label = m_Title[ExtractProcName(sigHists[i]->GetName())];
         if (signal_boost != 1.0) {
@@ -172,8 +173,15 @@ void Plot_Stack(const string& hname,
         }
         leg->AddEntry(sigHists[i], tmp_label.c_str(), "L");
     }
-    if(h_DATA) leg->AddEntry(h_DATA,"Data","P");
+    if (h_DATA) leg->AddEntry(h_DATA,"Data","P");
     leg->Draw();
+
+    TLatex l;
+    l.SetNDC();
+    l.SetTextSize(0.04);
+    l.SetTextFont(42);
+    l.DrawLatex(0.1,0.943,"#bf{#it{CMS}} Internal 13 TeV Simulation");
+    l.DrawLatex(0.7,0.943,ExtractBinName(string(axisHist->GetName())).c_str());
 
     if(outFile){ outFile->cd(); can->Write(0, TObject::kWriteDelete); }
     TString stackPdf = Form("%spdfs/%s/%s.pdf", outputDir.c_str(), ExtractBinName(bkgHists[0]->GetName()).c_str(), canvas_name.c_str());
@@ -307,7 +315,7 @@ void Plot_CutFlow(const std::string &hname,
     l.SetTextSize(0.04);
     l.SetTextFont(42);
     l.DrawLatex(0.1,0.943,"#bf{#it{CMS}} Internal 13 TeV Simulation");
-    l.SetTextSize(0.045); l.DrawLatex(0.7,0.04,ExtractBinName(string(axisHist->GetName())).c_str());
+    l.DrawLatex(0.7,0.943,ExtractBinName(string(axisHist->GetName())).c_str());
 
     // Save
     if(outFile){ outFile->cd(); can->Write(0, TObject::kWriteDelete); }
@@ -319,4 +327,152 @@ void Plot_CutFlow(const std::string &hname,
     delete can;
     if(h_BKG) delete h_BKG;
     if(h_DATA) delete h_DATA;
+}
+
+// ----------------------
+// Plot TEff Multigraph (grouped by bin or process)
+// groupType should be "Bin" or "Process"
+// ----------------------
+void Plot_Eff_Multi(const std::string& groupName,
+                    const std::vector<TEfficiency*>& effs,
+                    const std::string& groupType
+                   )
+{
+    if(effs.empty()) return;
+
+    // Canvas
+    TCanvas* can = new TCanvas(("can_multi_"+groupName).c_str(), ("can_"+groupName).c_str(), 1200, 700);
+    can->SetLeftMargin(hlo);
+    can->SetRightMargin(hhi);
+    can->SetBottomMargin(hbo);
+    can->SetTopMargin(hto);
+    can->SetGridx(); can->SetGridy();
+    can->Draw();
+    can->cd();
+
+    double ymin = 1e6, ymax = -1e6;
+    for(auto* e : effs){
+        if(!e) continue;
+    
+        // check for effective points
+        auto* htot = e->GetTotalHistogram();
+        bool hasPoints = false;
+        for(int i = 1; i <= htot->GetNbinsX(); ++i){
+            if(htot->GetBinContent(i) > 0){ hasPoints = true; break; }
+        }
+        if(!hasPoints){
+            // std::cerr << "[Warning] Skipping TEff with no valid points: " << e->GetName() << "\n";
+            continue;
+        }
+    
+        // create TGraph without painting
+        TGraphAsymmErrors* gr = e->CreateGraph();
+        if(!gr) continue;
+    
+        const int n = gr->GetN();
+        for(int i = 0; i < n; ++i){
+            double x, y;
+            gr->GetPoint(i, x, y);
+            double ylow = y - gr->GetErrorYlow(i);
+            double yhigh = y + gr->GetErrorYhigh(i);
+            ymin = std::min(ymin, ylow);
+            ymax = std::max(ymax, yhigh);
+        }
+    }
+    if(ymin < 0.) ymin = 0.;
+    ymax *= 1.05;
+
+    // Legend (mimic Plot_Stack positioning)
+    TLegend* leg = new TLegend(1.-hhi+0.01, 1.- (effs.size()+2)*(1.-0.49)/9., 0.98, 1.-hto-0.005);
+    leg->SetTextFont(132);
+    leg->SetTextSize(0.042);
+    leg->SetFillColor(kWhite);
+    leg->SetLineColor(kWhite);
+    leg->SetShadowColor(kWhite);
+
+    TMultiGraph* mg = new TMultiGraph();
+
+    for(size_t i = 0; i < effs.size(); ++i){
+        TEfficiency* e = effs[i];
+        if(!e) continue;
+    
+        // Create TGraph safely
+        TGraphAsymmErrors* gr = nullptr;
+        try {
+            gr = (TGraphAsymmErrors*)e->CreateGraph(); // safer than Draw() + GetPaintedGraph()
+        } catch (...) {
+            std::cerr << "[Warning] Failed to create graph for TEff: " << e->GetName() << "\n";
+            continue;
+        }
+    
+        if(!gr || gr->GetN() == 0){
+            // std::cerr << "[Warning] Skipping TEff with no valid points: " << e->GetName() << "\n";
+            continue;
+        }
+    
+        // Parse name to get bin/proc
+        HistId id = ParseHistName(e->GetName());
+        std::string legendKey, legendTitle;
+        int color = kBlack;
+    
+        if(groupType == "Bin"){
+            legendKey = id.proc.empty() ? "unknown_proc" : id.proc;
+            legendTitle = m_Title.count(legendKey) ? m_Title[legendKey] : legendKey;
+            color = m_Color.count(legendKey) ? m_Color[legendKey] : kBlack;
+        } else {
+            legendKey = id.bin.empty() ? "unknown_bin" : id.bin;
+            legendTitle = m_Title.count(legendKey) ? m_Title[legendKey] : legendKey;
+            color = m_Color.count(legendKey) ? m_Color[legendKey] : kBlack;
+        }
+    
+        gr->SetMarkerStyle(20);
+        gr->SetMarkerColor(color);
+        gr->SetLineColor(color);
+    
+        mg->Add(gr);
+        leg->AddEntry(gr, legendTitle.c_str(), "PL");
+    }
+
+    // Draw multi-graph and style axes
+    mg->Draw("AP");
+    mg->GetXaxis()->CenterTitle();
+    mg->GetXaxis()->SetTitleFont(42);
+    mg->GetXaxis()->SetTitleSize(0.06);
+    mg->GetXaxis()->SetTitleOffset(1.06);
+    mg->GetXaxis()->SetLabelFont(42);
+    mg->GetXaxis()->SetLabelSize(0.05);
+    mg->GetYaxis()->CenterTitle();
+    mg->GetYaxis()->SetTitleFont(42);
+    mg->GetYaxis()->SetTitleSize(0.06);
+    mg->GetYaxis()->SetTitleOffset(1.12);
+    mg->GetYaxis()->SetLabelFont(42);
+    mg->GetYaxis()->SetLabelSize(0.05);
+    mg->GetYaxis()->SetRangeUser(ymin, ymax);
+
+    // Draw legend
+    leg->Draw();
+
+    // TLatex: CMS on top-left; group info on top-right
+    TLatex l; l.SetNDC(); l.SetTextFont(42);
+    l.SetTextSize(0.04);
+    l.DrawLatex(0.01, 0.943, "#bf{CMS} Simulation Preliminary");
+
+    // top-right: show what this group is (Bin or Process)
+    std::string topRight;
+    if(groupType == "Bin") topRight = "Bin: " + groupName;
+    else topRight = "Process: " + groupName;
+    l.SetTextSize(0.045);
+    l.DrawLatex(0.7, 0.943, topRight.c_str());
+
+    // Save
+    TString dirName = Form("%spdfs/%s", outputDir.c_str(), groupName.c_str());
+    gSystem->MakeDirectory(dirName);
+    TString pdfName = Form("%s/multigraph_%s.pdf", dirName.Data(), groupName.c_str());
+    gErrorIgnoreLevel = 1001; can->SaveAs(pdfName); gErrorIgnoreLevel = 0;
+    if(outFile){ outFile->cd(); can->Write(0, TObject::kWriteDelete); }
+
+    // Cleanup
+    delete mg;
+    delete leg;
+    delete can;
 }

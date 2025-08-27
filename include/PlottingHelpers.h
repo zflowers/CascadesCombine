@@ -23,6 +23,7 @@
 #include <TStyle.h>
 #include <TEfficiency.h>
 #include <TGraph.h>
+#include <TMultiGraph.h>
 #include <TGraphAsymmErrors.h>
 
 #include "SampleTool.h"

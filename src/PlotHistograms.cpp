@@ -171,33 +171,61 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // Plot TEffs after collecting numerators and denominators
+    // Maps to store TEffs grouped by bin and by process
+    std::map<std::string, std::vector<TEfficiency*>> effsByBin;
+    std::map<std::string, std::vector<TEfficiency*>> effsByProcess;
+    
     for(const auto &nume : numHists){
         string denName = nume.second->GetName();
         size_t start_pos = 0;
         while ((start_pos = denName.find("__num__", start_pos)) != std::string::npos) {
             denName.replace(start_pos, 7, "__den__");
-            start_pos += 7; // Move past the replaced substring
+            start_pos += 7;
         }
+    
         HistId denID = ParseHistName(denName);
         if(denHists.count(denID)){
             gErrorIgnoreLevel = 1001;
             TEfficiency* eff = new TEfficiency(*nume.second,*denHists[denID]);
             gErrorIgnoreLevel = 0;
+    
+            // Clean the name
             string effName = denName;
             start_pos = 0;
             while ((start_pos = effName.find("_den__", start_pos)) != std::string::npos) {
                 effName.replace(start_pos, 6, "");
             }
             eff->SetName(effName.c_str());
+    
+            // Store in the maps
+            effsByBin[denID.bin].push_back(eff);
+            effsByProcess[denID.proc].push_back(eff);
+    
             Plot_Eff(eff);
         }
     }
+
+    for(const auto& pair : effsByBin)
+        Plot_Eff_Multi(pair.first, pair.second, "Bin");
+    for(const auto& pair : effsByProcess)
+        Plot_Eff_Multi(pair.first, pair.second, "Process");
 
     outFile->Close();
     inFile->Close();
     for(TH1* p:all_clones) delete p;
     all_clones.clear(); groups.clear();
+
+    // after making all multigraphs:
+    std::set<TEfficiency*> uniqueEffs;
+    for (auto &p : effsByBin)    for (auto *e : p.second) if(e) uniqueEffs.insert(e);
+    for (auto &p : effsByProcess) for (auto *e : p.second) if(e) uniqueEffs.insert(e);
+    
+    // delete each unique TEff
+    for (auto *e : uniqueEffs) delete e;
+    uniqueEffs.clear();
+    effsByBin.clear();
+    effsByProcess.clear();
+    
 
     cout<<"[PlotHistograms] All plots saved to "<<outRootName.Data()<<" and "<<outputDir<<"pdfs/"<<endl;
     return 0;

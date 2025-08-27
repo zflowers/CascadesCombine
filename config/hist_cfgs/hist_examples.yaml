@@ -78,8 +78,8 @@ histograms:
   - name: den__METtrigger # example denominator for TEff
     type: "1D"
     expr: "MET"
-    nbins: 64
-    xmin: 0
+    nbins: 32
+    xmin: 150
     xmax: 500
     x_title: "MET"
     y_title: "METtrig Eff"
@@ -91,12 +91,12 @@ histograms:
   - name: num__METtrigger # example numerator for TEff
     type: "1D"
     expr: "MET"
-    nbins: 64
-    xmin: 0
+    nbins: 32
+    xmin: 150
     xmax: 500
     x_title: "MET"
     y_title: "METtrig Eff"
-    cuts: "METtrigger==1"
+    cuts: "METtrigger==1;"
     lep-cut: ""
     predefined-cuts: ""
     user-cuts: ""
