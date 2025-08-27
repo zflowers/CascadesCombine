@@ -201,9 +201,9 @@ void loadFormatMaps(){
   m_Color["Cascades_300_300_289_280_275_270_SMS"] = 7061;
   //m_Color["Cascades_300_300_289_280_275_270"] = 8009;
 
-  m_Title["SMS_TChiWZ_Sandwich_SMS_300_290"] = "TChiWZ 300, 295, 290";
+  m_Title["SMS_TChiWZ_Sandwich_SMS_300_290"] = "#tilde{#chi}^{0}_{2} #tilde{#chi}^{#pm}_{1} 300, 295, 290";
   m_Color["SMS_TChiWZ_Sandwich_SMS_300_290"] = 7043;
-  m_Title["SMS_TChiWZ_SMS_300_290"] = "TChiWZ 300, 300, 290";
+  m_Title["SMS_TChiWZ_SMS_300_290"] = "#tilde{#chi}^{0}_{2} #tilde{#chi}^{#pm}_{1} 300, 300, 290";
   m_Color["SMS_TChiWZ_SMS_300_290"] = 7072;
 
   m_Title["T1bbbb_1500_SMS"] = "T1bbbb 1500";

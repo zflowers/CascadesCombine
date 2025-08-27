@@ -143,14 +143,18 @@ void Plot_Stack(const string& hname,
     axisHist->GetYaxis()->SetRangeUser(max(0.9*hmin, 1e-6), 1.1*hmax);
 
     for (size_t i = 0; i < bkgHists.size(); ++i) { TH1* h = bkgHists[i]; if (!h || h->GetEntries()==0) continue;
-        h->SetLineColor(kBlack); h->SetLineWidth(1); h->SetFillColor(m_Color[ExtractProcName(bkgHists[i]->GetName())]); h->SetFillStyle(1001);
+        h->SetLineColor(kBlack); h->SetLineWidth(1);
+        h->SetMarkerColor(m_Color[ExtractProcName(bkgHists[i]->GetName())]);
+        h->SetFillColor(m_Color[ExtractProcName(bkgHists[i]->GetName())]); h->SetFillStyle(1001);
         DrawLogSmart(h, "SAME HIST"); }
 
     if (h_BKG) { h_BKG->SetLineWidth(3); h_BKG->SetLineColor(kRed); DrawLogSmart(h_BKG, "SAME HIST"); }
 
     for (size_t i = 0; i < sigHists.size(); ++i) { TH1* h = sigHists[i]; if (!h || h->GetEntries()==0) continue;
         SetMinimumBinContent(h, 1.e-6);
-        h->SetLineWidth(3); h->SetLineStyle(7); h->SetLineColor(m_Color[ExtractProcName(sigHists[i]->GetName())]);
+        h->SetLineWidth(3); h->SetLineStyle(7);
+        h->SetLineColor(m_Color[ExtractProcName(sigHists[i]->GetName())]);
+        h->SetMarkerColor(m_Color[ExtractProcName(sigHists[i]->GetName())]);
         h->Scale(signal_boost); DrawLogSmart(h, "SAME HIST"); }
 
     if (h_DATA) { h_DATA->SetMarkerStyle(20); h_DATA->SetMarkerSize(0.8); h_DATA->SetLineColor(kBlack); DrawLogSmart(h_DATA, "SAME E"); }
@@ -158,12 +162,12 @@ void Plot_Stack(const string& hname,
     // Add Legend
     TLegend* leg = new TLegend(1.-hhi+0.01, 1.- (bkgHists.size()+sigHists.size()+2)*(1.-0.49)/9., 0.98, 1.-hto-0.005);
     leg->SetTextFont(132);
-    leg->SetTextSize(0.042);
+    leg->SetTextSize(0.039);
     leg->SetFillColor(kWhite);
     leg->SetLineColor(kWhite);
     leg->SetShadowColor(kWhite);
     if (h_BKG) leg->AddEntry(h_BKG,"SM total","L");
-    for (size_t i=0;i<bkgHists.size();++i) if(bkgHists[i]) leg->AddEntry(bkgHists[i],m_Title[ExtractProcName(bkgHists[i]->GetName())].c_str(),"L");
+    for (size_t i=0;i<bkgHists.size();++i) if(bkgHists[i]) leg->AddEntry(bkgHists[i],m_Title[ExtractProcName(bkgHists[i]->GetName())].c_str(),"F");
     for (size_t i=0;i<sigHists.size();++i) if(sigHists[i]) {
         std::string tmp_label = m_Title[ExtractProcName(sigHists[i]->GetName())];
         if (signal_boost != 1.0) {
@@ -292,7 +296,7 @@ void Plot_CutFlow(const std::string &hname,
     // Add Legend
     TLegend* leg = new TLegend(1.-hhi+0.01, 1.- (bkgHists.size()+sigHists.size()+2)*(1.-0.49)/9., 0.98, 1.-hto-0.005);
     leg->SetTextFont(132);
-    leg->SetTextSize(0.042);
+    leg->SetTextSize(0.039);
     leg->SetFillColor(kWhite);
     leg->SetLineColor(kWhite);
     leg->SetShadowColor(kWhite);
@@ -382,10 +386,10 @@ void Plot_Eff_Multi(const std::string& groupName,
     if(ymin < 0.) ymin = 0.;
     ymax *= 1.05;
 
-    // Legend (mimic Plot_Stack positioning)
+    // Add Legend
     TLegend* leg = new TLegend(1.-hhi+0.01, 1.- (effs.size()+2)*(1.-0.49)/9., 0.98, 1.-hto-0.005);
     leg->SetTextFont(132);
-    leg->SetTextSize(0.042);
+    leg->SetTextSize(0.039);
     leg->SetFillColor(kWhite);
     leg->SetLineColor(kWhite);
     leg->SetShadowColor(kWhite);
