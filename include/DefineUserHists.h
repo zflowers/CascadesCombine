@@ -128,7 +128,7 @@ static std::vector<HistDef> loadHistogramsUser(ROOT::RDF::RNode &node) {
     h1.lepCuts = {};
     h1.predefCuts = {};
     h1.userCuts = {};
-    hdefs.push_back(h1);
+    // hdefs.push_back(h1); // uncomment to load hist
 
     // 2) 2D histogram: M_ll (x) vs HTeta24_over_MET (y)
     //    This uses the derived ratio defined above
@@ -149,7 +149,7 @@ static std::vector<HistDef> loadHistogramsUser(ROOT::RDF::RNode &node) {
     h2.lepCuts = {};
     h2.predefCuts = {};
     h2.userCuts = {};
-    hdefs.push_back(h2);
+    // hdefs.push_back(h2); // uncomment to load hist
 
     // Return the user-provided histogram definitions. The main loop will:
     //   - apply h.cuts / h.lepCuts / h.predefCuts (via BFI->ExpandMacros) / h.userCuts

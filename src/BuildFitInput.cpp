@@ -1115,8 +1115,9 @@ BuildFitInput::ValidateCuts(ROOT::RDF::RNode node,
 // Example: User-defined cuts loader
 // -------------------------------------
 ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<std::string, CutDef>& ValidCuts){
-
     std::map<std::string, CutDef> cuts;
+
+    /*
     // Example 1: invariant mass of leading two jets -> M_jj (double)
     node = node.Define("M_jj", [](const std::vector<double> &pt,
                                   const std::vector<double> &eta,
@@ -1166,7 +1167,9 @@ ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<st
     node = node.Define("PT_jet0", [](const std::vector<double> &pt){
         return pt.empty() ? 0.0 : pt[0];
     }, {"PT_jet"});
+    */
     
+    /*
     // DeltaR between leading lepton and leading jet
     node = node.Define("DeltaR_lep0_jet0", [](const std::vector<double> &pt_lep,
                                              const std::vector<double> &eta_lep,
@@ -1195,6 +1198,7 @@ ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<st
     cut3.columns = {"PT_lep0","PT_jet0","DeltaR_lep0_jet0"};
     cut3.expression = "(PT_lep0 > 25) && (PT_jet0 > 30) && (DeltaR_lep0_jet0 > 0.4)";
     cuts[cut3.name] = cut3;
+    */
 
     // -----------------------------------------------------------------------------
     // Store 4-vectors as ROOT::Math::PtEtaPhiMVector (replaces TLV for RDataFrame)

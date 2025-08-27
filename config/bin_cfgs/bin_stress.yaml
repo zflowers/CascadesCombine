@@ -3,16 +3,16 @@ stressExample1: # very basic
   lep-cuts: ">=1OSSF"
   predefined-cuts: "Cleaning"
   user-cuts: ""
-stressExample2: # loads of examples
+stressExample2:
   cuts: "Nlep>=3;MET>=50;MAX(SIP3D_lep)<4"
   lep-cuts: |
     >=1Mu;
     >=1Silver;
     >=1SSSF_b|DeltaR<0.5;
   predefined-cuts: "Zstar"
-  user-cuts: "lep0_pt25_jet0_pt30_dR0p4;M_jj_gt_100"
+  user-cuts: ""
 stressSuperBin2L: # Example SuperBin in 2L
-  cuts: "Nlep==2;MET>=150;PTISR_LEP>=200;Nbjet==0;Mperp<=100;RISR_LEP>=0.6;RISR_LEP<=1;Njet_S==0;fabs(dphiMET_V)<TMath::Pi()/2.0;METtrigger==1"
+  cuts: "Nlep==2;MET>=150;PTISR_LEP>=200;Nbjet==0;Mperp<=100;RISR_LEP>=0.6;RISR_LEP<=1;Njet_S==0;fabs(dphiMET_V)<TMath::Pi()/2.0"
   lep-cuts: |
     =2Gold;
   #  =1OSSF|mass![3.,3.2];
