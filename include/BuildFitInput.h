@@ -1,9 +1,8 @@
 #ifndef BFI_H
 #define BFI_H
-#include "BuildFitTools.h"//Bin and process source
-#include <ROOT/RDataFrame.hxx>
-#include <ROOT/RVec.hxx>
+#include "BuildFitTools.h"
 #include "Math/Vector4Dfwd.h"
+#include "Math/PxPyPzE4D.h"
 
 using namespace std;
 using ROOT::RDF::RNode;
@@ -13,11 +12,15 @@ typedef ROOT::RDF::RNode RN;
 typedef std::vector<std::string> stringlist;
 typedef std::pair<std::string,std::string> proc_cut_pair;
 typedef std::map< proc_cut_pair, std::unique_ptr<RN> > nodemap;
-//typedef std::map< proc_cut_pair, ROOT::RDF::RResultPtr<long long unsigned int> > countmap;
-//typedef std::map< proc_cut_pair, ROOT::RDF::RResultPtr<double> > summap;
 typedef std::map<proc_cut_pair, double> errormap;
 typedef std::map<proc_cut_pair, double> countmap;
 typedef std::map<proc_cut_pair, double> summap;
+
+struct CutDef {
+    std::string name;                   // user-defined name for the cut
+    std::vector<std::string> columns;   // columns needed to compute/apply the cut
+    std::string expression;             // string to be used in node.Filter(...)
+};
 
 class BuildFitInput{
 	
@@ -67,6 +70,11 @@ class BuildFitInput{
 	void ConstructBkgBinObjects( countmap countResults, summap sumResults, errormap errorResults );
 	void AddSigToBinObjects( countmap countResults, summap sumResults, errormap errorResults, std::map<std::string, Bin*>& analysisbins);
 	void PrintBins(int verbosity=1);
+
+        //helpers cut objects
+        using CutFn = std::function<std::string(BuildFitInput*)>;
+        static const std::unordered_map<std::string, CutFn>& GetCutMap() { return cutMap_; }
+        bool GetCutByName(const std::string& name, std::string& out);
         std::string GetCleaningCut();
 	std::string GetZstarCut();
 	std::string GetnoZstarCut();
@@ -96,6 +104,20 @@ class BuildFitInput{
 	std::string BuildLeptonCut(const std::string& shorthand, const std::string& side = "");
 	ROOT::RDF::RNode DefineLeptonPairCounts(ROOT::RDF::RNode rdf, const std::string& side = "");
 	ROOT::RDF::RNode DefinePairKinematics(ROOT::RDF::RNode rdf, const std::string& side = "");
+        struct Registrar {
+                Registrar(const std::string& name, CutFn fn) {
+                    cutMap_[name] = fn;
+                }
+            };
+        static ROOT::RDF::RNode loadCutsUser(ROOT::RDF::RNode &node, std::map<std::string, CutDef>& cuts);
+        static bool ValidateUserCut(ROOT::RDF::RNode node, const CutDef &cut, unsigned nCheck = 50, unsigned maxCheck = 5000);
+        static std::map<std::string, CutDef> ValidateCuts(ROOT::RDF::RNode node, const std::map<std::string, CutDef>& cuts, unsigned nCheck = 50, unsigned maxCheck = 5000);
 
+    private:
+        static std::unordered_map<std::string, CutFn> cutMap_;
 };
+#define REGISTER_CUT(classname, funcname, cutname) \
+    static BuildFitInput::Registrar _registrar_##funcname( \
+        cutname, [](BuildFitInput* obj){ return obj->funcname(); } \
+    )
 #endif

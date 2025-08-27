@@ -7,45 +7,43 @@ and, if there are failed jobs, writes a single data-driven resubmit file
 (with one `queue LogFile, Args from (...)` block) and optionally submits it.
 
 Usage:
-    python3 checkJobs.py <submit_name> [--root-dir CONDOR_DIR] [--no-submit] [--clean-json] [--cms-env PATH]
+    call from python/submitJobs.py
 
-Examples:
-    python3 checkJobs.py manualExample1
 """
 import argparse, os, re, subprocess, sys, glob, shutil
 from typing import Dict, Tuple, List
 
-DEFAULT_CMS_ENV = "/cvmfs/cms.cern.ch/cmsset_default.sh"
+CMS_ENV = "/cvmfs/cms.cern.ch/cmsset_default.sh"
 
 def parse_args():
     p = argparse.ArgumentParser(description="Check and resubmit Condor jobs (single-queue resubmit).")
     p.add_argument("submit_name", help="Name of the submission folder (e.g. manualExample1).")
     p.add_argument("--root-dir", default="condor", help="Top-level condor directory (default: 'condor').")
     p.add_argument("--no-submit", action="store_true", help="Do not actually call condor_submit; just write the resubmit file.")
-    p.add_argument("--clean-json", action="store_true", help="Remove partial JSON outputs for failed jobs before resubmitting.")
-    p.add_argument("--cms-env", default=DEFAULT_CMS_ENV, help=f"Path to cmsset_default.sh (default: {DEFAULT_CMS_ENV})")
+    p.add_argument("--check-json", action="store_true", help="Check for JSON output files")
+    p.add_argument("--check-root", action="store_true", help="Check for ROOT output files")
     return p.parse_args()
 
 # --------------------- job checks ---------------------
-def job_paths(base_dir: str, job: str) -> Tuple[str, str, str]:
-    """Return (json_path, out_path, err_path) for a job"""
+def job_paths(base_dir: str, job: str) -> Tuple[str, str, str, str]:
     json_path = os.path.join(base_dir, "json", f"{job}.json")
+    root_path = os.path.join(base_dir, "root", f"{job}.root")
     out_path  = os.path.join(base_dir, "out",  f"{job}.out")
     err_path  = os.path.join(base_dir, "err",  f"{job}.err")
-    return json_path, out_path, err_path
+    return json_path, root_path, out_path, err_path
 
-def check_job_ok(base_dir: str, job: str) -> bool:
-    """Return True if job passes all checks, False otherwise."""
-    json_path, out_path, err_path = job_paths(base_dir, job)
+def check_job_ok(base_dir: str, job: str, check_json: bool, check_root: bool) -> bool:
+    json_path, root_path, out_path, err_path = job_paths(base_dir, job)
 
-    # Condition 1: json exists
-    json_ok = os.path.exists(json_path)
-    if json_ok: return True
+    json_ok = os.path.exists(json_path) if check_json else False
+    root_ok = os.path.exists(root_path) if check_root else False
 
-    # Condition 2: err exists and is empty
+    # require whichever flags were set
+    file_ok = (json_ok if check_json else True) and (root_ok if check_root else True)
+    if file_ok: return file_ok # if file ok just return
+
+    # still enforce err/out consistency
     err_ok = os.path.exists(err_path) and os.path.getsize(err_path) <= 1
-
-    # Condition 3: out contains "Wrote output to: "
     out_ok = False
     if os.path.exists(out_path):
         try:
@@ -56,9 +54,8 @@ def check_job_ok(base_dir: str, job: str) -> bool:
                         break
         except Exception as e:
             print(f"[checkJobs] Warning reading {out_path}: {e}", file=sys.stderr)
-            out_ok = False
 
-    return json_ok and err_ok and out_ok
+    return file_ok and err_ok and out_ok
 
 # --------------------- parse original submit ---------------------
 def parse_submit_for_mapping(submit_path: str) -> Tuple[str, Dict[str, str]]:
@@ -158,6 +155,8 @@ def write_single_queue_resubmit(resubmit_path: str, header: str, mapping: Dict[s
 # --------------------- main ---------------------
 def main():
     args = parse_args()
+    if not (args.check_json or args.check_root):
+        args.check_json = True
     submit_name = args.submit_name
     base_dir = os.path.join(args.root_dir, submit_name)
 
@@ -199,7 +198,7 @@ def main():
     failed = []
 
     for job in jobs:
-        ok = check_job_ok(base_dir, job)
+        ok = check_job_ok(base_dir, job, args.check_json, args.check_root)
         if ok:
             successful.append(job)
         else:
@@ -214,13 +213,6 @@ def main():
     if not failed:
         print("\nNo failed jobs to resubmit.")
         sys.exit(0)
-    
-    if args.clean_json:
-        for fjob in failed:
-            jp = os.path.join(json_dir, f"{fjob}.json")
-            if os.path.exists(jp):
-                os.remove(jp)
-                print(f"[checkJobs] Removed partial JSON: {jp}")
     
     # Single-queue resubmit: just reuse the original .sub
     resubmit_name = f"resubmit_failed_{submit_name}.sub"
@@ -239,7 +231,7 @@ def main():
         sys.exit(0)
     
     # Submit using CMS environment
-    submit_cmd = f"source {args.cms_env} && condor_submit {resubmit_path}"
+    submit_cmd = f"source {CMS_ENV} && condor_submit {resubmit_path}"
     print(f"[checkJobs] Submitting resubmit file with:\n  {submit_cmd}\n")
     proc = subprocess.run(submit_cmd, shell=True, executable="/bin/bash", capture_output=True, text=True)
     

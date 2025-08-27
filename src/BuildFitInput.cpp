@@ -1,8 +1,6 @@
 #include "BuildFitInput.h"
 
 BuildFitInput::BuildFitInput(){
-	ROOT::EnableImplicitMT();
-	std::cout<<"Enabled MT \n";
 }
 
 void BuildFitInput::LoadBkg_KeyValue(const std::string& key, const stringlist& bkglist, const double& Lumi) {
@@ -14,8 +12,7 @@ void BuildFitInput::LoadBkg_KeyValue(const std::string& key, const stringlist& b
         // Define scaled weight (w * Lumi) and squared weight
         auto df_scaled = df
             .Define("weight_scaled", [Lumi](double w){ return w * Lumi; }, {"weight"})
-            .Define("weight_sq_scaled", [Lumi](double w){ return (w*Lumi)*(w*Lumi); }, {"weight"});
-            //.Define("weight_sq_scaled", [Lumi](double w2){ return w2 * Lumi * Lumi; }, {"weight2"});
+            .Define("weight_sq_scaled", [Lumi](double w2){ return w2 * Lumi * Lumi; }, {"weight2"});
 
 
         // Define lepton pair counts for all sides
@@ -55,6 +52,7 @@ void BuildFitInput::LoadSig_KeyValue(const std::string& key, const stringlist& s
             auto df_scaled = df
                 .Define("weight_scaled", [Lumi](double w){ return w * Lumi; }, {"weight"})
                 .Define("weight_sq_scaled", [Lumi](double w){ return (w*Lumi)*(w*Lumi); }, {"weight"});
+                //.Define("weight_sq_scaled", [Lumi](double w2){ return w2 * Lumi * Lumi; }, {"weight2"});
 
             // Define lepton pair counts for all sides
             //auto df_with_lep = df_scaled;  // debug temp
@@ -73,20 +71,20 @@ void BuildFitInput::LoadSig_KeyValue(const std::string& key, const stringlist& s
 }
 
 void BuildFitInput::LoadBkg_byMap( map< std::string, stringlist>& BkgDict, const double& Lumi){
-	
-	for (const auto& pair : BkgDict) {
-		std::cout<<"Loading RDataFrame for: "<<pair.first<<"\n";
-		LoadBkg_KeyValue( pair.first, pair.second, Lumi);
-	}
+    
+    for (const auto& pair : BkgDict) {
+        std::cout<<"Loading RDataFrame for: "<<pair.first<<"\n";
+        LoadBkg_KeyValue( pair.first, pair.second, Lumi);
+    }
 
 }
 void BuildFitInput::LoadSig_byMap( map< std::string, stringlist>& SigDict, const double& Lumi){
-	
-	for (const auto& pair : SigDict) {
-		std::cout<<"Loading RDataFrame for: "<<pair.first<<"\n";
-		LoadSig_KeyValue( pair.first, pair.second, Lumi);
-	}
-	
+    
+    for (const auto& pair : SigDict) {
+        std::cout<<"Loading RDataFrame for: "<<pair.first<<"\n";
+        LoadSig_KeyValue( pair.first, pair.second, Lumi);
+    }
+    
 }
 
 inline bool ColumnExists(ROOT::RDF::RNode rdf, const std::string& name) {
@@ -101,8 +99,8 @@ inline bool ColumnExists(ROOT::RDF::RNode rdf, const std::string& name) {
 ROOT::RDF::RNode BuildFitInput::DefinePairKinematics(ROOT::RDF::RNode rdf, const std::string& side) {
     // Determine side-specific index branch
     std::string indexBranch;
-    if (side == "A")      indexBranch = "index_lep_a";
-    else if (side == "B") indexBranch = "index_lep_b";
+    if (side == "A")      indexBranch = "index_lep_a_LEP"; // LEP only RJR tree
+    else if (side == "B") indexBranch = "index_lep_b_LEP"; // LEP only RJR tree
 
     std::string sideSuffix = "";
     std::string pairPrefix = "";
@@ -244,6 +242,8 @@ static inline std::string trim_copy(const std::string &s) {
 }
 
 std::string BuildFitInput::BuildLeptonCut(const std::string& shorthand_in, const std::string& side) {
+    // return empty string if somehow a commented out string made it here
+    if(shorthand_in[0] == '#') return "";
     // maps
     std::map<std::string,int> qualMap   = {{"Gold",0}, {"Silver",1}, {"Bronze",2}};
     std::map<std::string,int> chargeMap = {{"Pos",1}, {"Neg",0}};
@@ -251,7 +251,7 @@ std::string BuildFitInput::BuildLeptonCut(const std::string& shorthand_in, const
     // make a mutable copy
     std::string shorthand = shorthand_in;
 
-    // split first token (count/type) from extraCuts using | instead of comma
+    // split first token (count/type) from extraCuts using |
     std::vector<std::string> tokens;
     {
         size_t sep = shorthand.find('|');
@@ -314,7 +314,7 @@ std::string BuildFitInput::BuildLeptonCut(const std::string& shorthand_in, const
         int n = std::stoi(match[2]);
         std::string prop = match[3];
         int val = qualMap[prop];
-        // LepQual_lep[_A/_B/_All] exist (we standardize on LepQual_lep_X names)
+        // LepQual_lep[_A/_B/_All] exist (standardize on LepQual_lep_X names)
         std::string branch = "LepQual_lep" + sideSuffix;
         return "(SUM(" + branch + "==" + std::to_string(val) + ")" + op + std::to_string(n) + ")";
     }
@@ -344,7 +344,7 @@ std::string BuildFitInput::BuildLeptonCut(const std::string& shorthand_in, const
     // 5) pair counts (possibly with extra pair-level cuts)
     // Accept forms: ">=1OSSF" or ">=1OSSF_a" (the latter already stripped if found)
     {
-        // For pair parsing we also want to capture if first token included a suffix (we already handled suffix earlier).
+        // For pair parsing we also want to capture if first token included a suffix (already handled suffix earlier).
         std::regex pairFullRgx(R"(^\s*(>=|<=|=|<|>)(\d+)(OSSF|OSOF|SSSF|SSOF)\s*$)", std::regex::icase);
         if (std::regex_match(first, match, pairFullRgx)) {
             std::string op = match[1]; if (op == "=") op = "==";
@@ -423,7 +423,7 @@ std::string BuildFitInput::BuildLeptonCut(const std::string& shorthand_in, const
             std::string branch = "Flavor_lep" + sideSuffix;
             return "(SUM(" + branch + "==" + std::to_string(code) + ")" + op + std::to_string(n) + ")";
         } else {
-            // "All" — use absolute PDGID
+            // "All" use absolute PDGID
             int pdg = (flavor == "Elec" || flavor == "elec") ? 11 : 13;
             return "(SUM(abs(PDGID_lep)==" + std::to_string(pdg) + ")" + op + std::to_string(n) + ")";
         }
@@ -438,8 +438,8 @@ std::string BuildFitInput::BuildLeptonCut(const std::string& shorthand_in, const
 
 ROOT::RDF::RNode BuildFitInput::DefineLeptonPairCounts(ROOT::RDF::RNode rdf, const std::string& side) {
     std::string indexBranch;
-    if (side == "A")      indexBranch = "index_lep_a";
-    else if (side == "B") indexBranch = "index_lep_b";
+    if (side == "A")      indexBranch = "index_lep_a_LEP"; // LEP only RJR tree
+    else if (side == "B") indexBranch = "index_lep_b_LEP"; // LEP only RJR tree
     // else "" => all leptons
 
     // --- define side-specific flattened vectors (flavour, charge, quality)
@@ -462,7 +462,7 @@ ROOT::RDF::RNode BuildFitInput::DefineLeptonPairCounts(ROOT::RDF::RNode rdf, con
             return qual;
         }, {"LepQual_lep", indexBranch});
 
-        // also expose kinematics for the side (needed to compute pair masses / ΔR)
+        // also expose kinematics for the side (needed to compute pair masses / dR)
         rdf = rdf.Define("PT_lep_" + side, [=](const std::vector<double>& PT, const std::vector<int>& idx){
             ROOT::RVec<double> v(idx.size());
             for (size_t ii = 0; ii < idx.size(); ++ii) v[ii] = PT[idx[ii]];
@@ -547,7 +547,6 @@ ROOT::RDF::RNode BuildFitInput::DefineLeptonPairCounts(ROOT::RDF::RNode rdf, con
             return pairLambda(f,c,[](int fi,int fj,int ci,int cj){ return fi!=fj && ci==cj; });
         }, {flavorVar, chargeVar});
 
-        // keep counts for backward compatibility
         rdf = rdf.Define(prefix + "NumOSSFPairs", [=](const ROOT::RVec<std::pair<int,int>>& pairs){ return (int)pairs.size(); }, {prefix + "OSSFPairs"});
         rdf = rdf.Define(prefix + "NumOSOFPairs", [=](const ROOT::RVec<std::pair<int,int>>& pairs){ return (int)pairs.size(); }, {prefix + "OSOFPairs"});
         rdf = rdf.Define(prefix + "NumSSSFPairs", [=](const ROOT::RVec<std::pair<int,int>>& pairs){ return (int)pairs.size(); }, {prefix + "SSSFPairs"});
@@ -806,7 +805,7 @@ void BuildFitInput::ReportRegions(int verbosity,
                                   countmap &countResults,
                                   summap &sumResults,
                                   errormap &errorResults,
-				  bool DoSig)
+                  bool DoSig)
 {
 
     countResults.clear();
@@ -848,7 +847,6 @@ void BuildFitInput::ReportRegions(int verbosity,
         }
     };
 
-
     if(DoSig){
       std::cout << "Processing Sig nodes...\n";
       processNodes(_base_rdf_SigDict);
@@ -859,26 +857,26 @@ void BuildFitInput::ReportRegions(int verbosity,
 }
 
 void BuildFitInput::ReportRegions(int verbosity){
-	std::cout<<"Reporting bkg nodes ...  \n";
-	for (const auto& it : _base_rdf_BkgDict){
-		if( verbosity > 0 ){
-			std::cout<<it.first<<": \n";
-			(it.second)->Report()->Print();
-			std::cout<<"\n";
-		}else{
-			(it.second)->Report();
-		}
-	}
-	std::cout<<"Reporting sig nodes ... \n";
-	for (const auto& it : _base_rdf_SigDict){
-		if( verbosity > 0 ){
-			std::cout<<it.first<<": \n";
-			(it.second)->Report()->Print();
-			std::cout<<"\n";
-		}else{
-			(it.second)->Report();
-		}
-	}
+    std::cout<<"Reporting bkg nodes ...  \n";
+    for (const auto& it : _base_rdf_BkgDict){
+        if( verbosity > 0 ){
+            std::cout<<it.first<<": \n";
+            (it.second)->Report()->Print();
+            std::cout<<"\n";
+        }else{
+            (it.second)->Report();
+        }
+    }
+    std::cout<<"Reporting sig nodes ... \n";
+    for (const auto& it : _base_rdf_SigDict){
+        if( verbosity > 0 ){
+            std::cout<<it.first<<": \n";
+            (it.second)->Report()->Print();
+            std::cout<<"\n";
+        }else{
+            (it.second)->Report();
+        }
+    }
 }
 
 void BuildFitInput::PrintCountReports(const countmap& countResults) {
@@ -919,33 +917,33 @@ void BuildFitInput::FullReport(const countmap& countResults,
 }
 
 std::map<std::string, Process*> BuildFitInput::CombineBkgs( std::map<std::string, Process*>& bkgProcs ){
-	//build the set of backgrounds
-	std::map<std::string, Process*> combinedBkgProcs{};
-	for( const auto& it : bkgProcs){
-		std::string procname = it.first;
-		
-		//check for key, if it doesn't exist create it
-		procname = BFTool::SplitString( procname, "_")[0] ;
-		if( combinedBkgProcs.find(procname) == combinedBkgProcs.end()){
-			//key was not found, make a new proc and put it in the map
-			Process* newproc = new Process(procname, 0, 0 ,0);
-			combinedBkgProcs[procname] = newproc;
-		}
-		
-		//if it is in there already, add up the  pieces with the existing components
-		combinedBkgProcs[procname]->Add(bkgProcs[it.first]);
-		
-	}
-	for( const auto& it: combinedBkgProcs){//loop back through and sqrt the errors
-		combinedBkgProcs[it.first]->FixError();
-	}
-	return combinedBkgProcs;
+    //build the set of backgrounds
+    std::map<std::string, Process*> combinedBkgProcs{};
+    for( const auto& it : bkgProcs){
+        std::string procname = it.first;
+        
+        //check for key, if it doesn't exist create it
+        procname = BFTool::SplitString( procname, "_")[0] ;
+        if( combinedBkgProcs.find(procname) == combinedBkgProcs.end()){
+            //key was not found, make a new proc and put it in the map
+            Process* newproc = new Process(procname, 0, 0 ,0);
+            combinedBkgProcs[procname] = newproc;
+        }
+        
+        //if it is in there already, add up the  pieces with the existing components
+        combinedBkgProcs[procname]->Add(bkgProcs[it.first]);
+        
+    }
+    for( const auto& it: combinedBkgProcs){//loop back through and sqrt the errors
+        combinedBkgProcs[it.first]->FixError();
+    }
+    return combinedBkgProcs;
 }
 
 void BuildFitInput::CreateBin(const std::string& binname){
-	Bin* bin = new Bin();
-	bin->binname = binname;
-	analysisbins[binname] = bin;
+    Bin* bin = new Bin();
+    bin->binname = binname;
+    analysisbins[binname] = bin;
 }
 
 // Overload: takes vector of cut strings
@@ -997,42 +995,248 @@ void BuildFitInput::AddSigToBinObjects(countmap countResults,
 }
 
 void BuildFitInput::PrintBins(int verbosity){
-	for(const auto& it: analysisbins){
-		std::cout<<"Bin: "<< it.second->binname << "\n";
-		//loop over raw bkg procs
-		if(verbosity >= 3){
-			for(const auto& it2: it.second->bkgProcs ){
-				std::cout<<"   "<<it2.second->procname<<" "<< it2.second->nevents <<" "<<it2.second->wnevents<<" "<<it2.second->staterror<<"\n";
-			}
-		}
-		if(verbosity > 0){
-			for(const auto& it2: it.second->combinedProcs){
-				std::cout<<"   "<< it2.second->procname<<" "<<it2.second->nevents <<" "<<it2.second->wnevents<<" "<<it2.second->staterror<<"\n";
-			}	
-		}
-		if(verbosity >= 1){
-			for(const auto& it2: it.second->signals){
-				std::cout<<"   "<< it2.second->procname<<" "<<it2.second->nevents <<" "<<it2.second->wnevents<<" "<<it2.second->staterror<<"\n";
-			}	
-		}
-	}
+    for(const auto& it: analysisbins){
+        std::cout<<"Bin: "<< it.second->binname << "\n";
+        //loop over raw bkg procs
+        if(verbosity >= 3){
+            for(const auto& it2: it.second->bkgProcs ){
+                std::cout<<"   "<<it2.second->procname<<" "<< it2.second->nevents <<" "<<it2.second->wnevents<<" "<<it2.second->staterror<<"\n";
+            }
+        }
+        if(verbosity > 0){
+            for(const auto& it2: it.second->combinedProcs){
+                std::cout<<"   "<< it2.second->procname<<" "<<it2.second->nevents <<" "<<it2.second->wnevents<<" "<<it2.second->staterror<<"\n";
+            }    
+        }
+        if(verbosity >= 1){
+            for(const auto& it2: it.second->signals){
+                std::cout<<"   "<< it2.second->procname<<" "<<it2.second->nevents <<" "<<it2.second->wnevents<<" "<<it2.second->staterror<<"\n";
+            }    
+        }
+    }
+}
+
+std::unordered_map<std::string, BuildFitInput::CutFn> BuildFitInput::cutMap_;
+bool BuildFitInput::GetCutByName(const std::string& name, std::string& out) {
+    auto it = cutMap_.find(name);
+    if (it == cutMap_.end()) return false;
+    out = it->second(this);
+    return true;
 }
 
 std::string BuildFitInput::GetCleaningCut(){
         return "(PTCM <= 200.) && "
-	"( (PTCM <= -500.*sqrt( ((-2.777*pow(fabs(dphiCMI),2) + 1.388*fabs(dphiCMI) + 0.8264) > 0 ? "
-	"(-2.777*pow(fabs(dphiCMI),2) + 1.388*fabs(dphiCMI) + 0.8264) : 0) ) + 575.) || "
-	"(-2.777*pow(fabs(dphiCMI),2) + 1.388*fabs(dphiCMI) + 0.8264 <= 0.) ) && "
-	"( (PTCM <= -500.*sqrt( ((-1.5625*pow(fabs(dphiCMI),2) + 7.8125*fabs(dphiCMI) - 8.766) > 0 ? "
-	"(-1.5625*pow(fabs(dphiCMI),2) + 7.8125*fabs(dphiCMI) - 8.766) : 0) ) + 600.) || "
-	"(-1.5625*pow(fabs(dphiCMI),2) + 7.8125*fabs(dphiCMI) - 8.766 <= 0.) )";
+    "( (PTCM <= -500.*sqrt( ((-2.777*pow(fabs(dphiCMI),2) + 1.388*fabs(dphiCMI) + 0.8264) > 0 ? "
+    "(-2.777*pow(fabs(dphiCMI),2) + 1.388*fabs(dphiCMI) + 0.8264) : 0) ) + 575.) || "
+    "(-2.777*pow(fabs(dphiCMI),2) + 1.388*fabs(dphiCMI) + 0.8264 <= 0.) ) && "
+    "( (PTCM <= -500.*sqrt( ((-1.5625*pow(fabs(dphiCMI),2) + 7.8125*fabs(dphiCMI) - 8.766) > 0 ? "
+    "(-1.5625*pow(fabs(dphiCMI),2) + 7.8125*fabs(dphiCMI) - 8.766) : 0) ) + 600.) || "
+    "(-1.5625*pow(fabs(dphiCMI),2) + 7.8125*fabs(dphiCMI) - 8.766 <= 0.) )";
 }
+REGISTER_CUT(BuildFitInput, GetCleaningCut, "Cleaning");
 std::string BuildFitInput::GetZstarCut(){
         return "((" + BuildLeptonCut(">=1OSSF","a") + " || " +
                BuildLeptonCut(">=1OSSF","b") + ") || "
                + "(Nlep==2 && " +
                BuildLeptonCut(">=1OSSF") + "))";
 }
+REGISTER_CUT(BuildFitInput, GetZstarCut, "Zstar");
 std::string BuildFitInput::GetnoZstarCut(){
         return "!"+GetZstarCut();
+}
+REGISTER_CUT(BuildFitInput, GetnoZstarCut, "noZstar");
+
+// --------------------------------------------------
+// Creates a tmp node, ensures columns exist, defines a temporary test 
+// column for the cut expression, and uses the TryValidateType
+// machinery to JIT-check the cut on a small number of events.
+// Recursively checks up to the maximum number of events (maxCheck)
+// --------------------------------------------------
+bool BuildFitInput::ValidateUserCut(ROOT::RDF::RNode node,
+                                    const CutDef &cut,
+                                    unsigned nCheck,
+                                    unsigned maxCheck) {
+    try {
+        // work on a copy of the node so we don't modify the caller's chain
+        ROOT::RDF::RNode tmpNode = node;
+
+        // Ensure columns named in the cut have a placeholder if missing.
+        // (Usually these columns will have been defined by loadCutsUser already
+        //  so this is mostly a safety net.)
+        auto colNames = tmpNode.GetColumnNames();
+        for (const auto &col : cut.columns) {
+            if (std::find(colNames.begin(), colNames.end(), col) == colNames.end()) {
+                // define a simple dummy scalar to allow expression compilation.
+                // If user expects a vector here, the detailed TryValidateType will detect
+                // type mismatch and reject the cut.
+                tmpNode = tmpNode.Define(col, [](){ return 0.0; });
+            }
+        }
+
+        // Wrap the cut expression into a DerivedVar so we can reuse the derived-var validator
+        DerivedVar dv;
+        dv.name = cut.name + "_test";
+        dv.expr = cut.expression;
+
+        // Validate via the same machinery (tries multiple types / containers, recurses if sparse)
+        return ValidateDerivedVar(tmpNode, dv, nCheck, maxCheck);
+
+    } catch (const std::exception &e) {
+        std::cerr << "[BuildFitInput] Exception validating user cut '" << cut.name
+                  << "': " << e.what() << "\n";
+        return false;
+    } catch (...) {
+        std::cerr << "[BuildFitInput] Unknown exception validating user cut '" << cut.name << "'\n";
+        return false;
+    }
+}
+
+std::map<std::string, CutDef>
+BuildFitInput::ValidateCuts(ROOT::RDF::RNode node,
+                            const std::map<std::string, CutDef>& cuts,
+                            unsigned nCheck,
+                            unsigned maxCheck) {
+    std::map<std::string, CutDef> valid;
+
+    for (const auto& kv : cuts) {
+        const auto& cut = kv.second;
+        if (BuildFitInput::ValidateUserCut(node, cut, nCheck, maxCheck)) {
+            valid[kv.first] = cut;
+        } else {
+            std::cerr << "[BuildFitInput] Cut '" << cut.name
+                      << "' is invalid and will not be available.\n";
+        }
+    }
+
+    return valid;
+}
+
+// -------------------------------------
+// Example: User-defined cuts loader
+// -------------------------------------
+ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<std::string, CutDef>& ValidCuts){
+
+    std::map<std::string, CutDef> cuts;
+    // Example 1: invariant mass of leading two jets -> M_jj (double)
+    node = node.Define("M_jj", [](const std::vector<double> &pt,
+                                  const std::vector<double> &eta,
+                                  const std::vector<double> &phi,
+                                  const std::vector<double> &mass) {
+        // Return -1.0 if not enough jets
+        if (pt.size() < 2 || eta.size() < 2 || phi.size() < 2 || mass.size() < 2) return -1.0;
+        // compute using temporary TLorentzVector locally (we only return a double)
+        TLorentzVector j0, j1;
+        j0.SetPtEtaPhiM(pt[0], eta[0], phi[0], mass[0]);
+        j1.SetPtEtaPhiM(pt[1], eta[1], phi[1], mass[1]);
+        return (j0 + j1).M();
+    }, {"PT_jet","Eta_jet","Phi_jet","M_jet"});
+
+    CutDef cut1;
+    cut1.name = "M_jj_gt_100";
+    cut1.columns = {"M_jj"};
+    cut1.expression = "M_jj > 100";
+    cuts[cut1.name] = cut1;
+
+    // -----------------------------------------------------------------
+    // Example 2: HT_eta24 / MET ratio > 1.5 
+    // -----------------------------------------------------------------
+    node = node.Define("HT_eta24_over_MET", [](double HT_eta24, double MET) {
+        if (MET == 0.0) return 0.0;
+        return HT_eta24 / MET;
+    }, {"HT_eta24","MET"});
+
+    CutDef cut2;
+    cut2.name = "HT_eta24_over_MET_gt_1p5";
+    cut2.columns = {"HT_eta24_over_MET"};
+    cut2.expression = "HT_eta24_over_MET > 1.5";
+    cuts[cut2.name] = cut2;
+
+    // -----------------------------------------------------------------
+    // Example 3: Combined lepton-jet cut (pT + DeltaR)
+    // Compute DeltaR using TLorentzVector::DeltaR, return double
+    // Also define leading pT columns to avoid unsafe indexing
+    // -----------------------------------------------------------------
+    
+    // Leading lepton pT
+    node = node.Define("PT_lep0", [](const std::vector<double> &pt){
+        return pt.empty() ? 0.0 : pt[0];
+    }, {"PT_lep"});
+    
+    // Leading jet pT
+    node = node.Define("PT_jet0", [](const std::vector<double> &pt){
+        return pt.empty() ? 0.0 : pt[0];
+    }, {"PT_jet"});
+    
+    // DeltaR between leading lepton and leading jet
+    node = node.Define("DeltaR_lep0_jet0", [](const std::vector<double> &pt_lep,
+                                             const std::vector<double> &eta_lep,
+                                             const std::vector<double> &phi_lep,
+                                             const std::vector<double> &m_lep,
+                                             const std::vector<double> &pt_jet,
+                                             const std::vector<double> &eta_jet,
+                                             const std::vector<double> &phi_jet,
+                                             const std::vector<double> &m_jet) {
+        if(pt_lep.empty() || eta_lep.empty() || phi_lep.empty() || m_lep.empty() ||
+           pt_jet.empty() || eta_jet.empty() || phi_jet.empty() || m_jet.empty()) {
+            return 999.0; // safe fallback
+        }
+    
+        TLorentzVector lep, jet;
+        lep.SetPtEtaPhiM(pt_lep[0], eta_lep[0], phi_lep[0], m_lep[0]);
+        jet.SetPtEtaPhiM(pt_jet[0], eta_jet[0], phi_jet[0], m_jet[0]);
+    
+        return lep.DeltaR(jet);
+    }, {"PT_lep","Eta_lep","Phi_lep","M_lep",
+        "PT_jet","Eta_jet","Phi_jet","M_jet"});
+    
+    // Define the user cut using only doubles, safe for validation
+    CutDef cut3;
+    cut3.name = "lep0_pt25_jet0_pt30_dR0p4";
+    cut3.columns = {"PT_lep0","PT_jet0","DeltaR_lep0_jet0"};
+    cut3.expression = "(PT_lep0 > 25) && (PT_jet0 > 30) && (DeltaR_lep0_jet0 > 0.4)";
+    cuts[cut3.name] = cut3;
+
+    // -----------------------------------------------------------------------------
+    // Store 4-vectors as ROOT::Math::PtEtaPhiMVector (replaces TLV for RDataFrame)
+    // How to create 4-vector columns (less recommended for simple cuts)
+    // -----------------------------------------------------------------------------
+    /*
+    node = node
+        .Define("p4_jet0_vect", [](const std::vector<double> &pt,
+                                   const std::vector<double> &eta,
+                                   const std::vector<double> &phi,
+                                   const std::vector<double> &mass) {
+            ROOT::Math::PtEtaPhiMVector v;
+            if (!pt.empty() && pt.size() == eta.size() && eta.size() == phi.size() && phi.size() == mass.size()) {
+                v.SetPtEtaPhiM(pt[0], eta[0], phi[0], mass[0]);
+            }
+            return v;
+        }, {"PT_jet","Eta_jet","Phi_jet","M_jet"})
+        .Define("p4_jet1_vect", [](const std::vector<double> &pt,
+                                   const std::vector<double> &eta,
+                                   const std::vector<double> &phi,
+                                   const std::vector<double> &mass) {
+            ROOT::Math::PtEtaPhiMVector v;
+            if (pt.size() > 1 && pt.size() == eta.size() && eta.size() == phi.size() && phi.size() == mass.size()) {
+                v.SetPtEtaPhiM(pt[1], eta[1], phi[1], mass[1]);
+            }
+            return v;
+        }, {"PT_jet","Eta_jet","Phi_jet","M_jet"});
+
+    node = node.Define("M_jj_vect", [](const ROOT::Math::PtEtaPhiMVector &j0,
+                                       const ROOT::Math::PtEtaPhiMVector &j1) {
+        return (j0 + j1).M();
+    }, {"p4_jet0_vect", "p4_jet1_vect"});
+    // Used *_vect in the names to avoid conflicts with the scalar-versions above.
+    */
+
+    // Validate the cuts that the user wrote
+    ValidCuts = ValidateCuts(node, cuts);
+    for (const auto &kv : cuts) {
+        if (!ValidCuts.count(kv.first)) {
+            std::cerr << "[BuildFitInput loadUserCuts WARN] User cut \"" << kv.first
+                      << "\" failed validation and will be ignored.\n";
+        }
+    }
+    return node;
 }

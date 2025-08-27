@@ -23,6 +23,32 @@ class CondorJobCountMonitor:
         except Exception as e:
             print(f"Error retrieving job count: {e}")
         return -1 # Return -1 if an error occurs
+
+    def wait_until_no_idle_jobs(self):
+        """Waits until all jobs for the current user are no longer idle."""
+        check_count = 0
+        while True:
+            try:
+                output = subprocess.check_output(f"condor_q $USER", shell=True, text=True)
+                idle_jobs = 0
+                for line in output.split("\n"):
+                    if line.strip() == "" or line.startswith(" --") or "ID" in line:
+                        continue
+                    fields = line.split()
+                    if len(fields) > 5:
+                        status = fields[5]  # Job status column
+                        if status == "I":
+                            idle_jobs += 1
+                if idle_jobs == 0:
+                    if self.verbose: print("All jobs have moved out of idle.")
+                    break
+                else:
+                    if check_count % 10 == 0 and self.verbose:
+                        print(f"{idle_jobs} job(s) still idle. Waiting...")
+            except Exception as e:
+                print(f"Error retrieving job statuses: {e}")
+            check_count += 1
+            time.sleep(5)
     
     def wait_until_jobs_below(self):
         """Waits until the number of running jobs is below the given threshold."""

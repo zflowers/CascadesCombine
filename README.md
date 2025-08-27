@@ -50,6 +50,17 @@ cd CombineHarvester/
 git checkout v3.0.0-pre1
 scram b
 ```
+To load YAMLs with C++:
+```
+cd $CMSSW_BASE/src
+git clone https://github.com/jbeder/yaml-cpp.git
+cd yaml-cpp
+git checkout yaml-cpp-0.7.0
+mkdir build && cd build
+cmake .. -DCMAKE_INSTALL_PREFIX=$CMSSW_BASE/lib -DCMAKE_BUILD_TYPE=Release
+make -j8
+make install
+```
 
 The RDataframe framework is here,
 https://github.com/zflowers/CascadesCombine

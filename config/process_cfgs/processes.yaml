@@ -1,4 +1,4 @@
-datasets:
+processes:
   bkg:
     - ttbar
     - ST
@@ -10,4 +10,5 @@ datasets:
 
   sig:
     - Cascades
-
+    - SMS_TChiWZ
+    - SMS_TChiWZ_Sandwich

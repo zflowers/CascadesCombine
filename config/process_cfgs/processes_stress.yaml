@@ -1,0 +1,14 @@
+processes:
+  bkg:
+    - ttbar
+    - ST
+    - DY
+    - ZInv
+    - DBTB
+    - QCD
+    - Wjets
+
+  sig:
+    - Cascades
+    - SMS_TChiWZ
+    - SMS_TChiWZ_Sandwich

@@ -12,6 +12,8 @@
 #include <regex> // for regex matching
 #include <memory>
 #include <utility>
+#include <unordered_map>
+#include <functional>
 
 // ROOT includes
 #include <TFile.h>
@@ -19,6 +21,12 @@
 #include <TKey.h>
 #include <TClass.h>
 #include <TCollection.h>
+#include <TLorentzVector.h>
+#include "TInterpreter.h"
+#include <ROOT/RDataFrame.hxx>
+#include <ROOT/RVec.hxx>
+
+#include "ValidationTools.h"
 
 typedef std::vector<std::string> stringlist;
 
@@ -185,4 +193,5 @@ inline bool BFTool::ContainsAnySubstring(const std::string& mainString, const st
     // No substring found
     return false; 
 }
+
 #endif

@@ -1,6 +1,5 @@
 #include "JSONFactory.h"
 
-
 JSONFactory::JSONFactory(std::map<std::string, Bin*> analysisbins){
 	//loop and add bins 
 	for(const auto& it: analysisbins ){
@@ -18,11 +17,13 @@ JSONFactory::JSONFactory(std::map<std::string, Bin*> analysisbins){
 		}
 	}
 }
+
 JSONFactory::JSONFactory(std::string filename){
 	std::ifstream ifs(filename);
 	j = json::parse(ifs);
 
 }
+
 std::vector<std::string> JSONFactory::GetSigProcs(){
         std::vector<std::string> sigprocs{};
 

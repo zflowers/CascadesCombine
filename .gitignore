@@ -12,3 +12,8 @@ obj/
 condor/
 python/__pycache__/
 *.yaml
+root/*
+plots/*
+*.root
+*.err
+*.out

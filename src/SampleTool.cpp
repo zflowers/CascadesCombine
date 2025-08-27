@@ -2,7 +2,7 @@
 
 SampleTool::SampleTool(){
 
-  string pathPrefix = "root://cmseos.fnal.gov//store/user/lpcsusylep/NTUPLES_Cascades_v3/";
+  string pathPrefix = "root://cmseos.fnal.gov//store/user/lpcsusylep/NTUPLES_Cascades_v4/";
 
   MasterDict["ttbar"] = {
     pathPrefix + "Summer23BPix_130X/TTto2L2Nu-2Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer23BPix_130X.root",
@@ -13,6 +13,9 @@ SampleTool::SampleTool(){
     pathPrefix + "Summer23BPix_130X/TTWW_TuneCP5_13p6TeV_madgraph-madspin-pythia8_Summer23BPix_130X.root",
     pathPrefix + "Summer23BPix_130X/TTZ-ZtoQQ-1Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer23BPix_130X.root",
     pathPrefix + "Summer23BPix_130X/TZQB-ZtoLL-TtoL-CPV_TuneCP5_13p6TeV_madgraph-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/TTLL_MLL-4to50_TuneCP5_13p6TeV_amcatnlo-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/TTLL_MLL-50_TuneCP5_13p6TeV_amcatnlo-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/TTLNu-1Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer23BPix_130X.root",
     pathPrefix + "Summer23BPix_130X/TTHto2B_M-125_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
     pathPrefix + "Summer23BPix_130X/TTHtoNon2B_M-125_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root"
   };
@@ -21,6 +24,8 @@ SampleTool::SampleTool(){
     pathPrefix + "Summer23BPix_130X/TBbartoLplusNuBbar-s-channel-4FS_TuneCP5_13p6TeV_amcatnlo-pythia8_Summer23BPix_130X.root",
     pathPrefix + "Summer23BPix_130X/TQbarto2Q-t-channel_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
     pathPrefix + "Summer23BPix_130X/TQbartoLNu-t-channel_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/TBbarQ_t-channel_4FS_TuneCP5_13p6TeV_powheg-madspin-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/TbarBQ_t-channel_4FS_TuneCP5_13p6TeV_powheg-madspin-pythia8_Summer23BPix_130X.root",
     pathPrefix + "Summer23BPix_130X/TbarBtoLminusNuB-s-channel-4FS_TuneCP5_13p6TeV_amcatnlo-pythia8_Summer23BPix_130X.root",
     pathPrefix + "Summer23BPix_130X/TbarQto2Q-t-channel_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
     pathPrefix + "Summer23BPix_130X/TbarQtoLNu-t-channel_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
@@ -77,6 +82,7 @@ SampleTool::SampleTool(){
     pathPrefix + "Summer23BPix_130X/ZZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
     pathPrefix + "Summer23BPix_130X/ZZto2Nu2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
     pathPrefix + "Summer23BPix_130X/ZZto4L_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/ZG2JtoG2L2J_EWK_MLL-50_MJJ-120_TuneCP5_13p6TeV_madgraph-pythia8_Summer23BPix_130X.root",
     pathPrefix + "Summer23BPix_130X/WWW_4F_TuneCP5_13p6TeV_amcatnlo-madspin-pythia8_Summer23BPix_130X.root",
     pathPrefix + "Summer23BPix_130X/WWZ_4F_TuneCP5_13p6TeV_amcatnlo-pythia8_Summer23BPix_130X.root",
     pathPrefix + "Summer23BPix_130X/WZGtoLNuZG_TuneCP5_13p6TeV_amcatnlo-pythia8_Summer23BPix_130X.root",
@@ -121,6 +127,15 @@ SampleTool::SampleTool(){
     pathPrefix + "Summer23BPix_130X/WtoLNu-4Jets_MLNu-120_HT-800to1500_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root"
   };
 
+  MasterDict["Gjets"] = {
+    pathPrefix + "Summer23BPix_130X/GJ-4Jets_HT-40to70_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/GJ-4Jets_HT-70to100_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/GJ-4Jets_HT-100to200_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/GJ-4Jets_HT-200to400_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/GJ-4Jets_HT-400to600_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+    pathPrefix + "Summer23BPix_130X/GJ-4Jets_HT-600_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root"
+  };
+
   MasterDict["Cascades"] = {
     pathPrefix + "Summer23BPix_130X_Cascades/SlepSnuCascade_MN1-220_MN2-260_MC1-240_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
     pathPrefix + "Summer23BPix_130X_Cascades/SlepSnuCascade_MN1-260_MN2-280_MC1-270_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
@@ -129,49 +144,59 @@ SampleTool::SampleTool(){
   };
 
   MasterDict["SMS_Gluinos"] = {
-    pathPrefix + "Fall17_102X_SMS/SMS-T1bbbb_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root"
+    //pathPrefix + "Fall17_102X_SMS/SMS-T1qqqq-compressedGluino_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
+    //pathPrefix + "Fall17_102X_SMS/SMS-T1qqqqL_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
+    pathPrefix + "Fall17_102X_SMS/SMS-T1qqqq_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root"
+  };
+
+  MasterDict["SMS_TChiWZ"] = {
+    pathPrefix + "Summer22_130X_SMS/SMS-TChiWZ_mC1-300_mN2-300_mN1-290_NanoAODv12_JustinPrivateMC_Summer22_130X_SMS_Summer22_130X.root"
+  };
+
+  MasterDict["SMS_TChiWZ_Sandwich"] = {
+    pathPrefix + "Summer22_130X_SMS/SMS-TChiWZ_mC1-295_mN2-300_mN1-290_NanoAODv12_JustinPrivateMC_Summer22_130X_SMS_Summer22_130X.root"
   };
 
 }
 
 void SampleTool::LoadBkgs( const stringlist& bkglist ){
-	for( long unsigned int i=0; i<bkglist.size(); i++){
-		//check if background exists
-		if( MasterDict.count(bkglist[i]) == 0 ){
-			std::cout<<"Bkg: "<<bkglist[i]<<" not found ... skipping ...\n";
-			continue;
-		} 
-		BkgDict[bkglist[i]] = MasterDict[bkglist[i]];		
-	}
+    for( long unsigned int i=0; i<bkglist.size(); i++){
+        //check if background exists
+        if( MasterDict.count(bkglist[i]) == 0 ){
+            std::cout<<"Bkg: "<<bkglist[i]<<" not found ... skipping ...\n";
+            continue;
+        } 
+        BkgDict[bkglist[i]] = MasterDict[bkglist[i]];        
+    }
 }
 void SampleTool::LoadSigs( const stringlist& siglist ){
-	for( long unsigned int i=0; i<siglist.size(); i++){
-		if( MasterDict.count(siglist[i]) == 0 ){
-			std::cout<<"Sig: "<<siglist[i]<<" not found ... skipping ...\n";
-			continue;
-		}
-		SigDict[siglist[i]] = MasterDict[siglist[i]];
-	}
-	//build signal keys
-	stringlist s_strings{};
-	for(long unsigned int i=0; i<siglist.size(); i++){
-		std::vector< std::string > keylist{};
-		s_strings = SigDict[siglist[i]];
-		for( long unsigned int j=0; j< s_strings.size(); j++){
-                        if(s_strings[j].find("X_Cascades") != std::string::npos) 
-			  SignalKeys.push_back( BFTool::GetSignalTokensCascades( s_strings[j] ) );
-                        else if(s_strings[j].find("X_SMS") != std::string::npos){
-                          stringlist sms_temp = BFTool::GetSignalTokensSMS( s_strings[j] );
-                          stringlist sms_filters_tmp;
-                          for (const auto& sms_entry : sms_temp){
-			    SignalKeys.push_back( sms_entry );
-			    sms_filters_tmp.push_back( sms_entry );
-                          }
-			  if (BFTool::filterSignalsSMS.empty())
-                            BFTool::SetFilterSignalsSMS(sms_filters_tmp);
-                        }
-		}
-	}
+    for( long unsigned int i=0; i<siglist.size(); i++){
+        if( MasterDict.count(siglist[i]) == 0 ){
+            std::cout<<"Sig: "<<siglist[i]<<" not found ... skipping ...\n";
+            continue;
+        }
+        SigDict[siglist[i]] = MasterDict[siglist[i]];
+    }
+    //build signal keys
+    stringlist s_strings{};
+    for(long unsigned int i=0; i<siglist.size(); i++){
+        std::vector< std::string > keylist{};
+        s_strings = SigDict[siglist[i]];
+        for( long unsigned int j=0; j< s_strings.size(); j++){
+            if(s_strings[j].find("X_Cascades") != std::string::npos) 
+                SignalKeys.push_back( BFTool::GetSignalTokensCascades( s_strings[j] ) );
+            else if(s_strings[j].find("X_SMS") != std::string::npos){
+                stringlist sms_temp = BFTool::GetSignalTokensSMS( s_strings[j] );
+                stringlist sms_filters_tmp;
+                for (const auto& sms_entry : sms_temp){
+                    SignalKeys.push_back( sms_entry );
+                    sms_filters_tmp.push_back( sms_entry );
+                }
+                if (BFTool::filterSignalsSMS.empty())
+                    BFTool::SetFilterSignalsSMS(sms_filters_tmp);
+            }
+        }
+    }
 }
 
 void SampleTool::LoadAllBkgs() {
@@ -198,25 +223,19 @@ void SampleTool::LoadAllFromMaster() {
 }
 
 void SampleTool::PrintDict( map<string,stringlist>& d ){
-	for(auto it = d.cbegin(); it != d.cend(); ++it){
- 	std::cout << "key:"<< it->first << ":\n";
- 	stringlist str = it->second;
- 	for (std::vector<string>::iterator it2 = str.begin(); it2 != str.end(); ++it2) {
+    for(auto it = d.cbegin(); it != d.cend(); ++it){
+     std::cout << "key:"<< it->first << ":\n";
+     stringlist str = it->second;
+     for (std::vector<string>::iterator it2 = str.begin(); it2 != str.end(); ++it2) {
   std::cout << *it2 << " \n";
- 	}
- 	
-	}
-	std::cout<<"\n";
-	
+     }
+     
+    }
+    std::cout<<"\n";
+    
 }
 
 void SampleTool::PrintKeys( stringlist sl ){
-	
-	for( long unsigned int i = 0; i<sl.size(); i++){
-		std::cout<<sl[i]<<"\n";
-	}
-
+    for( long unsigned int i = 0; i<sl.size(); i++)
+        std::cout<<sl[i]<<"\n";
 }
-
-
-
