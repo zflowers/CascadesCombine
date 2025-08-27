@@ -63,7 +63,7 @@ echo
 
 # Add alias to shell rc that cds into the working dir, sets KEYNOTE_BASE_DIR, and runs make_keynote.py
 # Detect shell rc file
-SHELL_RC="$HOME/.bashrc"
+SHELL_RC="$HOME/.bash_profile"
 if [ -n "$ZSH_VERSION" ] || [ -n "$ZSH_NAME" ]; then
     SHELL_RC="$HOME/.zshrc"
 fi
