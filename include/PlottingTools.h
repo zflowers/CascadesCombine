@@ -241,7 +241,7 @@ void Plot_CutFlow(const std::string &hname,
     TH1* axisHist = !allHists.empty() ? allHists.front() : nullptr;
     if (!axisHist) return;
     axisHist->Draw("");
-    axisHist->GetYaxis()->SetRangeUser(max(0.9*hmin, 1e-6), 1.1*hmax);
+    axisHist->GetYaxis()->SetRangeUser(max(0.8*hmin, 1e-6), 1.2*hmax);
     axisHist->GetXaxis()->CenterTitle();
     axisHist->GetXaxis()->SetTitleFont(42);
     axisHist->GetXaxis()->SetTitleSize(0.05);
@@ -260,7 +260,7 @@ void Plot_CutFlow(const std::string &hname,
     for (size_t i = 0; i < bkgHists.size(); ++i) {
         TH1* h = bkgHists[i]; if (!h || h->GetEntries()==0) continue;
         h->SetLineColor(kBlack);
-        h->SetLineWidth(1);
+        h->SetLineWidth(2);
         h->SetLineColor(m_Color[ExtractProcName(bkgHists[i]->GetName())]);
         h->SetMarkerColor(m_Color[ExtractProcName(bkgHists[i]->GetName())]);
         h->SetFillStyle(1001);
@@ -278,7 +278,7 @@ void Plot_CutFlow(const std::string &hname,
     for (size_t i = 0; i < sigHists.size(); ++i) {
         TH1* h = sigHists[i]; if (!h || h->GetEntries()==0) continue;
         h->Scale(signal_boost);
-        h->SetLineWidth(1);
+        h->SetLineWidth(2);
         h->SetLineStyle(7);
         h->SetLineColor(m_Color[ExtractProcName(sigHists[i]->GetName())]);
         h->SetMarkerColor(m_Color[ExtractProcName(sigHists[i]->GetName())]);
@@ -318,8 +318,8 @@ void Plot_CutFlow(const std::string &hname,
     l.SetNDC();
     l.SetTextSize(0.04);
     l.SetTextFont(42);
-    l.DrawLatex(0.1,0.943,"#bf{#it{CMS}} Internal 13 TeV Simulation");
-    l.DrawLatex(0.7,0.943,ExtractBinName(string(axisHist->GetName())).c_str());
+    l.DrawLatex(0.09,0.943,"#bf{#it{CMS}} Internal 13 TeV Simulation");
+    l.DrawLatex(0.69,0.943,ExtractBinName(string(axisHist->GetName())).c_str());
 
     // Save
     if(outFile){ outFile->cd(); can->Write(0, TObject::kWriteDelete); }
@@ -418,17 +418,26 @@ void Plot_Eff_Multi(const std::string& groupName,
         HistId id = ParseHistName(e->GetName());
         std::string legendKey, legendTitle;
         int color = kBlack;
-    
-        if(groupType == "Bin"){
+        static size_t fallbackIndex = 0;
+        
+        if (groupType == "Bin") {
             legendKey = id.proc.empty() ? "unknown_proc" : id.proc;
             legendTitle = m_Title.count(legendKey) ? m_Title[legendKey] : legendKey;
-            color = m_Color.count(legendKey) ? m_Color[legendKey] : kBlack;
         } else {
             legendKey = id.bin.empty() ? "unknown_bin" : id.bin;
             legendTitle = m_Title.count(legendKey) ? m_Title[legendKey] : legendKey;
-            color = m_Color.count(legendKey) ? m_Color[legendKey] : kBlack;
         }
-    
+        
+        // Try to get color from map
+        auto it = m_Color.find(legendKey);
+        if (it != m_Color.end()) {
+            color = it->second;
+        } else {
+            // Fallback to rotating palette
+            color = fallbackColors[fallbackIndex % fallbackColors.size()];
+            fallbackIndex++;
+        }
+
         gr->SetMarkerStyle(20);
         gr->SetMarkerColor(color);
         gr->SetLineColor(color);
@@ -459,14 +468,14 @@ void Plot_Eff_Multi(const std::string& groupName,
     // TLatex: CMS on top-left; group info on top-right
     TLatex l; l.SetNDC(); l.SetTextFont(42);
     l.SetTextSize(0.04);
-    l.DrawLatex(0.01, 0.943, "#bf{CMS} Simulation Preliminary");
+    l.DrawLatex(0.09, 0.943, "#bf{CMS} Simulation Preliminary");
 
     // top-right: show what this group is (Bin or Process)
     std::string topRight;
     if(groupType == "Bin") topRight = groupName;
-    else topRight = "Process: " + groupName;
+    else topRight = m_Title[groupName];
     l.SetTextSize(0.045);
-    l.DrawLatex(0.7, 0.943, topRight.c_str());
+    l.DrawLatex(0.69, 0.943, topRight.c_str());
     string varName = ParseHistName(effs[0]->GetName()).var;
 
     // Save
@@ -583,7 +592,7 @@ void Plot_EventCount2D(TH2* h, const std::string &mode,
     h->GetYaxis()->SetTitleFont(42); h->GetYaxis()->SetTitleSize(0.06); h->GetYaxis()->SetTitleOffset(1.1);
     h->GetYaxis()->SetLabelFont(42); h->GetYaxis()->SetLabelSize(0.035);
     h->GetZaxis()->CenterTitle();
-    h->GetZaxis()->SetTitleFont(42); h->GetZaxis()->SetTitleSize(0.035); h->GetZaxis()->SetTitleOffset(1.03);
+    h->GetZaxis()->SetTitleFont(42); h->GetZaxis()->SetTitleSize(0.03); h->GetZaxis()->SetTitleOffset(1.03);
     h->GetZaxis()->SetLabelFont(42); h->GetZaxis()->SetLabelSize(0.03);
 
     // Z-axis title
