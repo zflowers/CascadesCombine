@@ -131,3 +131,5 @@ The way we calculate the amount of weighted events in  a bin is by creating the 
 **Obey RDataFrame lazy execution**
 The Filters book operations (bin creation) on the dataframe but the result of that operation isn't acquired until an action on the dataframe is executed. Action happens when you dereference a result, triggering the event loop. After the event loop  the result ptrs that hold what you want to filter (or count or sum etc.) will be populated. Don't trigger multiple event loops, the run time will blow up
 
+**Further Documentation**
+Further documentation in the form of slides is provided in docs/
