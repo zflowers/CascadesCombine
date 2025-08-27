@@ -10,6 +10,7 @@
 #include <sstream>
 #include <limits>
 #include <cmath>
+#include <fstream>
 
 #include <TFile.h>
 #include <TH1.h>
@@ -423,7 +424,7 @@ bool HistsCompatible(const TH1* num, const TH1* den) {
 // --------------------------------------------------
 // Sort background histograms and process names by total yield (descending)
 // --------------------------------------------------
-static void SortByYield(
+void SortByYield(
     std::vector<TH1*>& Hists,
     std::vector<std::string>& Procs)
 {
@@ -452,7 +453,7 @@ static void SortByYield(
 // --------------------------------------------------
 // Sort cutflow histograms and process names by last-bin yield (descending)
 // --------------------------------------------------
-static void SortCutFlowsByLastBin(
+void SortCutFlowsByLastBin(
     std::vector<TH1*>& cutflowHists,
     std::vector<std::string>& cutflowProcs)
 {

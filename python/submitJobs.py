@@ -21,7 +21,7 @@ limit_submit = None  # limit number of job submissions (None=no limit)
 def write_flatten_script(bin_names, flatten_exe="./flattenJSONs.x", json_dir="json"):
     os.makedirs("condor", exist_ok=True)
     os.makedirs(json_dir, exist_ok=True)
-    output_name = "_".join(bin_names) if bin_names else "all"
+    output_name = "__".join(bin_names) if bin_names else "all"
     output_file = os.path.join(json_dir, f"flattened_{output_name}.json")
     script_path = "condor/run_flatten.sh"
 

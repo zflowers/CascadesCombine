@@ -322,6 +322,49 @@ end tell
 '''
     run_applescript(script)
 
+def make_applescript_call_add_significance(pdf_path, bin_names_text):
+    applescript_list = "{" + escape_for_applescript(pdf_path) + "}"
+    script = f'''
+set pdfPaths to {applescript_list}
+set binNamesText to "{bin_names_text}"
+
+tell application "Keynote"
+    if (count of documents) = 0 then
+        set thisDoc to make new document
+    else
+        set thisDoc to front document
+    end if
+    tell thisDoc
+        set thisSlide to make new slide with properties {{base slide:master slide "Plots"}}
+        delay 0.1
+        -- Add the PDF
+        set thisPDF to item 1 of pdfPaths
+        set pdfAlias to POSIX file thisPDF as alias
+        tell thisSlide
+            set newImg to make new image with properties {{file:pdfAlias}}
+            set position of newImg to {{100, 267}}
+            set width of newImg to 825
+            set height of newImg to 464
+            delay 0.1
+        end tell
+        -- Add a text box with bin names
+        repeat with ti in text items of thisSlide
+            try
+                set tiPosition to position of ti
+                if (item 1 of tiPosition) is 107 then
+                    set object text of ti to "Significances"
+                end if
+                if (item 1 of tiPosition) is 79 then
+                    set object text of ti to binNamesText
+                end if
+            end try
+        end repeat
+    end tell
+end tell
+'''
+    run_applescript(script)
+
+
 # -------------------------
 # Bin processing
 # -------------------------
@@ -360,9 +403,6 @@ def process_bin_dir(bin_dir: Path):
         for chunk in chunk_list(paths, 6):
             make_applescript_call_add_plots(chunk, format_var_title(var))
 
-# -------------------------
-# Discovery & main
-# -------------------------
 def get_target_bin_dirs():
     pdfs_root = base_dir / top_level / "pdfs"
     if not pdfs_root.exists():
@@ -385,6 +425,18 @@ def get_target_bin_dirs():
 def add_summary_slides(summary_pdfs):
     for pdf_path, title in summary_pdfs:
         make_applescript_call_add_single_Summary(pdf_path, title)
+
+def get_latest_significance_pdf():
+    pdf_root = base_dir / top_level / "pdfs"
+    all_sig_pdfs = sorted(pdf_root.glob("Significance_*.pdf"), key=lambda p: p.stat().st_mtime, reverse=True)
+    if all_sig_pdfs:
+        latest = all_sig_pdfs[0]
+        # extract bin names from the filename
+        stem = latest.stem  # e.g., "Significance_Example1__Example2__SuperBin2L"
+        bin_part = stem.replace("Significance_", "")
+        bin_names = bin_part.split("__")
+        return latest, "Included bins: "+", ".join(bin_names)
+    return None, None
 
 def main():
     try:
@@ -412,6 +464,15 @@ def main():
             print(f"  {proc}")
 
     make_applescript_call_show('false')
+
+    # Add latest Significance slide
+    sig_pdf, bin_text = get_latest_significance_pdf()
+    if sig_pdf:
+        print(f"Adding latest significance plot: {sig_pdf}")
+        make_applescript_call_add_significance(str(sig_pdf), bin_text)
+    else:
+        print("No Significance PDF found.")
+
     print("Making summary yield slides")
     summary_pdfs = [
         (base_dir / top_level / "pdfs/CutFlow2D_yield.pdf", "Yield"),

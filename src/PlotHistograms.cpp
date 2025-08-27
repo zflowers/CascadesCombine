@@ -73,13 +73,13 @@ int main(int argc, char* argv[]) {
         string procKey = id.proc.empty() ? string(clone->GetName()) : id.proc;
         // store in groups for this bin/var or CutFlow
         groups[groupKey][procKey] = clone;
-        // track unique bins (already mostly correct)
+        // track unique bins
         if(!id.bin.empty()) uniqueBinNames.insert(id.bin);
     }
 
-    // Build outputDir safely (preserve behavior but avoid undefined back())
+    // Build outputDir safely
     if(outputDir.empty()){
-        // if no pre-set outputDir, create a sensible one from the unique bins (same behavior as before)
+        // if no pre-set outputDir, create a sensible one from the unique bins
         bool first = true;
         for(const auto& bin : uniqueBinNames){
             if(!first) outputDir += "__";

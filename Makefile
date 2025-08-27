@@ -29,6 +29,7 @@ CMSSWSRCS = $(SRC_DIR)/BFmain.cpp $(SRC_DIR)/BuildFit.cpp $(SRC_DIR)/JSONFactory
 SRCS_MERGE = $(SRC_DIR)/mergeJSONs.cpp $(SRC_DIR)/JSONFactory.cpp $(SRC_DIR)/SampleTool.cpp $(SRC_DIR)/BuildFitInput.cpp
 SRCS_FLATTEN = $(SRC_DIR)/flattenJSONs.cpp
 SRCS_PLOTTER = $(SRC_DIR)/PlotHistograms.cpp $(SRC_DIR)/SampleTool.cpp
+SRCS_PLOTTERSIGS = $(SRC_DIR)/PlotSignificances.cpp $(SRC_DIR)/SampleTool.cpp
 PYBIND_SRCS = $(SRC_DIR)/pySampleTool.cpp $(SRC_DIR)/SampleTool.cpp
 
 # --- Object files ---
@@ -39,6 +40,7 @@ MERGEOBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJS_DIR)/%.o,$(SRCS_MERGE))
 FLATTENOBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJS_DIR)/%.o,$(SRCS_FLATTEN))
 PYBIND_OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJS_DIR)/%.o,$(PYBIND_SRCS))
 PLOTTEROBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJS_DIR)/%.o,$(SRCS_PLOTTER))
+PLOTTERSIGSOBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJS_DIR)/%.o,$(SRCS_PLOTTERSIGS))
 
 # --- Executables ---
 TARGET = $(BIN_DIR)/BFI.x
@@ -47,9 +49,10 @@ CONDORTARGET = $(BIN_DIR)/BFI_condor.x
 MERGETARGET = $(BIN_DIR)/mergeJSONs.x
 FLATTENTARGET = $(BIN_DIR)/flattenJSONs.x
 PLOTTERTARGET = $(BIN_DIR)/PlotHistograms.x
+PLOTTERSIGSTARGET = $(BIN_DIR)/PlotSignificances.x
 
 # --- Default target ---
-all: $(TARGET) $(CMSSWTARGET) $(CONDORTARGET) $(MERGETARGET) $(FLATTENTARGET) $(PLOTTERTARGET) $(PYBIND_TARGET)
+all: $(TARGET) $(CMSSWTARGET) $(CONDORTARGET) $(MERGETARGET) $(FLATTENTARGET) $(PLOTTERTARGET) $(PLOTTERSIGSTARGET) $(PYBIND_TARGET)
 
 # --- Executable targets ---
 $(TARGET): $(OBJS_DIR) $(OBJS)
@@ -69,6 +72,9 @@ $(FLATTENTARGET): $(OBJS_DIR) $(FLATTENOBJS)
 
 $(PLOTTERTARGET): $(OBJS_DIR) $(PLOTTEROBJS)
 	$(CXX) $(PLOTTEROBJS) -o $@ $(LDFLAGS) $(ROOTCFLAGS) $(LIBPATH)
+
+$(PLOTTERSIGSTARGET): $(OBJS_DIR) $(PLOTTERSIGSOBJS)
+	$(CXX) $(PLOTTERSIGSOBJS) -o $@ $(LDFLAGS) $(ROOTCFLAGS) $(LIBPATH)
 
 $(PYBIND_TARGET): $(OBJS_DIR) $(PYBIND_OBJS) | $(LIB_DIR)
 	$(CXX) -shared -std=c++17 -fPIC $(PYBIND_OBJS) -o $@ $(PYBIND_INCLUDES) $(LDFLAGS) $(ROOTCFLAGS)

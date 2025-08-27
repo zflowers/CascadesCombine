@@ -65,6 +65,13 @@ def get_flattened_root_path():
     root_files.sort(key=os.path.getmtime, reverse=True)
     return root_files[0]
 
+def get_significances_path():
+    sig_files = glob.glob("output/Significance_datacards_*.txt")
+    if not sig_files:
+        raise FileNotFoundError("No Significance files found in output/")
+    sig_files.sort(key=os.path.getmtime, reverse=True)
+    return sig_files[0]
+
 def get_output_dir():
     """
     Return the directory where BF.x should write datacards.
@@ -266,6 +273,22 @@ def main():
         # 10) Collect significances
         print("[run_all] Collecting significances...", flush=True)
         subprocess.run(["python3", "-u", "macro/CollectSignificance.py", output_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
+
+        # 11) Plot significances
+        plot_cmd = [
+              "./PlotSignificances.x", 
+              "-i", get_significances_path(),
+              "-h", args.hist_cfg,
+              "-d", args.processes_cfg,
+              "-b", args.bins_cfg
+            ]
+        print("[run_all] Plotting significances with command:"," ".join(plot_cmd), flush=True)
+        subprocess.run(
+            plot_cmd,
+            check=True,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+        )
 
     print("[run_all] All steps completed.", flush=True)
     # end time
