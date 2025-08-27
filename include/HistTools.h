@@ -80,7 +80,7 @@ static std::vector<HistDef> loadHistogramsYAML(const std::string &yamlPath, Buil
                   std::cerr << "[BFI_condor] Unknown predefined cut: " << pcut << "\n";
             }
         }
-        if (hnode["user-cuts"]) h.cuts = splitTopLevel(hnode["user-cuts"].as<std::string>());
+        if (hnode["user-cuts"]) h.userCuts = splitTopLevel(hnode["user-cuts"].as<std::string>());
         hists.push_back(h);
     }
     return hists;
