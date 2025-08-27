@@ -78,7 +78,7 @@ make all -j 8
 - call python3 python/run_combine.py to do everything
 - alias to run in bkg: 
 ```
-nohup python3 python/run_combine.py --bins-cfg config/examples.yaml > debug_run_combine.debug 2>&1 &
+nohup python3 python/run_combine.py --bins-cfg config/bin_examples.yaml > debug_run_combine.debug 2>&1 &
 ```
 
 ### Workflow TLDR;
