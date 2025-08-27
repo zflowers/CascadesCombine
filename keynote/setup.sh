@@ -31,7 +31,7 @@ for f in "${ESSENTIAL_FILES[@]}"; do
         mv "$src" "$WORKDIR"/
         echo "  Copied $f"
     else
-        echo "  WARNING: $f not found in $SCRIPT_DIR — skipping."
+        echo "  WARNING: $f not found in $SCRIPT_DIR -> skipping."
     fi
 done
 echo "Copy complete."

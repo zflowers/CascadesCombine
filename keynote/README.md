@@ -9,6 +9,8 @@ For non Apple users, visit [this link](https://www.apple.com)
 
 ## Quick Start
 
+0. If for some reason you have not already, do the kinit command as if you were normally going to login to the LPC
+
 1. **Download the keynote directory**  
    Copy the `keynote/` folder from this repository (contains `PlotTemplate.key`, `setup.sh`, and `make_keynote.py`) to your working machine.  
    Example using `rsync`:

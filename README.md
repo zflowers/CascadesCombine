@@ -75,6 +75,10 @@ make all -j 8
 
 ### Workflow Super TLDR;
 - Setup bins using .yaml files in config/
+- Initialize your proxy:
+```
+voms-proxy-init --voms cms -valid 192:00
+```
 - call python3 python/run_combine.py to do everything
 - alias to run in bkg: 
 ```
