@@ -8,6 +8,8 @@
 #include <set>
 #include <iomanip>
 #include <sstream>
+#include <limits>
+#include <cmath>
 
 #include <TFile.h>
 #include <TH1.h>
@@ -25,6 +27,7 @@
 #include <TGraph.h>
 #include <TMultiGraph.h>
 #include <TGraphAsymmErrors.h>
+#include <TPaveText.h>
 
 #include "SampleTool.h"
 
@@ -37,6 +40,7 @@ int lumi = 1;
 string outputDir = "plots/";
 map<string,string> m_Title;
 map<string,int>    m_Color;
+SampleTool tool;
 
 double hlo = 0.09;
 double hhi = 0.22;
@@ -84,6 +88,30 @@ void GetMinMaxIntegral(const vector<TH1*>& vect, double &hmin, double &hmax) {
     if (hmin > 1e98) hmin = 0.;
 }
 
+// helper: get last regular bin content (not overflow)
+double LastBinContent(TH1* h){
+    if(!h) return 0.0;
+    int nb = h->GetNbinsX();
+    return h->GetBinContent(nb);
+}
+
+// helper: get bin content at given 1-based bin index (safe)
+double BinContentSafe(TH1* h, int bin){
+    if(!h) return 0.0;
+    int nb = h->GetNbinsX();
+    if(bin < 1 || bin > nb) return 0.0;
+    return h->GetBinContent(bin);
+}
+
+double CalculateZbi(double Nsig, double Nbkg, double deltaNbkg){
+  double Nobs = Nsig+Nbkg;
+  double tau = 1./Nbkg/(deltaNbkg*deltaNbkg);
+  double aux = Nbkg*tau;
+  double Pvalue = TMath::BetaIncomplete(1./(1.+tau),Nobs,aux+1.);
+  double sigma = sqrt(2.)*TMath::ErfcInverse(Pvalue*2);
+
+  return (isnan(sigma))?0:sigma;
+}
 
 const TColor rf_blue0(7000,0.749,0.78,0.933);
 const TColor rf_blue1(7001,0.424,0.467,0.651);
@@ -267,8 +295,10 @@ void loadFormatMaps(){
   m_Title["Wjets_all"] = "W + jets";
   m_Color["Wjets_all"] = 7001;
 
-  m_Title["Total"] = "total background";
+  m_Title["Total"] = "Total Bkg";
   m_Color["Total"] = 7000;
+  m_Title["Total Bkg"] = "Total Bkg";
+  m_Color["Total Bkg"] = 7000;
 
 }
 
@@ -350,6 +380,36 @@ T* GetHistClone(TFile *f, const string &name) {
     T* clone = dynamic_cast<T*>(h->Clone());
     clone->SetDirectory(nullptr);
     return clone;
+}
+
+bool HistsCompatible(const TH1* num, const TH1* den) {
+    if (!num || !den) return false;
+
+    int nbins = num->GetNbinsX();
+    if (nbins != den->GetNbinsX()) return false;
+
+    // Check bin edges match exactly
+    for (int i = 1; i <= nbins; ++i) {
+        if (num->GetBinLowEdge(i) != den->GetBinLowEdge(i)) return false;
+        if (num->GetBinWidth(i) != den->GetBinWidth(i)) return false;
+    }
+
+    bool hasNonZeroBin = false;
+    for (int i = 1; i <= nbins; ++i) {
+        double n = num->GetBinContent(i);
+        double d = den->GetBinContent(i);
+
+        // Catch invalid numbers
+        if (std::isnan(n) || std::isnan(d) || std::isinf(n) || std::isinf(d)) return false;
+
+        // TEff requires numerator <= denominator
+        if (n > d) return false;
+
+        if (d > 0) hasNonZeroBin = true;
+    }
+
+    // If all denominator bins are zero, skip
+    return hasNonZeroBin;
 }
 
 // --------------------------------------------------

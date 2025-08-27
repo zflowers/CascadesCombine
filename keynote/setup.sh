@@ -68,7 +68,13 @@ if [ -n "$ZSH_VERSION" ] || [ -n "$ZSH_NAME" ]; then
     SHELL_RC="$HOME/.zshrc"
 fi
 
-ALIAS_CMD="alias make_keynote='cd \"$WORKDIR\" && export KEYNOTE_BASE_DIR=\"\$PWD\" && python3 make_keynote.py'"
+# If the user provided a remote source, store it in env for Python
+if [ -n "$REMOTE_SRC" ]; then
+    echo "export KEYNOTE_RSYNC=\"$REMOTE_SRC\"" >> "$SHELL_RC"
+    echo "Added KEYNOTE_RSYNC env variable to $SHELL_RC"
+fi
+
+ALIAS_CMD="alias make_keynote='cd \"$WORKDIR\" && export KEYNOTE_RSYNC=\"$REMOTE_SRC\" && export KEYNOTE_BASE_DIR=\"\$PWD\" && python3 make_keynote.py'"
 
 # Only append alias if not already present
 if ! grep -Fqs "alias make_keynote=" "$SHELL_RC"; then

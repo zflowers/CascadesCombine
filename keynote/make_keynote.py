@@ -55,9 +55,9 @@ def run_initial_rsync_if_requested():
     if not rsync_src:
         return
     base_dir.mkdir(parents=True, exist_ok=True)
-    print(f"Running rsync (no --delete) from '{rsync_src}' -> '{base_dir}' ...")
+    print(f"Running rsync from '{rsync_src}' -> '{base_dir}' ...")
     try:
-        subprocess.run(["rsync", "-av", rsync_src, str(base_dir)+"/"], check=True)
+        subprocess.run(["rsync", "-ar", rsync_src, str(base_dir)+"/lpc_plots/"], check=True)
         print("rsync finished.")
     except subprocess.CalledProcessError as e:
         print(f"rsync failed (code {e.returncode}); continuing without rsync.", file=sys.stderr)
@@ -283,6 +283,45 @@ end tell
 '''
     run_applescript(script)
 
+def make_applescript_call_add_single_Summary(pdf_path, slide_title):
+    applescript_list = "{" + escape_for_applescript(pdf_path) + "}"
+    title_text = slide_title
+    script = f'''
+set pdfPaths to {applescript_list}
+set slideTitle to "{title_text}"
+
+tell application "Keynote"
+    if (count of documents) = 0 then
+        set thisDoc to make new document
+    else
+        set thisDoc to front document
+    end if
+    tell thisDoc
+        set thisSlide to make new slide with properties {{base slide:master slide "Plots"}}
+        delay 0.1
+        repeat with ti in text items of thisSlide
+            try
+                set tiPosition to position of ti
+                if (item 1 of tiPosition) is 107 then
+                    set object text of ti to slideTitle
+                    exit repeat
+                end if
+            end try
+        end repeat
+        set thisPDF to item 1 of pdfPaths
+        set pdfAlias to POSIX file thisPDF as alias
+        tell thisSlide
+            set newImg to make new image with properties {{file:pdfAlias}}
+            set position of newImg to {{16, 135}}
+            set width of newImg to 862
+            set height of newImg to 558
+            delay 0.1
+        end tell
+    end tell
+end tell
+'''
+    run_applescript(script)
+
 # -------------------------
 # Bin processing
 # -------------------------
@@ -343,6 +382,10 @@ def get_target_bin_dirs():
     else:
         return [d for d in sorted(pdfs_root.iterdir()) if d.is_dir() and d.name not in ignore_bins]
 
+def add_summary_slides(summary_pdfs):
+    for pdf_path, title in summary_pdfs:
+        make_applescript_call_add_single_Summary(pdf_path, title)
+
 def main():
     try:
         bin_dirs = get_target_bin_dirs()
@@ -368,9 +411,17 @@ def main():
         for proc in missing_procs:
             print(f"  {proc}")
 
-    print("Will make slides for bins:", [d.name for d in bin_dirs])
     make_applescript_call_show('false')
+    print("Making summary yield slides")
+    summary_pdfs = [
+        (base_dir / top_level / "pdfs/CutFlow2D_SoverSqrtB.pdf", "S / √B"),
+        (base_dir / top_level / "pdfs/CutFlow2D_SoB.pdf", "S / B"),
+        (base_dir / top_level / "pdfs/CutFlow2D_yield.pdf", "Yield"),
+        (base_dir / top_level / "pdfs/CutFlow2D_Zbi.pdf", "Zbi"),
+    ]
+    add_summary_slides(summary_pdfs)
 
+    print("Will make slides for bins:", [d.name for d in bin_dirs])
     for bin_dir in bin_dirs:
         print("  Making slides for bin:", bin_dir.name)
         process_bin_dir(bin_dir)

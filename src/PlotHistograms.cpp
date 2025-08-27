@@ -24,8 +24,7 @@ int main(int argc, char* argv[]) {
     if(!inFile||inFile->IsZombie()){ cerr<<"Error: cannot open input "<<inputFileName<<endl; return 1; }
     gStyle->SetOptStat(0); gStyle->SetOptTitle(0);
     loadFormatMaps();
-
-    SampleTool tool; tool.LoadAllFromMaster();
+    tool.LoadAllFromMaster();
 
     map<string,map<string,TH1*>> groups;
     vector<TH1*> all_clones;
@@ -185,15 +184,19 @@ int main(int argc, char* argv[]) {
     
         HistId denID = ParseHistName(denName);
         if(denHists.count(denID)){
-            gErrorIgnoreLevel = 1001;
-            TEfficiency* eff = new TEfficiency(*nume.second,*denHists[denID]);
-            gErrorIgnoreLevel = 0;
+            TEfficiency* eff = nullptr;
+            if (HistsCompatible(nume.second, denHists[denID])) {
+                gErrorIgnoreLevel = 1001; // ignore ROOT warnings temporarily
+                eff = new TEfficiency(*nume.second, *denHists[denID]);
+                gErrorIgnoreLevel = 0;
+            }
+            else continue;
     
             // Clean the name
             string effName = denName;
             start_pos = 0;
-            while ((start_pos = effName.find("_den__", start_pos)) != std::string::npos) {
-                effName.replace(start_pos, 6, "");
+            while ((start_pos = effName.find("den__", start_pos)) != std::string::npos) {
+                effName.replace(start_pos, 5, "");
             }
             eff->SetName(effName.c_str());
     
@@ -210,6 +213,27 @@ int main(int argc, char* argv[]) {
     for(const auto& pair : effsByProcess)
         Plot_Eff_Multi(pair.first, pair.second, "Process");
 
+    // Load up 2D CutFlow
+    std::map<std::string, std::map<std::string, TH1*>> cutflowMap;
+    for (const auto &gpair : groups) {
+        const std::string &groupKey = gpair.first;
+        if (groupKey.find("__CutFlow") == std::string::npos) continue;
+        // extract the bin name (strip __CutFlow)
+        std::string binName = groupKey.substr(0, groupKey.find("__CutFlow"));
+        for (const auto &pp : gpair.second) {
+            const std::string proc = pp.first;
+            TH1* h = pp.second;
+            if(!h) continue;
+            cutflowMap[binName][proc] = h;
+        }
+    }
+    
+    // build global 2D cutflows from cutflowMap
+    MakeAndPlotCutflow2D(cutflowMap, "GlobalCutflow", "yield", 1.0);
+    MakeAndPlotCutflow2D(cutflowMap, "GlobalCutflow", "SoB",   1.0);
+    MakeAndPlotCutflow2D(cutflowMap, "GlobalCutflow", "SoverSqrtB", 1.0);
+    MakeAndPlotCutflow2D(cutflowMap, "GlobalCutflow", "Zbi", 10.0); // 10% systematic
+
     outFile->Close();
     inFile->Close();
     for(TH1* p:all_clones) delete p;
@@ -225,7 +249,6 @@ int main(int argc, char* argv[]) {
     uniqueEffs.clear();
     effsByBin.clear();
     effsByProcess.clear();
-    
 
     cout<<"[PlotHistograms] All plots saved to "<<outRootName.Data()<<" and "<<outputDir<<"pdfs/"<<endl;
     return 0;

@@ -463,15 +463,16 @@ void Plot_Eff_Multi(const std::string& groupName,
 
     // top-right: show what this group is (Bin or Process)
     std::string topRight;
-    if(groupType == "Bin") topRight = "Bin: " + groupName;
+    if(groupType == "Bin") topRight = groupName;
     else topRight = "Process: " + groupName;
     l.SetTextSize(0.045);
     l.DrawLatex(0.7, 0.943, topRight.c_str());
+    string varName = ParseHistName(effs[0]->GetName()).var;
 
     // Save
     TString dirName = Form("%spdfs/%s", outputDir.c_str(), groupName.c_str());
     gSystem->MakeDirectory(dirName);
-    TString pdfName = Form("%s/multigraph_%s.pdf", dirName.Data(), groupName.c_str());
+    TString pdfName = Form("%s/%s_%s.pdf", dirName.Data(), groupName.c_str(), varName.c_str());
     gErrorIgnoreLevel = 1001; can->SaveAs(pdfName); gErrorIgnoreLevel = 0;
     if(outFile){ outFile->cd(); can->Write(0, TObject::kWriteDelete); }
 
@@ -479,4 +480,321 @@ void Plot_Eff_Multi(const std::string& groupName,
     delete mg;
     delete leg;
     delete can;
+}
+
+void Plot_EventCount2D(TH2* h, const std::string &mode,
+                       double zmin_override = std::numeric_limits<double>::quiet_NaN(),
+                       double zmax_override = std::numeric_limits<double>::quiet_NaN()) {
+    if(!h) return;
+
+    // Locate Total Bkg row
+    int totalRow = -1;
+    for(int j=1; j<=h->GetNbinsY(); ++j){
+      TString lab = h->GetYaxis()->GetBinLabel(j);
+      if(lab.Contains("Total Bkg")) { totalRow = j; break; }
+    }
+
+    // Determine Z-axis range
+    double use_zmin = std::numeric_limits<double>::quiet_NaN();
+    double use_zmax = std::numeric_limits<double>::quiet_NaN();
+    if(std::isfinite(zmin_override) && std::isfinite(zmax_override) && zmax_override > zmin_override){
+      use_zmin = zmin_override;
+      use_zmax = zmax_override;
+    } else if(mode=="Zbi"){
+      double zmin=1e300, zmax=-1e300;
+      for(int iy=1; iy<=h->GetNbinsY(); ++iy){
+        if(iy==totalRow) continue; // ignore Total Bkg
+        for(int ix=1; ix<=h->GetNbinsX(); ++ix){
+          double v = h->GetBinContent(ix, iy);
+          if(!std::isfinite(v) || v<=0) continue;
+          if(v<zmin) zmin=v;
+          if(v>zmax) zmax=v;
+        }
+      }
+      if(zmax>=zmin && zmin<1e299){
+        use_zmin = std::max(0.0, 0.9*zmin);
+        use_zmax = 1.1*zmax;
+        if(use_zmax<=use_zmin) use_zmax = use_zmin + 1e-6;
+      }
+    }
+
+    if(std::isfinite(use_zmin) && std::isfinite(use_zmax))
+      h->GetZaxis()->SetRangeUser(use_zmin, use_zmax);
+
+    // Canvas setup
+    TCanvas* can = new TCanvas(("can_"+std::string(h->GetName())).c_str(), "", 1200, 700);
+    can->SetLeftMargin(0.13);
+    can->SetRightMargin(0.13);
+    can->SetBottomMargin(0.06);
+    can->SetTopMargin(0.06);
+    can->SetGridx(); can->SetGridy();
+    if(mode=="yield") can->SetLogz();
+
+    // Draw histogram COLZ
+    h->Draw("COLZ");
+    gPad->Update();
+
+    // Prepare TLatex for numbers
+    TLatex tex;
+    tex.SetTextFont(42);
+    tex.SetTextAlign(22);
+    float textSize = 0.045;
+    if(h->GetNbinsX()>25) textSize*=0.6;
+    if(h->GetNbinsY()>25) textSize*=0.8;
+    tex.SetTextSize(textSize);
+
+    // Draw numbers
+    for(int iy=1; iy<=h->GetNbinsY(); ++iy){
+      for(int ix=1; ix<=h->GetNbinsX(); ++ix){
+        double val = h->GetBinContent(ix, iy);
+        double xlow = h->GetXaxis()->GetBinLowEdge(ix);
+        double xup  = h->GetXaxis()->GetBinUpEdge(ix);
+        double ylow = h->GetYaxis()->GetBinLowEdge(iy);
+        double yup  = h->GetYaxis()->GetBinUpEdge(iy);
+        double xc = 0.5*(xlow+xup);
+        double yc = 0.5*(ylow+yup);
+        TString label = Form("%.3g", val);
+
+        if(mode=="Zbi" && iy==totalRow){
+          // Draw white box behind Total Bkg text
+          double xpad = 0.01*(xup-xlow);
+          double ypad = 0.12*(yup-ylow);
+          TBox box(xlow+xpad, ylow+ypad, xup-xpad, yup-ypad);
+          box.SetFillColor(kWhite);
+          box.SetLineColor(kBlack);
+          box.SetFillStyle(1001);
+          box.Draw("same"); // draw on top of COLZ
+          tex.SetTextColor(kBlack);
+        } else {
+          tex.SetTextColor(kRed);
+        }
+
+        tex.DrawLatex(xc, yc, label);
+      }
+    }
+
+    gPad->Update(); // force redraw
+
+    // Re-apply axis labels & formatting
+    h->GetXaxis()->CenterTitle();
+    h->GetXaxis()->SetTitleFont(42); h->GetXaxis()->SetTitleSize(0.06); h->GetXaxis()->SetTitleOffset(1.06);
+    h->GetXaxis()->SetLabelFont(42); h->GetXaxis()->SetLabelSize(0.03);
+    h->GetYaxis()->CenterTitle();
+    h->GetYaxis()->SetTitleFont(42); h->GetYaxis()->SetTitleSize(0.06); h->GetYaxis()->SetTitleOffset(1.12);
+    h->GetYaxis()->SetLabelFont(42); h->GetYaxis()->SetLabelSize(0.025);
+    h->GetZaxis()->CenterTitle();
+    h->GetZaxis()->SetTitleFont(42); h->GetZaxis()->SetTitleSize(0.025); h->GetZaxis()->SetTitleOffset(1.08);
+    h->GetZaxis()->SetLabelFont(42); h->GetZaxis()->SetLabelSize(0.025);
+
+    // Z-axis title
+    if(mode == "yield")
+      h->GetZaxis()->SetTitle(("N_{events} passing category scaled to "+std::to_string(lumi)+" fb^{-1}").c_str());
+    else if(mode == "SoB")
+      h->GetZaxis()->SetTitle(("#frac{N_{events}}{N_{TOT BKG}} for process in category scaled to "+std::to_string(lumi)+" fb^{-1}").c_str());
+    else if(mode == "SoverSqrtB")
+      h->GetZaxis()->SetTitle(("#frac{N_{events}}{#sqrt{N_{TOT BKG}}} for process in category scaled to "+std::to_string(lumi)+" fb^{-1}").c_str());
+    else if(mode == "Zbi")
+      h->GetZaxis()->SetTitle("Z_{bi} for signal in category");
+    else
+      h->GetZaxis()->SetTitle("Yield");
+
+    // Save canvas
+    TString pdfName = Form("%s/pdfs/CutFlow2D_%s.pdf", outputDir.c_str(), mode.c_str());
+    gErrorIgnoreLevel = 1001; can->SaveAs(pdfName); gErrorIgnoreLevel = 0;
+
+    delete can;
+    delete h;
+}
+
+void MakeAndPlotCutflow2D(
+    const std::map<std::string, std::map<std::string, TH1*>> &cutflowMap,
+    const std::string &groupKey,
+    const std::string &mode = "yield",
+    double Zbi_unc = 0.0)
+{
+    if(cutflowMap.empty()) return;
+
+    // --- 1) collect list of bins (X axis) ---
+    std::vector<std::string> bins;
+    bins.reserve(cutflowMap.size());
+    for (const auto &bp : cutflowMap) bins.push_back(bp.first);
+
+    int nx = (int)bins.size();
+
+    // --- 2) collect set of all processes across bins (skip data) ---
+    std::set<std::string> procSet;
+    for (const auto &bp : cutflowMap) {
+        for (const auto &pp : bp.second) {
+            const std::string &pname = pp.first;
+            if(pname == "data" || pname == "Data") continue;
+            procSet.insert(pname);
+        }
+    }
+
+    // --- 3) classify processes into bkg / sig (use tool) ---
+    std::vector<std::string> allBkgs, allSigs;
+    for (const auto &p : procSet) {
+        if (tool.BkgDict.count(p)) allBkgs.push_back(p);
+        else if (std::find(tool.SignalKeys.begin(), tool.SignalKeys.end(), p) != tool.SignalKeys.end()
+                 || p.find("SMS") != std::string::npos || p.find("Cascades") != std::string::npos)
+            allSigs.push_back(p);
+        else
+            allBkgs.push_back(p); // default unknown -> background
+    }
+
+    // --- 4) build yields[proc][binIndex] (binIndex: 0..nx-1) ---
+    std::map<std::string, std::vector<double>> yields;
+    for (const auto &p : procSet) yields[p] = std::vector<double>(nx, 0.0);
+
+    auto BinContentSafe = [&](TH1* h, int bin)->double {
+        if(!h) return 0.0;
+        int nb = h->GetNbinsX();
+        if(bin < 1 || bin > nb) return 0.0;
+        return h->GetBinContent(bin);
+    };
+
+    for (int ib = 0; ib < nx; ++ib) {
+        const auto &binMap = cutflowMap.at(bins[ib]);
+        for (const auto &pp : binMap) {
+            const std::string &proc = pp.first;
+            TH1* h = pp.second;
+            if(!h) continue;
+    
+            int nbins = h->GetNbinsX(); // number of regular bins
+            double last = 0.0;
+            if(nbins >= 1) {
+                // safely get last regular bin using BinContentSafe
+                last = BinContentSafe(h, nbins);
+            } else {
+                // defensive: histogram has no regular bins
+                last = 0.0;
+                std::cerr << "[Warning] Proc '" << proc << "' in bin '" << bins[ib]
+                          << "' has zero bins; setting yield to 0\n";
+            }
+            yields[proc][ib] = last;
+        }
+    }
+
+    // Ensure all bkgs/sigs exist in yields map (may be empty vectors already)
+    for (const auto &b : allBkgs) if(!yields.count(b)) yields[b] = std::vector<double>(nx,0.0);
+    for (const auto &s : allSigs) if(!yields.count(s)) yields[s] = std::vector<double>(nx,0.0);
+
+    // --- 5) compute total background per bin ---
+    std::vector<double> totalBkg(nx, 0.0);
+    for (int ib=0; ib<nx; ++ib) {
+        double sum = 0.0;
+        for (const auto &b : allBkgs) {
+            if(yields.count(b)) sum += yields[b][ib];
+        }
+        totalBkg[ib] = sum;
+    }
+
+    // --- 6) ordering: signals by first-bin yield, bkgs by first-bin yield,
+    //                 bins ordered by totalBkg (descending) ---
+    std::sort(allSigs.begin(), allSigs.end(),
+        [&](const std::string &a, const std::string &b){
+            double A = (yields.count(a) ? yields[a][0] : 0.0);
+            double B = (yields.count(b) ? yields[b][0] : 0.0);
+            return A > B;
+        });
+    std::sort(allBkgs.begin(), allBkgs.end(),
+        [&](const std::string &a, const std::string &b){
+            double A = (yields.count(a) ? yields[a][0] : 0.0);
+            double B = (yields.count(b) ? yields[b][0] : 0.0);
+            return A > B;
+        });
+
+    std::vector<int> binOrder(nx);
+    for (int i=0;i<nx;i++) binOrder[i]=i;
+    std::sort(binOrder.begin(), binOrder.end(),
+        [&](int A, int B){ return totalBkg[A] > totalBkg[B]; });
+
+    // --- 7) build Y-order depending on mode ---
+    std::vector<std::string> yOrder;
+    if(mode == "Zbi"){
+        // Total Bkg at top, then signals (no backgrounds)
+        yOrder.push_back("Total Bkg");
+        for (const auto &s : allSigs) yOrder.push_back(s);
+    } else {
+        // signals, Total Bkg, backgrounds
+        for (const auto &s : allSigs) yOrder.push_back(s);
+        yOrder.push_back("Total Bkg");
+        for (const auto &b : allBkgs) yOrder.push_back(b);
+    }
+
+    int ny = (int)yOrder.size();
+
+    // --- 8) create TH2D with appropriate binning & labels ---
+    std::string histName = groupKey + "_Cutflow2D_" + mode;
+    for (auto &c : histName) if(c==' '||c=='/') c='_';
+    TH2D *h2 = new TH2D(histName.c_str(), histName.c_str(), nx, 0.5, nx+0.5, ny, 0.5, ny+0.5);
+
+    // X labels = bin names in the sorted order
+    for (int ix=0; ix<nx; ++ix) {
+        int old = binOrder[ix];
+        h2->GetXaxis()->SetBinLabel(ix+1, bins[old].c_str());
+    }
+    // Y labels
+    for (int iy=0; iy<ny; ++iy) {
+        h2->GetYaxis()->SetBinLabel(iy+1, m_Title[yOrder[iy]].c_str());
+    }
+
+    // --- 9) fill contents. For Zbi collect signal Zbi values for z-range override ---
+    std::vector<double> zbi_values_for_range;
+    for (int ix=0; ix<nx; ++ix) {
+        int oldBin = binOrder[ix];
+        double B = totalBkg[oldBin];
+        double sqrtB = (B>0.0 ? std::sqrt(B) : 0.0);
+        for (int iy=0; iy<ny; ++iy) {
+            const std::string &procName = yOrder[iy];
+            double val = 0.0;
+            if(mode == "Zbi") {
+                if(procName == "Total Bkg") {
+                    val = B;
+                } else {
+                    // signal Zbi for this bin
+                    double S = (yields.count(procName) ? yields[procName][oldBin] : 0.0);
+                    if(S > 0.0 && B >= 0.0) {
+                        val = CalculateZbi(S, B, Zbi_unc);
+                        if(val > 0.0) zbi_values_for_range.push_back(val);
+                    } else {
+                        val = 0.0;
+                    }
+                }
+            } else {
+                if(procName == "Total Bkg") {
+                    if(mode == "yield") val = B;
+                    else if(mode == "SoB") val = (B > 0.0 ? 1.0 : 0.0);
+                    else if(mode == "SoverSqrtB") val = (sqrtB > 0.0 ? sqrtB : 0.0);
+                    else val = B;
+                } else {
+                    double pY = (yields.count(procName) ? yields[procName][oldBin] : 0.0);
+                    if(mode == "yield") val = pY;
+                    else if(mode == "SoB") val = (B > 0.0 ? pY / B : 0.0);
+                    else if(mode == "SoverSqrtB") val = (sqrtB > 0.0 ? pY / sqrtB : 0.0);
+                    else val = pY;
+                }
+            }
+            h2->SetBinContent(ix+1, iy+1, val);
+        }
+    }
+
+    // --- 10) determine z-range override for Zbi (based only on signal Zbi values) ---
+    double zmin_override = std::numeric_limits<double>::quiet_NaN();
+    double zmax_override = std::numeric_limits<double>::quiet_NaN();
+    if(mode == "Zbi" && !zbi_values_for_range.empty()) {
+        double zmin = 1e300, zmax = -1e300;
+        for(double v : zbi_values_for_range){
+            if(v > 0.0) { if(v < zmin) zmin = v; if(v > zmax) zmax = v; }
+        }
+        if(zmax >= zmin && zmin < 1e299){
+            zmin_override = std::max(0.0, 0.9 * zmin);
+            zmax_override = 1.1 * zmax;
+            if(zmax_override <= zmin_override) zmax_override = zmin_override + 1e-6;
+        }
+    }
+
+    // --- 11) call plotting routine which handles drawing + special Zbi total-row masking ---
+    Plot_EventCount2D(h2, mode, zmin_override, zmax_override);
+    // Plot_EventCount2D deletes h2 internally as per your convention
 }
