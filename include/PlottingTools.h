@@ -697,28 +697,34 @@ void MakeAndPlotCutflow2D(
     for (int ib=0; ib<nx; ++ib) {
         double sum = 0.0;
         for (const auto &b : allBkgs) {
-            if(yields.count(b)) sum += yields[b][ib];
+            auto it = yields.find(b);
+            if (it != yields.end()) sum += it->second[ib];
         }
         totalBkg[ib] = sum;
     }
 
-    // --- 6) ordering: signals by first-bin yield, bkgs by first-bin yield,
-    //                 bins ordered by totalBkg (descending) ---
+    // --- 6) ordering: signals by last-bin yield (descending),
+    //  backgrounds ascending by last-bin (so largest ends up last,
+    //  i.e. adjacent to "Total Bkg"), bins by totalBkg (descending) ---
+    if (nx <= 0) return;
+    int lastCutflowIndex = nx - 1;
+
     std::sort(allSigs.begin(), allSigs.end(),
         [&](const std::string &a, const std::string &b){
-            double A = (yields.count(a) ? yields[a][0] : 0.0);
-            double B = (yields.count(b) ? yields[b][0] : 0.0);
-            return A > B;
+            double A = (yields.count(a) ? yields[a][lastCutflowIndex] : 0.0);
+            double B = (yields.count(b) ? yields[b][lastCutflowIndex] : 0.0);
+            return A > B; // descending: biggest signals at top
         });
+
     std::sort(allBkgs.begin(), allBkgs.end(),
         [&](const std::string &a, const std::string &b){
-            double A = (yields.count(a) ? yields[a][0] : 0.0);
-            double B = (yields.count(b) ? yields[b][0] : 0.0);
-            return A > B;
+            double A = (yields.count(a) ? yields[a][lastCutflowIndex] : 0.0);
+            double B = (yields.count(b) ? yields[b][lastCutflowIndex] : 0.0);
+            return A < B; // ascending: biggest backgrounds at the end (closest to Total Bkg)
         });
 
     std::vector<int> binOrder(nx);
-    for (int i=0;i<nx;i++) binOrder[i]=i;
+    for (int i = 0; i < nx; ++i) binOrder[i] = i;
     std::sort(binOrder.begin(), binOrder.end(),
         [&](int A, int B){ return totalBkg[A] > totalBkg[B]; });
 
