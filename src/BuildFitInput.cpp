@@ -1045,6 +1045,10 @@ std::string BuildFitInput::GetnoZstarCut(){
         return "!"+GetZstarCut();
 }
 REGISTER_CUT(BuildFitInput, GetnoZstarCut, "noZstar");
+std::string BuildFitInput::GetdphiMETVCut(){
+        return "fabs(dphiMET_V)<TMath::Pi()/2.0";
+}
+REGISTER_CUT(BuildFitInput, GetdphiMETVCut, "dphiMETV");
 
 // --------------------------------------------------
 // Creates a tmp node, ensures columns exist, defines a temporary test 

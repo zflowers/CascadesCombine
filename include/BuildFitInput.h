@@ -76,6 +76,7 @@ class BuildFitInput{
         static const std::unordered_map<std::string, CutFn>& GetCutMap() { return cutMap_; }
         bool GetCutByName(const std::string& name, std::string& out);
         std::string GetCleaningCut();
+        std::string GetdphiMETVCut();
 	std::string GetZstarCut();
 	std::string GetnoZstarCut();
 
