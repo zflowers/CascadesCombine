@@ -24,6 +24,13 @@ def parse_args():
     p.add_argument("--check-root", action="store_true", help="Check for ROOT output files")
     return p.parse_args()
 
+def _file_nonzero(path: str) -> bool:
+    """Return True if file exists and has non-zero size."""
+    try:
+        return os.path.exists(path) and os.path.getsize(path) > 0
+    except Exception:
+        return False
+
 # --------------------- job checks ---------------------
 def job_paths(base_dir: str, job: str) -> Tuple[str, str, str, str]:
     json_path = os.path.join(base_dir, "json", f"{job}.json")
@@ -35,14 +42,16 @@ def job_paths(base_dir: str, job: str) -> Tuple[str, str, str, str]:
 def check_job_ok(base_dir: str, job: str, check_json: bool, check_root: bool) -> bool:
     json_path, root_path, out_path, err_path = job_paths(base_dir, job)
 
-    json_ok = os.path.exists(json_path) if check_json else False
-    root_ok = os.path.exists(root_path) if check_root else False
+    # Use non-zero-size checks to avoid counting partial/empty files as success
+    json_ok = _file_nonzero(json_path) if check_json else True
+    root_ok = _file_nonzero(root_path) if check_root else True
 
     # require whichever flags were set
     file_ok = (json_ok if check_json else True) and (root_ok if check_root else True)
-    if file_ok: return file_ok # if file ok just return
+    if file_ok:
+        return True
 
-    # still enforce err/out consistency
+    # still enforce err/out consistency (existing logic)
     err_ok = os.path.exists(err_path) and os.path.getsize(err_path) <= 1
     out_ok = False
     if os.path.exists(out_path):
@@ -58,7 +67,7 @@ def check_job_ok(base_dir: str, job: str, check_json: bool, check_root: bool) ->
     return file_ok and err_ok and out_ok
 
 # --------------------- parse original submit ---------------------
-def parse_submit_for_mapping(submit_path: str) -> Tuple[str, Dict[str, str]]:
+def parse_submit_for_mapping(submit_path: str) -> tuple[str, dict[str, str]]:
     """
     Parse the original submit file <submit_path>.
 
@@ -66,6 +75,11 @@ def parse_submit_for_mapping(submit_path: str) -> Tuple[str, Dict[str, str]]:
       - header_text is the content before the `queue LogFile, Args from (...)` block
         (or a default header if not found).
       - mapping is a dict LogFile -> Args (strings).
+
+    Handles:
+      - Multi-line queue blocks
+      - Trailing semicolons
+      - Single or double-quoted Args
     """
     default_header = (
         "universe = vanilla\n"
@@ -78,40 +92,46 @@ def parse_submit_for_mapping(submit_path: str) -> Tuple[str, Dict[str, str]]:
     )
 
     if not os.path.exists(submit_path):
-        # no submit file; return default header and empty mapping
         return default_header, {}
 
-    content = open(submit_path, "r", errors="ignore").read()
+    with open(submit_path, "r", errors="ignore") as f:
+        content = f.read()
 
-    # Try to capture header and queue block (LogFile, Args style)
-    m = re.search(r'(.*?)(?:\n|\r)+queue\s+LogFile\s*,\s*Args\s+from\s*\(\s*(.*?)\s*\)\s*',
-                  content, flags=re.S | re.I)
+    # Grab header and queue block
+    m = re.search(
+        r'(.*?)(?:\n|\r)+queue\s+LogFile\s*,\s*Args\s+from\s*\(\s*(.*?)\s*\)\s*$', 
+        content, flags=re.S | re.I
+    )
     mapping = {}
     if m:
         header = m.group(1).rstrip() + "\n\n"
         queue_block = m.group(2)
-        # Each line expected: <LogFileToken> "full args"
+
         for raw_line in queue_block.strip().splitlines():
-            line = raw_line.strip()
+            line = raw_line.strip().rstrip(";")  # remove trailing semicolon
             if not line or line.startswith("#"):
                 continue
+
             # Try double-quoted args
-            mm = re.match(r'([^\s"]+)\s+"(.+)"\s*$', line)
+            mm = re.match(r'([^\s"]+)\s+"(.+)"$', line)
             if mm:
                 mapping[mm.group(1)] = mm.group(2)
                 continue
+
             # Try single-quoted args
-            mm = re.match(r"([^\s']+)\s+'(.+)'\s*$", line)
+            mm = re.match(r"([^\s']+)\s+'(.+)'$", line)
             if mm:
                 mapping[mm.group(1)] = mm.group(2)
                 continue
+
             # Last-resort: split at first whitespace
             parts = line.split(None, 1)
             if len(parts) == 2:
                 mapping[parts[0]] = parts[1].strip().strip('"').strip("'")
+
         return header, mapping
 
-    # Fallback: try to find any lines like `LogFileName "Args"` anywhere
+    # Fallback: find any lines like `LogFile "Args"` anywhere
     lines = re.findall(r'^\s*([^\s"]+)\s+"([^"]+)"\s*$', content, flags=re.M)
     if lines:
         header = default_header
@@ -119,7 +139,7 @@ def parse_submit_for_mapping(submit_path: str) -> Tuple[str, Dict[str, str]]:
             mapping[name] = args
         return header, mapping
 
-    # Nothing found: return default header and empty mapping
+    # Nothing found
     return default_header, {}
 
 # --------------------- resubmit file builder ---------------------
@@ -194,6 +214,8 @@ def main():
         print(f"[checkJobs] No jobs discovered (submit parsing and filesystem fallback both empty).", file=sys.stderr)
         sys.exit(1)
 
+    print(f"[checkJobs] Inspecting {len(jobs)} jobs for submission '{submit_name}'", flush=True)
+
     successful = []
     failed = []
 
@@ -204,44 +226,80 @@ def main():
         else:
             failed.append(job)
 
+    if not failed:
+        print("[checkJobs] No failed jobs to resubmit.")
+        sys.exit(0)
+
     # Print summary
     if len(failed) > 0:
-        print(f"Failed jobs ({len(failed)}):")
+        print(f"[checkJobs] Failed jobs ({len(failed)}):", flush=True)
         for fjob in failed:
-            print("  ", fjob)
-
-    if not failed:
-        print("\nNo failed jobs to resubmit.")
-        sys.exit(0)
+            print("  ", fjob, flush=True)
     
-    # Single-queue resubmit: just reuse the original .sub
+    # Build a resubmit submit file containing ONLY the failed jobs
     resubmit_name = f"resubmit_failed_{submit_name}.sub"
     resubmit_path = os.path.join(base_dir, resubmit_name)
-    
-    if not os.path.exists(submit_path):
-        print(f"[checkJobs] ERROR: original submit file not found: {submit_path}", file=sys.stderr)
-        sys.exit(1)
-    
-    # Copy original .sub to resubmit
-    shutil.copy(submit_path, resubmit_path)
-    print(f"\nResubmit file written: {resubmit_path}")
-    
-    if args.no_submit:
-        print("[checkJobs] --no-submit specified: not calling condor_submit.")
+
+    try:
+        write_single_queue_resubmit(resubmit_path, header, mapping, failed)
+        print(f"\n[checkJobs] Resubmit file written: {resubmit_path}", flush=True)
+    except RuntimeError as e:
+        print(f"[checkJobs] No failed jobs could be mapped for resubmit: {e}", flush=True)
         sys.exit(0)
-    
-    # Submit using CMS environment
+
+    if args.no_submit:
+        print("[checkJobs] --no-submit specified: not calling condor_submit.", flush=True)
+        sys.exit(0)
+
+    # Submit the resubmit file
     submit_cmd = f"source {CMS_ENV} && condor_submit {resubmit_path}"
-    print(f"[checkJobs] Submitting resubmit file with:\n  {submit_cmd}\n")
+    print(f"[checkJobs] Submitting resubmit file with:\n  {submit_cmd}\n", flush=True)
     proc = subprocess.run(submit_cmd, shell=True, executable="/bin/bash", capture_output=True, text=True)
-    
+
     if proc.returncode != 0:
         print(f"[checkJobs] condor_submit failed with exit code {proc.returncode}", file=sys.stderr)
+        print(proc.stdout, file=sys.stderr)
+        print(proc.stderr, file=sys.stderr)
         sys.exit(proc.returncode)
-    
-    print("Resubmit submitted successfully.")
+
+    # Parse condor_submit stdout for schedd and cluster id
+    stdout = proc.stdout or ""
+    schedd = None
+    cluster_id = None
+
+    m_s = re.search(r"Attempting to submit jobs to\s+(\S+)", stdout)
+    if m_s:
+        schedd = m_s.group(1).strip()
+
+    m_c = re.search(r"submitted to cluster\s+(\d+)", stdout)
+    if m_c:
+        cluster_id = m_c.group(1).strip()
+
+    # Alternate: "cluster <id> on schedd <name>"
+    if not cluster_id:
+        m_c2 = re.search(r"cluster\s+(\d+)\s+on\s+schedd\s+(\S+)", stdout)
+        if m_c2:
+            cluster_id = m_c2.group(1).strip()
+            if not schedd:
+                schedd = m_c2.group(2).strip()
+
+    if not cluster_id:
+        print("[checkJobs] Warning: could not parse cluster id from condor_submit output. stdout:\n", stdout, file=sys.stderr)
+    else:
+        # Append to per-submission submitted_clusters.txt (condor/<submit_name>/submitted_clusters.txt)
+        per_sub_file = os.path.join(base_dir, "submitted_clusters.txt")
+        try:
+            os.makedirs(os.path.dirname(per_sub_file), exist_ok=True)
+            with open(per_sub_file, "a") as cf:
+                if schedd:
+                    cf.write(f"{cluster_id} {schedd}\n")
+                else:
+                    cf.write(f"{cluster_id}\n")
+        except Exception as e:
+            print(f"[checkJobs] Warning: failed to write {per_sub_file}: {e}", file=sys.stderr)
+
+    print("[checkJobs] Resubmit submitted successfully.", flush=True)
     sys.exit(0)
 
 if __name__ == "__main__":
     main()
-

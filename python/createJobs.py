@@ -58,7 +58,6 @@ executable              = scripts/BFI.sh
 
 should_transfer_files   = YES
 when_to_transfer_output = ON_EXIT
-transfer_input_files    = BFI_condor.x
 
 request_cpus            = {cpus}
 request_memory          = {memory}
@@ -150,6 +149,12 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, make_json
         shutil.rmtree(bin_dir)
     bin_dir.mkdir(parents=True, exist_ok=True)
 
+    # Copy BFI_condor.x into the condor directory
+    bfi_src = Path("BFI_condor.x")
+    bfi_dst = bin_dir / "BFI_condor.x"
+    if not bfi_dst.exists():
+        shutil.copy2(bfi_src, bfi_dst)
+
     # Subdirectories
     log_dir = bin_dir / "log"
     out_dir = bin_dir / "out"
@@ -171,7 +176,7 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, make_json
     submit_lines.append(f"error  = {err_dir}/$(LogFile).err")
 
     # Build per-job inputs collection (global)
-    all_inputs = set(["BFI_condor.x"])
+    all_inputs = set([str(bin_dir / "BFI_condor.x")])
     all_remaps = []
 
     # helper: flatten multi-line YAML literal blocks into a single-line string
@@ -247,8 +252,8 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, make_json
                 job.setdefault("transfer_input_files", []).append(hist_yaml_file)
                 all_inputs.add(hist_yaml_file)
 
-        # Ensure BFI_condor.x is in transfer_input_files
-        job.setdefault("transfer_input_files", []).append("BFI_condor.x")
+        # Ensure bin-local BFI_condor.x is in transfer_input_files
+        job.setdefault("transfer_input_files", []).append(str(bin_dir / "BFI_condor.x"))
 
         # Collect remaps for bookkeeping (not used to produce transfer_output_files)
         all_remaps.extend(job.get("remap_outputs", []))
@@ -316,8 +321,30 @@ def write_submit_file(bin_name, jobs, cpus="1", memory="1 GB", lumi=1, make_json
         )
         if proc.returncode != 0:
             print("condor_submit failed:", proc.stdout, proc.stderr)
+
         else:
-            print(f"Submitted bin {bin_name} ({len(jobs)} jobs)")
+            stdout = proc.stdout.strip()
+
+            cluster_id = None
+            schedd = None
+
+            match_cluster = re.search(r"submitted to cluster (\d+)", stdout)
+            if match_cluster:
+                cluster_id = match_cluster.group(1)
+
+            match_schedd = re.search(r"Attempting to submit jobs to (\S+)", stdout)
+            if match_schedd:
+                schedd = match_schedd.group(1)
+
+            if cluster_id:
+                record_path = bin_dir / "submitted_clusters.txt"
+                with open(record_path, "a") as f:
+                    if schedd:
+                        f.write(f"{cluster_id} {schedd}\n")
+                    else:
+                        f.write(f"{cluster_id}\n")
+
+            print(f"[createJobs] Submitted bin {bin_name} ({len(jobs)} jobs)")
             if make_json:
                 write_merge_script(bin_name,json_dir)
             if make_root:

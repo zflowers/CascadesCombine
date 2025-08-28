@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import subprocess, time, glob, os, sys, time, argparse, json
+import subprocess, time, glob, os, sys, time, argparse, json, yaml
 from CondorJobCountMonitor import CondorJobCountMonitor
 
 # ----- helper functions -----
@@ -19,22 +19,9 @@ def build_binaries():
 
     print("[run_all] Build finished.", flush=True)
 
-def wait_for_jobs():
-    """
-    Block until current user's Condor job count is below the monitor threshold.
-    Uses CondorJobCountMonitor to check the current user's jobs.
-    """
-    idle_time_start = time.time()
-    monitor = CondorJobCountMonitor(threshold=1, verbose=False)
-    monitor.wait_until_no_idle_jobs()
-    idle_time_end = time.time()
-    monitor.wait_until_jobs_below()
-    return idle_time_end - idle_time_start
-
 def submit_jobs(config, processes, hist, make_json=False, make_root=False, lumi="1."):
     """
-    Runs submitJobs.py to generate Condor scripts and merge scripts.
-    Must create `master_merge.sh` with all merge commands.
+    Runs submitJobs.py to generate Condor scripts.
     """
     cmd = ["python3", "python/submitJobs.py", "--bins-cfg", config, "--processes-cfg", processes, "--lumi", lumi]
 
@@ -45,6 +32,18 @@ def submit_jobs(config, processes, hist, make_json=False, make_root=False, lumi=
         if hist:
             cmd.append("--hist-yaml")
             cmd.append(hist)
+    subprocess.run(cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
+
+def create_mergers(config, make_json=False, make_root=False):
+    """
+    Runs createMergers.py to generate merger scripts.
+    """
+    cmd = ["python3", "python/createMergers.py", "--bins-cfg", config, "--make-master"]
+
+    if make_json:
+        cmd.append("--do-json")
+    if make_root:
+        cmd.append("--do-hadd")
     subprocess.run(cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
 def get_flattened_json_path():
@@ -95,30 +94,73 @@ def print_events(json_file):
                 weighted_events = round(values[1], 2)
                 print(f"  {proc_name}: {weighted_events}")
 
-def get_work_dirs():
+def get_all_work_dirs():
     """
     Return the directories from condor/.
     """
     return [name for name in os.listdir("condor/") if os.path.isdir(os.path.join("condor", name))]
 
-def run_checkjobs_loop_parallel(no_resubmit=False, max_resubmits=3, check_json=False, check_root=False):
+def load_bins(bins_cfg):
+    """
+    Return the bin names (condor work dirs) from the input YAML
+    If it fails, fall back to get_all_work_dirs() above
+    """
+    with open(bins_cfg, "r") as f:
+        bins_data = yaml.safe_load(f)
+    # The bin names are just the top-level keys
+    bin_names = list(bins_data.keys())
+    if len(bin_names) > 0:
+        return bin_names
+    else:
+        return get_all_work_dirs()
+
+def load_submitted_clusters(condor_dir):
+    clusters = []
+    path = condor_dir / "submitted_clusters.txt"
+    if path.exists():
+        with open(path) as f:
+            for line in f:
+                parts = line.strip().split()
+                if len(parts) == 2:
+                    clusters.append((parts[0], parts[1]))  # (cluster_id, schedd)
+                elif parts:
+                    clusters.append((parts[0], None))
+    return clusters
+
+def wait_for_jobs(work_dirs = None):
+    """
+    Block until current user's Condor job count is below the monitor threshold.
+    Uses CondorJobCountMonitor to check the current user's jobs.
+    """
+    idle_time_start = time.time()
+    monitor = CondorJobCountMonitor(threshold=1, verbose=False)
+    clusters = None
+    if work_dirs:
+        clusters = CondorJobCountMonitor.load_clusters_for_dirs(work_dirs, condor_root="condor")
+    monitor.wait_until_no_idle_jobs(clusters=clusters)
+    idle_time_end = time.time()
+    monitor.wait_until_jobs_below(clusters=clusters)
+    return idle_time_end - idle_time_start
+
+def run_checkjobs_loop_parallel(work_dirs=None, no_resubmit=False, max_resubmits=3, check_json=False, check_root=False):
     """
     Check all work directories with checkJobs.py, resubmit failing jobs across
     all directories in one cycle, then wait once for all resubmitted jobs to finish.
     Returns True if no failed jobs remain (proceed), False on error or if max resubmits reached.
     """
-    work_dirs = get_work_dirs()
+    if not work_dirs:
+        work_dirs = get_all_work_dirs()
     if not work_dirs:
         print("[run_all] No work directories found under condor/.", flush=True)
         return True
 
     attempt = 0
-    check_marker_no_failed = "No failed jobs to resubmit."
-    check_marker_resub_ok = "Resubmit submitted successfully."
+    check_marker_no_failed = "[checkJobs] No failed jobs to resubmit."
+    check_marker_resub_ok = "[checkJobs] Resubmit submitted successfully."
 
     while attempt < max_resubmits:
         attempt += 1
-        print(f"[run_all] Running checkJobs for all work_dirs (attempt {attempt}/{max_resubmits})...", flush=True)
+        print(f"[run_all] Running checkJobs for {work_dirs} (attempt {attempt}/{max_resubmits})...", flush=True)
 
         resubmitted_dirs = []
         any_unexpected = False
@@ -140,15 +182,12 @@ def run_checkjobs_loop_parallel(no_resubmit=False, max_resubmits=3, check_json=F
                 print(f"[run_all] checkJobs.py returned non-zero ({proc.returncode}) for {work_dir}. Aborting.", file=sys.stderr, flush=True)
                 return False
 
-            stdout = proc.stdout or ""
-
-            if check_marker_no_failed in stdout:
-                # nothing to do for this work_dir
+            stdout_lines = [line.strip() for line in (proc.stdout or "").splitlines()]
+            if any(check_marker_no_failed == line for line in stdout_lines):
                 continue
-            elif check_marker_resub_ok in stdout:
+            elif any(check_marker_resub_ok == line for line in stdout_lines):
                 resubmitted_dirs.append(work_dir)
             else:
-                # Unexpected output: be conservative and surface for inspection
                 print(f"[run_all] Unexpected checkJobs output for {work_dir}. See printed stdout/stderr above.", file=sys.stderr, flush=True)
                 any_unexpected = True
 
@@ -165,7 +204,7 @@ def run_checkjobs_loop_parallel(no_resubmit=False, max_resubmits=3, check_json=F
 
         # wait once for all resubmitted jobs across all dirs
         print(f"[run_all] Resubmitted jobs in {resubmitted_dirs}. Waiting for all resubmitted jobs to finish...", flush=True)
-        wait_for_jobs()
+        wait_for_jobs(work_dirs)
         time.sleep(3) # buffer time for new outputs to transfer before recheck
         # after wait, loop again to re-run checkJobs across all dirs
 
@@ -213,31 +252,35 @@ def main():
     print("[run_all] Building binaries...", flush=True)
     build_binaries()
 
-    # 2) Submit jobs and generate master_merge.sh
+    # 2) Submit jobs
     print("[run_all] Submitting jobs...", flush=True)
     submit_jobs(config=bins_cfg, processes=processes_cfg,
-                hist=hist_cfg,make_json=args.make_json, make_root=args.make_root, lumi=args.lumi)
+                hist=hist_cfg, make_json=args.make_json, make_root=args.make_root, lumi=args.lumi)
+
+    # 3) Create merge scripts
+    print("[run_all] Creating merger scripts...", flush=True)
+    create_mergers(config=bins_cfg, make_json=args.make_json, make_root=args.make_root)
 
     condor_time_start = time.time()
-    # 3) Wait for jobs to finish
+    # 4) Wait for jobs to finish
     print("[run_all] Waiting for condor jobs to finish...", flush=True)
-    idle_time_seconds = wait_for_jobs()
+    idle_time_seconds = wait_for_jobs(work_dirs=load_bins(args.bins_cfg))
 
-    # 4) Run checkJobs.py loop to find/resubmit failed jobs (if any)
+    # 5) Run checkJobs.py loop to find/resubmit failed jobs (if any)
     print("[run_all] Checking for failed jobs and resubmitting if necessary...", flush=True)
-    ok = run_checkjobs_loop_parallel(no_resubmit=False, max_resubmits=args.max_resubmits, check_json=args.make_json, check_root=args.make_root)
+    ok = run_checkjobs_loop_parallel(work_dirs=load_bins(args.bins_cfg), no_resubmit=False, max_resubmits=args.max_resubmits, check_json=args.make_json, check_root=args.make_root)
     if not ok:
         print(f"[run_all] checkJobs step did not complete successfully. Aborting further steps.", file=sys.stderr)
         sys.exit(1)
     condor_time_end = time.time()
     condor_time_seconds = condor_time_end - condor_time_start
 
-    # 5) Run all merge scripts
+    # 6) Run all merge scripts
     print("[run_all] Running master merge script", flush=True)
     subprocess.run(["bash", "condor/master_merge.sh"], check=True, stdout=sys.stdout, stderr=sys.stderr)
 
     if args.make_root:
-        # 6) Plot histograms
+        # 7) Plot histograms
         hadd_file = get_flattened_root_path()
         plot_cmd = [
               "./PlotHistograms.x", 
@@ -256,25 +299,25 @@ def main():
         )
 
     if args.make_json:
-        # 7) Run BF.x on the flattened JSON
+        # 8) Run BF.x on the flattened JSON
         flattened_json = get_flattened_json_path()
         output_dir = get_output_dir()
         print(f"[run_all] Running BF.x with input {flattened_json} & output {output_dir}", flush=True)
         subprocess.run(["./BF.x", flattened_json, output_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
 
-        # 8) Run combine
+        # 9) Run combine
         print("[run_all] Launching combine jobs...", flush=True)
         subprocess.run(["bash", "macro/launchCombine.sh", output_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
 
-        # 9) Print yields
+        # 10) Print yields
         print(f"[run_all] Yields for {args.bins_cfg}")
         print_events(flattened_json)
 
-        # 10) Collect significances
+        # 11) Collect significances
         print("[run_all] Collecting significances...", flush=True)
         subprocess.run(["python3", "-u", "macro/CollectSignificance.py", output_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
 
-        # 11) Plot significances
+        # 12) Plot significances
         plot_cmd = [
               "./PlotSignificances.x", 
               "-i", get_significances_path(),
