@@ -3,6 +3,16 @@ import subprocess
 from pathlib import Path
 from typing import Iterable, Tuple, Optional, List
 
+# Example usage snippets:
+# 1) Read the global clusters file and wait only on those:
+# clusters = CondorJobCountMonitor.load_submitted_clusters("condor")
+# monitor = CondorJobCountMonitor(threshold=1)
+# monitor.wait_until_jobs_below(clusters=clusters)
+
+# 2) After resubmitting only some work_dirs:
+# clusters = CondorJobCountMonitor.load_clusters_for_dirs(resubmitted_dirs, condor_root="condor")
+# monitor.wait_until_jobs_below(clusters=clusters)
+
 class CondorJobCountMonitor:
     """
     Condor job-count monitor with integrated cluster-list utilities.
@@ -145,7 +155,6 @@ class CondorJobCountMonitor:
     def get_total_jobs(self, clusters: Optional[Iterable[Tuple[str, Optional[str]]]] = None) -> int:
         """
         Returns the total number of jobs.
-
         If clusters is None: behave as before and query `condor_q $USER -total`.
         If clusters is provided: sum job totals for each (cluster_id, schedd).
         Returns -1 on error.
@@ -277,16 +286,6 @@ class CondorJobCountMonitor:
                 print(f"[CondorJobCountMonitor] Error while waiting for jobs: {e}", flush=True)
             check_count += 1
             time.sleep(5)
-
-# Example usage snippets:
-# 1) Read the global clusters file and wait only on those:
-# clusters = CondorJobCountMonitor.load_submitted_clusters("condor")
-# monitor = CondorJobCountMonitor(threshold=1)
-# monitor.wait_until_jobs_below(clusters=clusters)
-
-# 2) After resubmitting only some work_dirs:
-# clusters = CondorJobCountMonitor.load_clusters_for_dirs(resubmitted_dirs, condor_root="condor")
-# monitor.wait_until_jobs_below(clusters=clusters)
 
 if __name__ == "__main__":
         condor_monitor = CondorJobCountMonitor(threshold=1,verbose=False)

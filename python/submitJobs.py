@@ -17,7 +17,7 @@ max_workers = 4
 limit_submit = None  # limit number of job submissions (None=no limit)
 
 # ---------------------------------
-# HELPERS (trimmed to what's needed)
+# HELPERS
 # ---------------------------------
 def strip_inline_comments(s):
     if not isinstance(s, str):

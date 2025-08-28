@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 """
 checkJobs.py
-
 Checks Condor job outputs for a given submission (condor/<submit_name>),
 and, if there are failed jobs, writes a single data-driven resubmit file
 (with one `queue LogFile, Args from (...)` block) and optionally submits it.
-
 Usage:
     call from python/submitJobs.py
-
 """
 import argparse, os, re, subprocess, sys, glob, shutil
 from typing import Dict, Tuple, List
