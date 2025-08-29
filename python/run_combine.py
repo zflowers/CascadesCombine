@@ -1,8 +1,47 @@
 #!/usr/bin/env python3
-import subprocess, time, glob, os, sys, time, argparse, json, yaml
+import subprocess, time, glob, os, sys, time, argparse, json, yaml, re
 from CondorJobCountMonitor import CondorJobCountMonitor
 
 # ----- helper functions -----
+def _read_condor_bins_list(condor_dir="condor"):
+    """
+    Reads the automatically generated bins list file from condor/
+    Returns list of bin names. Picks the most recent file matching bins_list_*.txt
+    """
+    pattern = os.path.join(condor_dir, "bins_list_*.txt")
+    files = glob.glob(pattern)
+    if not files:
+        return []
+    # pick the latest file by modification time
+    files.sort(key=os.path.getmtime, reverse=True)
+    latest_file = files[0]
+    with open(latest_file) as f:
+        return [ln.strip() for ln in f if ln.strip()]
+
+def _joined_bins_from_condor_list(condor_dir="condor"):
+    """
+    Return joined bin names (with '__') from the auto-generated bins list file
+    """
+    bins = _read_condor_bins_list(condor_dir=condor_dir)
+    return "__".join(bins) if bins else None
+
+def _joined_bins_from_yaml(bins_cfg):
+    """
+    Return joined bin names (with '__') directly from the YAML file
+    """
+    try:
+        with open(bins_cfg, "r") as f:
+            bins_data = yaml.safe_load(f) or {}
+        names = list(bins_data.keys())
+        if names:
+            # sanitize names to remove any characters unsafe for filenames
+            import re
+            safe_names = [re.sub(r"[^A-Za-z0-9_]", "__", n) for n in names]
+            return "__".join(safe_names)
+    except Exception:
+        pass
+    return None
+
 def clean_binaries():
     """
     Run `make clean` to clean out binaries.
@@ -46,21 +85,45 @@ def create_mergers(config, make_json=False, make_root=False):
         cmd.append("--do-hadd")
     subprocess.run(cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
-def get_flattened_json_path():
+def get_flattened_json_path(condor_dir="condor", json_dir="json"):
     """
     Return the path to the flattened JSON produced by the merge scripts.
-    Picks the first file matching flattened_*.json in the json/ directory.
+
+    Preferred behavior:
+      1) Use the auto-generated bins_list_*.txt to get joined bin names
+      2) Otherwise fallback to latest json/flattened_*.json
     """
-    flattened_files = glob.glob("json/flattened_*.json")
+    joined = _joined_bins_from_condor_list(condor_dir=condor_dir)
+    if joined:
+        candidate = os.path.join(json_dir, f"flattened_{joined}.json")
+        if os.path.exists(candidate):
+            return candidate
+
+    # fallback
+    flattened_files = glob.glob(os.path.join(json_dir, "flattened_*.json"))
     if not flattened_files:
-        raise FileNotFoundError("No flattened JSON files found in json/")
+        raise FileNotFoundError(f"No flattened JSON files found in {json_dir}/")
     flattened_files.sort(key=os.path.getmtime, reverse=True)
     return flattened_files[0]
 
-def get_flattened_root_path():
-    root_files = glob.glob("root/hadded_*.root")
+
+def get_flattened_root_path(condor_dir="condor", root_dir="root"):
+    """
+    Return the path to the hadded ROOT produced by the merge scripts.
+
+    Preferred behavior:
+      1) Use the auto-generated bins_list_*.txt to get joined bin names
+      2) Otherwise fallback to latest root/hadded_*.root
+    """
+    joined = _joined_bins_from_condor_list(condor_dir=condor_dir)
+    if joined:
+        candidate = os.path.join(root_dir, f"hadded_{joined}.root")
+        if os.path.exists(candidate):
+            return candidate
+
+    root_files = glob.glob(os.path.join(root_dir, "hadded_*.root"))
     if not root_files:
-        raise FileNotFoundError("No hadded ROOT files found in root/")
+        raise FileNotFoundError(f"No hadded ROOT files found in {root_dir}/")
     root_files.sort(key=os.path.getmtime, reverse=True)
     return root_files[0]
 
@@ -71,12 +134,11 @@ def get_significances_path():
     sig_files.sort(key=os.path.getmtime, reverse=True)
     return sig_files[0]
 
-def get_output_dir():
+def get_output_dir(flattened_json):
     """
     Return the directory where BF.x should write datacards.
-    Derived from the flattened JSON filename.
+    Derived from the provided flattened JSON filename.
     """
-    flattened_json = get_flattened_json_path()
     base_name = os.path.basename(flattened_json)
     name_without_ext = os.path.splitext(base_name)[0]
     if name_without_ext.startswith("flattened_"):
@@ -102,17 +164,25 @@ def get_all_work_dirs():
 
 def load_bins(bins_cfg):
     """
-    Return the bin names (condor work dirs) from the input YAML
-    If it fails, fall back to get_all_work_dirs() above
+    Return the bin names (condor work dirs) from the input YAML.
+    Sanitizes names so they are safe for filesystem/condor.
+    If it fails, fall back to get_all_work_dirs() above.
     """
-    with open(bins_cfg, "r") as f:
-        bins_data = yaml.safe_load(f)
-    # The bin names are just the top-level keys
-    bin_names = list(bins_data.keys())
-    if len(bin_names) > 0:
-        return bin_names
-    else:
-        return get_all_work_dirs()
+    try:
+        with open(bins_cfg, "r") as f:
+            bins_data = yaml.safe_load(f) or {}
+        # The bin names are just the top-level keys
+        raw_bin_names = list(bins_data.keys())
+        if len(raw_bin_names) > 0:
+            # Sanitize: replace bad chars with "__"
+            safe_bin_names = [
+                re.sub(r"[^A-Za-z0-9_]", "__", name) for name in raw_bin_names
+            ]
+            return safe_bin_names
+    except Exception as e:
+        # if YAML can't be read, fall through to fallback
+        print(f"[run_all] Warning reading bins cfg ({bins_cfg}): {e}", file=sys.stderr)
+    return get_all_work_dirs()
 
 def load_submitted_clusters(condor_dir):
     clusters = []
@@ -276,12 +346,20 @@ def main():
     condor_time_seconds = condor_time_end - condor_time_start
 
     # 6) Run all merge scripts
-    print("[run_all] Running master merge script", flush=True)
-    subprocess.run(["bash", "condor/master_merge.sh"], check=True, stdout=sys.stdout, stderr=sys.stderr)
+    joined_bins = _joined_bins_from_yaml(args.bins_cfg) or _joined_bins_from_condor_list()
+    if not joined_bins:
+        print("[run_all] WARNING: Could not determine joined bin names for master merge script.", file=sys.stderr)
+        sys.exit(1)
+    master_merge_sh = os.path.join("condor", f"master_merge_{joined_bins}.sh")
+    if not os.path.exists(master_merge_sh):
+        print(f"[run_all] ERROR: master merge script not found: {master_merge_sh}", file=sys.stderr)
+        sys.exit(1)
+    print(f"[run_all] Running master merge script: {master_merge_sh}", flush=True)
+    subprocess.run(["bash", master_merge_sh], check=True, stdout=sys.stdout, stderr=sys.stderr)
 
     if args.make_root:
         # 7) Plot histograms
-        hadd_file = get_flattened_root_path()
+        hadd_file = get_flattened_root_path(condor_dir="condor", root_dir="root")
         plot_cmd = [
               "./PlotHistograms.x", 
               "-i", hadd_file,
@@ -291,17 +369,12 @@ def main():
               "-l", args.lumi 
             ]
         print("[run_all] Plotting histograms with command:"," ".join(plot_cmd), flush=True)
-        subprocess.run(
-            plot_cmd,
-            check=True,
-            stdout=sys.stdout,
-            stderr=sys.stderr,
-        )
+        subprocess.run(plot_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
     if args.make_json:
         # 8) Run BF.x on the flattened JSON
-        flattened_json = get_flattened_json_path()
-        output_dir = get_output_dir()
+        flattened_json = get_flattened_json_path(condor_dir="condor", json_dir="json")
+        output_dir = get_output_dir(flattened_json=flattened_json)
         print(f"[run_all] Running BF.x with input {flattened_json} & output {output_dir}", flush=True)
         subprocess.run(["./BF.x", flattened_json, output_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
 
@@ -326,15 +399,9 @@ def main():
               "-b", args.bins_cfg
             ]
         print("[run_all] Plotting significances with command:"," ".join(plot_cmd), flush=True)
-        subprocess.run(
-            plot_cmd,
-            check=True,
-            stdout=sys.stdout,
-            stderr=sys.stderr,
-        )
+        subprocess.run(plot_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
     print("[run_all] All steps completed.", flush=True)
-    # end time
     end_time = time.time()
 
     # total time

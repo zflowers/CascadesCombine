@@ -48,6 +48,8 @@ def write_hadd_script(bin_name, condor_dir="condor", root_dir="root"):
         f.write("#!/usr/bin/env bash\n")
         f.write("# Auto-generated per-bin hadd script\n")
         f.write(f"hadd -f {condor_dir}/{bin_name}/{bin_name}.root "
+                f"{condor_dir}/{bin_name}/{root_dir}/*.root > /dev/null 2>&1 || "
+                f"hadd -f {condor_dir}/{bin_name}/{bin_name}.root "
                 f"{condor_dir}/{bin_name}/{root_dir}/*.root\n")
     os.chmod(hadd_script_path, 0o755)
     print(f"[createJobs] Generated hadd script: {hadd_script_path}")

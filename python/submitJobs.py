@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-import os
-import sys
-import argparse
-import subprocess
-import yaml
+import os, sys, argparse, subprocess, yaml, re
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -86,8 +82,6 @@ def main():
     parser.add_argument("--make-json", action="store_true", help="Pass --make-json to createJobs.py")
     parser.add_argument("--make-root", action="store_true", help="Pass --make-root to createJobs.py")
     parser.add_argument("--hist-yaml", type=str, default=None, help="YAML file for histogram configuration")
-    parser.add_argument("--bins-list-out", type=str, default="condor/bins_list.txt",
-                        help="Optional: write the list of bin names to this file for createMergers.py")
     args = parser.parse_args()
 
     # Default behavior: make JSON if neither specified
@@ -133,13 +127,16 @@ def main():
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         executor.map(submit_job, jobs)
 
-    # Optionally write bins-list for createMergers.py to consume
-    if args.bins_list_out:
-        os.makedirs(os.path.dirname(args.bins_list_out) or ".", exist_ok=True)
-        with open(args.bins_list_out, "w") as f:
+    # Generate a bins list file automatically, encoding bin names
+    if bins:  # bins is your dict of bin definitions
+        safe_bin_names = [re.sub(r"[^A-Za-z0-9_]", "__", b) for b in bins.keys()]
+        joined_bins = "__".join(safe_bin_names) if safe_bin_names else "all"
+        bins_list_filename = os.path.join("condor", f"bins_list_{joined_bins}.txt")
+        os.makedirs(os.path.dirname(bins_list_filename) or ".", exist_ok=True)
+        with open(bins_list_filename, "w") as f:
             for b in bins.keys():
                 f.write(b + "\n")
-        print(f"[submitJobs] Wrote bin list to: {args.bins_list_out}")
+        print(f"[submitJobs] Wrote automatic bin list to: {bins_list_filename}")
 
     print("\nAll submissions dispatched.\n")
 
