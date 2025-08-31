@@ -1,15 +1,10 @@
 *.o
 myprogram
 *.x
-datacards*
 *.json
 *.debug
-json/*
-condor/logs/
-output/*
 libs/
 obj/
-condor/
 python/__pycache__/
 *.yaml
 root/*
@@ -17,3 +12,4 @@ plots/*
 *.root
 *.err
 *.out
+runs/

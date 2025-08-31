@@ -44,21 +44,31 @@ For non Apple users, visit [this link](https://www.apple.com)
 Plots should be organized on LPC under:
 
 ```
-plots/
-  ├── [bin]/
-  │     ├── [process]/
-  │     │      ├── can_[process]_[var].pdf
-  │     │      └── ...
-  │     └── ...
-  └── ...
+lpc_plots/
+  runs/
+    <run_id>/                   # e.g., run_August30_2025_2120
+      plots/
+        pdfs/
+          [bin]/                # Physics bin name (e.g., SuperBin2L, SuperBin3L)
+            [process]/          # Process name (e.g., ttbar, Wjets, Cascades_220)
+              can_[process]_[var].pdf
+              can_[process]_[var2].pdf
+              ...
+            [process2]/
+              ...
+          [bin2]/
+            ...
 ```
 
+- `<run_id>`: Automatically generated run directory under `runs/` (format: `run_<MonthDayYear>_<HHMM>`). Each run gets its own Keynote slide deck.
 - `[bin]`: Physics bin name (e.g., `SuperBin2L`, `SuperBin3L`).
 - `[process]`: Process name (e.g., `ttbar`, `Wjets`, `Cascades_220`).
-- `[var]`: Variable name used in plots.
+- `[var]`: Variable name used in plots (e.g., `MET`, `HT`, `MET_vs_HT`).
 
-The script automatically groups plots by variable across processes.
-
+The script automatically:
+- Creates a separate Keynote run deck per `<run_id>`.
+- Groups plots by variable across processes within each bin.
+- Adds summary slides (cutflows, yields, S/B, S/√B, Zbi) and the latest Significance PDF per run.
 ---
 
 ## Plot Template

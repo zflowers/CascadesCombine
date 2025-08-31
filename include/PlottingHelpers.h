@@ -51,18 +51,6 @@ double hto = 0.07;
 // ----------------------
 // Helpers
 // ----------------------
-void copyConfigsToOutput(const std::string &outputDir,
-                         const std::string &histCfg,
-                         const std::string &processCfg,
-                         const std::string &binsCfg) 
-{
-    if (gSystem->AccessPathName(outputDir.c_str())) {
-        gSystem->mkdir(outputDir.c_str(), true); 
-    }
-    if (!histCfg.empty()) gSystem->CopyFile(histCfg.c_str(), (outputDir + "/" + histCfg).c_str(), true);
-    if (!processCfg.empty()) gSystem->CopyFile(processCfg.c_str(), (outputDir + "/" + processCfg).c_str(), true);
-    if (!binsCfg.empty()) gSystem->CopyFile(binsCfg.c_str(), (outputDir + "/" + binsCfg).c_str(), true);
-}
 
 void SetMinimumBinContent(TH1* h, double minVal) {
     if (!h) return;

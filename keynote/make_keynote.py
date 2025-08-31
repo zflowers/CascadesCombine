@@ -12,9 +12,10 @@ import sys
 # -------------------------
 parser = argparse.ArgumentParser(description="Create Keynote slides from plot PDFs (with optional rsync).")
 parser.add_argument("--rsync-source", default=None,
-                    help="Optional rsync source (e.g. user@host:/path/to/plots/*). If not provided, env KEYNOTE_RSYNC is checked.")
+                    help="Optional rsync source (e.g. user@host:/path/to/runs/*/plots/*). If not provided, env KEYNOTE_RSYNC is checked.")
 parser.add_argument("--no-rsync", action="store_true", help="Skip rsync even if rsync source is provided.")
 parser.add_argument("--dry-run", action="store_true", help="Don't run AppleScript; print previews instead.")
+parser.add_argument("--run-id", default=None, help="Use a specific run id (directory name under runs/). If omitted, pick newest runs/* by mtime.")
 args = parser.parse_args()
 
 DRY_RUN = args.dry_run
@@ -22,8 +23,10 @@ DRY_RUN = args.dry_run
 # -------------------------
 # Config
 # -------------------------
-base_dir = Path(os.environ.get("KEYNOTE_BASE_DIR", "/Users/$USER/Desktop/Work/Cascades/"))
+base_dir = Path(os.environ.get("KEYNOTE_BASE_DIR", "/Users/$USER/Desktop/Work/Cascades/")).expanduser()
 top_level = "lpc_plots"
+# new layout: base_dir / top_level / "runs" / <run_id> / "plots" / "pdfs"
+runs_root = base_dir / top_level / "runs"
 bin_names = []
 
 prefix_order = [
@@ -48,16 +51,21 @@ ignore_bins = [
 # Rsync
 # -------------------------
 def run_initial_rsync_if_requested():
+    """If KEYNOTE_RSYNC / --rsync-source is given, run rsync to populate base_dir/top_level/.
+       Uses rsync -aR --prune-empty-dirs so remote './runs/*/plots/pdfs/' is preserved under top_level.
+    """
     if args.no_rsync:
         print("Skipping rsync due to --no-rsync.")
         return
     rsync_src = args.rsync_source or os.environ.get("KEYNOTE_RSYNC")
     if not rsync_src:
         return
-    base_dir.mkdir(parents=True, exist_ok=True)
-    print(f"Running rsync from '{rsync_src}' -> '{base_dir}' ...")
+    dest = base_dir / top_level
+    dest.mkdir(parents=True, exist_ok=True)
+    print(f"Running rsync from '{rsync_src}' -> '{dest}' ...")
     try:
-        subprocess.run(["rsync", "-ar", rsync_src, str(base_dir)+"/lpc_plots/"], check=True)
+        # use -aR --prune-empty-dirs to preserve the path part after './' in the remote spec
+        subprocess.run(["rsync", "-aR", "--prune-empty-dirs", rsync_src, str(dest) + "/"], check=True)
         print("rsync finished.")
     except subprocess.CalledProcessError as e:
         print(f"rsync failed (code {e.returncode}); continuing without rsync.", file=sys.stderr)
@@ -72,10 +80,38 @@ def open_keynote_template(template_path):
     script = f'''
 tell application "Keynote"
     activate
-    delay 2.5
     open {template_path_str}
-    delay 2.5
 end tell
+
+-- Wait until Keynote has at least one document and that document has at least one slide.
+tell application "System Events"
+    set appIsRunning to (exists process "Keynote")
+end tell
+
+-- Poll until front document exists and has slides. Use a reasonable timeout to avoid infinite loops.
+set timeout_seconds to 30
+set start_time to (do shell script "date +%s")
+repeat
+    try
+        tell application "Keynote"
+            if (count of documents) > 0 then
+                set thisDoc to front document
+                try
+                    if (count of slides of thisDoc) > 0 then
+                        exit repeat
+                    end if
+                end try
+            end if
+        end tell
+    end try
+    -- check timeout
+    set now_time to (do shell script "date +%s")
+    if ((now_time as integer) - (start_time as integer)) > timeout_seconds then
+        do shell script "echo 'Timeout waiting for Keynote document to become ready' >&2"
+        exit repeat
+    end if
+    delay 0.5
+end repeat
 '''
     run_applescript(script)
 
@@ -135,6 +171,7 @@ def parse_pdf_stem(stem: str):
 # AppleScript helpers
 # -------------------------
 def make_applescript_call_show(show):
+    # show should be 'true' or 'false' as a string
     script = f'''
 tell application "System Events"
     set visible of application process "Keynote" to {show}
@@ -148,10 +185,6 @@ def make_applescript_call_add_folder_title(bin_name, cutflow_pdf_path=None):
     script = f'''
 set slideTitle to "{title}"
 set cutflowPathRaw to {cutflow_str}
-
-tell application "System Events"
-    set visible of application process "Keynote" to false
-end tell
 
 tell application "Keynote"
     if (count of documents) = 0 then
@@ -364,6 +397,39 @@ end tell
 '''
     run_applescript(script)
 
+def make_applescript_call_add_run_title(run_id: str):
+    """Insert a Run title slide at index 1 using master 'Plots' and set the slide title to '<run_id>'."""
+    title_text = f"{run_id}".replace('"', '\\"')
+    if DRY_RUN:
+        print(f"[DRY RUN] Would add run title slide with title: {title_text}")
+        return
+    script = f'''
+tell application "Keynote"
+    -- ensure there's a front document (should be ready because open_keynote_template waited)
+    repeat until (count of documents) > 0
+        delay 0.2
+    end repeat
+    set thisDoc to front document
+    tell thisDoc
+        set newSlide to make new slide with properties {{base slide:master slide "Plots"}}
+        delay 0.1
+        repeat with ti in text items of newSlide
+            try
+                set tiPosition to position of ti
+                if (item 1 of tiPosition) is 107 then
+                    set object text of ti to "{title_text}"
+                    exit repeat
+                end if
+            end try
+        end repeat
+        -- move the new slide to be the first slide
+        try
+            set the slide index of newSlide to 1
+        end try
+    end tell
+end tell
+'''
+    run_applescript(script)
 
 # -------------------------
 # Bin processing
@@ -403,43 +469,94 @@ def process_bin_dir(bin_dir: Path):
         for chunk in chunk_list(paths, 6):
             make_applescript_call_add_plots(chunk, format_var_title(var))
 
+# -------------------------
+# New layout helpers (updated to runs/<run_id>/plots/pdfs/)
+# -------------------------
+def choose_run_dir():
+    """Return Path to chosen run directory (runs/<run_id>).
+       If --run-id given, verify it exists. Otherwise pick the newest directory in runs_root.
+       Supports two possible top-level locations:
+         1) base_dir / top_level / "runs"  (new rsync layout)
+         2) base_dir / "runs"               (older direct layout)
+    """
+    # allow user override
+    if args.run_id:
+        # try new layout first
+        candidate = runs_root / args.run_id
+        if candidate.exists():
+            return candidate
+        # fallback to old layout
+        candidate_old = base_dir / "runs" / args.run_id
+        if candidate_old.exists():
+            return candidate_old
+        raise FileNotFoundError(f"Requested run-id not found in either expected locations: {candidate} or {candidate_old}")
+
+    # no explicit run: try new layout first
+    if runs_root.exists():
+        run_dirs = [p for p in runs_root.iterdir() if p.is_dir()]
+        if run_dirs:
+            newest = max(run_dirs, key=lambda p: p.stat().st_mtime)
+            return newest
+
+    # fallback to old layout base_dir/runs
+    old_root = base_dir / "runs"
+    if old_root.exists():
+        run_dirs = [p for p in old_root.iterdir() if p.is_dir()]
+        if run_dirs:
+            newest = max(run_dirs, key=lambda p: p.stat().st_mtime)
+            return newest
+
+    # neither layout found
+    raise FileNotFoundError(f"Runs root not found (checked {runs_root} and {old_root})")
+
+def get_plots_dir_for_run(run_dir: Path):
+    # updated path for new layout: runs/<run_id>/plots/pdfs/
+    # But accept both runs/<run_id>/plots/pdfs and runs/<run_id>/pdfs (older)
+    plots_dir_candidate = run_dir / "plots" / "pdfs"
+    if plots_dir_candidate.exists():
+        return plots_dir_candidate
+    # fallback (older layout)
+    alt_candidate = run_dir / "pdfs"
+    if alt_candidate.exists():
+        return alt_candidate
+    raise FileNotFoundError(f"Plots directory not found for run '{run_dir.name}': tried {plots_dir_candidate} and {alt_candidate}")
+
 def get_target_bin_dirs():
-    pdfs_root = base_dir / top_level / "pdfs"
-    if not pdfs_root.exists():
-        raise FileNotFoundError(f"Top-level pdfs dir not found: {pdfs_root}")
-    if bin_names:
-        found = []
-        for b in bin_names:
-            if b in ignore_bins:
-                print(f"INFO: requested bin '{b}' is in ignore_bins and will be skipped.")
-                continue
-            candidate = pdfs_root / b
-            if candidate.exists() and candidate.is_dir():
-                found.append(candidate)
-            else:
-                print(f"WARNING: requested bin '{b}' not found under {pdfs_root}")
-        return found
-    else:
-        return [d for d in sorted(pdfs_root.iterdir()) if d.is_dir() and d.name not in ignore_bins]
+    """Return list of directories that will be treated as 'bins' for the selected run.
+       If plots/pdfs/ contains subdirectories those are bins; otherwise treat pdfs/ as single bin.
+    """
+    run_dir = choose_run_dir()
+    plots_dir = get_plots_dir_for_run(run_dir)
+    # subdirs that contain pdfs:
+    subdirs = [d for d in sorted(plots_dir.iterdir()) if d.is_dir()]
+    if subdirs:
+        return [d for d in subdirs if d.name not in ignore_bins]
+    # no subdirs: treat the plots_dir itself as a bin
+    if plots_dir.name in ignore_bins:
+        return []
+    return [plots_dir]
 
 def add_summary_slides(summary_pdfs):
     for pdf_path, title in summary_pdfs:
-        make_applescript_call_add_single_Summary(pdf_path, title)
+        if pdf_path.exists():
+            make_applescript_call_add_single_Summary(str(pdf_path), title)
+        else:
+            print(f"INFO: summary PDF not found (skipping): {pdf_path}")
 
-def get_latest_significance_pdf():
-    pdf_root = base_dir / top_level / "pdfs"
-    all_sig_pdfs = sorted(pdf_root.glob("Significance_*.pdf"), key=lambda p: p.stat().st_mtime, reverse=True)
+def get_latest_significance_pdf(plots_root):
+    all_sig_pdfs = sorted(plots_root.glob("**/Significance.pdf"), key=lambda p: p.stat().st_mtime, reverse=True)
     if all_sig_pdfs:
         latest = all_sig_pdfs[0]
-        # extract bin names from the filename
-        stem = latest.stem  # e.g., "Significance_Example1__Example2__SuperBin2L"
-        bin_part = stem.replace("Significance_", "")
-        bin_names = bin_part.split("__")
-        return latest, "Included bins: "+", ".join(bin_names)
-    return None, None
+        return latest
+    return None
 
+# -------------------------
+# Main
+# -------------------------
 def main():
     try:
+        run_dir = choose_run_dir()
+        plots_dir = get_plots_dir_for_run(run_dir)
         bin_dirs = get_target_bin_dirs()
     except FileNotFoundError as e:
         print("ERROR:", e)
@@ -449,6 +566,8 @@ def main():
     if not template_file.exists():
         raise FileNotFoundError(f"Keynote template not found: {template_file}")
     open_keynote_template(str(template_file))
+    print("Hiding keynote document until after slides are updated")
+    make_applescript_call_show('false')
 
     found_procs = set()
     for bin_dir in bin_dirs:
@@ -463,10 +582,14 @@ def main():
         for proc in missing_procs:
             print(f"  {proc}")
 
-    make_applescript_call_show('false')
+    # --- NEW: add a run title slide as the very first slide using master "Plots"
+    print(f"Adding run title slide for run: {run_dir.name}")
+    make_applescript_call_add_run_title(run_dir.name)
 
-    # Add latest Significance slide
-    sig_pdf, bin_text = get_latest_significance_pdf()
+    # Add latest Significance slide (search under this run's plots dir)
+    sig_pdf = get_latest_significance_pdf(plots_dir)
+    bin_names = [d.name for d in bin_dirs]
+    bin_text = "Included bins: " + ", ".join(bin_names) if bin_names else "Significances"
     if sig_pdf:
         print(f"Adding latest significance plot: {sig_pdf}")
         make_applescript_call_add_significance(str(sig_pdf), bin_text)
@@ -475,10 +598,10 @@ def main():
 
     print("Making summary yield slides")
     summary_pdfs = [
-        (base_dir / top_level / "pdfs/CutFlow2D_yield.pdf", "Yield"),
-        (base_dir / top_level / "pdfs/CutFlow2D_SoB.pdf", "S / B"),
-        (base_dir / top_level / "pdfs/CutFlow2D_SoverSqrtB.pdf", "S / √B"),
-        (base_dir / top_level / "pdfs/CutFlow2D_Zbi.pdf", "Zbi"),
+        (plots_dir / "CutFlow2D_yield.pdf", "Yield"),
+        (plots_dir / "CutFlow2D_SoB.pdf", "S / B"),
+        (plots_dir / "CutFlow2D_SoverSqrtB.pdf", "S / √B"),
+        (plots_dir / "CutFlow2D_Zbi.pdf", "Zbi"),
     ]
     add_summary_slides(summary_pdfs)
 

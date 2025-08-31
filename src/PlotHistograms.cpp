@@ -5,13 +5,11 @@
 // Main
 // ----------------------
 int main(int argc, char* argv[]) {
-    string inputFile, histCfg, processCfg, binsCfg;
+    string inputFile;
     for(int i=1;i<argc;++i){
         string arg=argv[i];
         if(arg=="-i"||arg=="--input"){ if(i+1<argc) inputFile=argv[++i]; else{ cerr<<"[ERROR] Missing "<<arg<<endl; return 1;} }
-        else if(arg=="-h"||arg=="--hist"){ if(i+1<argc) histCfg=argv[++i]; else{ cerr<<"[ERROR] Missing "<<arg<<endl; return 1;} }
-        else if(arg=="-d"||arg=="--process"){ if(i+1<argc) processCfg=argv[++i]; else{ cerr<<"[ERROR] Missing "<<arg<<endl; return 1;} }
-        else if(arg=="-b"||arg=="--bins"){ if(i+1<argc) binsCfg=argv[++i]; else{ cerr<<"[ERROR] Missing "<<arg<<endl; return 1;} }
+        else if(arg=="-o"||arg=="--output"){ if(i+1<argc) outputDir=argv[++i]; else{ cerr<<"[ERROR] Missing "<<arg<<endl; return 1;} }
         // lumi used when filling histograms upstream; doesn't rescale, just need for labels
         else if(arg=="-l"||arg=="--lumi"){ if(i+1<argc) lumi=std::stoi(argv[++i]); else{ lumi = 1.;} }
         else if(arg=="--help"){ cout<<"[PlotHistograms] Usage: "<<argv[0]<<" [options]\n -i <file.root>\n -h <hist.yaml>\n -d <process.yaml>\n -b <bins.yaml>\n"; return 0; }
@@ -97,7 +95,6 @@ int main(int argc, char* argv[]) {
     gSystem->mkdir((outputDir+"pdfs").c_str(), kTRUE);
     for(const auto& bin : uniqueBinNames)
         gSystem->mkdir((outputDir+"pdfs/"+bin).c_str(), kTRUE);
-    copyConfigsToOutput(outputDir,histCfg,processCfg,binsCfg);
 
     TString baseName=gSystem->BaseName(inputFileName); baseName.ReplaceAll(".root","");
     TString outRootName=Form("%soutput_%s.root",outputDir.c_str(),baseName.Data());

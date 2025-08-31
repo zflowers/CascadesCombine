@@ -170,7 +170,7 @@ int main(int argc, char **argv) {
 
     if (!success) return 3;
 
-    std::cout << "[mergeJSONs] Merged " << inputs.size() << " JSONs to " << outFile << "\n";
+    std::cout << "[mergeJSONs] Merged " << inputs.size() << " JSONs to " << outFile << ".json\n";
     if (per_file) std::cout << "[mergeJSONs] Per-file breakdown written to " << outFile << "_files.json\n";
 
     return 0;

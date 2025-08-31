@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import os, sys, argparse, subprocess, yaml, re
+import os, sys, argparse, subprocess, yaml, re, time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -33,7 +33,7 @@ def load_processes(cfg_path):
     sms_filters = cfg.get("sms_filters", [])
     return bkg, sig, sms_filters
 
-def build_command(bin_name, cfg, bkg_processes, sig_processes, sms_filters, make_json, make_root, hist_yaml, lumi):
+def build_command(bin_name, cfg, bkg_processes, sig_processes, sms_filters, make_json, make_root, hist_yaml, lumi, run_dir):
     cmd = [
         "python3", "python/createJobs.py",
         "--bkg_processes", *bkg_processes,
@@ -45,7 +45,8 @@ def build_command(bin_name, cfg, bkg_processes, sig_processes, sms_filters, make
         "--user-cuts", cfg.get("user-cuts","").replace('\n',''),
         "--cpus", cpus,
         "--memory", memory,
-        "--lumi", lumi
+        "--lumi", lumi,
+        "--run-dir", run_dir
     ]
     if sms_filters:
         cmd += ["--sms-filters", *sms_filters]
@@ -63,9 +64,10 @@ def build_command(bin_name, cfg, bkg_processes, sig_processes, sms_filters, make
     return cmd
 
 def submit_job(cmd):
-    print("Submit command:", " ".join(cmd))
+    print("[submitJobs] Submit command:", " ".join(cmd))
     if not dryrun:
         subprocess.run(cmd)
+        time.sleep(0.25)
 
 # -----------------------------
 # MAIN
@@ -73,15 +75,15 @@ def submit_job(cmd):
 def main():
     global dryrun
 
-    parser = argparse.ArgumentParser(description="Submit BFI jobs (only: call createJobs.py for each bin)")
+    parser = argparse.ArgumentParser(description="Submit BFI jobs by calling python/createJobs.py")
     parser.add_argument("--dryrun", action="store_true")
     parser.add_argument("--lumi", type=str, default="1.")
-    parser.add_argument("--bins-cfg", type=str, default="config/bin_cfgs/examples.yaml",
-                        help="YAML file with bin definitions (same format as before)")
+    parser.add_argument("--bins-cfg", type=str, default="config/bin_cfgs/examples.yaml", help="YAML file with bin definitions")
     parser.add_argument("--processes-cfg", type=str, default="config/process_cfgs/processes.yaml")
     parser.add_argument("--make-json", action="store_true", help="Pass --make-json to createJobs.py")
     parser.add_argument("--make-root", action="store_true", help="Pass --make-root to createJobs.py")
     parser.add_argument("--hist-yaml", type=str, default=None, help="YAML file for histogram configuration")
+    parser.add_argument("--run-dir", type=str, default="condor", help="directing for holding condor info")
     args = parser.parse_args()
 
     # Default behavior: make JSON if neither specified
@@ -92,6 +94,8 @@ def main():
 
     dryrun = args.dryrun
     lumi = args.lumi
+    run_dir = args.run_dir
+    os.makedirs(run_dir, exist_ok=True)
 
     # Load processes
     bkg_processes, sig_processes, sms_filters = load_processes(args.processes_cfg)
@@ -115,7 +119,7 @@ def main():
     jobs = []
     print("\n===== BEGIN BIN DEFINITIONS =====\n")
     for bin_name, cfg in bins.items():
-        cmd = build_command(bin_name, cfg, bkg_processes, sig_processes, sms_filters, make_json, make_root, args.hist_yaml, lumi)
+        cmd = build_command(bin_name, cfg, bkg_processes, sig_processes, sms_filters, make_json, make_root, args.hist_yaml, lumi, run_dir)
         jobs.append(cmd)
         print(f"[BIN-DEF] bin={bin_name} cuts={cfg.get('cuts')} lep-cuts={cfg.get('lep-cuts')} predefined-cuts={cfg.get('predefined-cuts')} user-cuts={cfg.get('user-cuts')}")
     print("===== END BIN DEFINITIONS =====\n")
@@ -127,18 +131,7 @@ def main():
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         executor.map(submit_job, jobs)
 
-    # Generate a bins list file automatically, encoding bin names
-    if bins:  # bins is your dict of bin definitions
-        safe_bin_names = [re.sub(r"[^A-Za-z0-9_]", "__", b) for b in bins.keys()]
-        joined_bins = "__".join(safe_bin_names) if safe_bin_names else "all"
-        bins_list_filename = os.path.join("condor", f"bins_list_{joined_bins}.txt")
-        os.makedirs(os.path.dirname(bins_list_filename) or ".", exist_ok=True)
-        with open(bins_list_filename, "w") as f:
-            for b in bins.keys():
-                f.write(b + "\n")
-        print(f"[submitJobs] Wrote automatic bin list to: {bins_list_filename}")
-
-    print("\nAll submissions dispatched.\n")
+    print("[submitJobs] All submissions dispatched")
 
 if __name__ == "__main__":
     main()

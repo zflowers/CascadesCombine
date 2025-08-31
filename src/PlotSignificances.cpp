@@ -2,28 +2,20 @@
 #include "PlottingHelpers.h"
 
 int main(int argc, char** argv) {
-    string inputFile, histCfg, processCfg, binsCfg;
+    string inputFile;
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
         if (arg == "-i" || arg == "--input") {
             if (i + 1 < argc) inputFile = argv[++i];
             else { std::cerr << "[ERROR] Missing " << arg << std::endl; return 1; }
         }
-        else if (arg == "-h" || arg == "--hist") {
-            if (i + 1 < argc) histCfg = argv[++i];
-            else { std::cerr << "[ERROR] Missing " << arg << std::endl; return 1; }
-        }
-        else if (arg == "-d" || arg == "--process") {
-            if (i + 1 < argc) processCfg = argv[++i];
-            else { std::cerr << "[ERROR] Missing " << arg << std::endl; return 1; }
-        }
-        else if (arg == "-b" || arg == "--bins") {
-            if (i + 1 < argc) binsCfg = argv[++i];
+        else if (arg == "-o" || arg == "--output") {
+            if (i + 1 < argc) outputDir = argv[++i];
             else { std::cerr << "[ERROR] Missing " << arg << std::endl; return 1; }
         }
         else if (arg == "--help") {
             std::cout << "[plotSignificance] Usage: " << argv[0]
-                      << " -i <txtfile> -h <hist.yaml> -d <process.yaml> -b <bins.yaml>\n";
+                      << " -i <txtfile>\n";
             return 0;
         }
         else {
@@ -36,43 +28,6 @@ int main(int argc, char** argv) {
         std::cerr << "[ERROR] No input text file provided.\n";
         return 1;
     }
-
-    // --------------------------------------------------
-    // Extract bin names from input filename
-    // Example: output/Significance_datacards_Example1__Example2__SuperBin2L.txt
-    // -> we want Example1, Example2, SuperBin2L
-    // --------------------------------------------------
-    std::string baseName = inputFile.substr(inputFile.find_last_of("/\\") + 1);
-    std::string noExt = baseName.substr(0, baseName.find_last_of('.'));
-
-    std::vector<std::string> binNames;
-    {
-        std::string prefix = "Significance_datacards_";
-        size_t pos = noExt.find(prefix);
-        if (pos != std::string::npos) {
-            std::string binsPart = noExt.substr(pos + prefix.size()); // "Example1__Example2__SuperBin2L"
-            std::stringstream ss(binsPart);
-            std::string token;
-            size_t start = 0;
-            while (true) {
-                size_t idx = binsPart.find("__", start);
-                if (idx == std::string::npos) {
-                    binNames.push_back(binsPart.substr(start));
-                    break;
-                }
-                binNames.push_back(binsPart.substr(start, idx - start));
-                start = idx + 2;
-            }
-        }
-    }
-
-    // Build a joined string for output naming
-    std::string binTag;
-    for (size_t i = 0; i < binNames.size(); ++i) {
-        if (i > 0) binTag += "__";
-        binTag += binNames[i];
-    }
-    if (binTag.empty()) binTag = "UnknownBins";
 
     // --------------------------------------------------
     // Read significance values from file
@@ -121,7 +76,7 @@ int main(int argc, char** argv) {
     // Draw graph
     // --------------------------------------------------
     int N = (int)procs.size();
-    TCanvas *c = new TCanvas(("c_" + binTag).c_str(), ("Significances_" + binTag).c_str(), 1200, 700);
+    TCanvas *c = new TCanvas("c_Significances", "c_Significances", 1200, 700);
     c->SetLeftMargin(0.08);
     c->SetRightMargin(0.04);
     c->SetBottomMargin(0.12);
@@ -178,10 +133,10 @@ int main(int argc, char** argv) {
     l.DrawLatex(0.085, 0.938, "#bf{CMS} Simulation Preliminary");
 
     // --------------------------------------------------
-    // Save outputs with binTag in names
+    // Save output
     // --------------------------------------------------
-    std::string rootName = outputDir + "Significance_" + binTag + ".root";
-    std::string pdfName  = outputDir + "pdfs/Significance_" + binTag + ".pdf";
+    std::string rootName = outputDir + "Significance.root";
+    std::string pdfName  = outputDir + "pdfs/Significance.pdf";
 
     TFile fout(rootName.c_str(), "RECREATE");
     hFrame->Write();

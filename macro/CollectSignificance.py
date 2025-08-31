@@ -24,8 +24,9 @@ print(f"[CollectSignificance] Using datacard directory: {datacard_dir}")
 datacard_subdir_list = get_directories(datacard_dir)
 
 # Ensure output directory exists
-os.makedirs("output", exist_ok=True)
-output_file = os.path.join("output", f"Significance_{os.path.basename(datacard_dir)}.txt")
+output_dir = sys.argv[2] if len(sys.argv) > 2 else "output/"
+os.makedirs(output_dir, exist_ok=True)
+output_file = os.path.join(output_dir, f"Significance_{os.path.basename(datacard_dir)}.txt")
 
 with open(output_file, "w") as file:
     sig = -1
