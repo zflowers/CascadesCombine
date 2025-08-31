@@ -44,20 +44,19 @@ For non Apple users, visit [this link](https://www.apple.com)
 Plots should be organized on LPC under:
 
 ```
-lpc_plots/
-  runs/
-    <run_id>/                   # e.g., run_August30_2025_2120
-      plots/
-        pdfs/
-          [bin]/                # Physics bin name (e.g., SuperBin2L, SuperBin3L)
-            [process]/          # Process name (e.g., ttbar, Wjets, Cascades_220)
-              can_[process]_[var].pdf
-              can_[process]_[var2].pdf
-              ...
-            [process2]/
-              ...
-          [bin2]/
+runs/
+  <run_id>/                   # e.g., run_August30_2025_2120
+    plots/
+      pdfs/
+        [bin]/                # Physics bin name (e.g., SuperBin2L, SuperBin3L)
+          [process]/          # Process name (e.g., ttbar, Wjets, Cascades_220)
+            can_[process]_[var].pdf
+            can_[process]_[var2].pdf
             ...
+          [process2]/
+            ...
+        [bin2]/
+          ...
 ```
 
 - `<run_id>`: Automatically generated run directory under `runs/` (format: `run_<MonthDayYear>_<HHMM>`). Each run gets its own Keynote slide deck.
@@ -96,10 +95,7 @@ rsync -avz $USER@cmslpc-el9.fnal.gov:/uscms/home/$USER/nobackup/CMSSW_14_1_0_pre
 # Step 2: Setup working directory
 bash setup.sh
 
-# Step 3: Sync plots from LPC
-rsync -avz $USER@cmslpc-el9.fnal.gov:/uscms/home/$USER/nobackup/CMSSW_14_1_0_pre4/src/CascadesCombine/plots/* lpc_plots/
-
-# Step 4: Generate slides
+# Step 3: Generate slides
 make_keynote
 ```
 
@@ -111,4 +107,3 @@ This will produce updated slides in `~/Cascades_keynote/`.
 
 - `make_keynote` is safe to run multiple times — it will add on slides to existing keynote.
 - You can copy the keynote file and rename to help keep things organized, or remove existing added slides to update.
-
