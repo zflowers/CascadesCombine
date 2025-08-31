@@ -1,10 +1,7 @@
 source /cvmfs/cms.cern.ch/cmsset_default.sh
-export CMSSW_GIT_REFERENCE=/cvmfs/cms.cern.ch/cmssw.git.daily
 source /cvmfs/cms.cern.ch/crab3/crab.sh
-alias proxy='voms-proxy-init --voms cms -valid 192:00'
-alias setup_combine='export SCRAM_ARCH=el9_amd64_gcc12 && cd /uscms/home/z374f439/nobackup/CMSSW_14_1_0_pre4/src/CascadesCombine/ && cmsenv'
-alias condor_rm_user='condor_rm $USER -n lpcschedd4; condor_rm $USER -n lpcschedd5; condor_rm $USER -n lpcschedd6'
-alias condor='watch condor_q $USER -batch'
+# Point setup_combine to where you will install CMSSW (recommend nobackup)
+alias setup_combine="export SCRAM_ARCH=el9_amd64_gcc12 && cd /uscms/home/$USER/nobackup/CMSSW_14_1_0_pre4/src/CascadesCombine/ && cmsenv"
 run_all() {
     mkdir -p runs/
     echo "[run_all] Launching ./scripts/run_all.sh with arguments: $*"

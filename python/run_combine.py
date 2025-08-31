@@ -1,175 +1,99 @@
 #!/usr/bin/env python3
-import sys, os, argparse, datetime, time, fcntl
+import sys, os, argparse, datetime, time, fcntl, subprocess, time, glob, json, yaml, re, shutil
 from pathlib import Path
-
-# --- Early logging setup: accept exact run name from caller ---
-early_parser = argparse.ArgumentParser(add_help=False)
-early_parser.add_argument("--run-name", default=None,
-                          help="Final run directory name (caller should pass this). If not provided, script will auto-generate one.")
-early_args, _ = early_parser.parse_known_args(sys.argv[1:])
-
-if early_args.run_name:
-    # Use exactly what caller passed
-    run_name = early_args.run_name
-else:
-    # Fallback: generate one here (minute resolution)
-    ts = datetime.datetime.now().strftime("%B%d_%Y_%H%M")
-    run_name = f"run_{ts}"
-
-# Create the run_dir and debug file immediately (so wrapper can tail it)
-run_dir = os.path.join("runs", run_name)
-os.makedirs(run_dir, exist_ok=True)
-
-debug_log_path = os.path.join(run_dir, "debug_run_combine.debug")
-
-# Print outward confirmation to the original terminal before redirecting
-print(f"[run_combine] Using run directory: {run_dir}", file=sys.__stdout__)
-
-# Redirect stdout/stderr to the per-run debug file (line-buffered)
-log_file = open(debug_log_path, "w", buffering=1)
-sys.stdout = log_file
-sys.stderr = log_file
-
-# Save early info in a dict for downstream use
-run_info = {
-    "run_dir": run_dir,
-    "debug_log": debug_log_path,
-    "run_name": run_name
-}
-print(f"[run_combine] Using run directory: {run_dir}")
-
-# --- Simple advisory file lock utility (fcntl.flock) ---
-LOCK_FILENAME = os.path.join("runs", ".build_and_stage.lock")
-
-class FileLockTimeout(Exception):
-    pass
-
-class FileLock:
-    """
-    Advisory file lock using fcntl.flock. This is cooperative between processes
-    that use the same lock file.
-
-    Usage:
-        lock = FileLock(LOCK_FILENAME)
-        # non-blocking attempt:
-        if not lock.try_acquire():
-            # someone else holds the lock
-            ...
-        # or blocking with optional timeout:
-        lock.acquire(timeout=300)   # wait up to 300s
-        try:
-            # critical section
-            ...
-        finally:
-            lock.release()
-    """
-    def __init__(self, lock_path: str = LOCK_FILENAME):
-        self.lock_path = lock_path
-        # ensure parent directory exists
-        parent = os.path.dirname(self.lock_path) or "."
-        os.makedirs(parent, exist_ok=True)
-        self._fd = None
-
-    def _open(self):
-        if self._fd is None:
-            # open in append so we can write pid/timestamp info
-            self._fd = open(self.lock_path, "a+")
-        return self._fd
-
-    def try_acquire(self) -> bool:
-        """Try to acquire lock non-blocking. Return True if acquired, False otherwise."""
-        fd = self._open()
-        try:
-            fcntl.flock(fd.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-            # write some debug info
-            try:
-                fd.seek(0)
-                fd.truncate()
-                fd.write(f"PID {os.getpid()} acquired lock at {time.ctime()}\n")
-                fd.flush()
-                os.fsync(fd.fileno())
-            except Exception:
-                pass
-            return True
-        except BlockingIOError:
-            return False
-
-    def acquire(self, timeout: float = None, poll_interval: float = 1.0):
-        """
-        Acquire lock, blocking. If timeout is provided, raise FileLockTimeout on timeout.
-        """
-        fd = self._open()
-        start = time.time()
-        while True:
-            try:
-                fcntl.flock(fd.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-                try:
-                    fd.seek(0)
-                    fd.truncate()
-                    fd.write(f"PID {os.getpid()} acquired lock at {time.ctime()}\n")
-                    fd.flush()
-                    os.fsync(fd.fileno())
-                except Exception:
-                    pass
-                return True
-            except BlockingIOError:
-                if timeout is not None and (time.time() - start) >= timeout:
-                    raise FileLockTimeout(f"Timeout acquiring lock {self.lock_path}")
-                time.sleep(poll_interval)
-
-    def release(self):
-        """Release the lock and close the file descriptor."""
-        if self._fd:
-            try:
-                fcntl.flock(self._fd.fileno(), fcntl.LOCK_UN)
-            except Exception:
-                pass
-            try:
-                self._fd.close()
-            except Exception:
-                pass
-            self._fd = None
-
-    # context manager convenience
-    def __enter__(self):
-        self.acquire()
-        return self
-
-    def __exit__(self, exc_type, exc, tb):
-        self.release()
-
-# Helper wrappers that print friendly messages to the original terminal if lock cannot be obtained.
-
-def try_acquire_lock_or_exit(non_blocking: bool = True):
-    """
-    Try to acquire the global lock. If non_blocking and lock is held, prints a friendly message
-    to the original terminal (sys.__stdout__) and exits(1). If non_blocking is False, this
-    will block until the lock is acquired.
-    Returns the FileLock instance (which you must release when done).
-    """
-    lock = FileLock(LOCK_FILENAME)
-    if non_blocking:
-        got = lock.try_acquire()
-        if not got:
-            print("[run_combine] ERROR: Another run is currently building/staging assets.", file=sys.__stdout__, flush=True)
-            print(f"[run_combine] Lock file: {LOCK_FILENAME}", file=sys.__stdout__, flush=True)
-            print("[run_combine] Please wait until that run finishes before starting another.", file=sys.__stdout__, flush=True)
-            # optionally give the user a hint where to look
-            recent_runs = sorted(Path("runs").glob("run_*"), key=os.path.getmtime, reverse=True)[:5]
-            if recent_runs:
-                print("[run_combine] Recent runs (newest first):", file=sys.__stdout__, flush=True)
-                for p in recent_runs:
-                    print(f"  {p}", file=sys.__stdout__, flush=True)
-            sys.exit(1)
-        return lock
-    else:
-        # blocking acquire with optional timeout (None => block indefinitely)
-        lock.acquire()
-        return lock
-
-import subprocess, time, glob, json, yaml, re, shutil
+from typing import Optional, Dict, Any
 from CondorJobCountMonitor import CondorJobCountMonitor
-from typing import Optional
+from fileLock import FileLock, FileLockTimeout, LOCK_FILENAME
+
+def parse_args():
+    p = argparse.ArgumentParser(description="Top-level workflow runner")
+    p.add_argument("--max-resubmits", type=int, default=3,
+                   help="Max resubmit cycles to attempt")
+    p.add_argument("--bins-cfg", dest="bins_cfg", type=str, default="config/bin_cfgs/bin_examples.yaml",
+                   help="Path to YAML config file containing bin definitions")
+    p.add_argument("--processes-cfg", dest="processes_cfg", type=str, default="config/process_cfgs/processes.yaml",
+                   help="YAML config file containing process definitions")
+    p.add_argument("--hist-cfg", dest="hist_cfg", type=str, default="config/hist_cfgs/hist_examples.yaml",
+                   help="YAML config file containing histogram definitions")
+    p.add_argument("--stress_test", dest="stress_test", action="store_true",
+                   help="Run stress test")
+    p.add_argument("--make-json", action="store_true",
+                   help="Generate JSON outputs")
+    p.add_argument("--make-root", action="store_true",
+                   help="Generate ROOT outputs")
+    p.add_argument("--lumi", dest="lumi", type=str, default="400.0",
+                   help="Lumi to scale everything to (default is 400.0)")
+    p.add_argument("--run-name", dest="run_name", type=str, default=None,
+                   help="Optional run name prefix to prepend to timestamp for the run directory")
+    return p.parse_args()
+
+def early_setup(run_name):
+    """
+    Early logging/setup called before the main workflow begins.
+
+    Returns:
+      (run_info: dict, try_acquire_lock_or_exit: callable)
+    The returned try_acquire_lock_or_exit(non_blocking: bool=True) will return a FileLock.
+    """
+    if run_name:
+        # Use exactly what caller passed
+        run_name = run_name
+    else:
+        # Fallback: generate one here (minute resolution)
+        ts = datetime.datetime.now().strftime("%B%d_%Y_%H%M")
+        run_name = f"run_{ts}"
+
+    # Create the run_dir and debug file immediately (so wrapper can tail it)
+    run_dir = os.path.join("runs", run_name)
+    os.makedirs(run_dir, exist_ok=True)
+
+    debug_log_path = os.path.join(run_dir, "debug_run_combine.debug")
+
+    # Print outward confirmation to the original terminal before redirecting
+    print(f"[run_combine] Using run directory: {run_dir}", file=sys.__stdout__)
+
+    # Redirect stdout/stderr to the per-run debug file (line-buffered)
+    log_file = open(debug_log_path, "w", buffering=1)
+    sys.stdout = log_file
+    sys.stderr = log_file
+
+    # Save early info in a dict for downstream use
+    run_info: Dict[str, Any] = {
+        "run_dir": run_dir,
+        "debug_log": debug_log_path,
+        "run_name": run_name
+    }
+    print(f"[run_combine] Using run directory: {run_dir}")
+
+    # Helper wrappers that print friendly messages to the original terminal if lock cannot be obtained.
+    def try_acquire_lock_or_exit(non_blocking: bool = True) -> FileLock:
+        """
+        Try to acquire the global lock. If non_blocking and lock is held, prints a friendly message
+        to the original terminal (sys.__stdout__) and exits(1). If non_blocking is False, this
+        will block until the lock is acquired.
+        Returns the FileLock instance (which the caller must release when done).
+        """
+        lock = FileLock(LOCK_FILENAME)
+        if non_blocking:
+            got = lock.try_acquire()
+            if not got:
+                print("[run_combine] ERROR: Another run is currently building/staging assets.", file=sys.__stdout__, flush=True)
+                print(f"[run_combine] Lock file: {LOCK_FILENAME}", file=sys.__stdout__, flush=True)
+                print("[run_combine] Please wait until that run finishes before starting another.", file=sys.__stdout__, flush=True)
+                # optionally give the user a hint where to look
+                recent_runs = sorted(Path("runs").glob("run_*"), key=os.path.getmtime, reverse=True)[:5]
+                if recent_runs:
+                    print("[run_combine] Recent runs (newest first):", file=sys.__stdout__, flush=True)
+                    for p in recent_runs:
+                        print(f"  {p}", file=sys.__stdout__, flush=True)
+                sys.exit(1)
+            return lock
+        else:
+            # blocking acquire (no timeout here; could be extended)
+            lock.acquire()
+            return lock
+
+    return run_info, try_acquire_lock_or_exit
 
 # ----- helper functions -----
 def _read_condor_bins_list(condor_dir="condor"):
@@ -542,33 +466,9 @@ def run_checkjobs_loop_parallel(condor_dir=None, work_dirs=None, no_resubmit=Fal
     return False
 
 # ----- main workflow -----
-def parse_args():
-    p = argparse.ArgumentParser(description="Top-level workflow runner")
-    p.add_argument("--max-resubmits", type=int, default=3,
-                   help="Max resubmit cycles to attempt")
-    p.add_argument("--bins-cfg", dest="bins_cfg", type=str, default="config/bin_cfgs/bin_examples.yaml",
-                   help="Path to YAML config file containing bin definitions")
-    p.add_argument("--processes-cfg", dest="processes_cfg", type=str, default="config/process_cfgs/processes.yaml",
-                   help="YAML config file containing process definitions")
-    p.add_argument("--hist-cfg", dest="hist_cfg", type=str, default="config/hist_cfgs/hist_examples.yaml",
-                   help="YAML config file containing histogram definitions")
-    p.add_argument("--stress_test", dest="stress_test", action="store_true",
-                   help="Run stress test")
-    p.add_argument("--make-json", action="store_true",
-                   help="Generate JSON outputs")
-    p.add_argument("--make-root", action="store_true",
-                   help="Generate ROOT outputs")
-    p.add_argument("--lumi", dest="lumi", type=str, default="400.0",
-                   help="Lumi to scale everything to (default is 400.0)")
-    # --- REPLACEMENT: use --run-name instead of --run-id ---
-    p.add_argument("--run-name", dest="run_name", type=str, default=None,
-                   help="Optional run name prefix to prepend to timestamp for the run directory")
-    return p.parse_args()
 
-def main():
-    args = parse_args()
-
-    # canonical run directory / name (created by the early block)
+def main(args, run_info, try_acquire_lock_or_exit):
+    # canonical run directory / name
     run_dir = run_info.get("run_dir")
     run_name = run_info.get("run_name")
     print(f"[run_combine] Using run directory: {run_dir}", flush=True)
@@ -585,9 +485,10 @@ def main():
 
     start_time = time.time()
 
-    # Acquire lock (non-blocking) before compile + staging so other runs get immediate feedback.
+    # Acquire lock (blocking or not)
     lock = None
     try:
+        # NOTE: set non_blocking=True to exit if lock is held, False to block until acquired
         lock = try_acquire_lock_or_exit(non_blocking=False)
 
         # Inform user (print to original terminal) that we've got the lock and are starting.
@@ -598,7 +499,6 @@ def main():
         build_binaries()
 
         # 2) Stage files into the run directory (configs, exe, src, include, condor, plots, root, etc.)
-        # prepare_run_and_stage_assets_copy now expects run_info as first arg (so it can use/run_info["run_dir"])
         run_dir_map = prepare_run_and_stage_assets_copy(run_info, bins_cfg, processes_cfg, hist_cfg)
         # merge staged mapping into run_info so downstream code can use run_info everywhere
         run_info.update(run_dir_map)
@@ -735,4 +635,7 @@ def main():
         total_time_seconds, total_time_seconds/60, total_time_seconds/3600), flush=True)
 
 if __name__ == "__main__":
-    main()
+    args = parse_args()
+    # call early_setup first so run_dir and logging redirection exist early
+    run_info, try_acquire_lock_or_exit = early_setup(args.run_name)
+    main(args, run_info, try_acquire_lock_or_exit)

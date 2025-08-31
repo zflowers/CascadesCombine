@@ -67,7 +67,7 @@ def submit_job(cmd):
     print("[submitJobs] Submit command:", " ".join(cmd))
     if not dryrun:
         subprocess.run(cmd)
-        time.sleep(0.25)
+        time.sleep(0.5)
 
 # -----------------------------
 # MAIN
