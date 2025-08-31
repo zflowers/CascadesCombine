@@ -15,17 +15,24 @@ parser.add_argument("--rsync-source", default=None,
                     help="Optional rsync source (e.g. user@host:/path/to/runs/*/plots/*). If not provided, env KEYNOTE_RSYNC is checked.")
 parser.add_argument("--no-rsync", action="store_true", help="Skip rsync even if rsync source is provided.")
 parser.add_argument("--dry-run", action="store_true", help="Don't run AppleScript; print previews instead.")
-parser.add_argument("--run-id", default=None, help="Use a specific run id (directory name under runs/). If omitted, pick newest runs/* by mtime.")
 args = parser.parse_args()
 
 DRY_RUN = args.dry_run
+
+# -------------------------
+# Hardcoded run-ids to loop over
+# -------------------------
+# Edit this list to the run ids (directory names under runs/) you want processed.
+# If this list is empty, the script will auto-discover all run directories and process them.
+RUN_IDS = [
+    # example: "run_August31_2025_0917",
+]
 
 # -------------------------
 # Config
 # -------------------------
 base_dir = Path(os.environ.get("KEYNOTE_BASE_DIR", "/Users/$USER/Desktop/Work/Cascades/")).expanduser()
 top_level = "lpc_plots"
-# new layout: base_dir / top_level / "runs" / <run_id> / "plots" / "pdfs"
 runs_root = base_dir / top_level / "runs"
 bin_names = []
 
@@ -46,6 +53,29 @@ ignore_bins = [
     "DBTB", "DY", "QCD",
     "ST", "ZInv", "ttbar", "Wjets",
 ]
+
+# -------------------------
+# Auto-discover RUN_IDS if list is empty
+# -------------------------
+if not RUN_IDS:
+    discovered = []
+    if runs_root.exists():
+        discovered = [p for p in runs_root.iterdir() if p.is_dir()]
+    # fallback to older layout base_dir/runs
+    old_root = base_dir / "runs"
+    if not discovered and old_root.exists():
+        discovered = [p for p in old_root.iterdir() if p.is_dir()]
+
+    if discovered:
+        # Sort newest first (change reverse=False if you prefer oldest-first)
+        discovered.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+        RUN_IDS = [p.name for p in discovered]
+        print(f"AUTO: discovered {len(RUN_IDS)} run-ids (newest first):")
+        for r in RUN_IDS:
+            print("  ", r)
+    else:
+        print("WARNING: RUN_IDS is empty and no run directories were found under "
+              f"{runs_root} or {old_root}. The script will not process any runs.")
 
 # -------------------------
 # Rsync
@@ -70,6 +100,7 @@ def run_initial_rsync_if_requested():
     except subprocess.CalledProcessError as e:
         print(f"rsync failed (code {e.returncode}); continuing without rsync.", file=sys.stderr)
 
+# run it early so the runs/ area can be populated before we look for run directories
 run_initial_rsync_if_requested()
 
 # -------------------------
@@ -472,42 +503,15 @@ def process_bin_dir(bin_dir: Path):
 # -------------------------
 # New layout helpers (updated to runs/<run_id>/plots/pdfs/)
 # -------------------------
-def choose_run_dir():
-    """Return Path to chosen run directory (runs/<run_id>).
-       If --run-id given, verify it exists. Otherwise pick the newest directory in runs_root.
-       Supports two possible top-level locations:
-         1) base_dir / top_level / "runs"  (new rsync layout)
-         2) base_dir / "runs"               (older direct layout)
-    """
-    # allow user override
-    if args.run_id:
-        # try new layout first
-        candidate = runs_root / args.run_id
-        if candidate.exists():
-            return candidate
-        # fallback to old layout
-        candidate_old = base_dir / "runs" / args.run_id
-        if candidate_old.exists():
-            return candidate_old
-        raise FileNotFoundError(f"Requested run-id not found in either expected locations: {candidate} or {candidate_old}")
-
-    # no explicit run: try new layout first
-    if runs_root.exists():
-        run_dirs = [p for p in runs_root.iterdir() if p.is_dir()]
-        if run_dirs:
-            newest = max(run_dirs, key=lambda p: p.stat().st_mtime)
-            return newest
-
-    # fallback to old layout base_dir/runs
-    old_root = base_dir / "runs"
-    if old_root.exists():
-        run_dirs = [p for p in old_root.iterdir() if p.is_dir()]
-        if run_dirs:
-            newest = max(run_dirs, key=lambda p: p.stat().st_mtime)
-            return newest
-
-    # neither layout found
-    raise FileNotFoundError(f"Runs root not found (checked {runs_root} and {old_root})")
+def choose_run_dir_by_id(run_id: str) -> Path:
+    """Given a run_id, return Path to that run directory, checking both new and old layouts."""
+    candidate = runs_root / run_id
+    if candidate.exists():
+        return candidate
+    candidate_old = base_dir / "runs" / run_id
+    if candidate_old.exists():
+        return candidate_old
+    raise FileNotFoundError(f"Requested run-id not found in either expected locations: {candidate} or {candidate_old}")
 
 def get_plots_dir_for_run(run_dir: Path):
     # updated path for new layout: runs/<run_id>/plots/pdfs/
@@ -521,11 +525,10 @@ def get_plots_dir_for_run(run_dir: Path):
         return alt_candidate
     raise FileNotFoundError(f"Plots directory not found for run '{run_dir.name}': tried {plots_dir_candidate} and {alt_candidate}")
 
-def get_target_bin_dirs():
+def get_target_bin_dirs_for_run(run_dir: Path):
     """Return list of directories that will be treated as 'bins' for the selected run.
        If plots/pdfs/ contains subdirectories those are bins; otherwise treat pdfs/ as single bin.
     """
-    run_dir = choose_run_dir()
     plots_dir = get_plots_dir_for_run(run_dir)
     # subdirs that contain pdfs:
     subdirs = [d for d in sorted(plots_dir.iterdir()) if d.is_dir()]
@@ -554,14 +557,7 @@ def get_latest_significance_pdf(plots_root):
 # Main
 # -------------------------
 def main():
-    try:
-        run_dir = choose_run_dir()
-        plots_dir = get_plots_dir_for_run(run_dir)
-        bin_dirs = get_target_bin_dirs()
-    except FileNotFoundError as e:
-        print("ERROR:", e)
-        return
-
+    # Ensure template exists and open it once (we'll append run slides for all RUN_IDS into this document)
     template_file = base_dir / "PlotsTemplate.key"
     if not template_file.exists():
         raise FileNotFoundError(f"Keynote template not found: {template_file}")
@@ -569,46 +565,73 @@ def main():
     print("Hiding keynote document until after slides are updated")
     make_applescript_call_show('false')
 
-    found_procs = set()
-    for bin_dir in bin_dirs:
-        for p in bin_dir.glob("*.pdf"):
-            proc = parse_pdf_stem(p.stem).get("proc")
-            if proc:
-                found_procs.add(proc)
+    any_run_processed = False
 
-    missing_procs = [proc for proc in prefix_order if proc not in found_procs]
-    if missing_procs:
-        print("WARNING: The following requested procs were not found in any bins:")
-        for proc in missing_procs:
-            print(f"  {proc}")
+    for run_id in RUN_IDS:
+        print(f"\n=== Processing run-id: {run_id} ===")
+        try:
+            run_dir = choose_run_dir_by_id(run_id)
+        except FileNotFoundError as e:
+            print(f"WARNING: {e} — skipping run-id {run_id}")
+            continue
 
-    # --- NEW: add a run title slide as the very first slide using master "Plots"
-    print(f"Adding run title slide for run: {run_dir.name}")
-    make_applescript_call_add_run_title(run_dir.name)
+        try:
+            plots_dir = get_plots_dir_for_run(run_dir)
+        except FileNotFoundError as e:
+            print(f"WARNING: {e} — skipping run-id {run_id}")
+            continue
 
-    # Add latest Significance slide (search under this run's plots dir)
-    sig_pdf = get_latest_significance_pdf(plots_dir)
-    bin_names = [d.name for d in bin_dirs]
-    bin_text = "Included bins: " + ", ".join(bin_names) if bin_names else "Significances"
-    if sig_pdf:
-        print(f"Adding latest significance plot: {sig_pdf}")
-        make_applescript_call_add_significance(str(sig_pdf), bin_text)
-    else:
-        print("No Significance PDF found.")
+        bin_dirs = get_target_bin_dirs_for_run(run_dir)
+        if not bin_dirs:
+            print(f"WARNING: No bins found for run {run_id} (maybe all bins are ignored). Skipping.")
+            continue
 
-    print("Making summary yield slides")
-    summary_pdfs = [
-        (plots_dir / "CutFlow2D_yield.pdf", "Yield"),
-        (plots_dir / "CutFlow2D_SoB.pdf", "S / B"),
-        (plots_dir / "CutFlow2D_SoverSqrtB.pdf", "S / √B"),
-        (plots_dir / "CutFlow2D_Zbi.pdf", "Zbi"),
-    ]
-    add_summary_slides(summary_pdfs)
+        any_run_processed = True
 
-    print("Will make slides for bins:", [d.name for d in bin_dirs])
-    for bin_dir in bin_dirs:
-        print("  Making slides for bin:", bin_dir.name)
-        process_bin_dir(bin_dir)
+        # find which procs are present
+        found_procs = set()
+        for bin_dir in bin_dirs:
+            for p in bin_dir.glob("*.pdf"):
+                proc = parse_pdf_stem(p.stem).get("proc")
+                if proc:
+                    found_procs.add(proc)
+
+        missing_procs = [proc for proc in prefix_order if proc not in found_procs]
+        if missing_procs:
+            print("WARNING: The following requested procs were not found in any bins:")
+            for proc in missing_procs:
+                print(f"  {proc}")
+
+        # Add a run title slide for this run
+        print(f"Adding run title slide for run: {run_dir.name}")
+        make_applescript_call_add_run_title(run_dir.name)
+
+        # Add latest Significance slide (search under this run's plots dir)
+        sig_pdf = get_latest_significance_pdf(plots_dir)
+        bin_names = [d.name for d in bin_dirs]
+        bin_text = "Included bins: " + ", ".join(bin_names) if bin_names else "Significances"
+        if sig_pdf:
+            print(f"Adding latest significance plot: {sig_pdf}")
+            make_applescript_call_add_significance(str(sig_pdf), bin_text)
+        else:
+            print("No Significance PDF found for this run.")
+
+        print("Making summary yield slides")
+        summary_pdfs = [
+            (plots_dir / "CutFlow2D_yield.pdf", "Yield"),
+            (plots_dir / "CutFlow2D_SoB.pdf", "S / B"),
+            (plots_dir / "CutFlow2D_SoverSqrtB.pdf", "S / √B"),
+            (plots_dir / "CutFlow2D_Zbi.pdf", "Zbi"),
+        ]
+        add_summary_slides(summary_pdfs)
+
+        print("Will make slides for bins:", [d.name for d in bin_dirs])
+        for bin_dir in bin_dirs:
+            print("  Making slides for bin:", bin_dir.name)
+            process_bin_dir(bin_dir)
+
+    if not any_run_processed:
+        print("No runs were processed. Check RUN_IDS and the filesystem layout (runs_root/base_dir).")
 
     make_applescript_call_show('true')
 

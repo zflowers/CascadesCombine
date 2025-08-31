@@ -39,22 +39,44 @@ done
 mkdir -p runs
 touch "${LOCKFILE}"
 
-# Non-blocking advisory lock check: if another process holds the lock, inform and exit.
-# We use FD 9 to avoid stomping other fds.
+# -------------------------
+# Configurable lock wait
+# -------------------------
+LOCK_WAIT_SECS=60  # default
+
+# Parse a --lock-wait option if provided
+for arg in "$@"; do
+  case "$arg" in
+    --lock-wait=*)
+      LOCK_WAIT_SECS="${arg#*=}"
+      ;;
+  esac
+done
+
+# -------------------------
+# Lock handling
+# -------------------------
 exec 9>"${LOCKFILE}"
 if ! flock -n 9 ; then
-  echo "[run_all] ERROR: Another run is currently building/staging assets. Aborting start." >&2
-  echo "[run_all] Lock file: ${LOCKFILE}" >&2
-  if [[ -s "${LOCKFILE}" ]]; then
-    echo "[run_all] Lock owner info (from lock file):" >&2
-    sed -n '1,20p' "${LOCKFILE}" >&2 || true
+  echo "[run_all] Another run is currently building/staging assets."
+  echo "[run_all] Lock file: ${LOCKFILE}"
+  echo "[run_all] Waiting up to ${LOCK_WAIT_SECS}s for the lock to be released..."
+
+  sleep "${LOCK_WAIT_SECS}"
+
+  if ! flock -n 9 ; then
+    echo "[run_all] ERROR: Lock still held after ${LOCK_WAIT_SECS}s. Aborting start." >&2
+    if [[ -s "${LOCKFILE}" ]]; then
+      echo "[run_all] Lock owner info (from lock file):" >&2
+      sed -n '1,20p' "${LOCKFILE}" >&2 || true
+    else
+      echo "[run_all] (lock file exists but is empty)" >&2
+    fi
+    exec 9>&-
+    exit 1
   else
-    echo "[run_all] (lock file exists but is empty)" >&2
+    echo "[run_all] Lock released, proceeding..."
   fi
-  echo "[run_all] Wait for that run to finish or remove ${LOCKFILE} if it is stale." >&2
-  # release FD 9 and exit non-zero
-  exec 9>&-
-  exit 1
 fi
 # We acquired the temporary check lock — release it immediately so the Python process can obtain it
 flock -u 9

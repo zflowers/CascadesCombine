@@ -15,7 +15,7 @@ def parse_args():
                    help="YAML config file containing process definitions")
     p.add_argument("--hist-cfg", dest="hist_cfg", type=str, default="config/hist_cfgs/hist_examples.yaml",
                    help="YAML config file containing histogram definitions")
-    p.add_argument("--stress_test", dest="stress_test", action="store_true",
+    p.add_argument("--stress-test", dest="stress_test", action="store_true",
                    help="Run stress test")
     p.add_argument("--make-json", action="store_true",
                    help="Generate JSON outputs")
@@ -466,22 +466,25 @@ def run_checkjobs_loop_parallel(condor_dir=None, work_dirs=None, no_resubmit=Fal
     return False
 
 # ----- main workflow -----
-
 def main(args, run_info, try_acquire_lock_or_exit):
     # canonical run directory / name
     run_dir = run_info.get("run_dir")
     run_name = run_info.get("run_name")
     print(f"[run_combine] Using run directory: {run_dir}", flush=True)
 
-    # configs/inputs (start from args, may be overridden by stress_test)
+    # configs/inputs (start from args)
     bins_cfg = args.bins_cfg
     hist_cfg = args.hist_cfg
     processes_cfg = args.processes_cfg
+    make_json = args.make_json
+    make_root = args.make_root
     if args.stress_test:
         print("[run_combine] Running stress test. Using stress yamls instead of loaded arg yamls", flush=True)
         bins_cfg = "config/bin_cfgs/bin_stress.yaml"
         hist_cfg = "config/hist_cfgs/hist_stress.yaml"
         processes_cfg = "config/process_cfgs/processes_stress.yaml"
+        make_json = True
+        make_root = True
 
     start_time = time.time()
 
@@ -543,15 +546,15 @@ def main(args, run_info, try_acquire_lock_or_exit):
         config=bins_cfg,
         processes=processes_cfg,
         hist=hist_cfg,
-        make_json=args.make_json,
-        make_root=args.make_root,
+        make_json=make_json,
+        make_root=make_root,
         lumi=args.lumi,
         run_dir=condor_dir
     )
 
     # 4) Create merge scripts (master merge should live in the run condor dir)
     print("[run_combine] Creating merger scripts...", flush=True)
-    create_mergers(make_json=args.make_json, make_root=args.make_root, run_dir=run_dir)
+    create_mergers(make_json=make_json, make_root=make_root, run_dir=run_dir)
 
     # 5) Wait for jobs to finish; pass condor path to functions that need it
     condor_time_start = time.time()
@@ -566,8 +569,8 @@ def main(args, run_info, try_acquire_lock_or_exit):
         work_dirs=loaded_bins,
         no_resubmit=False,
         max_resubmits=args.max_resubmits,
-        check_json=args.make_json,
-        check_root=args.make_root,
+        check_json=make_json,
+        check_root=make_root,
         condor=condor_dir
     )
     if not ok:
@@ -585,7 +588,7 @@ def main(args, run_info, try_acquire_lock_or_exit):
     subprocess.run(["bash", master_merge_sh], check=True, stdout=sys.stdout, stderr=sys.stderr)
 
     # 8) Plot histograms (reads from run-local condor/root layout)
-    if args.make_root:
+    if make_root:
         hadd_file = get_flattened_root_path(run_dir=run_dir)
         plot_cmd = [
             "./"+exe_dir+"/PlotHistograms.x",
@@ -597,7 +600,7 @@ def main(args, run_info, try_acquire_lock_or_exit):
         subprocess.run(plot_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
     # 9) BF + combine + significances + plot-significances
-    if args.make_json:
+    if make_json:
         flattened_json = get_flattened_json_path(run_dir=run_dir)
         output_dir = run_info["datacards_dir"]
         print(f"[run_combine] Running BF.x with input {flattened_json} & output {output_dir}", flush=True)
