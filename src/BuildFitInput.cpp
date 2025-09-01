@@ -1024,6 +1024,7 @@ bool BuildFitInput::GetCutByName(const std::string& name, std::string& out) {
     return true;
 }
 
+/*
 std::string BuildFitInput::GetCleaningCut(){
         return "(PTCM <= 200.) && "
     "( (PTCM <= -500.*sqrt( ((-2.777*pow(fabs(dphiCMI),2) + 1.388*fabs(dphiCMI) + 0.8264) > 0 ? "
@@ -1049,13 +1050,14 @@ std::string BuildFitInput::GetdphiMETVCut(){
         return "fabs(dphiMET_V)<TMath::Pi()/2.0";
 }
 REGISTER_CUT(BuildFitInput, GetdphiMETVCut, "dphiMETV");
-
+*/
 // --------------------------------------------------
 // Creates a tmp node, ensures columns exist, defines a temporary test 
 // column for the cut expression, and uses the TryValidateType
 // machinery to JIT-check the cut on a small number of events.
 // Recursively checks up to the maximum number of events (maxCheck)
 // --------------------------------------------------
+/*
 bool BuildFitInput::ValidateUserCut(ROOT::RDF::RNode node,
                                     const CutDef &cut,
                                     unsigned nCheck,
@@ -1114,14 +1116,21 @@ BuildFitInput::ValidateCuts(ROOT::RDF::RNode node,
 
     return valid;
 }
-
+*/
 // -------------------------------------
 // Example: User-defined cuts loader
 // -------------------------------------
+/*
 ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<std::string, CutDef>& ValidCuts){
     std::map<std::string, CutDef> cuts;
 
-    /*
+    CutDef cut_leadSjetPt;
+    cut_leadSjetPt.name = "leadSjet_pt_lt40";
+    cut_leadSjetPt.columns = {"PT_jet", "index_jet_S", "Njet_S"};
+    cut_leadSjetPt.expression =
+        "(Njet_S == 0) || (Njet_S > 0 && SafeIndex(PT_jet, SafeIndex(index_jet_S, 0, -1), -1.0) < 40)";
+    cuts[cut_leadSjetPt.name] = cut_leadSjetPt;
+
     // Example 1: invariant mass of leading two jets -> M_jj (double)
     node = node.Define("M_jj", [](const std::vector<double> &pt,
                                   const std::vector<double> &eta,
@@ -1236,7 +1245,6 @@ ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<st
         return (j0 + j1).M();
     }, {"p4_jet0_vect", "p4_jet1_vect"});
     // Used *_vect in the names to avoid conflicts with the scalar-versions above.
-    */
 
     // Validate the cuts that the user wrote
     ValidCuts = ValidateCuts(node, cuts);
@@ -1247,4 +1255,5 @@ ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<st
         }
     }
     return node;
-}
+
+}*/

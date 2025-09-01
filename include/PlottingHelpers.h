@@ -471,7 +471,7 @@ void SortCutFlowsByLastBin(
 
 // ------------------ TH1 ------------------
 void DrawLog(TH1* h, const char* opt = "",
-             double fallbackMin = 1e-3, double rangeFactor = 1.1) {
+             double fallbackMin = 1e-1, double rangeFactor = 1.1) {
     if (!h) return;
     double max = h->GetMaximum();
     if (max <= 0) {
@@ -488,7 +488,7 @@ void DrawLog(TH1* h, const char* opt = "",
 
 // ------------------ TH2 ------------------
 void DrawLog(TH2* h, const char* opt = "",
-             double fallbackMin = 1e-3, double rangeFactor = 1.1) {
+             double fallbackMin = 1e-1, double rangeFactor = 1.1) {
     if (!h) return;
     double max = h->GetMaximum();
     if (max <= 0) {
@@ -505,7 +505,7 @@ void DrawLog(TH2* h, const char* opt = "",
 
 // ------------------ TEfficiency ------------------
 void DrawLog(TEfficiency* e, const char* opt = "",
-             double fallbackMin = 1e-3, double rangeFactor = 1.1) {
+             double fallbackMin = 1e-1, double rangeFactor = 1.1) {
     if (!e) return;
     double ymin = 1e30, ymax = -1e30;
     for (int i = 1; i <= e->GetTotalHistogram()->GetNbinsX(); ++i) {
@@ -529,7 +529,7 @@ void DrawLog(TEfficiency* e, const char* opt = "",
 
 // ------------------ TGraph / TGraphAsymmErrors ------------------
 void DrawLog(TGraph* g, const char* opt = "AP",
-             double fallbackMin = 1e-3, double rangeFactor = 1.1) {
+             double fallbackMin = 1e-1, double rangeFactor = 1.1) {
     if (!g) return;
     double ymin = 1e30, ymax = -1e30;
     for (int i = 0; i < g->GetN(); ++i) {
@@ -555,6 +555,6 @@ void DrawLog(TGraph* g, const char* opt = "AP",
 // ------------------ Smart Dispatcher ------------------
 template <typename T>
 void DrawLogSmart(T* obj, const char* opt = "",
-                  double fallbackMin = 1e-3, double rangeFactor = 1.1) {
+                  double fallbackMin = 1e-1, double rangeFactor = 1.1) {
     DrawLog(obj, opt, fallbackMin, rangeFactor);
 }

@@ -1,0 +1,38 @@
+#include "BuildFitInput.h"
+#include "BuildFitTools.h"
+#include <cmath>
+#include <TMath.h>
+
+// --- Cleaning cut ---
+std::string BuildFitInput::GetCleaningCut() {
+    return "(PTCM <= 200.) && "
+           "( (PTCM <= -500.*sqrt( ((-2.777*pow(fabs(dphiCMI),2) + 1.388*fabs(dphiCMI) + 0.8264) > 0 ? "
+           "(-2.777*pow(fabs(dphiCMI),2) + 1.388*fabs(dphiCMI) + 0.8264) : 0) ) + 575.) || "
+           "(-2.777*pow(fabs(dphiCMI),2) + 1.388*fabs(dphiCMI) + 0.8264 <= 0.) ) && "
+           "( (PTCM <= -500.*sqrt( ((-1.5625*pow(fabs(dphiCMI),2) + 7.8125*fabs(dphiCMI) - 8.766) > 0 ? "
+           "(-1.5625*pow(fabs(dphiCMI),2) + 7.8125*fabs(dphiCMI) - 8.766) : 0) ) + 600.) || "
+           "(-1.5625*pow(fabs(dphiCMI),2) + 7.8125*fabs(dphiCMI) - 8.766 <= 0.) )";
+}
+REGISTER_CUT(BuildFitInput, GetCleaningCut, "Cleaning");
+
+// --- Zstar cut ---
+std::string BuildFitInput::GetZstarCut() {
+    return "((" + BuildLeptonCut(">=1OSSF","a") + " || " +
+           BuildLeptonCut(">=1OSSF","b") + ") || "
+           + "(Nlep==2 && " +
+           BuildLeptonCut(">=1OSSF") + "))";
+}
+REGISTER_CUT(BuildFitInput, GetZstarCut, "Zstar");
+
+// --- noZstar cut ---
+std::string BuildFitInput::GetnoZstarCut() {
+    return "!" + GetZstarCut();
+}
+REGISTER_CUT(BuildFitInput, GetnoZstarCut, "noZstar");
+
+// --- dphiMETV cut ---
+std::string BuildFitInput::GetdphiMETVCut() {
+    return "fabs(dphiMET_V)<TMath::Pi()/2.0";
+}
+REGISTER_CUT(BuildFitInput, GetdphiMETVCut, "dphiMETV");
+
