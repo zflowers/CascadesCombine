@@ -48,7 +48,7 @@ def write_merge_script(bin_name, condor_bin_dir: Path, json_dirname="json"):
     with open(merge_script_path, "w") as f:
         f.write("#!/usr/bin/env bash\n")
         f.write("# Auto-generated merge script\n")
-        f.write(f"./mergeJSONs.x {condor_bin_dir}/{bin_name} {condor_bin_dir}/{json_dirname}\n")
+        f.write(f"{condor_bin_dir}/../../exe/mergeJSONs.x {condor_bin_dir}/{bin_name} {condor_bin_dir}/{json_dirname}\n")
     os.chmod(merge_script_path, 0o755)
 
 def write_hadd_script(bin_name, condor_bin_dir: Path, root_dirname="root"):
