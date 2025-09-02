@@ -45,23 +45,44 @@ def check_job_ok(base_dir: str, job: str, check_json: bool, check_root: bool) ->
 
     # require whichever flags were set
     file_ok = (json_ok if check_json else True) and (root_ok if check_root else True)
-    if file_ok:
-        return True
 
-    # still enforce err/out consistency (existing logic)
     err_ok = os.path.exists(err_path) and os.path.getsize(err_path) <= 1
-    out_ok = False
-    if os.path.exists(out_path):
+    if not err_ok and os.path.exists(err_path):
+        # Use grep to check if err file is empty excluding common ignores
+        bash = f"grep -v -e 'nvidia-drivers' -e 'CUDA_COMPATIBILITY' {err_path}"
         try:
-            with open(out_path, "r", errors="ignore") as fh:
-                for line in fh:
-                    if "Wrote output to: " in line:
-                        out_ok = True
-                        break
-        except Exception as e:
-            print(f"[checkJobs] Warning reading {out_path}: {e}", file=sys.stderr)
+            output = subprocess.check_output(['bash','-c',bash]).decode().splitlines()
+            err_ok = len(output) == 0
+            if not err_ok:
+                err_log_print = "[checkJobs] "+err_path+" has error: "+"\n".join(output)
+                print(err_log_print, flush=True)
+        except subprocess.CalledProcessError:
+            # grep returns non-zero if no lines found, i.e., err_ok is True
+            err_ok = True
 
-    return file_ok and err_ok and out_ok
+    out_ok_json = False
+    out_ok_root = False
+    if os.path.exists(out_path):
+        if check_json:
+            bash = f"grep -q 'Wrote JSON output to: ' {out_path}"
+            try:
+                subprocess.check_call(['bash', '-c', bash])
+                out_ok_json = True
+            except subprocess.CalledProcessError:
+                pass
+        else:
+            out_ok_json = True
+        if check_root:
+            bash = f"grep -q 'Wrote ROOT output to: ' {out_path}"
+            try:
+                subprocess.check_call(['bash', '-c', bash])
+                out_ok_root = True
+            except subprocess.CalledProcessError:
+                pass
+        else:
+            out_ok_root = True
+
+    return file_ok and err_ok and out_ok_json and out_ok_root
 
 # --------------------- parse original submit ---------------------
 def parse_submit_for_mapping(submit_path: str) -> tuple[str, dict[str, str]]:

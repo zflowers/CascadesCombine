@@ -348,6 +348,8 @@ int main(int argc, char** argv) {
         std::cerr<<"[BFI_condor] ERROR writing JSON to "<<outputJsonPath<<"\n"; delete BFI; return 5;
     }
     if(histFile) histFile->Close();
+    if(doJSON) std::cout <<"[BFI_condor] Wrote JSON output to: " << outputJsonPath << std::endl;
+    if(doHist) std::cout <<"[BFI_condor] Wrote ROOT output to: " << histOutputPath << std::endl;
 
     delete BFI;
     return 0;
