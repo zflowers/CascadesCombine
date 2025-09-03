@@ -128,6 +128,29 @@ def _joined_bins_from_yaml(bins_cfg):
         pass
     return None
 
+def _rename_with_suffix(src_path, suffix, target_dir):
+    """
+    Move/rename src_path into target_dir with suffix inserted before the extension.
+    e.g. myconfig.yaml -> myconfig_bin.yaml
+    Overwrites existing target file if present.
+    Returns the new path (string).
+    """
+    src = Path(src_path)
+    target_dir = Path(target_dir)
+    ext = src.suffix                # .yaml / .yml / etc
+    base = src.stem                 # filename without suffix/extension
+
+    new_name = f"{base}{suffix}{ext}"
+    dest = target_dir / new_name
+    dest.parent.mkdir(parents=True, exist_ok=True)
+
+    # If destination exists, remove it so replace() will succeed
+    if dest.exists():
+        dest.unlink()
+
+    # move/rename (replace will overwrite if necessary)
+    return str(src.replace(dest))
+
 def _copy_file(src, dst_dir_or_file):
     srcp = Path(src)
     dstp = Path(dst_dir_or_file)
@@ -171,12 +194,16 @@ def prepare_run_and_stage_assets_copy(
 
     # -------------------------
     # 1) Copy selected config files
+    # Note: .yaml files have extension added on just in case user repeated the same name
     # -------------------------
     config_bin_path = _copy_file(bins_cfg, configs_dir)
+    config_bin_path = _rename_with_suffix(config_bin_path, "_bins", configs_dir)
     configs_processes_path = _copy_file(processes_cfg, configs_dir)
+    configs_processes_path = _rename_with_suffix(configs_processes_path, "_processes", configs_dir)
     configs_hist_path = None
     if hists_cfg:
         configs_hist_path = _copy_file(hists_cfg, configs_dir)
+        configs_hist_path = _rename_with_suffix(configs_hist_path, "_hists", configs_dir)
 
     # -------------------------
     # 2) Copy all *.x exes
