@@ -458,7 +458,7 @@ def run_checkjobs_loop_parallel(condor_dir=None, work_dirs=None, no_resubmit=Fal
 
         # wait once for all resubmitted jobs across all dirs
         print(f"[run_combine] Resubmitted jobs in {resubmitted_dirs}. Waiting for all resubmitted jobs to finish...", flush=True)
-        wait_for_jobs(work_dirs)
+        wait_for_jobs(work_dirs,condor_dir)
         time.sleep(3) # buffer time for new outputs to transfer before recheck
         # after wait, loop again to re-run checkJobs across all dirs
 
