@@ -242,8 +242,8 @@ void loadFormatMaps(){
   m_Color["SMS_Gluinos_SMS_1200_1176"] = 7071;
   m_Title["SMS_Gluinos_SMS_2000_1900"] = "T1qqqq 2000 1900";
   m_Color["SMS_Gluinos_SMS_2000_1900"] = 7041;
-  m_Title["SMS_Gluinos_SMS_2000_1500"] = "T1qqqq 2000 1500";
-  m_Color["SMS_Gluinos_SMS_2000_1500"] = 7041;
+  m_Title["SMS_Gluinos_SMS_1500_1400"] = "T1qqqq 1500 1400";
+  m_Color["SMS_Gluinos_SMS_1500_1400"] = 7041;
 
   m_Title["HF_Fakes"] = "HF leptons";
   m_Color["HF_Fakes"] = 7022;
