@@ -568,7 +568,7 @@ def main():
     any_run_processed = False
 
     for run_id in RUN_IDS:
-        print(f"\n=== Processing run-id: {run_id} ===")
+        print(f"=== Processing run-id: {run_id} ===")
         try:
             run_dir = choose_run_dir_by_id(run_id)
         except FileNotFoundError as e:
