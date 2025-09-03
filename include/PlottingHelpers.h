@@ -93,6 +93,7 @@ double BinContentSafe(TH1* h, int bin){
 }
 
 double CalculateZbi(double Nsig, double Nbkg, double deltaNbkg){
+  if(deltaNbkg > 1) deltaNbkg /= 100; // assume user passed in percent rather than fraction
   double Nobs = Nsig+Nbkg;
   double tau = 1./Nbkg/(deltaNbkg*deltaNbkg);
   double aux = Nbkg*tau;
@@ -231,12 +232,12 @@ void loadFormatMaps(){
   m_Title["SMS_TChiWZ_SMS_300_290"] = "#tilde{#chi}^{0}_{2} #tilde{#chi}^{#pm}_{1} 300, 300, 290";
   m_Color["SMS_TChiWZ_SMS_300_290"] = 7072;
 
-  m_Title["T1bbbb_1500_SMS"] = "T1bbbb 1500";
-  m_Color["T1bbbb_1500_SMS"] = 7071;
-  m_Title["T1bbbb_1752_SMS"] = "T1bbbb 1752";
-  m_Color["T1bbbb_1752_SMS"] = 7041;
-  m_Title["T1bbbb_1900_SMS"] = "T1bbbb 1900";
-  m_Color["T1bbbb_1900_SMS"] = 7061;
+  m_Title["SMS_Gluinos_SMS_1000_900"] = "T1qqqq 1000 900";
+  m_Color["SMS_Gluinos_SMS_1000_900"] = 7071;
+  m_Title["SMS_Gluinos_SMS_1100_1000"] = "T1qqqq 1100 1000";
+  m_Color["SMS_Gluinos_SMS_1100_1000"] = 7041;
+  m_Title["SMS_Gluinos_SMS_1200_1100"] = "T1qqqq 1200 1100";
+  m_Color["SMS_Gluinos_SMS_1200_1100"] = 7061;
 
   m_Title["HF_Fakes"] = "HF leptons";
   m_Color["HF_Fakes"] = 7022;
@@ -471,7 +472,7 @@ void SortCutFlowsByLastBin(
 
 // ------------------ TH1 ------------------
 void DrawLog(TH1* h, const char* opt = "",
-             double fallbackMin = 1e-1, double rangeFactor = 1.1) {
+             double fallbackMin = 1e-1, double rangeFactor = 1.2) {
     if (!h) return;
     double max = h->GetMaximum();
     if (max <= 0) {
@@ -488,7 +489,7 @@ void DrawLog(TH1* h, const char* opt = "",
 
 // ------------------ TH2 ------------------
 void DrawLog(TH2* h, const char* opt = "",
-             double fallbackMin = 1e-1, double rangeFactor = 1.1) {
+             double fallbackMin = 1e-1, double rangeFactor = 1.2) {
     if (!h) return;
     double max = h->GetMaximum();
     if (max <= 0) {
@@ -505,7 +506,7 @@ void DrawLog(TH2* h, const char* opt = "",
 
 // ------------------ TEfficiency ------------------
 void DrawLog(TEfficiency* e, const char* opt = "",
-             double fallbackMin = 1e-1, double rangeFactor = 1.1) {
+             double fallbackMin = 1e-1, double rangeFactor = 1.2) {
     if (!e) return;
     double ymin = 1e30, ymax = -1e30;
     for (int i = 1; i <= e->GetTotalHistogram()->GetNbinsX(); ++i) {
@@ -529,7 +530,7 @@ void DrawLog(TEfficiency* e, const char* opt = "",
 
 // ------------------ TGraph / TGraphAsymmErrors ------------------
 void DrawLog(TGraph* g, const char* opt = "AP",
-             double fallbackMin = 1e-1, double rangeFactor = 1.1) {
+             double fallbackMin = 1e-1, double rangeFactor = 1.2) {
     if (!g) return;
     double ymin = 1e30, ymax = -1e30;
     for (int i = 0; i < g->GetN(); ++i) {
@@ -555,6 +556,6 @@ void DrawLog(TGraph* g, const char* opt = "AP",
 // ------------------ Smart Dispatcher ------------------
 template <typename T>
 void DrawLogSmart(T* obj, const char* opt = "",
-                  double fallbackMin = 1e-1, double rangeFactor = 1.1) {
+                  double fallbackMin = 1e-1, double rangeFactor = 1.2) {
     DrawLog(obj, opt, fallbackMin, rangeFactor);
 }

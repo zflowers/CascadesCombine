@@ -197,8 +197,9 @@ def prepare_run_and_stage_assets_copy(
     ]
     src_items = [
         "BuildFit.cpp",
-        "BuildFitInput.cpp",
         "SampleTool.cpp",
+        "PredefinedCutsBFI.cpp",
+        "UserCutsBFI.cpp",
     ]
 
     for item in include_items:
