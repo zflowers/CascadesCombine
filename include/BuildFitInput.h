@@ -72,6 +72,8 @@ class BuildFitInput{
         bool GetCutByName(const std::string& name, std::string& out);
         std::string GetCleaningCut();
         std::string GetdphiMETVCut();
+        std::string GetCleaningLEPCut();
+        std::string GetdphiMETVLEPCut();
 	std::string GetZstarCut();
 	std::string GetnoZstarCut();
 
