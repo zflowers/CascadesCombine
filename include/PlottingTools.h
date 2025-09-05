@@ -35,7 +35,9 @@ void Plot_Hist2D(TH2* h) {
     TCanvas* can = new TCanvas(("can_"+title).c_str(), ("can_"+title).c_str(), 700, 600);
     can->SetLeftMargin(0.15); can->SetRightMargin(0.18); can->SetBottomMargin(0.15);
     can->SetGridx(); can->SetGridy();
-    DrawLogSmart(h, "COLZ");
+    //DrawLogSmart(h, "COLZ");
+    h->SetMinimum(0.);
+    h->Draw("COLZ");
     h->GetXaxis()->CenterTitle(); h->GetYaxis()->CenterTitle();
     h->GetZaxis()->SetTitle(("N_{events} / "+std::to_string(int(lumi))+" fb^{-1}").c_str());
     TLatex l; l.SetTextFont(42); l.SetNDC();
@@ -556,13 +558,18 @@ void Plot_EventCount2D(TH2* h, const std::string &mode,
     for(int iy=1; iy<=h->GetNbinsY(); ++iy){
       for(int ix=1; ix<=h->GetNbinsX(); ++ix){
         double val = h->GetBinContent(ix, iy);
+        double val_err = h->GetBinError(ix, iy);
         double xlow = h->GetXaxis()->GetBinLowEdge(ix);
         double xup  = h->GetXaxis()->GetBinUpEdge(ix);
         double ylow = h->GetYaxis()->GetBinLowEdge(iy);
         double yup  = h->GetYaxis()->GetBinUpEdge(iy);
         double xc = 0.5*(xlow+xup);
         double yc = 0.5*(ylow+yup);
-        TString label = Form("%.3g", val);
+        TString label = "";
+        if(mode == "yield")
+          label = Form("%.3g #pm %.3g", val, val_err);
+        else
+          label = Form("%.3g", val);
 
         if(mode=="Zbi" && iy==totalRow){
           // Draw white box behind Total Bkg text
@@ -795,6 +802,7 @@ void MakeAndPlotCutflow2D(
                 }
             }
             h2->SetBinContent(ix+1, iy+1, val);
+            if(mode == "yield") h2->SetBinError(ix+1, iy+1, std::sqrt(val));
         }
     }
 
