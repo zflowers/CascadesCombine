@@ -565,6 +565,7 @@ void Plot_EventCount2D(TH2* h, const std::string &mode,
         double yup  = h->GetYaxis()->GetBinUpEdge(iy);
         double xc = 0.5*(xlow+xup);
         double yc = 0.5*(ylow+yup);
+        if(val < 1.e-5) { val = 0.; val_err = 0.; }
         TString label = "";
         if(mode == "yield")
           label = Form("%.3g #pm %.3g", val, val_err);
