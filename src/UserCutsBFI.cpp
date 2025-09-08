@@ -8,12 +8,26 @@
 ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<std::string, CutDef>& ValidCuts){
     std::map<std::string, CutDef> cuts;
 
-    CutDef cut_leadSjetPt;
-    cut_leadSjetPt.name = "leadSjet_pt_lt40";
-    cut_leadSjetPt.columns = {"PT_jet", "index_jet_S", "Njet_S"};
-    cut_leadSjetPt.expression =
+    CutDef cut_leadSjetPt30;
+    cut_leadSjetPt30.name = "leadSjet_pt_lt30";
+    cut_leadSjetPt30.columns = {"PT_jet", "index_jet_S", "Njet_S"};
+    cut_leadSjetPt30.expression =
+        "(Njet_S == 0) || (Njet_S > 0 && SafeIndex(PT_jet, SafeIndex(index_jet_S, 0, -1), -1.0) < 30)";
+    cuts[cut_leadSjetPt30.name] = cut_leadSjetPt30;
+
+    CutDef cut_leadSjetPt40;
+    cut_leadSjetPt40.name = "leadSjet_pt_lt40";
+    cut_leadSjetPt40.columns = {"PT_jet", "index_jet_S", "Njet_S"};
+    cut_leadSjetPt40.expression =
         "(Njet_S == 0) || (Njet_S > 0 && SafeIndex(PT_jet, SafeIndex(index_jet_S, 0, -1), -1.0) < 40)";
-    cuts[cut_leadSjetPt.name] = cut_leadSjetPt;
+    cuts[cut_leadSjetPt40.name] = cut_leadSjetPt40;
+
+    CutDef cut_leadSjetPt45;
+    cut_leadSjetPt45.name = "leadSjet_pt_lt45";
+    cut_leadSjetPt45.columns = {"PT_jet", "index_jet_S", "Njet_S"};
+    cut_leadSjetPt45.expression =
+        "(Njet_S == 0) || (Njet_S > 0 && SafeIndex(PT_jet, SafeIndex(index_jet_S, 0, -1), -1.0) < 45)";
+    cuts[cut_leadSjetPt45.name] = cut_leadSjetPt45;
 
     /*
     // Example 1: invariant mass of leading two jets -> M_jj (double)
