@@ -103,7 +103,7 @@ void BuildFit::BuildAsimovFit(JSONFactory* j, std::string signalPoint, std::stri
 	});
 
 	std::vector<std::string> binset = GetBinSet(j);
-	cb.cp().bin(binset).AddSyst(cb, "DummySys", "lnN", SystMap<>::init(1.10));
+	cb.cp().bin(binset).AddSyst(cb, "DummySys", "lnN", SystMap<>::init(1.01)); // 1%
       
 	//cb.PrintAll();
 	cb.WriteDatacard(datacard_dir+"/"+signalPoint+"/"+signalPoint+".txt");
