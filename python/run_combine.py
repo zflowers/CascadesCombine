@@ -550,7 +550,7 @@ def main(args, run_info, try_acquire_lock_or_exit):
         if lock:
             try:
                 lock.release()
-                print("[run_combine] Build/stage complete — lock released.", file=sys.__stdout__, flush=True)
+                print("[run_combine] Build/stage complete; lock released.", file=sys.__stdout__, flush=True)
             except Exception:
                 pass
 
@@ -640,8 +640,11 @@ def main(args, run_info, try_acquire_lock_or_exit):
         print(f"[run_combine] Yields for {bins_cfg}")
         print_events(flattened_json)
 
-        print("[run_combine] Collecting significances...", flush=True)
-        subprocess.run(["python3", "-u", "macro/CollectSignificance.py", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
+        try:
+            print("[run_combine] Collecting significances...", flush=True)
+            subprocess.run(["python3", "-u", "macro/CollectSignificance.py", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
+        except Exception: # typical failure is because a signal process has 0 events but that shouldn't crash things
+            pass
 
         plot_cmd = [
             "./"+exe_dir+"/PlotSignificances.x",
