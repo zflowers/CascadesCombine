@@ -93,7 +93,7 @@ double BinContentSafe(TH1* h, int bin){
 }
 
 double CalculateZbi(double Nsig, double Nbkg, double deltaNbkg){
-  if(deltaNbkg > 1) deltaNbkg /= 100; // assume user passed in percent rather than fraction
+  if(deltaNbkg >= 1.) deltaNbkg /= 100; // assume user passed in percent rather than fraction
   double Nobs = Nsig+Nbkg;
   double tau = 1./Nbkg/(deltaNbkg*deltaNbkg);
   double aux = Nbkg*tau;

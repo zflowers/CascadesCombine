@@ -229,7 +229,7 @@ int main(int argc, char* argv[]) {
     MakeAndPlotCutflow2D(cutflowMap, "GlobalCutflow", "yield", 1.0);
     MakeAndPlotCutflow2D(cutflowMap, "GlobalCutflow", "SoB",   1.0);
     MakeAndPlotCutflow2D(cutflowMap, "GlobalCutflow", "SoverSqrtB", 1.0);
-    MakeAndPlotCutflow2D(cutflowMap, "GlobalCutflow", "Zbi", 10.0); // 10% systematic
+    MakeAndPlotCutflow2D(cutflowMap, "GlobalCutflow", "Zbi", 1.0); // 1% systematic
 
     outFile->Close();
     inFile->Close();
