@@ -176,7 +176,7 @@ def prepare_run_and_stage_assets_copy(
       dict mapping keys like 'bins_cfg','hist_cfg','processes_cfg','exe_dir','configs_dir',...
     """
     run_dir = run_info["run_dir"]
-    for sub in ["exe", "configs", "datacards", "condor", "root", "plots", "include", "src"]:
+    for sub in ["exe", "configs", "datacards", "condor", "plots", "include", "src"]:
         os.makedirs(os.path.join(run_dir, sub), exist_ok=True)
     run_path = Path(run_dir)
     # directories to maintain inside run_dir
@@ -184,12 +184,11 @@ def prepare_run_and_stage_assets_copy(
     configs_dir = run_path / "configs"
     datacards_dir = run_path / "datacards"
     condor_dir = run_path / "condor"
-    root_dir = run_path / "root"
     plots_dir = run_path / "plots"
     include_dir = run_path / "include"
     src_dir = run_path / "src"
     combine_dir = run_path / "combine"
-    for d in (exe_dir, configs_dir, datacards_dir, condor_dir, root_dir, plots_dir, include_dir, src_dir):
+    for d in (exe_dir, configs_dir, datacards_dir, condor_dir, plots_dir, include_dir, src_dir):
         d.mkdir(parents=True, exist_ok=True)
 
     # -------------------------
@@ -256,7 +255,6 @@ def prepare_run_and_stage_assets_copy(
         "configs_dir": str(configs_dir),
         "datacards_dir": str(datacards_dir),
         "condor_dir": str(condor_dir),
-        "root_dir": str(root_dir),
         "plots_dir": str(plots_dir),
         "include_dir": str(include_dir),
         "src_dir": str(src_dir),
@@ -563,7 +561,6 @@ def main(args, run_info, try_acquire_lock_or_exit):
 
     # convenience local paths
     condor_dir = run_info.get("condor_dir")
-    root_dir = run_info.get("root_dir")
     plots_dir = run_info.get("plots_dir")
     configs_dir = run_info.get("configs_dir")
     exe_dir = run_info.get("exe_dir")

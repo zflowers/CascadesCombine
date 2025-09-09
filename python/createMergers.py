@@ -30,20 +30,16 @@ def write_master_hadd_script(run_dir):
     bin_names = extract_bin_names(run_dir)
     with open(master_script_path, "w") as f:
         f.write("#!/usr/bin/env bash\n")
-        f.write("# Auto-generated master hadd script\n\n")
-        # Call per-bin hadd scripts first
-        for bin_name in bin_names:
-            hadd_script = os.path.join(run_dir, "condor", bin_name, "haddROOTs.sh")
-            f.write(f"bash {hadd_script}\n")
+        f.write("# Auto-generated master hadd script\n")
         # Collect per-bin ROOT outputs
         per_bin_roots = [os.path.join(run_dir, "condor", bin_name, f"{bin_name}.root") for bin_name in bin_names]
-        f.write("\nexisting_roots=()\n")
+        f.write("existing_roots=()\n")
         f.write("for f in " + " ".join(per_bin_roots) + "; do\n")
         f.write("  if [ -f \"$f\" ]; then existing_roots+=(\"$f\"); fi\n")
         f.write("done\n\n")
         # Merge if at least one ROOT exists
         f.write("if [ ${#existing_roots[@]} -gt 0 ]; then\n")
-        f.write(f"  if ! hadd -f -n 10 {final_root} ${{existing_roots[@]}} > /dev/null 2>&1; then\n")
+        f.write(f"  if ! hadd -f {final_root} ${{existing_roots[@]}} > /dev/null 2>&1; then\n")
         f.write(f"    echo 'Error: hadd failed for {final_root}'\n")
         f.write("    exit 1\n")
         f.write("  fi\n")
