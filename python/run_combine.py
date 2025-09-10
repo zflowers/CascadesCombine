@@ -504,6 +504,8 @@ def main(args, run_info, try_acquire_lock_or_exit):
     processes_cfg = args.processes_cfg
     make_json = args.make_json
     make_root = args.make_root
+    if not make_json and not make_root:
+        make_json = True # if user passed neither option then make json
     if args.stress_test:
         print("[run_combine] Running stress test. Using stress yamls instead of loaded arg yamls", flush=True)
         bins_cfg = "config/bin_cfgs/bin_stress.yaml"
