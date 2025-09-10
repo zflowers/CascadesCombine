@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import os, sys, subprocess, argparse, re, shutil
+import os, sys, subprocess, argparse, re, shutil, time
 from pathlib import Path
 import importlib.util
 
@@ -317,15 +317,41 @@ def write_submit_file(
 
     # Submit if not dryrun
     if not dryrun:
-        proc = subprocess.run(
-            f"source /cvmfs/cms.cern.ch/cmsset_default.sh && condor_submit {submit_path.as_posix()}",
-            shell=True,
-            executable="/bin/bash",
-            capture_output=True,
-            text=True
-        )
-        if proc.returncode != 0:
-            print("condor_submit failed:", proc.stdout, proc.stderr)
+        max_retries = 3
+        attempt = 0
+        success = False
+        last_proc = None
+        
+        while attempt < max_retries and not success:
+            attempt += 1
+            proc = subprocess.run(
+                f"source /cvmfs/cms.cern.ch/cmsset_default.sh && condor_submit {submit_path.as_posix()}",
+                shell=True,
+                executable="/bin/bash",
+                capture_output=True,
+                text=True
+            )
+            last_proc = proc
+        
+            if proc.returncode == 0:
+                success = True
+            else:
+                stderr = proc.stderr.strip()
+                if "Unable to create user specific configuration file" in stderr:
+                    time.sleep(2)  # brief pause before retry
+                    continue
+                else:
+                    print("condor_submit failed:", proc.stdout, proc.stderr)
+                    break
+        
+        if not success:
+            if last_proc is not None:
+                print(f"condor_submit failed after {attempt} attempt(s). Last returncode: {last_proc.returncode}")
+                print("Last STDOUT:", last_proc.stdout)
+                print("Last STDERR:", last_proc.stderr)
+            else:
+                print("condor_submit failed: no subprocess result available.")
+
         else:
             stdout = proc.stdout.strip()
             cluster_id = None
@@ -336,6 +362,7 @@ def write_submit_file(
             match_schedd = re.search(r"Attempting to submit jobs to (\S+)", stdout)
             if match_schedd:
                 schedd = match_schedd.group(1)
+        
             if cluster_id:
                 record_path = bin_dir / "submitted_clusters.txt"
                 with open(record_path, "a") as f:
@@ -343,6 +370,7 @@ def write_submit_file(
                         f.write(f"{cluster_id} {schedd}\n")
                     else:
                         f.write(f"{cluster_id}\n")
+        
             print(f"[createJobs] Submitted bin {bin_name} ({len(jobs)} jobs)")
             if make_json:
                 write_merge_script(bin_name, bin_dir, json_dirname="json")
