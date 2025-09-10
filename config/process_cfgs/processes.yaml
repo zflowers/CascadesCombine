@@ -5,7 +5,6 @@ processes:
     - DY
     - ZInv
     - DBTB
-    - QCD
     - Wjets
 
   sig:
