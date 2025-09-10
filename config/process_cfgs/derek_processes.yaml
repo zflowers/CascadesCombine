@@ -1,0 +1,6 @@
+processes:
+  bkg:
+    - Wjets
+
+  sig:
+    - SMS_TChiWZ
