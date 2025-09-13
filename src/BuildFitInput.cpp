@@ -246,7 +246,7 @@ std::string BuildFitInput::BuildLeptonCut(const std::string& shorthand_in, const
     if(shorthand_in[0] == '#') return "";
     // maps
     std::map<std::string,int> qualMap   = {{"Gold",0}, {"Silver",1}, {"Bronze",2}};
-    std::map<std::string,int> chargeMap = {{"Pos",1}, {"Neg",0}};
+    std::map<std::string,int> chargeMap = {{"Pos",1}, {"Neg",-1}};
 
     // make a mutable copy
     std::string shorthand = shorthand_in;
@@ -329,16 +329,30 @@ std::string BuildFitInput::BuildLeptonCut(const std::string& shorthand_in, const
         return "(SUM(" + branch + "==" + std::to_string(val) + ")" + op + std::to_string(n) + ")";
     }
 
+    // helper to pick Nlep name depending on side requested
+    auto nlepVar = [&](){
+        if (effectiveSide == "a") return std::string("Nlep_a_LEP");
+        if (effectiveSide == "b") return std::string("Nlep_b_LEP");
+        return std::string("Nlep");
+    };
+    
+    // helper to pick branch name: side-specific otherwise _All
+    auto branchName = [&](const std::string &base){
+        return base + (effectiveSide.empty() ? "_All" : sideSuffix);
+    };
+    
     // 3) Handle "AllSS" (All Same-Sign Leptons)
     if (first == "AllSS") {
-        std::string branch = "Charge_lep" + sideSuffix;
-        return "((SUM(" + branch + "==1) == Nlep) || (SUM(" + branch + "==0) == Nlep))";
+        std::string branch = branchName("Charge_lep");      // Charge_lep_A / Charge_lep_B / Charge_lep_All
+        std::string nlep   = nlepVar();                    // Nlep_a_LEP / Nlep_b_LEP / Nlep
+        return "((SUM(" + branch + "==1) == " + nlep + ") || (SUM(" + branch + "==-1) == " + nlep + "))";
     }
-
+    
     // 4) Handle "AllSF" (All Same-Flavor Leptons)
     if (first == "AllSF") {
-        std::string branch = "Flavor_lep" + sideSuffix;
-        return "((SUM(" + branch + "==0) == Nlep) || (SUM(" + branch + "==1) == Nlep))";
+        std::string branch = branchName("Flavor_lep");      // Flavor_lep_A / Flavor_lep_B / Flavor_lep_All
+        std::string nlep   = nlepVar();
+        return "((SUM(" + branch + "==0) == " + nlep + ") || (SUM(" + branch + "==1) == " + nlep + "))";
     }
 
     // 5) pair counts (possibly with extra pair-level cuts)
