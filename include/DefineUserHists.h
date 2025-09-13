@@ -4,6 +4,161 @@
 // User existing HistDef type
 static std::vector<HistDef> loadHistogramsUser(ROOT::RDF::RNode &node) {
     std::vector<HistDef> hdefs;
+    //node = node
+    //    .Define("My_p4_lep0_a", [](const std::vector<double> &pt,
+    //                          const std::vector<double> &eta,
+    //                          const std::vector<double> &phi,
+    //                          const std::vector<double> &mass,
+    //                          const std::vector<int> &index_lep_a_LEP,
+    //                          const int &Nlep) {
+    //            // Construct TLV for lepton 0 on A side if present; otherwise returns a zero TLV.
+    //            TLorentzVector v;
+    //            if (index_lep_a_LEP.size() >= 1 && Nlep > 2) {
+    //                // safe access to [index_lep_a_LEP[0]]
+    //                v.SetPtEtaPhiM(pt[index_lep_a_LEP[0]], eta[index_lep_a_LEP[0]], phi[index_lep_a_LEP[0]], mass[index_lep_a_LEP[0]]);
+    //            }
+    //            else if (Nlep == 2) {
+    //                // safe access to [0]
+    //                v.SetPtEtaPhiM(pt[0], eta[0], phi[0], mass[0]);
+    //            }
+    //            return v;
+    //        }, {"PT_lep","Eta_lep","Phi_lep","M_lep","index_lep_a_LEP","Nlep"})
+    //    .Define("My_p4_lep1_a", [](const std::vector<double> &pt,
+    //                          const std::vector<double> &eta,
+    //                          const std::vector<double> &phi,
+    //                          const std::vector<double> &mass,
+    //                          const std::vector<int> &index_lep_a_LEP,
+    //                          const int &Nlep) {
+    //            // Construct TLV for lepton 1 on A side if present; otherwise returns a zero TLV.
+    //            TLorentzVector v;
+    //            if (index_lep_a_LEP.size() >= 2 && Nlep > 2) {
+    //                // safe access to [index_lep_a_LEP[1]]
+    //                v.SetPtEtaPhiM(pt[index_lep_a_LEP[1]], eta[index_lep_a_LEP[1]], phi[index_lep_a_LEP[1]], mass[index_lep_a_LEP[1]]);
+    //            }
+    //            else if (Nlep == 2) {
+    //                // safe access to [1]
+    //                v.SetPtEtaPhiM(pt[1], eta[1], phi[1], mass[1]);
+    //            }
+    //            return v;
+    //        }, {"PT_lep","Eta_lep","Phi_lep","M_lep","index_lep_a_LEP","Nlep"})
+    //    .Define("Q_lep0_a", [](const std::vector<int> &charge,
+    //                           const std::vector<int> &index_lep_a_LEP,
+    //                           const int &Nlep){
+    //            if(Nlep > 2)       return index_lep_a_LEP.size() >= 1 ? charge[index_lep_a_LEP[0]] : 0;
+    //            else if(Nlep == 2) return charge[0];
+    //            else return 0;
+    //        }, {"Charge_lep","index_lep_a_LEP","Nlep"})
+    //    .Define("Q_lep1_a", [](const std::vector<int> &charge,
+    //                           const std::vector<int> &index_lep_a_LEP,
+    //                           const int &Nlep){
+    //            if(Nlep > 2)       return index_lep_a_LEP.size() >= 2 ? charge[index_lep_a_LEP[1]] : 0;
+    //            else if(Nlep == 2) return charge[1];
+    //            else return 0;
+    //        }, {"Charge_lep","index_lep_a_LEP","Nlep"})
+    //    .Define("F_lep0_a", [](const std::vector<int> &pdgid,
+    //                           const std::vector<int> &index_lep_a_LEP,
+    //                           const int &Nlep){
+    //            if (index_lep_a_LEP.size() < 1 && Nlep > 2) return 0;
+    //            int id = 0;
+    //            if (Nlep > 2) id = std::abs(pdgid[index_lep_a_LEP[0]]);
+    //            else if (Nlep == 2) id = std::abs(pdgid[0]);
+    //            return (id == 11 ? 1 : (id == 13 ? 2 : 0));
+    //        }, {"PDGID_lep","index_lep_a_LEP","Nlep"})
+    //    .Define("F_lep1_a", [](const std::vector<int> &pdgid,
+    //                           const std::vector<int> &index_lep_a_LEP,
+    //                           const int &Nlep){
+    //            if (index_lep_a_LEP.size() < 2 && Nlep > 2) return 0;
+    //            int id = 0;
+    //            if (Nlep > 2) id = std::abs(pdgid[index_lep_a_LEP[1]]);
+    //            else if (Nlep == 2) id = std::abs(pdgid[1]);
+    //            return (id == 11 ? 1 : (id == 13 ? 2 : 0));
+    //        }, {"PDGID_lep","index_lep_a_LEP","Nlep"})
+    //    .Define("TLV_Cand", [](const TLorentzVector &l0,
+    //                           const TLorentzVector &l1
+    //                          //, int q0, int q1, int f0, int f1
+    //                          ) {
+    //            // Only build TLV if OSSF
+    //            //if (f0 != 0 && f0 == f1 && q0 * q1 == -1) {
+    //            //    return l0 + l1;
+    //            //}
+    //            //return TLorentzVector{}; // return zero TLV otherwise
+    //            return l0 + l1;
+    //        }, {"My_p4_lep0_a","My_p4_lep1_a"
+    //           //,"Q_lep0_a","Q_lep1_a","F_lep0_a","F_lep1_a"
+    //           })
+    //    .Define("HasCand", [](const TLorentzVector &cand){
+    //            return cand.E() > 0.0;  // nonzero candidate
+    //        }, {"TLV_Cand"})
+    //    .Define("CandBetaZLab", [](const TLorentzVector &Cand){
+    //            return (Cand.E() != 0.0) ? Cand.Pz() / Cand.E() : 0.0;
+    //        }, {"TLV_Cand"})
+    //    .Define("CandRapidityLab", [](const TLorentzVector &Cand){
+    //            return Cand.Rapidity();
+    //        }, {"TLV_Cand"})
+    //    .Define("CandCosDecayAngleLab",
+    //        [](const TLorentzVector &cand,
+    //           const TLorentzVector &l0,
+    //           const TLorentzVector &l1,
+    //           int q0, int q1) -> double
+    //        {
+    //            // choose the positively charged child TLV (prefer l0 if both >0, fallback to l1)
+    //            TLorentzVector child = TLorentzVector{};
+    //            if (q0 > 0) child = l0;
+    //            else if (q1 > 0) child = l1;
+    //            else return -2.; // no positively charged child -> single lep
+    //    
+    //            // safety: candidate must have nonzero energy (otherwise boost undefined)
+    //            if (cand.E() == 0.0) return -2.;
+    //    
+    //            TVector3 boost = cand.BoostVector();
+    //    
+    //            // boost the child into the candidate rest frame
+    //            child.Boost(-boost);
+    //    
+    //            TVector3 childVec = child.Vect();
+    //            if (childVec.Mag() == 0.0 || boost.Mag() == 0.0) return -2.;
+    //    
+    //            return fabs(childVec.Unit().Dot(boost.Unit()));
+    //        },
+    //        {"TLV_Cand", "My_p4_lep0_a", "My_p4_lep1_a", "Q_lep0_a", "Q_lep1_a"})
+    //;
+    //HistDef h_CandCosDecayAngleLab_CandBetaZLab;
+    //h_CandCosDecayAngleLab_CandBetaZLab.name = "CandCosDecayAngleLab_vs_CandBetaZLab";
+    //h_CandCosDecayAngleLab_CandBetaZLab.type = "2D";
+    //h_CandCosDecayAngleLab_CandBetaZLab.expr = "CandCosDecayAngleLab";
+    //h_CandCosDecayAngleLab_CandBetaZLab.yexpr = "CandBetaZLab";
+    //h_CandCosDecayAngleLab_CandBetaZLab.nbins = 64;
+    //h_CandCosDecayAngleLab_CandBetaZLab.xmin = 0;
+    //h_CandCosDecayAngleLab_CandBetaZLab.xmax = 1;
+    //h_CandCosDecayAngleLab_CandBetaZLab.x_title = "cos#theta Z^{*}";
+    //h_CandCosDecayAngleLab_CandBetaZLab.nybins = 64;
+    //h_CandCosDecayAngleLab_CandBetaZLab.ymin = 0;
+    //h_CandCosDecayAngleLab_CandBetaZLab.ymax = 1;
+    //h_CandCosDecayAngleLab_CandBetaZLab.y_title = "#beta Z^{*}";
+    //h_CandCosDecayAngleLab_CandBetaZLab.cuts = {"HasCand"};
+    //h_CandCosDecayAngleLab_CandBetaZLab.lepCuts = {};
+    //h_CandCosDecayAngleLab_CandBetaZLab.predefCuts = {};
+    //h_CandCosDecayAngleLab_CandBetaZLab.userCuts = {};
+    //hdefs.push_back(h_CandCosDecayAngleLab_CandBetaZLab);
+
+    //HistDef h_CandCosDecayAngleLab_CandRapidityLab;
+    //h_CandCosDecayAngleLab_CandRapidityLab.name = "CandCosDecayAngleLab_vs_CandRapidityLab";
+    //h_CandCosDecayAngleLab_CandRapidityLab.type = "2D";
+    //h_CandCosDecayAngleLab_CandRapidityLab.expr = "CandCosDecayAngleLab";
+    //h_CandCosDecayAngleLab_CandRapidityLab.yexpr = "CandRapidityLab";
+    //h_CandCosDecayAngleLab_CandRapidityLab.nbins = 64;
+    //h_CandCosDecayAngleLab_CandRapidityLab.xmin = 0;
+    //h_CandCosDecayAngleLab_CandRapidityLab.xmax = 1;
+    //h_CandCosDecayAngleLab_CandRapidityLab.x_title = "cos#theta Z^{*}";
+    //h_CandCosDecayAngleLab_CandRapidityLab.nybins = 64;
+    //h_CandCosDecayAngleLab_CandRapidityLab.ymin = -2.5;
+    //h_CandCosDecayAngleLab_CandRapidityLab.ymax = 2.5;
+    //h_CandCosDecayAngleLab_CandRapidityLab.y_title = "Rapidity Z^{*}";
+    //h_CandCosDecayAngleLab_CandRapidityLab.cuts = {"HasCand"};
+    //h_CandCosDecayAngleLab_CandRapidityLab.lepCuts = {};
+    //h_CandCosDecayAngleLab_CandRapidityLab.predefCuts = {};
+    //h_CandCosDecayAngleLab_CandRapidityLab.userCuts = {};
+    //hdefs.push_back(h_CandCosDecayAngleLab_CandRapidityLab);
 
     // Examples below \/
     //// ---------------------------------------------------------------------
