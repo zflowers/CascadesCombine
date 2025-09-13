@@ -536,7 +536,7 @@ void Plot_EventCount2D(TH2* h, const std::string &mode,
     TCanvas* can = new TCanvas(("can_"+std::string(h->GetName())).c_str(), "", 1200, 700);
     can->SetLeftMargin(0.13);
     can->SetRightMargin(0.13);
-    can->SetBottomMargin(0.06);
+    can->SetBottomMargin(0.16);
     can->SetTopMargin(0.06);
     can->SetGridx(); can->SetGridy();
     if(mode=="yield") can->SetLogz();
@@ -549,9 +549,9 @@ void Plot_EventCount2D(TH2* h, const std::string &mode,
     TLatex tex;
     tex.SetTextFont(42);
     tex.SetTextAlign(22);
-    float textSize = 0.045;
-    if(h->GetNbinsX()>25) textSize*=0.6;
-    if(h->GetNbinsY()>25) textSize*=0.8;
+    float textSize = 0.035; // 0.045
+    if(h->GetNbinsX()>15) textSize*=0.6;
+    if(h->GetNbinsY()>15) textSize*=0.8;
     tex.SetTextSize(textSize);
 
     // Draw numbers
@@ -567,9 +567,9 @@ void Plot_EventCount2D(TH2* h, const std::string &mode,
         double yc = 0.5*(ylow+yup);
         if(val < 1.e-5) { val = 0.; val_err = 0.; }
         TString label = "";
-        if(mode == "yield")
-          label = Form("%.3g #pm %.3g", val, val_err);
-        else
+        //if(mode == "yield")
+        //  label = Form("%.3g #pm %.3g", val, val_err);
+        //else
           label = Form("%.3g", val);
 
         if(mode=="Zbi" && iy==totalRow){
@@ -595,7 +595,7 @@ void Plot_EventCount2D(TH2* h, const std::string &mode,
     // Re-apply axis labels & formatting
     h->GetXaxis()->CenterTitle();
     h->GetXaxis()->SetTitleFont(42); h->GetXaxis()->SetTitleSize(0.06); h->GetXaxis()->SetTitleOffset(1.06);
-    h->GetXaxis()->SetLabelFont(42); h->GetXaxis()->SetLabelSize(0.045);
+    h->GetXaxis()->SetLabelFont(42); h->GetXaxis()->SetLabelSize(0.035);
     h->GetYaxis()->CenterTitle();
     h->GetYaxis()->SetTitleFont(42); h->GetYaxis()->SetTitleSize(0.06); h->GetYaxis()->SetTitleOffset(1.1);
     h->GetYaxis()->SetLabelFont(42); h->GetYaxis()->SetLabelSize(0.035);
@@ -733,8 +733,8 @@ void MakeAndPlotCutflow2D(
 
     std::vector<int> binOrder(nx);
     for (int i = 0; i < nx; ++i) binOrder[i] = i;
-    std::sort(binOrder.begin(), binOrder.end(),
-        [&](int A, int B){ return totalBkg[A] > totalBkg[B]; });
+    //std::sort(binOrder.begin(), binOrder.end(),
+    //    [&](int A, int B){ return totalBkg[A] > totalBkg[B]; });
 
     // --- 7) build Y-order depending on mode ---
     std::vector<std::string> yOrder;
