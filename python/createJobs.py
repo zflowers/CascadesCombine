@@ -337,7 +337,8 @@ def write_submit_file(
                 success = True
             else:
                 stderr = proc.stderr.strip()
-                if "Unable to create user specific configuration file" in stderr:
+                stdout = proc.stdout.strip()
+                if "Unable" in stderr or "Unable" in stdout:
                     time.sleep(2)  # brief pause before retry
                     continue
                 else:
