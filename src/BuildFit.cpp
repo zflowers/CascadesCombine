@@ -82,13 +82,13 @@ std::vector<std::string> BuildFit::GetBinSet( JSONFactory* j){
 
 void BuildFit::BuildAsimovFit(JSONFactory* j, std::string signalPoint, std::string datacard_dir){
 	ch::Categories cats = BuildCats(j);
-	std::cout<<"building obs rates \n";
+	//std::cout<<"building obs rates \n";
 	std::map<std::string, float> obs_rates = BuildAsimovData(j);
-	std::cout<<"Getting process list\n";
+	//std::cout<<"Getting process list\n";
 	std::vector<std::string> bkgprocs = GetBkgProcs(j);
-	std::cout<<"Parse Signal point\n";
+	//std::cout<<"Parse Signal point\n";
 	std::vector<std::string> signalDetails = ExtractSignalDetails( signalPoint);
-	std::cout<<"Build cb objects\n";
+	//std::cout<<"Build cb objects\n";
 	//cb.SetVerbosity(3);
 	cb.AddObservations({"*"}, {signalDetails[0]}, {"13.6TeV"}, {signalDetails[1]}, cats);
 	cb.AddProcesses(   {"*"}, {signalDetails[0]}, {"13.6TeV"}, {signalDetails[1]}, bkgprocs, cats, false);
