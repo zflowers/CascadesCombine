@@ -549,28 +549,37 @@ void Plot_EventCount2D(TH2* h, const std::string &mode,
     TLatex tex;
     tex.SetTextFont(42);
     tex.SetTextAlign(22);
-    float textSize = 0.035; // 0.045
-    if(h->GetNbinsX()>15) textSize*=0.6;
-    if(h->GetNbinsY()>15) textSize*=0.8;
+    float textSize = 0.04;
+    if (h->GetNbinsX() > 10) textSize = textSize - 0.0016f * (h->GetNbinsX()- 10);
+    if (textSize < 0.015) textSize = 0.015;
     tex.SetTextSize(textSize);
 
     // Draw numbers
     for(int iy=1; iy<=h->GetNbinsY(); ++iy){
       for(int ix=1; ix<=h->GetNbinsX(); ++ix){
         double val = h->GetBinContent(ix, iy);
-        double val_err = h->GetBinError(ix, iy);
+        //double val_err = h->GetBinError(ix, iy);
         double xlow = h->GetXaxis()->GetBinLowEdge(ix);
         double xup  = h->GetXaxis()->GetBinUpEdge(ix);
         double ylow = h->GetYaxis()->GetBinLowEdge(iy);
         double yup  = h->GetYaxis()->GetBinUpEdge(iy);
         double xc = 0.5*(xlow+xup);
         double yc = 0.5*(ylow+yup);
-        if(val < 1.e-5) { val = 0.; val_err = 0.; }
+        if(val < 1.e-5){
+            val = 0.;
+            //val_err = 0.;
+        }
         TString label = "";
-        //if(mode == "yield")
-        //  label = Form("%.3g #pm %.3g", val, val_err);
-        //else
-          label = Form("%.3g", val);
+        if(val < 1)
+          //if(mode == "yield")
+          //  label = Form("%.3g #pm %.3g", val, val_err);
+          //else
+            label = Form("%.2g", val);
+        else
+          //if(mode == "yield")
+          //  label = Form("%.3g #pm %.3g", val, val_err);
+          //else
+            label = Form("%.3g", val);
 
         if(mode=="Zbi" && iy==totalRow){
           // Draw white box behind Total Bkg text
@@ -595,7 +604,12 @@ void Plot_EventCount2D(TH2* h, const std::string &mode,
     // Re-apply axis labels & formatting
     h->GetXaxis()->CenterTitle();
     h->GetXaxis()->SetTitleFont(42); h->GetXaxis()->SetTitleSize(0.06); h->GetXaxis()->SetTitleOffset(1.06);
-    h->GetXaxis()->SetLabelFont(42); h->GetXaxis()->SetLabelSize(0.035);
+    h->GetXaxis()->SetLabelFont(42);
+
+    float XLabelSize = 0.045;
+    if (h->GetNbinsX() > 10) XLabelSize = XLabelSize - 0.001f * (h->GetNbinsX() - 10);
+    if (XLabelSize < 0.015) XLabelSize = 0.015;
+    h->GetXaxis()->SetLabelSize(XLabelSize);
     h->GetYaxis()->CenterTitle();
     h->GetYaxis()->SetTitleFont(42); h->GetYaxis()->SetTitleSize(0.06); h->GetYaxis()->SetTitleOffset(1.1);
     h->GetYaxis()->SetLabelFont(42); h->GetYaxis()->SetLabelSize(0.035);
