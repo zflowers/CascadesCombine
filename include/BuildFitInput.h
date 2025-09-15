@@ -76,6 +76,7 @@ class BuildFitInput{
         std::string GetdphiMETVLEPCut();
 	std::string GetZstarCut();
 	std::string GetnoZstarCut();
+        std::string GetMinMassCut();
 
     	std::map<std::string,std::string> userMacros = {
             {"MAX",       "ROOT::VecOps::Max"},       // Maximum value in a vector
