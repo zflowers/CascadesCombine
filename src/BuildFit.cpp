@@ -10,6 +10,7 @@ ch::Categories BuildFit::BuildCats(JSONFactory* j){
 	}
 	return cats;
 }
+
 std::map<std::string, float> BuildFit::BuildAsimovData(JSONFactory* j){
 
 	std::map<std::string, float> obs_rates{};
@@ -37,6 +38,7 @@ std::map<std::string, float> BuildFit::BuildAsimovData(JSONFactory* j){
 	}
 	return obs_rates;	
 }
+
 std::vector<std::string> BuildFit::GetBkgProcs(JSONFactory* j){
 	std::vector<std::string> bkgprocs{};
 
@@ -55,6 +57,7 @@ std::vector<std::string> BuildFit::GetBkgProcs(JSONFactory* j){
 	}
 	return bkgprocs;
 }
+
 std::vector<std::string> BuildFit::ExtractSignalDetails( std::string signalPoint){
 
 	std::vector<std::string> splitPoint = BFTool::SplitString( signalPoint, "_");
@@ -70,6 +73,7 @@ std::vector<std::string> BuildFit::ExtractSignalDetails( std::string signalPoint
 	return signalDetails;
 
 }
+
 std::vector<std::string> BuildFit::GetBinSet( JSONFactory* j){
 	std::vector<std::string> bins{};
         for (json::iterator it = j->j.begin(); it != j->j.end(); ++it) {
@@ -107,5 +111,4 @@ void BuildFit::BuildAsimovFit(JSONFactory* j, std::string signalPoint, std::stri
       
 	//cb.PrintAll();
 	cb.WriteDatacard(datacard_dir+"/"+signalPoint+"/"+signalPoint+".txt");
-
 }	

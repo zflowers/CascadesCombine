@@ -31,42 +31,42 @@
 typedef std::vector<std::string> stringlist;
 
 class Process{
-	
-	public: 
-	std::string procname{};
-	long long unsigned int nevents{};
-	double wnevents{};
-	double staterror{};
+    
+    public: 
+    std::string procname{};
+    long long unsigned int nevents{};
+    double wnevents{};
+    double staterror{};
 
-	Process(std::string name, long long unsigned int n, double wn, double err) :procname(name), nevents(n), wnevents(wn), staterror(err){}
-	//assume it is initialized from 0
-	void Add(Process* p){
-		nevents += p->nevents;
-		wnevents += p->wnevents;
-		staterror += p->staterror * p->staterror;
-	}
-	void FixError(){
-		staterror = std::sqrt(staterror);
-	}
+    Process(std::string name, long long unsigned int n, double wn, double err) :procname(name), nevents(n), wnevents(wn), staterror(err){}
+    //assume it is initialized from 0
+    void Add(Process* p){
+        nevents += p->nevents;
+        wnevents += p->wnevents;
+        staterror += p->staterror * p->staterror;
+    }
+    void FixError(){
+        staterror = std::sqrt(staterror);
+    }
 };
 class Bin{
-	
-	public:
-	std::string binname{};
-	std::map<std::string, Process*> bkgProcs{};
-	std::map<std::string, Process*> combinedProcs{};
-	std::map<std::string, Process*> signals{};
-	std::pair<std::string, Process*> totalBkg{};
+    
+    public:
+    std::string binname{};
+    std::map<std::string, Process*> bkgProcs{};
+    std::map<std::string, Process*> combinedProcs{};
+    std::map<std::string, Process*> signals{};
+    std::pair<std::string, Process*> totalBkg{};
 
 };
 
 class BFTool{
 
-	public:
-	static std::vector<std::string> SplitString(const std::string& str,const std::string& delimiter);
-	static std::string GetSignalTokensCascades(const std::string& input);
-	static stringlist GetSignalTokensSMS(const std::string& input);
-	static bool  ContainsAnySubstring(const std::string& mainString, const std::vector<std::string>& substrings);
+    public:
+    static std::vector<std::string> SplitString(const std::string& str,const std::string& delimiter);
+    static std::string GetSignalTokensCascades(const std::string& input);
+    static stringlist GetSignalTokensSMS(const std::string& input);
+    static bool  ContainsAnySubstring(const std::string& mainString, const std::vector<std::string>& substrings);
         static stringlist filterSignalsSMS;
         static void SetFilterSignalsSMS(const stringlist& filters);
         static stringlist GetFilterSignalsSMS();
@@ -184,7 +184,7 @@ inline std::string BFTool::GetSignalTokensCascades(const std::string& input ){
 
 inline bool BFTool::ContainsAnySubstring(const std::string& mainString, const std::vector<std::string>& substrings) {
     for (const std::string& sub : substrings) {
-	//std::cout<<"comparing string: "<< mainString <<", "<<sub<<"\n";
+    //std::cout<<"comparing string: "<< mainString <<", "<<sub<<"\n";
         if (mainString.find(sub) != std::string::npos) {
             // Substring found
             return true; 

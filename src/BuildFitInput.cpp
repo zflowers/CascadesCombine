@@ -14,9 +14,7 @@ void BuildFitInput::LoadBkg_KeyValue(const std::string& key, const stringlist& b
             .Define("weight_scaled", [Lumi](double w){ return w * Lumi; }, {"weight"})
             .Define("weight_sq_scaled", [Lumi](double w2){ return w2 * Lumi * Lumi; }, {"weight2"});
 
-
         // Define lepton pair counts for all sides
-        //auto df_with_lep = df_scaled;  // debug temp
         auto df_with_lep = DefineLeptonPairCounts(df_scaled, "");  // all
         df_with_lep = DefineLeptonPairCounts(df_with_lep, "A");    // side A
         df_with_lep = DefineLeptonPairCounts(df_with_lep, "B");    // side B
