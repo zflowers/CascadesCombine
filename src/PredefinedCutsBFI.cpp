@@ -50,3 +50,9 @@ std::string BuildFitInput::GetdphiMETVLEPCut() {
 }
 REGISTER_CUT(BuildFitInput, GetdphiMETVLEPCut, "dphiMETV_LEP");
 
+// --- min mass cut ---
+REGISTER_CUT(BuildFitInput, GetMinMassCut, "MinMassCut");
+std::string BuildFitInput::GetMinMassCut() {
+   return "((Nlep >= 4 && ((Nlep_b_LEP < 2 || MVb_LEP > 4) && (Nlep_b_LEP != 1 || MVa_LEP > 4)))"
+          "|| (Nlep == 3 && (MVa_LEP > 4)))";
+}
