@@ -10,12 +10,16 @@ echo "[launchImpacts] Using datacard directory: $dcdir"
 
 # Run Impacts for each workspace
 for WS in "${dcdir}"/*/*_workspace.root; do
-    echo "[launchImpacts] Running Impacts for ${WS}"
+    WSDIR="$(dirname "$WS")"
+    WSFILE="$(basename "$WS")"
+    echo "[launchImpacts] Running Impacts in $WSDIR for $WSFILE"
+    pushd "$WSDIR" > /dev/null || exit 1
     combineTool.py \
       -M Impacts \
-      -d "${WS}" \
+      -d "$WSFILE" \
       -m 125 \
       --doInitialFit
       #--robustFit 1 \
+    popd > /dev/null || exit 1
 done
 #combineTool.py -M Impacts -d workspace.root -m 5000325 --input-file ../ --job-mode connect --sub-opts='+ProjectName="cms.org.ku" \n request_memory = 8 GB \n' 
