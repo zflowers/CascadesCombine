@@ -21,6 +21,8 @@ def parse_args():
                    help="Generate JSON outputs")
     p.add_argument("--make-root", action="store_true",
                    help="Generate ROOT outputs")
+    p.add_argument("--make-impacts", action="store_true",
+                   help="Generate Impacts")
     p.add_argument("--lumi", dest="lumi", type=str, default="400.0",
                    help="Lumi to scale everything to (default is 400.0)")
     p.add_argument("--run-name", dest="run_name", type=str, default=None,
@@ -176,11 +178,12 @@ def prepare_run_and_stage_assets_copy(
       dict mapping keys like 'bins_cfg','hist_cfg','processes_cfg','exe_dir','configs_dir',...
     """
     run_dir = run_info["run_dir"]
-    for sub in ["exe", "configs", "datacards", "condor", "plots", "include", "src"]:
+    for sub in ["exe", "configs", "datacards", "condor", "plots", "include", "src", "macro"]:
         os.makedirs(os.path.join(run_dir, sub), exist_ok=True)
     run_path = Path(run_dir)
     # directories to maintain inside run_dir
     exe_dir = run_path / "exe"
+    macro_dir = run_path / "macro"
     configs_dir = run_path / "configs"
     datacards_dir = run_path / "datacards"
     condor_dir = run_path / "condor"
@@ -188,7 +191,7 @@ def prepare_run_and_stage_assets_copy(
     include_dir = run_path / "include"
     src_dir = run_path / "src"
     combine_dir = run_path / "combine"
-    for d in (exe_dir, configs_dir, datacards_dir, condor_dir, plots_dir, include_dir, src_dir):
+    for d in (exe_dir, configs_dir, datacards_dir, condor_dir, plots_dir, include_dir, src_dir, macro_dir):
         d.mkdir(parents=True, exist_ok=True)
 
     # -------------------------
@@ -215,7 +218,9 @@ def prepare_run_and_stage_assets_copy(
     print(f"[run_combine] Copied executables to {str(exe_dir)}", flush=True)
 
     # -------------------------
-    # 3) Copy include_items into run_dir/include/ and src_items into run_dir/src/
+    # 3) Copy include_items into run_dir/include/
+    #    and src_items into run_dir/src/
+    #    and macro_items into run_dir/macro/
     #    (items may be files or directories; directories are copied recursively preserving basename)
     # -------------------------
     include_items = [
@@ -226,6 +231,12 @@ def prepare_run_and_stage_assets_copy(
         "SampleTool.cpp",
         "PredefinedCutsBFI.cpp",
         "UserCutsBFI.cpp",
+    ]
+    macro_items = [
+        "CollectSignificance.py",
+        "launchCombine.sh",
+        "launchT2W.sh",
+        "launchImpacts.sh",
     ]
 
     for item in include_items:
@@ -246,6 +257,15 @@ def prepare_run_and_stage_assets_copy(
         _copy_file(p, dst)
         print(f"[run_combine] Copied src file {p} -> {dst}", flush=True)
 
+    for item in macro_items:
+        p = Path(Path("macro") / item)
+        if not p.exists():
+            print(f"[run_combine] WARNING: macro item '{item}' not found, skipping.", file=os.sys.stderr, flush=True)
+            continue
+        dst = macro_dir / p.name
+        _copy_file(p, dst)
+        print(f"[run_combine] Copied macro file {p} -> {dst}", flush=True)
+
     # -------------------------
     # 5) Return mapping for use by the workflow
     # -------------------------
@@ -258,6 +278,7 @@ def prepare_run_and_stage_assets_copy(
         "plots_dir": str(plots_dir),
         "include_dir": str(include_dir),
         "src_dir": str(src_dir),
+        "macro_dir": str(macro_dir),
         "combine": str(combine_dir),
         "debug_log": str(run_path / "debug_run_combine.debug"),
         "bins_cfg": str(config_bin_path),
@@ -504,6 +525,7 @@ def main(args, run_info, try_acquire_lock_or_exit):
     processes_cfg = args.processes_cfg
     make_json = args.make_json
     make_root = args.make_root
+    make_impacts = args.make_impacts
     if not make_json and not make_root:
         make_json = True # if user passed neither option then make json
     if args.stress_test:
@@ -529,7 +551,7 @@ def main(args, run_info, try_acquire_lock_or_exit):
         clean_binaries()
         build_binaries()
 
-        # 2) Stage files into the run directory (configs, exe, src, include, condor, plots, root, etc.)
+        # 2) Stage files into the run directory (configs, exe, src, include, condor, plots, macro, etc.)
         run_dir_map = prepare_run_and_stage_assets_copy(run_info, bins_cfg, processes_cfg, hist_cfg)
         # merge staged mapping into run_info so downstream code can use run_info everywhere
         run_info.update(run_dir_map)
@@ -566,6 +588,7 @@ def main(args, run_info, try_acquire_lock_or_exit):
     plots_dir = run_info.get("plots_dir")
     configs_dir = run_info.get("configs_dir")
     exe_dir = run_info.get("exe_dir")
+    macro_dir = run_info.get("macro_dir")
 
     # 3) Submit jobs (give submit_jobs the run-local condor dir so everything stays inside the run)
     print("[run_combine] Submitting jobs...", flush=True)
@@ -626,25 +649,28 @@ def main(args, run_info, try_acquire_lock_or_exit):
         print("[run_combine] Plotting histograms with command:", " ".join(plot_cmd), flush=True)
         subprocess.run(plot_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
-    # 9) BF + combine + significances + plot-significances
     if make_json:
         flattened_json = get_flattened_json_path(run_dir=run_dir)
         output_dir = run_info["datacards_dir"]
+        # 9) BF
         print(f"[run_combine] Running BF.x with input {flattened_json} & output {output_dir}", flush=True)
         subprocess.run(["./"+exe_dir+"/BF.x", flattened_json, output_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
 
+        # 10) combine
         print("[run_combine] Launching combine jobs...", flush=True)
-        subprocess.run(["bash", "macro/launchCombine.sh", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
+        subprocess.run(["bash", macro_dir+"/launchCombine.sh", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
 
+        # 11) significances
         print(f"[run_combine] Yields for {bins_cfg}")
         print_events(flattened_json)
 
         try:
             print("[run_combine] Collecting significances...", flush=True)
-            subprocess.run(["python3", "-u", "macro/CollectSignificance.py", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
+            subprocess.run(["python3", "-u", macro_dir+"/CollectSignificance.py", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
         except Exception: # typical failure is because a signal process has 0 events but that shouldn't crash things
             pass
 
+        # 12) plot significances
         plot_cmd = [
             "./"+exe_dir+"/PlotSignificances.x",
             "-i", run_dir+"/Significance_datacards.txt",
@@ -652,6 +678,27 @@ def main(args, run_info, try_acquire_lock_or_exit):
         ]
         print("[run_combine] Plotting significances with command:", " ".join(plot_cmd), flush=True)
         subprocess.run(plot_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
+
+        if make_impacts:
+            # 13) T2W
+            T2W_cmd = [
+                "bash",
+                macro_dir+"/launchT2W.sh",
+                output_dir,
+                run_dir
+            ]
+            print("[run_combine] Running T2W with command:", " ".join(T2W_cmd), flush=True)
+            subprocess.run(T2W_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
+
+            # 14) Impacts
+            impacts_cmd = [
+                "bash",
+                macro_dir+"/launchImpacts.sh",
+                output_dir,
+                run_dir
+            ]
+            print("[run_combine] Running impacts with command:", " ".join(impacts_cmd), flush=True)
+            subprocess.run(impacts_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
     print("[run_combine] All steps completed.", flush=True)
     end_time = time.time()

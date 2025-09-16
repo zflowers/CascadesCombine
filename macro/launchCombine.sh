@@ -6,10 +6,7 @@ dcdir="${1:-datacards_cascades}"
 # Second argument = run_dir (default: runs/latest)
 rundir="${2:-runs/latest}"
 
-mkdir -p "${rundir}/combine_jobs"
-
 echo "[launchCombine] Using datacard directory: $dcdir"
-echo "[launchCombine] Storing outputs under: ${rundir}/combine_jobs"
 
 # Run AsymptoticLimits
 combineTool.py \

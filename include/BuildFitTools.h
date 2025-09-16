@@ -63,10 +63,10 @@ class Bin{
 class BFTool{
 
     public:
-    static std::vector<std::string> SplitString(const std::string& str,const std::string& delimiter);
+    static stringlist SplitString(const std::string& str,const std::string& delimiter);
     static std::string GetSignalTokensCascades(const std::string& input);
     static stringlist GetSignalTokensSMS(const std::string& input);
-    static bool  ContainsAnySubstring(const std::string& mainString, const std::vector<std::string>& substrings);
+    static bool  ContainsAnySubstring(const std::string& mainString, const stringlist& substrings);
         static stringlist filterSignalsSMS;
         static void SetFilterSignalsSMS(const stringlist& filters);
         static stringlist GetFilterSignalsSMS();
@@ -82,8 +82,8 @@ inline stringlist BFTool::GetFilterSignalsSMS(){
     return filterSignalsSMS;
 }
 
-inline std::vector<std::string> BFTool::SplitString(const std::string& str,const std::string& delimiter) {
-    std::vector<std::string> tokens;
+inline stringlist BFTool::SplitString(const std::string& str,const std::string& delimiter) {
+    stringlist tokens;
     size_t prev_pos = 0;
     size_t current_pos;
 
@@ -98,7 +98,7 @@ inline std::vector<std::string> BFTool::SplitString(const std::string& str,const
 
 inline stringlist BFTool::GetSignalTokensSMS(const std::string& input ){
 
-    std::vector<std::string> tree_names;
+    stringlist tree_names;
     TFile *file = TFile::Open(input.c_str(), "READ");
     if (!file || file->IsZombie()) {
         std::cerr << "Error: could not open file " << input << std::endl;
@@ -182,7 +182,7 @@ inline std::string BFTool::GetSignalTokensCascades(const std::string& input ){
   
 }
 
-inline bool BFTool::ContainsAnySubstring(const std::string& mainString, const std::vector<std::string>& substrings) {
+inline bool BFTool::ContainsAnySubstring(const std::string& mainString, const stringlist& substrings) {
     for (const std::string& sub : substrings) {
     //std::cout<<"comparing string: "<< mainString <<", "<<sub<<"\n";
         if (mainString.find(sub) != std::string::npos) {

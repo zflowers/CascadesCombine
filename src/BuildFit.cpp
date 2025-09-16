@@ -39,8 +39,8 @@ std::map<std::string, float> BuildFit::BuildAsimovData(JSONFactory* j){
     return obs_rates;    
 }
 
-std::vector<std::string> BuildFit::GetBkgProcs(JSONFactory* j){
-    std::vector<std::string> bkgprocs{};
+stringlist BuildFit::GetBkgProcs(JSONFactory* j){
+    stringlist bkgprocs{};
 
     for (json::iterator it = j->j.begin(); it != j->j.end(); ++it){
                 //inner loop process iterator
@@ -58,9 +58,9 @@ std::vector<std::string> BuildFit::GetBkgProcs(JSONFactory* j){
     return bkgprocs;
 }
 
-std::vector<std::string> BuildFit::ExtractSignalDetails( std::string signalPoint){
+stringlist BuildFit::ExtractSignalDetails( std::string signalPoint){
 
-    std::vector<std::string> splitPoint = BFTool::SplitString( signalPoint, "_");
+    stringlist splitPoint = BFTool::SplitString( signalPoint, "_");
     std::string analysis = splitPoint[0];
     std::string channel = "gamma";    
     //pad for mass?
@@ -69,13 +69,13 @@ std::vector<std::string> BuildFit::ExtractSignalDetails( std::string signalPoint
         mass += splitPoint[i];
     }
 
-    std::vector<std::string> signalDetails = {analysis, channel, mass};
+    stringlist signalDetails = {analysis, channel, mass};
     return signalDetails;
 
 }
 
-std::vector<std::string> BuildFit::GetBinSet( JSONFactory* j){
-    std::vector<std::string> bins{};
+stringlist BuildFit::GetBinSet( JSONFactory* j){
+    stringlist bins{};
         for (json::iterator it = j->j.begin(); it != j->j.end(); ++it) {
                 //std::cout << it.key() <<"\n";
                 bins.push_back(  it.key() );
@@ -84,14 +84,23 @@ std::vector<std::string> BuildFit::GetBinSet( JSONFactory* j){
 
 }
 
+void BuildFit::AddFloatingNorms(stringlist bkgprocs){
+    cb.SetFlag("filters-use-regex", true);
+    for (const auto& proc: bkgprocs){
+        cb.cp().process({proc})
+            .AddSyst(cb, "scale_"+proc, "rateParam", SystMap<>::init(1.0));
+    }
+    cb.SetFlag("filters-use-regex", false);
+}
+
 void BuildFit::BuildAsimovFit(JSONFactory* j, std::string signalPoint, std::string datacard_dir){
     ch::Categories cats = BuildCats(j);
     //std::cout<<"building obs rates \n";
     std::map<std::string, float> obs_rates = BuildAsimovData(j);
     //std::cout<<"Getting process list\n";
-    std::vector<std::string> bkgprocs = GetBkgProcs(j);
+    stringlist bkgprocs = GetBkgProcs(j);
     //std::cout<<"Parse Signal point\n";
-    std::vector<std::string> signalDetails = ExtractSignalDetails( signalPoint);
+    stringlist signalDetails = ExtractSignalDetails( signalPoint);
     //std::cout<<"Build cb objects\n";
     //cb.SetVerbosity(3);
     cb.AddObservations({"*"}, {signalDetails[0]}, {"13.6TeV"}, {signalDetails[1]}, cats);
@@ -106,8 +115,12 @@ void BuildFit::BuildAsimovFit(JSONFactory* j, std::string signalPoint, std::stri
         x->set_rate(json_array[1].get<float>());
     });
 
-    std::vector<std::string> binset = GetBinSet(j);
-    cb.cp().bin(binset).AddSyst(cb, "DummySys", "lnN", SystMap<>::init(1.01)); // 1%
+    stringlist binset = GetBinSet(j);
+    //AddFloatingNorms(bkgprocs);
+    cb.cp().bin(binset).AddSyst(cb, "DummySys", "lnN", SystMap<>::init(1.01)); // 1% over all bins
+    //for (const auto& bin: binset){
+    //    cb.cp().bin({bin}).AddSyst(cb, bin+"_DummySys", "lnN", SystMap<>::init(1.01)); // 1% over each bin
+    //}
       
     //cb.PrintAll();
     cb.WriteDatacard(datacard_dir+"/"+signalPoint+"/"+signalPoint+".txt");

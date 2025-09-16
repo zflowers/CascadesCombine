@@ -20,19 +20,20 @@ using ch::syst::bin;
 using json = nlohmann::json;
 
 class BuildFit{
-	
-	public:
-	ch::CombineHarvester cb{};
-	
-	ch::Categories BuildCats(JSONFactory* j);
-	std::map<std::string, float> BuildAsimovData(JSONFactory* j);
+    
+    public:
+    ch::CombineHarvester cb{};
+    
+    ch::Categories BuildCats(JSONFactory* j);
+    std::map<std::string, float> BuildAsimovData(JSONFactory* j);
         std::vector<std::string> GetBkgProcs(JSONFactory* j);
-	std::vector<std::string> ExtractSignalDetails( std::string signalPoint);
-	std::vector<std::string> GetBinSet( JSONFactory* j);
+    std::vector<std::string> ExtractSignalDetails( std::string signalPoint);
+    std::vector<std::string> GetBinSet( JSONFactory* j);
+    void AddFloatingNorms(stringlist bkgprocs);
        
-	void BuildAsimovFit(JSONFactory* j, std::string signaPoint, std::string datacard_dir);
-	
-	std::vector<std::string> sigkeys = { "Cascades", "SMS" };
+    void BuildAsimovFit(JSONFactory* j, std::string signaPoint, std::string datacard_dir);
+    
+    std::vector<std::string> sigkeys = { "Cascades", "SMS" };
 
 };
 #endif
