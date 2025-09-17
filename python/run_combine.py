@@ -27,6 +27,8 @@ def parse_args():
                    help="Lumi to scale everything to (default is 400.0)")
     p.add_argument("--run-name", dest="run_name", type=str, default=None,
                    help="Optional run name prefix to prepend to timestamp for the run directory")
+    p.add_argument("--existing-run-dir", dest="existing_run_dir", type=str, default=None,
+                   help="Optional pass in existing run dir and make new run dir that takes the existing BFI output as input to do BF and later steps")
     return p.parse_args()
 
 def early_setup(run_name):
@@ -513,30 +515,57 @@ def run_checkjobs_loop_parallel(condor_dir=None, work_dirs=None, no_resubmit=Fal
     return False
 
 # ----- main workflow -----
-def main(args, run_info, try_acquire_lock_or_exit):
+def main(args, run_info, try_acquire_lock_or_exit, start_time):
     # canonical run directory / name
     run_dir = run_info.get("run_dir")
     run_name = run_info.get("run_name")
     print(f"[run_combine] Using run directory: {run_dir}", flush=True)
 
-    # configs/inputs (start from args)
-    bins_cfg = args.bins_cfg
-    hist_cfg = args.hist_cfg
-    processes_cfg = args.processes_cfg
-    make_json = args.make_json
-    make_root = args.make_root
     make_impacts = args.make_impacts
-    if not make_json and not make_root:
-        make_json = True # if user passed neither option then make json
-    if args.stress_test:
-        print("[run_combine] Running stress test. Using stress yamls instead of loaded arg yamls", flush=True)
-        bins_cfg = "config/bin_cfgs/bin_stress.yaml"
-        hist_cfg = "config/hist_cfgs/hist_stress.yaml"
-        processes_cfg = "config/process_cfgs/processes_stress.yaml"
-        make_json = True
-        make_root = True
+    if args.existing_run_dir:
+        existing_run_dir = args.existing_run_dir
+        config_dir = os.path.join(existing_run_dir, "configs")
+        bins_files = glob.glob(os.path.join(config_dir, "*bins.yaml"))
+        hists_files = glob.glob(os.path.join(config_dir, "*hists.yaml"))
+        processes_files = glob.glob(os.path.join(config_dir, "*processes.yaml"))
 
-    start_time = time.time()
+        if not bins_files:
+            raise FileNotFoundError(f"No '*bins.yaml' file found in {config_dir}")
+        elif len(bins_files) > 1:
+            print(f"[run_combine] Warning: Multiple '*bins.yaml' files found. Using the first one.")
+        if not hists_files:
+            raise FileNotFoundError(f"No '*hists.yaml' file found in {config_dir}")
+        elif len(hists_files) > 1:
+            print(f"[run_combine] Warning: Multiple '*hists.yaml' files found. Using the first one.")
+        if not processes_files:
+            raise FileNotFoundError(f"No '*processes.yaml' file found in {config_dir}")
+        elif len(processes_files) > 1:
+            print(f"[run_combine] Warning: Multiple '*processes.yaml' files found. Using the first one.")
+
+        bins_cfg = bins_files[0]
+        hist_cfg = hists_files[0]
+        processes_cfg = processes_files[0]
+        make_json = os.path.isfile(os.path.join(existing_run_dir, "flattened.json"))
+        make_root = os.path.isfile(os.path.join(existing_run_dir, "final_hadded.root"))
+        if not make_json and not make_root:
+            print("[run_combine] ERROR: Could not find flattened.json or final_hadded.root in ",args.existing_run_dir)
+            sys.exit(1)
+
+    else:
+        bins_cfg = args.bins_cfg
+        hist_cfg = args.hist_cfg
+        processes_cfg = args.processes_cfg
+        make_json = args.make_json
+        make_root = args.make_root
+        if not make_json and not make_root:
+            make_json = True # if user passed neither option then make json
+        if args.stress_test:
+            print("[run_combine] Running stress test. Using stress yamls instead of loaded arg yamls", flush=True)
+            bins_cfg = "config/bin_cfgs/bin_stress.yaml"
+            hist_cfg = "config/hist_cfgs/hist_stress.yaml"
+            processes_cfg = "config/process_cfgs/processes_stress.yaml"
+            make_json = True
+            make_root = True
 
     # Acquire lock (blocking or not)
     lock = None
@@ -637,8 +666,8 @@ def main(args, run_info, try_acquire_lock_or_exit):
     print(f"[run_combine] Running master merge script: {master_merge_sh}", flush=True)
     subprocess.run(["bash", master_merge_sh], check=True, stdout=sys.stdout, stderr=sys.stderr)
 
-    # 8) Plot histograms (reads from run-local condor/root layout)
     if make_root:
+        # 8) Plot Histograms
         hadd_file = get_flattened_root_path(run_dir=run_dir)
         plot_cmd = [
             "./"+exe_dir+"/PlotHistograms.x",
@@ -650,17 +679,27 @@ def main(args, run_info, try_acquire_lock_or_exit):
         subprocess.run(plot_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
     if make_json:
+        # 9) Plot Yields
         flattened_json = get_flattened_json_path(run_dir=run_dir)
+        plot_cmd = [
+            "./"+exe_dir+"/PlotYields.x",
+            "-i", flattened_json,
+            "-o", plots_dir,
+            "-l", args.lumi
+        ]
+        print("[run_combine] Plotting yields with command:", " ".join(plot_cmd), flush=True)
+        subprocess.run(plot_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
         output_dir = run_info["datacards_dir"]
-        # 9) BF
+
+        # 10) BF
         print(f"[run_combine] Running BF.x with input {flattened_json} & output {output_dir}", flush=True)
         subprocess.run(["./"+exe_dir+"/BF.x", flattened_json, output_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
 
-        # 10) combine
+        # 11) combine
         print("[run_combine] Launching combine jobs...", flush=True)
         subprocess.run(["bash", macro_dir+"/launchCombine.sh", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
 
-        # 11) significances
+        # 12) significances
         print(f"[run_combine] Yields for {bins_cfg}")
         print_events(flattened_json)
 
@@ -670,7 +709,7 @@ def main(args, run_info, try_acquire_lock_or_exit):
         except Exception: # typical failure is because a signal process has 0 events but that shouldn't crash things
             pass
 
-        # 12) plot significances
+        # 13) plot significances
         plot_cmd = [
             "./"+exe_dir+"/PlotSignificances.x",
             "-i", run_dir+"/Significance_datacards.txt",
@@ -680,7 +719,7 @@ def main(args, run_info, try_acquire_lock_or_exit):
         subprocess.run(plot_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
         if make_impacts:
-            # 13) T2W
+            # 14) T2W
             T2W_cmd = [
                 "bash",
                 macro_dir+"/launchT2W.sh",
@@ -690,7 +729,7 @@ def main(args, run_info, try_acquire_lock_or_exit):
             print("[run_combine] Running T2W with command:", " ".join(T2W_cmd), flush=True)
             subprocess.run(T2W_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
-            # 14) Impacts
+            # 15) Impacts
             impacts_cmd = [
                 "bash",
                 macro_dir+"/launchImpacts.sh",
@@ -715,7 +754,11 @@ def main(args, run_info, try_acquire_lock_or_exit):
         total_time_seconds, total_time_seconds/60, total_time_seconds/3600), flush=True)
 
 if __name__ == "__main__":
+    start_time = time.time()
     args = parse_args()
     # call early_setup first so run_dir and logging redirection exist early
-    run_info, try_acquire_lock_or_exit = early_setup(args.run_name)
-    main(args, run_info, try_acquire_lock_or_exit)
+    if args.existing_run_dir:
+        run_info, try_acquire_lock_or_exit = early_setup(args.existing_run_dir)
+    else:
+        run_info, try_acquire_lock_or_exit = early_setup(args.run_name)
+    main(args, run_info, try_acquire_lock_or_exit, start_time)
