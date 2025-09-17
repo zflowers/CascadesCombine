@@ -210,27 +210,6 @@ int main(int argc, char* argv[]) {
     for(const auto& pair : effsByProcess)
         Plot_Eff_Multi(pair.first, pair.second, "Process");
 
-    // Load up 2D CutFlow
-    std::map<std::string, std::map<std::string, TH1*>> cutflowMap;
-    for (const auto &gpair : groups) {
-        const std::string &groupKey = gpair.first;
-        if (groupKey.find("__CutFlow") == std::string::npos) continue;
-        // extract the bin name (strip __CutFlow)
-        std::string binName = groupKey.substr(0, groupKey.find("__CutFlow"));
-        for (const auto &pp : gpair.second) {
-            const std::string proc = pp.first;
-            TH1* h = pp.second;
-            if(!h) continue;
-            cutflowMap[binName][proc] = h;
-        }
-    }
-    
-    // build global 2D cutflows from cutflowMap
-    MakeAndPlotCutflow2D(cutflowMap, "GlobalCutflow", "yield", 1.0);
-    MakeAndPlotCutflow2D(cutflowMap, "GlobalCutflow", "SoB",   1.0);
-    MakeAndPlotCutflow2D(cutflowMap, "GlobalCutflow", "SoverSqrtB", 1.0);
-    MakeAndPlotCutflow2D(cutflowMap, "GlobalCutflow", "Zbi", 1.0); // 1% systematic
-
     outFile->Close();
     inFile->Close();
     for(TH1* p:all_clones) delete p;

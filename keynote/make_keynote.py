@@ -18,6 +18,7 @@ parser.add_argument("--dry-run", action="store_true", help="Don't run AppleScrip
 args = parser.parse_args()
 
 DRY_RUN = args.dry_run
+SKIP_CUTFLOW = False
 
 # -------------------------
 # Hardcoded run-ids to loop over
@@ -37,8 +38,16 @@ runs_root = base_dir / top_level / "runs"
 bin_names = []
 
 prefix_order = [
-    "Cascades_300_300_289_280_275_270", "Cascades_209_220_209_200_190_180",
-    "Wjets", "DY", "ttbar", "DBTB",
+    "Cascades_300_300_289_280_275_270",
+    #"Cascades_289_300_289_280_270_260",
+    "Cascades_300_300_289_260_240_220",
+    "Cascades_209_220_209_200_190_180",
+    "Wjets", "ttbar", "DBTB",
+]
+
+if "Gluinos" in RUN_IDS[0]: prefix_order = [
+    "SMS_Gluinos_SMS_1200_1100", "SMS_Gluinos_SMS_1200_1176",
+    "Wjets", "ZInv", "ttbar", "QCD",
 ]
 
 ignore_bins = [
@@ -488,7 +497,8 @@ def process_bin_dir(bin_dir: Path):
     for var in var_to_entries:
         var_to_entries[var].sort(key=lambda e: prefix_order.index(e["proc"]) if e["proc"] in prefix_order else 999)
 
-    make_applescript_call_add_folder_title(bin_name, str(cutflow_pdf) if cutflow_pdf else None)
+    if not SKIP_CUTFLOW:
+        make_applescript_call_add_folder_title(bin_name, str(cutflow_pdf) if cutflow_pdf else None)
 
     for sp in stack_pdfs:
         var_title = sp.get("var") or "stack"
@@ -568,7 +578,7 @@ def main():
     any_run_processed = False
 
     for run_id in RUN_IDS:
-        print(f"=== Processing run-id: {run_id} ===")
+        print(f"\n=== Processing run-id: {run_id} ===")
         try:
             run_dir = choose_run_dir_by_id(run_id)
         except FileNotFoundError as e:
@@ -609,6 +619,7 @@ def main():
         # Add latest Significance slide (search under this run's plots dir)
         sig_pdf = get_latest_significance_pdf(plots_dir)
         bin_names = [d.name for d in bin_dirs]
+
         bin_text = "Included bins: " + ", ".join(bin_names) if bin_names else "Significances"
         if sig_pdf:
             print(f"Adding latest significance plot: {sig_pdf}")
