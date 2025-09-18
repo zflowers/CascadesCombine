@@ -32,6 +32,8 @@ int main(int argc, char* argv[]) {
     gSystem->mkdir(outputDir.c_str(), kTRUE);
     gSystem->mkdir((outputDir+"pdfs").c_str(), kTRUE);
 
+    gStyle->SetOptStat(0); gStyle->SetOptTitle(0);
+    loadFormatMaps();
     TString outRootName=Form("%soutput_2DYields.root",outputDir.c_str());
     outFile=new TFile(outRootName,"RECREATE");
 
@@ -56,7 +58,7 @@ int main(int argc, char* argv[]) {
             double weighted = values[1].get<double>(); // weighted events
             double err      = values[2].get<double>(); // stat error
             // Create a 1-bin histogram
-            TH1F* h = new TH1F(Form("%s__%s", binName.c_str(), procName.c_str()), "", 1, 0, 1);
+            TH1F* h = new TH1F(Form("%s__%s", binName.c_str(), procName.c_str()), Form("%s__%s", binName.c_str(), procName.c_str()), 1, 0, 1);
             h->SetBinContent(1, weighted);
             h->SetBinError(1, err);
             cutflowMap[binName][procName] = h;

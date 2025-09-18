@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
-import os
-import argparse
+import os, argparse, subprocess, tempfile, sys, json
 from pathlib import Path
 from collections import defaultdict
-import subprocess
-import tempfile
-import sys
 
 # -------------------------
 # CLI args
@@ -607,10 +603,10 @@ def main():
                     found_procs.add(proc)
 
         missing_procs = [proc for proc in prefix_order if proc not in found_procs]
-        if missing_procs:
-            print("WARNING: The following requested procs were not found in any bins:")
-            for proc in missing_procs:
-                print(f"  {proc}")
+        #if missing_procs:
+        #    print("WARNING: The following requested procs were not found in any bins:")
+        #    for proc in missing_procs:
+        #        print(f"  {proc}")
 
         # Add a run title slide for this run
         print(f"Adding run title slide for run: {run_dir.name}")
@@ -620,7 +616,33 @@ def main():
         sig_pdf = get_latest_significance_pdf(plots_dir)
         bin_names = [d.name for d in bin_dirs]
 
-        bin_text = "Included bins: " + ", ".join(bin_names) if bin_names else "Significances"
+        bin_text = "Included bins: " + ", ".join(bin_names) if bin_names and [d.name for d in bin_dirs] != ['pdfs'] else ""
+        if bin_text == "": # pull JSON to get bin names
+            rsync_src = args.rsync_source or os.environ.get("KEYNOTE_RSYNC")
+            if rsync_src:
+                if ":" not in rsync_src:
+                    raise ValueError("rsync source must include user@host:/path")
+                host, remote_path = rsync_src.split(":", 1)
+                
+                # Build the truncated remote path
+                parts = Path(remote_path).parts
+                for i in range(len(parts) - 1):
+                    if parts[i] == "CascadesCombine" and parts[i + 1] == "runs":
+                        idx = i
+                        break
+                else:
+                    raise ValueError("Could not find 'CascadesCombine/runs' in rsync_src")
+                
+                base_remote_path = Path(*parts[:idx + 2]) # up to .../CascadesCombine/runs/
+                json_path = f"{host}:{base_remote_path}/{Path(run_dir).name}/flattened.json"
+                dest = base_dir / top_level / run_dir
+                subprocess.run(["rsync", "-a", str(json_path), str(dest) + "/"], check=True)
+                json_path = dest / "flattened.json"
+                if json_path.exists():
+                    with json_path.open("r") as f:
+                        data = json.load(f)
+                    bin_text = "Included bins: " + ", ".join([k for k in data.keys() if k.startswith("Bin")] if data else "")
+            
         if sig_pdf:
             print(f"Adding latest significance plot: {sig_pdf}")
             make_applescript_call_add_significance(str(sig_pdf), bin_text)
@@ -636,10 +658,12 @@ def main():
         ]
         add_summary_slides(summary_pdfs)
 
-        print("Will make slides for bins:", [d.name for d in bin_dirs])
-        for bin_dir in bin_dirs:
-            print("  Making slides for bin:", bin_dir.name)
-            process_bin_dir(bin_dir)
+        if [d.name for d in bin_dirs] != ['pdfs']:
+            print("Will make slides for bins:", [d.name for d in bin_dirs])
+            for bin_dir in bin_dirs:
+                if(bin_dir.name == "pdfs"): continue
+                print("  Making slides for bin:", bin_dir.name)
+                process_bin_dir(bin_dir)
 
     if not any_run_processed:
         print("No runs were processed. Check RUN_IDS and the filesystem layout (runs_root/base_dir).")

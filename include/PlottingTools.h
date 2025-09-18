@@ -497,6 +497,7 @@ void Plot_EventCount2D(TH2* h, const std::string &mode,
                        double zmin_override = std::numeric_limits<double>::quiet_NaN(),
                        double zmax_override = std::numeric_limits<double>::quiet_NaN()) {
     if(!h) return;
+    bool include_err = false;
 
     // Locate Total Bkg row
     int totalRow = -1;
@@ -558,28 +559,25 @@ void Plot_EventCount2D(TH2* h, const std::string &mode,
     for(int iy=1; iy<=h->GetNbinsY(); ++iy){
       for(int ix=1; ix<=h->GetNbinsX(); ++ix){
         double val = h->GetBinContent(ix, iy);
-        //double val_err = h->GetBinError(ix, iy);
+        double val_err = h->GetBinError(ix, iy);
         double xlow = h->GetXaxis()->GetBinLowEdge(ix);
         double xup  = h->GetXaxis()->GetBinUpEdge(ix);
         double ylow = h->GetYaxis()->GetBinLowEdge(iy);
         double yup  = h->GetYaxis()->GetBinUpEdge(iy);
         double xc = 0.5*(xlow+xup);
         double yc = 0.5*(ylow+yup);
-        if(val < 1.e-5){
+        if(val < 1.e-5 && mode != "yield")
             val = 0.;
-            //val_err = 0.;
-        }
         TString label = "";
         if(val < 1)
-          //if(mode == "yield")
-          //  label = Form("%.3g #pm %.3g", val, val_err);
-          //else
             label = Form("%.2g", val);
         else
-          //if(mode == "yield")
-          //  label = Form("%.3g #pm %.3g", val, val_err);
-          //else
             label = Form("%.3g", val);
+        if(mode == "yield" && include_err)
+            if(val < 1)
+                label += Form(" #pm %.2g", val_err);
+            else
+                label += Form(" #pm %.3g", val_err);
 
         if(mode=="Zbi" && iy==totalRow){
           // Draw white box behind Total Bkg text
@@ -817,7 +815,6 @@ void MakeAndPlotCutflow2D(
                 }
             }
             h2->SetBinContent(ix+1, iy+1, val);
-            if(mode == "yield") h2->SetBinError(ix+1, iy+1, std::sqrt(val));
         }
     }
 
@@ -836,6 +833,7 @@ void MakeAndPlotCutflow2D(
         }
     }
 
+    h2->SetMinimum(0.01);
     // --- 11) call plotting routine which handles drawing + special Zbi total-row masking ---
     Plot_EventCount2D(h2, mode, zmin_override, zmax_override);
     // Plot_EventCount2D deletes h2 internally as per your convention
