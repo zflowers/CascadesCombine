@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-import os, sys, subprocess, argparse, re, shutil, time
+import os, sys, subprocess, argparse, re, shutil, time, random
 from pathlib import Path
 import importlib.util
+from collections import defaultdict
 
 # ----------------------------------------
 # Module imports (pybind)
@@ -315,36 +316,106 @@ def write_submit_file(
     submit_content = "\n".join(submit_lines) + "\n"
     submit_path.write_text(submit_content)
 
-    # Submit if not dryrun
+    # --- config ---
+    known_schedds = [
+        "lpcschedd4.fnal.gov",
+        "lpcschedd5.fnal.gov",
+        "lpcschedd6.fnal.gov",
+    ]
+    max_retries = 8      # overall attempts (including forced schedd attempts)
+    per_schedd_limit = 3 # don't try the same schedd more than this many times
+    # ------------------
+    
     if not dryrun:
-        max_retries = 3
         attempt = 0
         success = False
         last_proc = None
-        
+    
+        # track how many times tried each schedd with -name
+        schedd_tries = defaultdict(int)
+    
+        # start without forcing a schedd; let condor pick first
+        force_schedd = None
+    
+        transient_signatures = [
+            "Can't find address of local schedd",
+            "Querying the CMS LPC pool",
+            "Attempting to submit jobs to",
+            "Unable to connect to",
+            "Failed to connect",
+        ]
+    
         while attempt < max_retries and not success:
             attempt += 1
+    
+            # build command: allow an initial attempt without -name, then use -name to force
+            if force_schedd:
+                cmd = f"source /cvmfs/cms.cern.ch/cmsset_default.sh && condor_submit -name {force_schedd} {submit_path.as_posix()}"
+                printed_name = force_schedd
+            else:
+                cmd = f"source /cvmfs/cms.cern.ch/cmsset_default.sh && condor_submit {submit_path.as_posix()}"
+                printed_name = "(auto)"
+    
             proc = subprocess.run(
-                f"source /cvmfs/cms.cern.ch/cmsset_default.sh && condor_submit {submit_path.as_posix()}",
+                cmd,
                 shell=True,
                 executable="/bin/bash",
                 capture_output=True,
                 text=True
             )
             last_proc = proc
-        
+    
+            stdout = (proc.stdout or "").strip()
+            stderr = (proc.stderr or "").strip()
+    
             if proc.returncode == 0:
                 success = True
-            else:
-                stderr = proc.stderr.strip()
-                stdout = proc.stdout.strip()
-                if "Unable" in stderr or "Unable" in stdout:
-                    time.sleep(2)  # brief pause before retry
-                    continue
-                else:
-                    print("condor_submit failed:", proc.stdout, proc.stderr)
-                    break
-        
+                break
+    
+            # If no returncode 0, inspect output to decide whether to retry
+            is_transient = any(sig in stdout or sig in stderr for sig in transient_signatures)
+    
+            # Try to detect the schedd name that condor tried to use (if present in stdout)
+            match_schedd = re.search(r"Attempting to submit jobs to (\S+)", stdout)
+            reported_schedd = match_schedd.group(1) if match_schedd else None
+    
+            # Print the captured outputs for diagnosis
+            print("  condor_submit failed (returncode={}):".format(proc.returncode))
+            if stdout:
+                print("  STDOUT:", stdout.replace("\n", " | "))
+            if stderr:
+                print("  STDERR:", stderr.replace("\n", " | "))
+    
+            if not is_transient:
+                # Non-transient error: bail out (likely a real submitfile problem)
+                print("[createJobs] Non-transient condor_submit failure; not retrying.")
+                break
+    
+            # If transient, decide which schedd to try next.
+            # If told which schedd failed, prefer other schedds first.
+            candidate_schedds = [s for s in known_schedds if schedd_tries[s] < per_schedd_limit]
+    
+            if reported_schedd and reported_schedd in candidate_schedds:
+                # exclude the reported failing schedd for the immediate next try
+                candidate_schedds = [s for s in candidate_schedds if s != reported_schedd]
+    
+            if not candidate_schedds:
+                # all schedds exhausted per the per_schedd_limit -> stop retrying
+                print("[createJobs] All schedds have reached the per-schedd attempt limit. Stopping retries.")
+                break
+    
+            # pick the schedd tried the least (ties broken randomly)
+            min_tries = min(schedd_tries[s] for s in candidate_schedds)
+            least_tried = [s for s in candidate_schedds if schedd_tries[s] == min_tries]
+            next_schedd = random.choice(least_tried)
+    
+            schedd_tries[next_schedd] += 1
+            force_schedd = next_schedd
+    
+            wait_time = min(2 * attempt, 10)
+            print(f"[warn] Transient schedd error; will retry using -name {next_schedd} (attempt count for this schedd: {schedd_tries[next_schedd]}). Sleeping {wait_time}s.")
+            time.sleep(wait_time)
+    
         if not success:
             if last_proc is not None:
                 print(f"condor_submit failed after {attempt} attempt(s). Last returncode: {last_proc.returncode}")
@@ -352,18 +423,23 @@ def write_submit_file(
                 print("Last STDERR:", last_proc.stderr)
             else:
                 print("condor_submit failed: no subprocess result available.")
-
         else:
-            stdout = proc.stdout.strip()
+            # parse cluster id and schedd for bookkeeping
+            final_stdout = (proc.stdout or "").strip()
             cluster_id = None
             schedd = None
-            match_cluster = re.search(r"submitted to cluster (\d+)", stdout)
+    
+            match_cluster = re.search(r"submitted to cluster (\d+)", final_stdout)
             if match_cluster:
                 cluster_id = match_cluster.group(1)
-            match_schedd = re.search(r"Attempting to submit jobs to (\S+)", stdout)
+    
+            # prefer explicitly reported schedd in stdout; if not present, use the forced schedd if any
+            match_schedd = re.search(r"Attempting to submit jobs to (\S+)", final_stdout)
             if match_schedd:
                 schedd = match_schedd.group(1)
-        
+            elif force_schedd:
+                schedd = force_schedd
+    
             if cluster_id:
                 record_path = bin_dir / "submitted_clusters.txt"
                 with open(record_path, "a") as f:
@@ -371,8 +447,8 @@ def write_submit_file(
                         f.write(f"{cluster_id} {schedd}\n")
                     else:
                         f.write(f"{cluster_id}\n")
-        
-            print(f"[createJobs] Submitted bin {bin_name} ({len(jobs)} jobs)")
+    
+            print(f"[createJobs] Submitted bin {bin_name} ({len(jobs)} jobs) via schedd {schedd or '(unknown)'}")
             if make_json:
                 write_merge_script(bin_name, bin_dir, json_dirname="json")
             if make_root:
@@ -435,7 +511,7 @@ def main():
         hist_yaml_file=args.hist_yaml if args.hist_yaml else None
     )
 
-    # If a hist YAML was provided, store it in each job (we'll reference staged configs if available)
+    # If a hist YAML was provided, store it in each job (reference staged configs if available)
     if args.hist_yaml:
         for job in jobs:
             job["hist_yaml"] = args.hist_yaml

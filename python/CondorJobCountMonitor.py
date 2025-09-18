@@ -121,6 +121,46 @@ class CondorJobCountMonitor:
             cmd = cmd + " -total"
         return cmd
 
+    def _run_condor_q(self, cluster_id, schedd=None, total=False,
+                      max_retries: int = 5, backoff: int = 2):
+        """Run condor_q with retries if schedd is unreachable."""
+        cmd = self._condor_q_cmd(cluster_id, schedd, total)
+        attempt = 0
+    
+        transient_errors = [
+            "Can't find address of local schedd",
+            "Unable to connect to",
+            "Failed to connect",
+        ]
+    
+        while attempt < max_retries:
+            attempt += 1
+            try:
+                return subprocess.check_output(
+                    cmd,
+                    shell=True,
+                    text=True,
+                    stderr=subprocess.STDOUT
+                )
+            except subprocess.CalledProcessError as e:
+                output = (e.output or "").strip()
+                if any(sig in output for sig in transient_errors):
+                    wait_time = min(backoff * attempt, 10)  # cap at 10s
+                    print(f"[warn] condor_q transient schedd error "
+                          f"(cluster={cluster_id}, schedd={schedd}, attempt={attempt}/{max_retries}). "
+                          f"Retrying in {wait_time}s...")
+                    print("  Output:", output.replace("\n", " | "))
+                    time.sleep(wait_time)
+                    continue
+                else:
+                    # not transient, re-raise
+                    raise
+    
+        # if we exit the loop, all retries failed
+        print(f"[error] condor_q failed after {max_retries} retries "
+              f"(cluster={cluster_id}, schedd={schedd})")
+        return None
+
     def _count_jobs_from_output(self, output: str) -> int:
         """
         Return the total jobs for the condor_q output (cluster-specific).
@@ -172,13 +212,9 @@ class CondorJobCountMonitor:
             else:
                 total = 0
                 for cluster_id, schedd in clusters:
-                    cmd = self._condor_q_cmd(cluster_id, schedd, total=False)
-                    try:
-                        output = subprocess.check_output(cmd, shell=True, text=True)
+                    output = self._run_condor_q(cluster_id, schedd, total=False)
+                    if output is not None:
                         total += self._count_jobs_from_output(output)
-                    except subprocess.CalledProcessError as e:
-                        if self.verbose:
-                            print(f"[CondorJobCountMonitor] Warning: condor_q failed for {cluster_id} on {schedd}: {e}")
                 return total
         except Exception as e:
             print(f"Error retrieving job count: {e}")
@@ -203,22 +239,20 @@ class CondorJobCountMonitor:
                     idle_jobs = 0
                     new_active = []
                     for cluster_id, schedd in active_clusters:
-                        cmd = self._condor_q_cmd(cluster_id, schedd, total=False)
-                        try:
-                            output = subprocess.check_output(cmd, shell=True, text=True)
-                        except subprocess.CalledProcessError:
+                        output = self._run_condor_q(cluster_id, schedd, total=False)
+                        if output is None:
                             if self.verbose:
                                 print(f"[CondorJobCountMonitor] condor_q failed for {cluster_id} on {schedd}; assuming finished.")
                             continue
-    
+                    
                         total_jobs_cluster = self._count_jobs_from_output(output)
                         cluster_idle = self._count_idle_jobs_from_output(output)
-    
+                    
                         if total_jobs_cluster == 0:
                             if self.verbose:
                                 print(f"[CondorJobCountMonitor] cluster {cluster_id} on {schedd} has no jobs; assuming finished.")
                             continue
-    
+                    
                         idle_jobs += cluster_idle
                         if cluster_idle > 0:
                             new_active.append((cluster_id, schedd))
