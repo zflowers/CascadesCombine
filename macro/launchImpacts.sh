@@ -37,3 +37,30 @@ for WS in "${dcdir}"/*/*_workspace.root; do
       #--robustFit 1 \
     popd > /dev/null || exit 1
 done
+
+# Make Impacts results for each workspace
+for WS in "${dcdir}"/*/*_workspace.root; do
+    WSDIR="$(dirname "$WS")"
+    WSFILE="$(basename "$WS")"
+    echo "[launchImpacts] Making Impacts json in $WSDIR for $WSFILE"
+    pushd "$WSDIR" > /dev/null || exit 1
+    combineTool.py \
+      -M Impacts \
+      -d "$WSFILE" \
+      -m 125 \
+      -o impacts.json
+      #--robustFit 1 \
+    popd > /dev/null || exit 1
+done
+
+# Plot Impacts results for each workspace
+for WS in "${dcdir}"/*/*_workspace.root; do
+    WSDIR="$(dirname "$WS")"
+    WSFILE="$(basename "$WS")"
+    echo "[launchImpacts] Making Impacts plot in $WSDIR for $WSFILE"
+    pushd "$WSDIR" > /dev/null || exit 1
+    plotImpacts.py \
+      -i impacts.json \
+      -o impacts
+    popd > /dev/null || exit 1
+done
