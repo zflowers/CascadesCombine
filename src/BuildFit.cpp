@@ -88,7 +88,8 @@ void BuildFit::AddFloatingNorms(stringlist bkgprocs){
     cb.SetFlag("filters-use-regex", true);
     for (const auto& proc: bkgprocs){
         cb.cp().process({proc})
-            .AddSyst(cb, "scale_"+proc, "rateParam", SystMap<>::init(1.0));
+            //.AddSyst(cb, "scale_"+proc, "rateParam", SystMap<>::init(1.0));
+            .AddSyst(cb, "scale_"+proc, "lnN", SystMap<>::init(1.1));
     }
     cb.SetFlag("filters-use-regex", false);
 }
@@ -99,13 +100,15 @@ void BuildFit::BuildAsimovFit(JSONFactory* j, std::string signalPoint, std::stri
     std::map<std::string, float> obs_rates = BuildAsimovData(j);
     //std::cout<<"Getting process list\n";
     stringlist bkgprocs = GetBkgProcs(j);
+    std::sort(bkgprocs.begin(), bkgprocs.end());
+    bkgprocs.erase(std::unique(bkgprocs.begin(), bkgprocs.end()), bkgprocs.end());
     //std::cout<<"Parse Signal point\n";
     stringlist signalDetails = ExtractSignalDetails( signalPoint);
     //std::cout<<"Build cb objects\n";
     //cb.SetVerbosity(3);
     cb.AddObservations({"*"}, {signalDetails[0]}, {"13.6TeV"}, {signalDetails[1]}, cats);
     cb.AddProcesses(   {"*"}, {signalDetails[0]}, {"13.6TeV"}, {signalDetails[1]}, bkgprocs, cats, false);
-    cb.AddProcesses(   {signalDetails[2]}, {signalDetails[0]}, {"13.6Tev"}, {signalDetails[1]}, {signalPoint}, cats, true);
+    cb.AddProcesses(   {signalDetails[2]}, {signalDetails[0]}, {"13.6TeV"}, {signalDetails[1]}, {signalPoint}, cats, true);
     cb.ForEachObs([&](ch::Observation *x){
         x->set_rate(obs_rates[x->bin()]);
     });
@@ -119,7 +122,7 @@ void BuildFit::BuildAsimovFit(JSONFactory* j, std::string signalPoint, std::stri
     //AddFloatingNorms(bkgprocs);
     cb.cp().bin(binset).AddSyst(cb, "DummySys", "lnN", SystMap<>::init(1.01)); // 1% over all bins
     //for (const auto& bin: binset){
-    //    cb.cp().bin({bin}).AddSyst(cb, bin+"_DummySys", "lnN", SystMap<>::init(1.01)); // 1% over each bin
+    //    cb.cp().bin({bin}).AddSyst(cb, bin+"_DummySys", "lnN", SystMap<>::init(1.03)); // 3% over each bin
     //}
       
     //cb.PrintAll();

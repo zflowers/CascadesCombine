@@ -7,6 +7,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <algorithm>
 
 #include "CombineHarvester/CombineTools/interface/CombineHarvester.h"
 #include "CombineHarvester/CombineTools/interface/Observation.h"
