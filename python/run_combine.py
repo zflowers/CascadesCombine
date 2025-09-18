@@ -31,7 +31,7 @@ def parse_args():
                    help="Optional pass in existing run dir and make new run dir that takes the existing BFI output as input to do BF and later steps")
     return p.parse_args()
 
-def early_setup(run_name):
+def early_setup(run_name, existing_run_name=None):
     """
     Early logging/setup called before the main workflow begins.
 
@@ -39,6 +39,7 @@ def early_setup(run_name):
       (run_info: dict, try_acquire_lock_or_exit: callable)
     The returned try_acquire_lock_or_exit(non_blocking: bool=True) will return a FileLock.
     """
+
     if run_name:
         # Use exactly what caller passed
         run_name = run_name
@@ -46,6 +47,9 @@ def early_setup(run_name):
         # Fallback: generate one here (minute resolution)
         ts = datetime.datetime.now().strftime("%B%d_%Y_%H%M")
         run_name = f"run_{ts}"
+
+    if existing_run_name:
+        run_name = existing_run_name.split('/')[1] + "_" + run_name 
 
     # Create the run_dir and debug file immediately (so wrapper can tail it)
     run_dir = os.path.join("runs", run_name)
@@ -67,7 +71,6 @@ def early_setup(run_name):
         "debug_log": debug_log_path,
         "run_name": run_name
     }
-    print(f"[run_combine] Using run directory: {run_dir}")
 
     # Helper wrappers that print friendly messages to the original terminal if lock cannot be obtained.
     def try_acquire_lock_or_exit(non_blocking: bool = True) -> FileLock:
@@ -173,6 +176,7 @@ def prepare_run_and_stage_assets_copy(
     bins_cfg: str,
     processes_cfg: str,
     hists_cfg: Optional[str] = None,
+    existing_run_dir: Optional[bool] = False,
 ):
     """
     Copy-only staging for run_dir.
@@ -180,7 +184,10 @@ def prepare_run_and_stage_assets_copy(
       dict mapping keys like 'bins_cfg','hist_cfg','processes_cfg','exe_dir','configs_dir',...
     """
     run_dir = run_info["run_dir"]
-    for sub in ["exe", "configs", "datacards", "condor", "plots", "include", "src", "macro"]:
+    dirs_to_make = ["exe", "configs", "datacards", "include", "src", "macro"]
+    if not existing_run_dir:
+        dirs_to_make.append("condor", "plots")
+    for sub in dirs_to_make:
         os.makedirs(os.path.join(run_dir, sub), exist_ok=True)
     run_path = Path(run_dir)
     # directories to maintain inside run_dir
@@ -193,8 +200,6 @@ def prepare_run_and_stage_assets_copy(
     include_dir = run_path / "include"
     src_dir = run_path / "src"
     combine_dir = run_path / "combine"
-    for d in (exe_dir, configs_dir, datacards_dir, condor_dir, plots_dir, include_dir, src_dir, macro_dir):
-        d.mkdir(parents=True, exist_ok=True)
 
     # -------------------------
     # 1) Copy selected config files
@@ -226,13 +231,9 @@ def prepare_run_and_stage_assets_copy(
     #    (items may be files or directories; directories are copied recursively preserving basename)
     # -------------------------
     include_items = [
-        "DefineUserHists.h",
     ]
     src_items = [
         "BuildFit.cpp",
-        "SampleTool.cpp",
-        "PredefinedCutsBFI.cpp",
-        "UserCutsBFI.cpp",
     ]
     macro_items = [
         "CollectSignificance.py",
@@ -240,6 +241,15 @@ def prepare_run_and_stage_assets_copy(
         "launchT2W.sh",
         "launchImpacts.sh",
     ]
+    if not existing_run_dir:
+        include_items.append(
+            "DefineUserHists.h",
+        )
+        src_items.append(
+            "SampleTool.cpp",
+            "PredefinedCutsBFI.cpp",
+            "UserCutsBFI.cpp",
+        )
 
     for item in include_items:
         p = Path(Path("include") / item)
@@ -546,10 +556,14 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
         hist_cfg = hists_files[0]
         processes_cfg = processes_files[0]
         make_json = os.path.isfile(os.path.join(existing_run_dir, "flattened.json"))
-        make_root = os.path.isfile(os.path.join(existing_run_dir, "final_hadded.root"))
-        if not make_json and not make_root:
-            print("[run_combine] ERROR: Could not find flattened.json or final_hadded.root in ",args.existing_run_dir)
+        make_root = False
+        
+        if not make_json:
+            print("[run_combine] ERROR: Could not find flattened.json in",args.existing_run_dir)
             sys.exit(1)
+        else:
+            _copy_file(os.path.join(existing_run_dir, "flattened.json"), run_dir)
+            flattened_json = os.path.join(run_dir, "flattened.json")
 
     else:
         bins_cfg = args.bins_cfg
@@ -572,16 +586,14 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
     try:
         # NOTE: set non_blocking=True to exit if lock is held, False to block until acquired
         lock = try_acquire_lock_or_exit(non_blocking=False)
-
-        # Inform user (print to original terminal) that we've got the lock and are starting.
         print("[run_combine] Build/stage lock acquired; starting compile and staging...", file=sys.__stdout__, flush=True)
 
-        # 1) Compile framework (inside the lock)
+        # Compile framework (inside the lock)
         clean_binaries()
         build_binaries()
 
-        # 2) Stage files into the run directory (configs, exe, src, include, condor, plots, macro, etc.)
-        run_dir_map = prepare_run_and_stage_assets_copy(run_info, bins_cfg, processes_cfg, hist_cfg)
+        # Stage files into the run directory (configs, exe, src, include, condor, plots, macro, etc.)
+        run_dir_map = prepare_run_and_stage_assets_copy(run_info, bins_cfg, processes_cfg, hist_cfg, True if args.existing_run_dir else False)
         # merge staged mapping into run_info so downstream code can use run_info everywhere
         run_info.update(run_dir_map)
 
@@ -619,87 +631,89 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
     exe_dir = run_info.get("exe_dir")
     macro_dir = run_info.get("macro_dir")
 
-    # 3) Submit jobs (give submit_jobs the run-local condor dir so everything stays inside the run)
-    print("[run_combine] Submitting jobs...", flush=True)
-    submit_jobs(
-        config=bins_cfg,
-        processes=processes_cfg,
-        hist=hist_cfg,
-        make_json=make_json,
-        make_root=make_root,
-        lumi=args.lumi,
-        run_dir=condor_dir
-    )
+    if not args.existing_run_dir:
+        # Submit jobs (give submit_jobs the run-local condor dir so everything stays inside the run)
+        print("[run_combine] Submitting jobs...", flush=True)
+        submit_jobs(
+            config=bins_cfg,
+            processes=processes_cfg,
+            hist=hist_cfg,
+            make_json=make_json,
+            make_root=make_root,
+            lumi=args.lumi,
+            run_dir=condor_dir
+        )
 
-    # 4) Create merge scripts (master merge should live in the run condor dir)
-    print("[run_combine] Creating merger scripts...", flush=True)
-    create_mergers(make_json=make_json, make_root=make_root, run_dir=run_dir)
+        # Create merge scripts (master merge should live in the run condor dir)
+        print("[run_combine] Creating merger scripts...", flush=True)
+        create_mergers(make_json=make_json, make_root=make_root, run_dir=run_dir)
 
-    # 5) Wait for jobs to finish; pass condor path to functions that need it
-    condor_time_start = time.time()
-    print("[run_combine] Waiting for condor jobs to finish...", flush=True)
-    loaded_bins = load_bins(bins_cfg)
-    idle_time_seconds = wait_for_jobs(work_dirs=loaded_bins, condor=condor_dir)
+        # Wait for jobs to finish; pass condor path to functions that need it
+        condor_time_start = time.time()
+        print("[run_combine] Waiting for condor jobs to finish...", flush=True)
+        loaded_bins = load_bins(bins_cfg)
+        idle_time_seconds = wait_for_jobs(work_dirs=loaded_bins, condor=condor_dir)
 
-    # 6) Run checkJobs loop and resubmit if necessary
-    print("[run_combine] Checking for failed jobs and resubmitting if necessary...", flush=True)
-    ok = run_checkjobs_loop_parallel(
-        condor_dir=condor_dir,
-        work_dirs=loaded_bins,
-        no_resubmit=False,
-        max_resubmits=args.max_resubmits,
-        check_json=make_json,
-        check_root=make_root,
-        condor=condor_dir
-    )
-    if not ok:
-        print("[run_combine] checkJobs step did not complete successfully. Aborting further steps.", file=sys.stderr)
-        sys.exit(1)
-    condor_time_end = time.time()
-    condor_time_seconds = condor_time_end - condor_time_start
+        # Run checkJobs loop and resubmit if necessary
+        print("[run_combine] Checking for failed jobs and resubmitting if necessary...", flush=True)
+        ok = run_checkjobs_loop_parallel(
+            condor_dir=condor_dir,
+            work_dirs=loaded_bins,
+            no_resubmit=False,
+            max_resubmits=args.max_resubmits,
+            check_json=make_json,
+            check_root=make_root,
+            condor=condor_dir
+        )
+        if not ok:
+            print("[run_combine] checkJobs step did not complete successfully. Aborting further steps.", file=sys.stderr)
+            sys.exit(1)
+        condor_time_end = time.time()
+        condor_time_seconds = condor_time_end - condor_time_start
 
-    # 7) Run all merge scripts - master merge script lives in the run condor dir
-    master_merge_sh = os.path.join(condor_dir, f"master_merge.sh")
-    if not os.path.exists(master_merge_sh):
-        print(f"[run_combine] ERROR: master merge script not found: {master_merge_sh}", file=sys.stderr)
-        sys.exit(1)
-    print(f"[run_combine] Running master merge script: {master_merge_sh}", flush=True)
-    subprocess.run(["bash", master_merge_sh], check=True, stdout=sys.stdout, stderr=sys.stderr)
+        # Run all merge scripts - master merge script lives in the run condor dir
+        master_merge_sh = os.path.join(condor_dir, f"master_merge.sh")
+        if not os.path.exists(master_merge_sh):
+            print(f"[run_combine] ERROR: master merge script not found: {master_merge_sh}", file=sys.stderr)
+            sys.exit(1)
+        print(f"[run_combine] Running master merge script: {master_merge_sh}", flush=True)
+        subprocess.run(["bash", master_merge_sh], check=True, stdout=sys.stdout, stderr=sys.stderr)
 
-    if make_root:
-        # 8) Plot Histograms
-        hadd_file = get_flattened_root_path(run_dir=run_dir)
-        plot_cmd = [
-            "./"+exe_dir+"/PlotHistograms.x",
-            "-i", hadd_file,
-            "-o", plots_dir,
-            "-l", args.lumi
-        ]
-        print("[run_combine] Plotting histograms with command:", " ".join(plot_cmd), flush=True)
-        subprocess.run(plot_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
+        if make_root:
+            # Plot Histograms
+            hadd_file = get_flattened_root_path(run_dir=run_dir)
+            plot_cmd = [
+                "./"+exe_dir+"/PlotHistograms.x",
+                "-i", hadd_file,
+                "-o", plots_dir,
+                "-l", args.lumi
+            ]
+            print("[run_combine] Plotting histograms with command:", " ".join(plot_cmd), flush=True)
+            subprocess.run(plot_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
     if make_json:
-        # 9) Plot Yields
-        flattened_json = get_flattened_json_path(run_dir=run_dir)
-        plot_cmd = [
-            "./"+exe_dir+"/PlotYields.x",
-            "-i", flattened_json,
-            "-o", plots_dir,
-            "-l", args.lumi
-        ]
-        print("[run_combine] Plotting yields with command:", " ".join(plot_cmd), flush=True)
-        subprocess.run(plot_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
-        output_dir = run_info["datacards_dir"]
+        if not args.existing_run_dir:
+            # Plot Yields
+            flattened_json = get_flattened_json_path(run_dir=run_dir)
+            plot_cmd = [
+                "./"+exe_dir+"/PlotYields.x",
+                "-i", flattened_json,
+                "-o", plots_dir,
+                "-l", args.lumi
+            ]
+            print("[run_combine] Plotting yields with command:", " ".join(plot_cmd), flush=True)
+            subprocess.run(plot_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
-        # 10) BF
+        # BF
+        output_dir = run_info["datacards_dir"]
         print(f"[run_combine] Running BF.x with input {flattened_json} & output {output_dir}", flush=True)
         subprocess.run(["./"+exe_dir+"/BF.x", flattened_json, output_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
 
-        # 11) combine
+        # combine
         print("[run_combine] Launching combine jobs...", flush=True)
         subprocess.run(["bash", macro_dir+"/launchCombine.sh", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
 
-        # 12) significances
+        # significances
         print(f"[run_combine] Yields for {bins_cfg}")
         print_events(flattened_json)
 
@@ -709,7 +723,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
         except Exception: # typical failure is because a signal process has 0 events but that shouldn't crash things
             pass
 
-        # 13) plot significances
+        # plot significances
         plot_cmd = [
             "./"+exe_dir+"/PlotSignificances.x",
             "-i", run_dir+"/Significance_datacards.txt",
@@ -719,7 +733,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
         subprocess.run(plot_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
         if make_impacts:
-            # 14) T2W
+            # T2W
             T2W_cmd = [
                 "bash",
                 macro_dir+"/launchT2W.sh",
@@ -729,7 +743,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             print("[run_combine] Running T2W with command:", " ".join(T2W_cmd), flush=True)
             subprocess.run(T2W_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
-            # 15) Impacts
+            # Impacts
             impacts_cmd = [
                 "bash",
                 macro_dir+"/launchImpacts.sh",
@@ -744,12 +758,11 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
 
     # total time
     total_time_seconds = end_time - start_time
-    condor_time_end = time.time()
-    condor_time_seconds = condor_time_end - condor_time_start
-    print("Time for all condor jobs to start running: {:.2f} seconds = {:.2f} minutes = {:.2f} hours".format(
-        idle_time_seconds, idle_time_seconds/60, idle_time_seconds/3600), flush=True)
-    print("Time for condor processing: {:.2f} seconds = {:.2f} minutes = {:.2f} hours".format(
-        condor_time_seconds, condor_time_seconds/60, condor_time_seconds/3600), flush=True)
+    if not args.existing_run_dir:
+        print("Time for all condor jobs to start running: {:.2f} seconds = {:.2f} minutes = {:.2f} hours".format(
+            idle_time_seconds, idle_time_seconds/60, idle_time_seconds/3600), flush=True)
+        print("Time for condor processing: {:.2f} seconds = {:.2f} minutes = {:.2f} hours".format(
+            condor_time_seconds, condor_time_seconds/60, condor_time_seconds/3600), flush=True)
     print("Total time: {0:.2f} seconds = {1:.2f} minutes = {2:.2f} hours".format(
         total_time_seconds, total_time_seconds/60, total_time_seconds/3600), flush=True)
 
@@ -758,7 +771,7 @@ if __name__ == "__main__":
     args = parse_args()
     # call early_setup first so run_dir and logging redirection exist early
     if args.existing_run_dir:
-        run_info, try_acquire_lock_or_exit = early_setup(args.existing_run_dir)
+        run_info, try_acquire_lock_or_exit = early_setup(args.run_name, args.existing_run_dir)
     else:
         run_info, try_acquire_lock_or_exit = early_setup(args.run_name)
     main(args, run_info, try_acquire_lock_or_exit, start_time)
