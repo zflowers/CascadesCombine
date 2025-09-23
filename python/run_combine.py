@@ -186,7 +186,10 @@ def prepare_run_and_stage_assets_copy(
     run_dir = run_info["run_dir"]
     dirs_to_make = ["exe", "configs", "datacards", "include", "src", "macro"]
     if not existing_run_dir:
-        dirs_to_make.append("condor", "plots")
+        dirs_to_make.extend([
+                             "condor",
+                             "plots",
+                            ])
     for sub in dirs_to_make:
         os.makedirs(os.path.join(run_dir, sub), exist_ok=True)
     run_path = Path(run_dir)
@@ -242,14 +245,14 @@ def prepare_run_and_stage_assets_copy(
         "launchImpacts.sh",
     ]
     if not existing_run_dir:
-        include_items.append(
+        include_items.extend([
             "DefineUserHists.h",
-        )
-        src_items.append(
+        ])
+        src_items.extend([
             "SampleTool.cpp",
             "PredefinedCutsBFI.cpp",
             "UserCutsBFI.cpp",
-        )
+        ])
 
     for item in include_items:
         p = Path(Path("include") / item)
