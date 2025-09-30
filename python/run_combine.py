@@ -29,6 +29,8 @@ def parse_args():
                    help="Optional run name prefix to prepend to timestamp for the run directory")
     p.add_argument("--existing-run-dir", dest="existing_run_dir", type=str, default=None,
                    help="Optional pass in existing run dir and make new run dir that takes the existing BFI output as input to do BF and later steps")
+    p.add_argument("--skip-compile", action="store_true",
+                   help="Skip running the compile step")
     return p.parse_args()
 
 def early_setup(run_name, existing_run_name=None):
@@ -161,11 +163,14 @@ def _rename_with_suffix(src_path, suffix, target_dir):
 def _copy_file(src, dst_dir_or_file):
     srcp = Path(src)
     dstp = Path(dst_dir_or_file)
-    # If caller passed the exact filename (e.g. exe_dir / srcp.name), treat that as a file path.
-    if dstp.name == srcp.name:
+    # If dstp has a file extension, treat it as a full file path
+    if dstp.suffix:
+        dst = dstp
+    # If caller passed the exact filename, also treat as file path
+    elif dstp.name == srcp.name:
         dst = dstp
     else:
-        # caller passed a directory (or something that doesn't match the basename)
+        # Otherwise treat dstp as a directory
         dst = dstp / srcp.name
     dst.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(srcp, dst)
@@ -592,8 +597,9 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
         print("[run_combine] Build/stage lock acquired; starting compile and staging...", file=sys.__stdout__, flush=True)
 
         # Compile framework (inside the lock)
-        clean_binaries()
-        build_binaries()
+        if not args.skip_compile:
+            clean_binaries()
+            build_binaries()
 
         # Stage files into the run directory (configs, exe, src, include, condor, plots, macro, etc.)
         run_dir_map = prepare_run_and_stage_assets_copy(run_info, bins_cfg, processes_cfg, hist_cfg, True if args.existing_run_dir else False)
@@ -755,6 +761,22 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             ]
             print("[run_combine] Running impacts with command:", " ".join(impacts_cmd), flush=True)
             subprocess.run(impacts_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
+
+            # Collect all impacts.pdf into plots/pdfs/impacts
+            impacts_src_root = output_dir  # datacards dir
+            impacts_dst_root = os.path.join(plots_dir, "pdfs", "impacts")
+            os.makedirs(impacts_dst_root, exist_ok=True)
+
+            print(f"[run_combine] Collecting impacts.pdf files into {impacts_dst_root}", flush=True)
+            for subdir in os.listdir(impacts_src_root):
+                subdir_path = os.path.join(impacts_src_root, subdir)
+                impacts_pdf = os.path.join(subdir_path, "impacts.pdf")
+                if os.path.isdir(subdir_path) and os.path.isfile(impacts_pdf):
+                    dst_file = os.path.join(impacts_dst_root, f"impacts__{subdir}.pdf")
+                    try:
+                        _copy_file(impacts_pdf, dst_file)
+                    except Exception as e:
+                        print(f"[run_combine] Warning: failed to copy {impacts_pdf}: {e}", flush=True)
 
     print("[run_combine] All steps completed.", flush=True)
     end_time = time.time()

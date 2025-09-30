@@ -573,11 +573,12 @@ void Plot_EventCount2D(TH2* h, const std::string &mode,
             label = Form("%.2g", val);
         else
             label = Form("%.3g", val);
-        if(mode == "yield" && include_err)
+        if(mode == "yield" && include_err){
             if(val < 1)
                 label += Form(" #pm %.2g", val_err);
             else
                 label += Form(" #pm %.3g", val_err);
+        }
 
         if(mode=="Zbi" && iy==totalRow){
           // Draw white box behind Total Bkg text

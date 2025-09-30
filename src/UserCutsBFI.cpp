@@ -8,12 +8,12 @@
 ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<std::string, CutDef>& ValidCuts){
     std::map<std::string, CutDef> cuts;
 
-    CutDef cut_leadSjetPt45;
-    cut_leadSjetPt45.name = "leadSjet_pt_lt45";
-    cut_leadSjetPt45.columns = {"PT_jet", "index_jet_S", "Njet_S"};
-    cut_leadSjetPt45.expression =
+    CutDef cut_leadSjetPt;
+    cut_leadSjetPt.name = "leadSjet_pt";
+    cut_leadSjetPt.columns = {"PT_jet", "index_jet_S", "Njet_S"};
+    cut_leadSjetPt.expression =
         "(Njet_S == 0) || (Njet_S > 0 && SafeIndex(PT_jet, SafeIndex(index_jet_S, 0, -1), -1.0) < 45)";
-    cuts[cut_leadSjetPt45.name] = cut_leadSjetPt45;
+    cuts[cut_leadSjetPt.name] = cut_leadSjetPt;
 
     //node = node
     //    .Define("My_p4_lep0_a", [](const std::vector<double> &pt,

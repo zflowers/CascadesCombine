@@ -119,11 +119,11 @@ void BuildFit::BuildAsimovFit(JSONFactory* j, std::string signalPoint, std::stri
     });
 
     stringlist binset = GetBinSet(j);
-    //AddFloatingNorms(bkgprocs);
-    cb.cp().bin(binset).AddSyst(cb, "DummySys", "lnN", SystMap<>::init(1.01)); // 1% over all bins
-    //for (const auto& bin: binset){
-    //    cb.cp().bin({bin}).AddSyst(cb, bin+"_DummySys", "lnN", SystMap<>::init(1.03)); // 3% over each bin
-    //}
+    AddFloatingNorms(bkgprocs);
+    //cb.cp().bin(binset).AddSyst(cb, "DummySys", "lnN", SystMap<>::init(1.01)); // 1% over all bins
+    for (const auto& bin: binset){
+        cb.cp().bin({bin}).AddSyst(cb, bin+"_DummySys", "lnN", SystMap<>::init(1.03)); // 3% over each bin
+    }
       
     //cb.PrintAll();
     cb.WriteDatacard(datacard_dir+"/"+signalPoint+"/"+signalPoint+".txt");

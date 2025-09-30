@@ -161,7 +161,7 @@ inline std::string BFTool::GetSignalTokensCascades(const std::string& input ){
     for (Long64_t i = 0; i < nEntries; ++i) {
         tree->GetEntry(i);
     
-        if (!MP     && tMP)     MP     = tMP;
+        if (tMP > MP)           MP     = tMP;
         if (!MSlepL && tMSlepL) MSlepL = tMSlepL;
         if (!MSneu  && tMSneu)  MSneu  = tMSneu;
         if (!MN2    && tMN2)    MN2    = tMN2;

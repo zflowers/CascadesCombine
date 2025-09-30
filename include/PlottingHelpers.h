@@ -202,6 +202,8 @@ void loadFormatMaps(){
   m_Color["Cascades_300_300_289_260_240_220_220_209_200_190_180"] = 7040; // 7072 might look better...?
   m_Title["Cascades_209_220_209_200_190_180"] = "Cascades 180";
   m_Color["Cascades_209_220_209_200_190_180"] = 7040; // 7072 might look better...?
+  m_Title["Cascades_220_220_209_200_190_180"] = "Cascades 180";
+  m_Color["Cascades_220_220_209_200_190_180"] = 7040; // 7072 might look better...?
 
   m_Title["Cascades_300_300_289_260_240_220"] = "Cascades 220";
   m_Color["Cascades_300_300_289_260_240_220"] = 7071;
