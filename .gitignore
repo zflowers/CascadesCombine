@@ -13,3 +13,4 @@ plots/*
 *.err
 *.out
 runs/
+scripts/submit_Regions.sh
