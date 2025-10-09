@@ -1,5 +1,5 @@
 SuperBin2L:
-  cuts: "Nlep==2;MET>=150;Njet>0;PTISR_LEP>=300;RISR_LEP>=0.95;RISR_LEP<=1.;METtrigger==1;Nbjet_ISR==0;Njet_S==0;Mperp<15"
+  cuts: "Nlep==2;MET>=150;Njet>0;PTISR_LEP>=300;RISR_LEP>=0.95;RISR_LEP<=1.;METORtrigger==1;Nbjet_ISR==0;Njet_S==0;Mperp<15"
   lep-cuts: |
     =2Gold;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"

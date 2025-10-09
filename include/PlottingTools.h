@@ -146,8 +146,18 @@ void Plot_Stack(const string& hname,
 
     for (size_t i = 0; i < bkgHists.size(); ++i) { TH1* h = bkgHists[i]; if (!h || h->GetEntries()==0) continue;
         h->SetLineColor(kBlack); h->SetLineWidth(1);
-        h->SetMarkerColor(m_Color[ExtractProcName(bkgHists[i]->GetName())]);
-        h->SetFillColor(m_Color[ExtractProcName(bkgHists[i]->GetName())]); h->SetFillStyle(1001);
+        int color = kBlack;
+        auto it = m_Color.find(ExtractProcName(bkgHists[i]->GetName()));
+        if (it != m_Color.end()) {
+            color = it->second;
+        } else {
+            // Fallback to rotating palette
+            color = fallbackColors[fallbackIndex % fallbackColors.size()];
+            fallbackIndex++;
+            m_Color[it->first] = color;
+        }
+        h->SetMarkerColor(color);
+        h->SetFillColor(color); h->SetFillStyle(1001);
         DrawLogSmart(h, "SAME HIST"); }
 
     if (h_BKG) { h_BKG->SetLineWidth(3); h_BKG->SetLineColor(kRed); DrawLogSmart(h_BKG, "SAME HIST"); }
@@ -155,8 +165,18 @@ void Plot_Stack(const string& hname,
     for (size_t i = 0; i < sigHists.size(); ++i) { TH1* h = sigHists[i]; if (!h || h->GetEntries()==0) continue;
         SetMinimumBinContent(h, 1.e-6);
         h->SetLineWidth(3); h->SetLineStyle(7);
-        h->SetLineColor(m_Color[ExtractProcName(sigHists[i]->GetName())]);
-        h->SetMarkerColor(m_Color[ExtractProcName(sigHists[i]->GetName())]);
+        int color = kBlack;
+        auto it = m_Color.find(ExtractProcName(sigHists[i]->GetName()));
+        if (it != m_Color.end()) {
+            color = it->second;
+        } else {
+            // Fallback to rotating palette
+            color = fallbackColors[fallbackIndex % fallbackColors.size()];
+            fallbackIndex++;
+            m_Color[it->first] = color;
+        }
+        h->SetLineColor(color);
+        h->SetMarkerColor(color);
         h->Scale(signal_boost); DrawLogSmart(h, "SAME HIST"); }
 
     if (h_DATA) { h_DATA->SetMarkerStyle(20); h_DATA->SetMarkerSize(0.8); h_DATA->SetLineColor(kBlack); DrawLogSmart(h_DATA, "SAME E"); }
@@ -263,8 +283,18 @@ void Plot_CutFlow(const std::string &hname,
         TH1* h = bkgHists[i]; if (!h || h->GetEntries()==0) continue;
         h->SetLineColor(kBlack);
         h->SetLineWidth(2);
-        h->SetLineColor(m_Color[ExtractProcName(bkgHists[i]->GetName())]);
-        h->SetMarkerColor(m_Color[ExtractProcName(bkgHists[i]->GetName())]);
+        int color = kBlack;
+        auto it = m_Color.find(ExtractProcName(bkgHists[i]->GetName()));
+        if (it != m_Color.end()) {
+            color = it->second;
+        } else {
+            // Fallback to rotating palette
+            color = fallbackColors[fallbackIndex % fallbackColors.size()];
+            fallbackIndex++;
+            m_Color[it->first] = color;
+        }
+        h->SetLineColor(color);
+        h->SetMarkerColor(color);
         h->SetFillStyle(1001);
         h->Draw("SAME");
     }
@@ -282,8 +312,18 @@ void Plot_CutFlow(const std::string &hname,
         h->Scale(signal_boost);
         h->SetLineWidth(2);
         h->SetLineStyle(7);
-        h->SetLineColor(m_Color[ExtractProcName(sigHists[i]->GetName())]);
-        h->SetMarkerColor(m_Color[ExtractProcName(sigHists[i]->GetName())]);
+        int color = kBlack;
+        auto it = m_Color.find(ExtractProcName(bkgHists[i]->GetName()));
+        if (it != m_Color.end()) {
+            color = it->second;
+        } else {
+            // Fallback to rotating palette
+            color = fallbackColors[fallbackIndex % fallbackColors.size()];
+            fallbackIndex++;
+            m_Color[it->first] = color;
+        }
+        h->SetLineColor(color);
+        h->SetMarkerColor(color);
         h->Draw("SAME");
     }
 
@@ -420,7 +460,6 @@ void Plot_Eff_Multi(const std::string& groupName,
         HistId id = ParseHistName(e->GetName());
         std::string legendKey, legendTitle;
         int color = kBlack;
-        static size_t fallbackIndex = 0;
         
         if (groupType == "Bin") {
             legendKey = id.proc.empty() ? "unknown_proc" : id.proc;
@@ -438,6 +477,7 @@ void Plot_Eff_Multi(const std::string& groupName,
             // Fallback to rotating palette
             color = fallbackColors[fallbackIndex % fallbackColors.size()];
             fallbackIndex++;
+            m_Color[it->first] = color;
         }
 
         gr->SetMarkerStyle(20);
@@ -552,7 +592,7 @@ void Plot_EventCount2D(TH2* h, const std::string &mode,
     tex.SetTextAlign(22);
     float textSize = 0.04;
     if (h->GetNbinsX() > 10) textSize = textSize - 0.0016f * (h->GetNbinsX()- 10);
-    if (textSize < 0.015) textSize = 0.015;
+    if (textSize < 0.01) textSize = 0.01;
     tex.SetTextSize(textSize);
 
     // Draw numbers

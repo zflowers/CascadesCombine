@@ -5,8 +5,15 @@ processes:
     - DY
     - DBTB
     - Wjets
+    #- ZInv
+    #- QCD
 
   sig:
     - Cascades
     - SMS_TChiWZ
-    - SMS_TChiWZ_Sandwich
+    #- SMS_TChiWZ_Sandwich
+
+sms_filters:
+  - SMS_300_290
+  - SMS_300_295
+  - SMS_300_280

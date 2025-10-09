@@ -23,8 +23,8 @@ def parse_args():
                    help="Generate ROOT outputs")
     p.add_argument("--make-impacts", action="store_true",
                    help="Generate Impacts")
-    p.add_argument("--lumi", dest="lumi", type=str, default="400.0",
-                   help="Lumi to scale everything to (default is 400.0)")
+    p.add_argument("--lumi", dest="lumi", type=str, default="-1",
+                   help="Lumi to scale everything to overriding SampleTool values")
     p.add_argument("--run-name", dest="run_name", type=str, default=None,
                    help="Optional run name prefix to prepend to timestamp for the run directory")
     p.add_argument("--existing-run-dir", dest="existing_run_dir", type=str, default=None,
@@ -639,6 +639,10 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
     configs_dir = run_info.get("configs_dir")
     exe_dir = run_info.get("exe_dir")
     macro_dir = run_info.get("macro_dir")
+    lumi = args.lumi
+    plot_lumi = lumi # lumi used for labels in plots
+    if plot_lumi == "-1":
+        plot_lumi = "400" # set to estimated Run2 + Run3 for now
 
     if not args.existing_run_dir:
         # Submit jobs (give submit_jobs the run-local condor dir so everything stays inside the run)
@@ -649,7 +653,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             hist=hist_cfg,
             make_json=make_json,
             make_root=make_root,
-            lumi=args.lumi,
+            lumi=lumi,
             run_dir=condor_dir
         )
 
@@ -695,7 +699,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                 "./"+exe_dir+"/PlotHistograms.x",
                 "-i", hadd_file,
                 "-o", plots_dir,
-                "-l", args.lumi
+                "-l", plot_lumi
             ]
             print("[run_combine] Plotting histograms with command:", " ".join(plot_cmd), flush=True)
             subprocess.run(plot_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
@@ -708,7 +712,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                 "./"+exe_dir+"/PlotYields.x",
                 "-i", flattened_json,
                 "-o", plots_dir,
-                "-l", args.lumi
+                "-l", plot_lumi
             ]
             print("[run_combine] Plotting yields with command:", " ".join(plot_cmd), flush=True)
             subprocess.run(plot_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)

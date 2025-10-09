@@ -92,6 +92,7 @@ int main(int argc, char** argv) {
         }
     }
 
+    if (Lumi <= 0.) Lumi = GetLumiFromKey(rootFilePath); // get lumi from ST for file
     if (sampleName.empty()) sampleName = GetSampleNameFromKey(rootFilePath);
     if (outputJsonPath.empty()) outputJsonPath = binName + "_" + sampleName + ".json";
     if (binName.empty() || rootFilePath.empty() || (!doHist && !doJSON)) { usage(argv[0]); return 1; }

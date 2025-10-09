@@ -7,6 +7,7 @@
 #include <cmath>
 #include <memory>
 #include <filesystem>
+#include <optional>
 
 #include "yaml-cpp/yaml.h"
 
@@ -23,10 +24,75 @@ inline std::string GetSampleNameFromKey(const std::string& keyOrPath) {
     return name;
 }
 
+// put this in the same header where ST and fs are visible
+inline double GetLumiFromKey(const std::string& keyOrPath) {
+    SampleTool ST;
+    ST.LoadAllFromMaster();
+    // Helper: strip known suffixes
+    auto stripSuffixes = [](std::string s) -> std::string {
+        const std::vector<std::string> suffixes = {"_SMS", "_Cascades"};
+        for (const auto& suf : suffixes) {
+            if (s.size() >= suf.size() &&
+                s.compare(s.size() - suf.size(), suf.size(), suf) == 0) {
+                s.erase(s.size() - suf.size());
+            }
+        }
+        return s;
+    };
+
+    // Use stripSuffixes later when not mixing and matching signals across eras
+    // For now just explicitly set SMS xsecs in SampleTool
+    // Helper: search for the best (longest) LumiDict key appearing as a path-segment prefix
+    auto findLumiKeyInString = [&ST, &stripSuffixes](const std::string &s) -> std::optional<std::string> {
+        std::string best;
+        for (const auto &kv : ST.LumiDict) {
+            std::string tag = kv.first; // stripSuffixes(kv.first);
+            std::size_t pos = 0;
+            while (pos < s.size()) {
+                std::size_t next = s.find('/', pos);
+                std::string seg = (next == std::string::npos) ? s.substr(pos) : s.substr(pos, next - pos);
+                //seg = stripSuffixes(seg);
+
+                if (seg == tag ||
+                    (seg.rfind(tag, 0) == 0 &&
+                     (seg.size() == tag.size() || seg[tag.size()] == '_' || seg[tag.size()] == '-'))) {
+                    if (tag.size() > best.size()) best = tag;
+                }
+
+                if (next == std::string::npos) break;
+                pos = next + 1;
+            }
+        }
+        if (!best.empty()) return best;
+        return std::nullopt;
+    };
+
+    // 1) Try direct search in the provided path/string
+    if (auto k = findLumiKeyInString(keyOrPath); k.has_value()) {
+        return ST.LumiDict[*k];
+    }
+
+    // 2) Fallback: try to match by filename against MasterDict entries
+    std::string keyBase = fs::path(keyOrPath).filename().string();
+    for (const auto &kv : ST.MasterDict) {
+        for (const auto &entry : kv.second) {
+            std::string entryBase = fs::path(entry).filename().string();
+            if (keyBase == entryBase) {
+                if (auto k = findLumiKeyInString(entry); k.has_value()) {
+                    return ST.LumiDict[*k];
+                }
+            }
+        }
+    }
+
+    // 3) Give up
+    std::cerr << "Warning: GetLumiFromKey could not determine lumi for '" << keyOrPath << "'. Returning 0.\n";
+    return 0.0;
+}
+
 inline std::string GetProcessNameFromKey(const std::string& keyOrPath) {
     SampleTool ST;
     ST.LoadAllFromMaster();
-
     auto resolveGroup = [&ST](const std::string &Key) -> std::string {
         std::string keyBase = fs::path(Key).filename().string();    
         for (const auto &kv : ST.MasterDict) {       // kv.first = canonical group

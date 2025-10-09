@@ -151,6 +151,56 @@ std::vector<int> fallbackColors = {
     7003, 7013, 7023, 7033, 7043, 7053, 7063, 7073, // "3" group
     7004, 7014, 7024, 7034, 7044, 7054, 7064, 7074  // "4" group
 };
+static size_t fallbackIndex = 0;
+
+std::string makeSMSChiTitle(const std::string& key) {
+    int color = kBlack;
+    auto it = m_Color.find(key);
+    if (it == m_Color.end()) {
+        // Fallback to rotating palette
+        color = fallbackColors[fallbackIndex % fallbackColors.size()];
+        fallbackIndex++;
+        m_Color[it->first] = color;
+    }
+    // Determine model type
+    std::string model;
+    if (key.find("TChiWZ") != std::string::npos) model = "TChiWZ";
+    else if (key.find("TChiHZ") != std::string::npos) model = "TChiHZ";
+    else if (key.find("TChipmWW") != std::string::npos) model = "TChipmWW";
+    else model = "Unknown";
+
+    // Determine particle text for the model
+    std::string particles;
+    if (model == "TChiWZ" || model == "TChiHZ")
+        particles = "#tilde{#chi}^{0}_{2} #tilde{#chi}^{#pm}_{1}";
+    else if (model == "TChipmWW")
+        particles = "#tilde{#chi}^{#pm}_{1} #tilde{#chi}^{#mp}_{1}";
+    else
+        particles = "#tilde{#chi} #tilde{#chi}"; // fallback
+
+    // Extract mass numbers from key
+    int m1 = 0, m3 = 0;
+    size_t lastUnderscore = key.find_last_of('_');
+    size_t secondLastUnderscore = key.find_last_of('_', lastUnderscore - 1);
+    if (secondLastUnderscore == std::string::npos || lastUnderscore == std::string::npos)
+        return "Invalid";
+
+    try {
+        m1 = std::stoi(key.substr(secondLastUnderscore + 1, lastUnderscore - secondLastUnderscore - 1));
+        m3 = std::stoi(key.substr(lastUnderscore + 1));
+    } catch (...) {
+        return "Invalid";
+    }
+
+    // Handle Sandwich models
+    bool isSandwich = key.find("Sandwich") != std::string::npos;
+    int m2 = (isSandwich && model != "TChipmWW") ? (m1 + m3) / 2 : m1;
+
+    // Compose final title
+    std::ostringstream title;
+    title << particles << " " << m1 << ", " << m2 << ", " << m3;
+    return title.str();
+}
 
 void loadFormatMaps(){
 
@@ -229,9 +279,9 @@ void loadFormatMaps(){
   m_Color["Cascades_300_300_289_280_275_270_SMS"] = 7061;
   //m_Color["Cascades_300_300_289_280_275_270"] = 8009;
 
-  m_Title["SMS_TChiWZ_Sandwich_SMS_300_290"] = "#tilde{#chi}^{0}_{2} #tilde{#chi}^{#pm}_{1} 300, 295, 290";
+  m_Title["SMS_TChiWZ_Sandwich_SMS_300_290"] = makeSMSChiTitle("SMS_TChiWZ_Sandwich_SMS_300_290");
+  m_Title["SMS_TChiWZ_SMS_300_290"] = makeSMSChiTitle("SMS_TChiWZ_SMS_300_290");
   m_Color["SMS_TChiWZ_Sandwich_SMS_300_290"] = 7043;
-  m_Title["SMS_TChiWZ_SMS_300_290"] = "#tilde{#chi}^{0}_{2} #tilde{#chi}^{#pm}_{1} 300, 300, 290";
   m_Color["SMS_TChiWZ_SMS_300_290"] = 7072;
 
   m_Title["SMS_Gluinos_SMS_1000_900"] = "T1qqqq 1000 900";

@@ -15,6 +15,7 @@ class SampleTool{
 	map <string, stringlist> BkgDict{};
 	map <string, stringlist> SigDict{};
 	map <string, stringlist> MasterDict{};
+        map <string, double> LumiDict{};
 
 	stringlist SignalKeys{};
 		

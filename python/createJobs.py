@@ -3,6 +3,7 @@ import os, sys, subprocess, argparse, re, shutil, time, random
 from pathlib import Path
 import importlib.util
 from collections import defaultdict
+from CondorJobCountMonitor import CondorJobCountMonitor
 
 # ----------------------------------------
 # Module imports (pybind)
@@ -39,6 +40,21 @@ def _flatten_field(value):
     joined = " ".join(parts)
     joined = joined.replace('"', '\\"')
     return joined
+
+def get_auto_THRESHOLD():
+    result = subprocess.run(
+        ["condor_config_val", "-dump"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        check=True
+    )   
+    for line in result.stdout.splitlines():
+        if line.startswith("MAX_JOBS_PER_OWNER"):
+            _, value = line.split("=")
+            return int(int(value.strip()) * 0.95)
+            break
+    return 10000 # default fallback
 
 # ----------------------------------------
 # Write helper scripts (merge/hadd)
@@ -345,6 +361,10 @@ def write_submit_file(
             "Failed to connect",
         ]
     
+        # Hold condor submissions if over max threshold
+        condor_monitor = CondorJobCountMonitor(threshold=get_auto_THRESHOLD(),verbose=False)
+        condor_monitor.wait_until_jobs_below()
+
         while attempt < max_retries and not success:
             attempt += 1
     
