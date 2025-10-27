@@ -48,6 +48,11 @@ cmake .. -DCMAKE_INSTALL_PREFIX=$CMSSW_BASE/lib -DCMAKE_BUILD_TYPE=Release
 make -j8
 make install
 ```
+Also for auto making yaml files later useful to do:
+```
+python3 -m ensurepip --upgrade --user
+python3 -m pip install --user ruamel.yaml
+```
 
 The RDataframe framework is here,
 https://github.com/zflowers/CascadesCombine

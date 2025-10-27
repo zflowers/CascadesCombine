@@ -131,42 +131,60 @@ static bool buildCutsForBin(BuildFitInput* BFI,
     return true;
 }
 
-static bool writePartialJSON(const std::string& outPath,
-                             const std::string& binname,
-                             const std::map<std::string, std::map<std::string, std::array<double,3>>>& fileResults,
-                             const std::map<std::string, std::array<double,3>>& totals) 
+static bool writePartialJSON(
+    const std::string& outPath,
+    const std::string& binname,
+    const std::map<std::string, std::map<std::string, std::array<double,5>>>& fileResults,
+    const std::map<std::string, std::array<double,5>>& totals)
 {
     std::ofstream ofs(outPath);
     if (!ofs) return false;
-    ofs << "{\n  \"" << binname << "\": {\n";
+
+    ofs << "{\n";
+    ofs << "  \"" << binname << "\": {\n";
+
     bool firstSample = true;
-    for (const auto &kv : totals) {
+    for (const auto& kv : totals) {
         if (!firstSample) ofs << ",\n";
         firstSample = false;
-        const std::string &sname = kv.first;
-        std::string sampleId = GetSampleNameFromKey(sname); 
-        const auto &totalVals = kv.second;
-        ofs << "    \"" << sampleId << "\": {\n      \"files\": {\n";
+
+        const std::string& sname = kv.first;
+        std::string sampleId = GetSampleNameFromKey(sname);
+        const auto& totalVals = kv.second;
+
+        ofs << "    \"" << sampleId << "\": {\n";
+        ofs << "      \"files\": {\n";
+
         bool firstFile = true;
         auto itFiles = fileResults.find(sname);
         if (itFiles != fileResults.end()) {
-            for (const auto &fkv : itFiles->second) {
+            for (const auto& fkv : itFiles->second) {
                 if (!firstFile) ofs << ",\n";
                 firstFile = false;
+
                 ofs << "        \"" << fkv.first << "\": ["
                     << (long long)fkv.second[0] << ", "
                     << fkv.second[1] << ", "
-                    << fkv.second[2] << "]";
+                    << fkv.second[2] << ", "
+                    << fkv.second[3] << ", "
+                    << fkv.second[4] << "]";
             }
         }
+
         ofs << "\n      },\n";
+
         ofs << "      \"totals\": ["
             << (long long)totalVals[0] << ", "
             << totalVals[1] << ", "
-            << totalVals[2] << "]\n";
+            << totalVals[2] << ", "
+            << totalVals[3] << ", "
+            << totalVals[4] << "]\n";
+
         ofs << "    }";
     }
-    ofs << "\n  }\n}\n";
+
+    ofs << "\n  }\n";
+    ofs << "}\n";
     ofs.close();
     return true;
 }

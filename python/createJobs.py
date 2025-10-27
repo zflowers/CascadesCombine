@@ -362,7 +362,7 @@ def write_submit_file(
         ]
     
         # Hold condor submissions if over max threshold
-        condor_monitor = CondorJobCountMonitor(threshold=get_auto_THRESHOLD(),verbose=False)
+        condor_monitor = CondorJobCountMonitor(threshold=get_auto_THRESHOLD()*.95,verbose=False)
         condor_monitor.wait_until_jobs_below()
 
         while attempt < max_retries and not success:

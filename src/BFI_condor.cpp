@@ -123,8 +123,8 @@ int main(int argc, char** argv) {
     if(isSignal && sigType.empty())
         sigType=(rootFilePath.find("SMS")!=std::string::npos)?"sms":"cascades";
 
-    std::map<std::string, std::map<std::string,std::array<double,3>>> fileResults;
-    std::map<std::string,std::array<double,3>> totals;
+    std::map<std::string, std::map<std::string,std::array<double,5>>> fileResults;
+    std::map<std::string,std::array<double,5>> totals;
     std::string processName = "";
     if(isSignal && sigType == "cascades")
         processName = BFTool::GetSignalTokensCascades(rootFilePath);
@@ -139,7 +139,11 @@ int main(int argc, char** argv) {
     
         // Scale weights
         auto df_scaled = df.Define("weight_scaled",[Lumi](double w){return w*Lumi;},{"weight"})
-                           .Define("weight_sq_scaled", [Lumi](double w2){ return w2 * Lumi * Lumi; }, {"weight2"});
+                           .Define("weight_sq_scaled", [Lumi](double w2){ return w2 * Lumi * Lumi; }, {"weight2"})
+                           .Define("mc_genweight", [](double gw, double xsec){ return gw * xsec; }, {"genweight","XSec"})
+                           .Define("mc_genweight_sq", [](double gw, double xsec){ return gw * gw * xsec * xsec; }, {"genweight","XSec"});
+                           //.Define("mc_genweight", [](double gw){ return gw; }, {"genweight"})
+                           //.Define("mc_genweight_sq", [](double gw){ return gw * gw; }, {"genweight"});
     
         // Lepton counts / kinematics
         auto df_with_lep = BFI->DefineLeptonPairCounts(df_scaled,"");
@@ -324,15 +328,22 @@ int main(int argc, char** argv) {
             auto cnt = json_node.Count();
             auto sumW = json_node.Sum<double>("weight_scaled");
             auto sumW2 = json_node.Sum<double>("weight_sq_scaled");
+            auto sumG = json_node.Sum<double>("mc_genweight");
+            auto sumG2 = json_node.Sum<double>("mc_genweight_sq");
+
             unsigned long long n_entries = cnt.GetValue();
             double sW = sumW.GetValue();
             double sW2Val = sumW2.GetValue();
             double err = (sW2Val>=0)?std::sqrt(sW2Val):0.0;
-            fileResults[key][rootFilePath] = {(double)n_entries,sW,err};
+            double sG = sumG.GetValue();
+            double sG2 = sumG2.GetValue();
+            fileResults[key][rootFilePath] = {(double)n_entries,sW,err,sG,sG2};
             auto &tot=totals[key];
             tot[0]+= (double)n_entries;
             tot[1]+= sW;
             tot[2]+= err*err;
+            tot[3]+= sG;
+            tot[4]+= sG2;
         }
     };
 

@@ -24,32 +24,130 @@ run_all() {
 }
 echo "Submitting Regions..."
 SLEEP=60
-VERSION="v55"
+VERSION="v149"
 make clean
 make all -j 8
 
-#run_all --make-json --make-impacts --skip-compile --bins-cfg config/bin_cfgs/Regions_2L.yaml --run-name Cascades_2L_Regions_${VERSION}
+run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_2L_0J_lPTISR_Gold.yaml --run-name Cascades_2L_0J_lPTISR_Regions_Gold_${VERSION}
+sleep ${SLEEP}
+run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_2L_0J_hPTISR_Gold.yaml --run-name Cascades_2L_0J_hPTISR_Regions_Gold_${VERSION}
+sleep ${SLEEP}
+run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_2L_1J_lPTISR_Gold.yaml --run-name Cascades_2L_1J_lPTISR_Regions_Gold_${VERSION}
+sleep ${SLEEP}
+run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_2L_1J_hPTISR_Gold.yaml --run-name Cascades_2L_1J_hPTISR_Regions_Gold_${VERSION}
+sleep ${SLEEP}
+#rm -f config/bin_cfgs/Regions_2L_Gold.yaml # Clean up yaml
+#cat config/bin_cfgs/Regions_2L_0J_lPTISR_Gold.yaml >> config/bin_cfgs/Regions_2L_Gold.yaml
+#cat config/bin_cfgs/Regions_2L_1J_lPTISR_Gold.yaml >> config/bin_cfgs/Regions_2L_Gold.yaml
+#cat config/bin_cfgs/Regions_2L_0J_hPTISR_Gold.yaml >> config/bin_cfgs/Regions_2L_Gold.yaml
+#cat config/bin_cfgs/Regions_2L_1J_hPTISR_Gold.yaml >> config/bin_cfgs/Regions_2L_Gold.yaml
+#run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_2L_Gold.yaml --run-name Cascades_2L_Regions_Gold_${VERSION}
 #sleep ${SLEEP}
-#run_all --make-json --make-impacts --skip-compile --bins-cfg config/bin_cfgs/Regions_3L.yaml --run-name Cascades_3L_Regions_${VERSION}
+run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_3L_Gold.yaml --run-name Cascades_3L_Regions_Gold_${VERSION}
+sleep ${SLEEP}
+run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_4L_Gold.yaml --run-name Cascades_4L_Regions_Gold_${VERSION}
+sleep ${SLEEP}
+#
+#rm -f config/bin_cfgs/Regions_Gold.yaml # Clean up yaml
+#cat config/bin_cfgs/Regions_2L_0J_lPTISR_Gold.yaml >> config/bin_cfgs/Regions_Gold.yaml
+#cat config/bin_cfgs/Regions_2L_1J_lPTISR_Gold.yaml >> config/bin_cfgs/Regions_Gold.yaml
+#cat config/bin_cfgs/Regions_2L_0J_hPTISR_Gold.yaml >> config/bin_cfgs/Regions_Gold.yaml
+#cat config/bin_cfgs/Regions_2L_1J_hPTISR_Gold.yaml >> config/bin_cfgs/Regions_Gold.yaml
+#cat config/bin_cfgs/Regions_3L_Gold.yaml >> config/bin_cfgs/Regions_Gold.yaml
+#cat config/bin_cfgs/Regions_4L_Gold.yaml >> config/bin_cfgs/Regions_Gold.yaml
+#run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_Gold.yaml --run-name Cascades_Regions_234L_Gold_${VERSION}
 #sleep ${SLEEP}
-#run_all --make-json --make-impacts --skip-compile --bins-cfg config/bin_cfgs/Regions_4L.yaml --run-name Cascades_4L_Regions_${VERSION}
+
+run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_2L_0J_lPTISR_Silver.yaml --run-name Cascades_2L_0J_lPTISR_Regions_Silver_${VERSION}
+sleep ${SLEEP}
+run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_2L_0J_hPTISR_Silver.yaml --run-name Cascades_2L_0J_hPTISR_Regions_Silver_${VERSION}
+sleep ${SLEEP}
+run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_2L_1J_lPTISR_Silver.yaml --run-name Cascades_2L_1J_lPTISR_Regions_Silver_${VERSION}
+sleep ${SLEEP}
+run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_2L_1J_hPTISR_Silver.yaml --run-name Cascades_2L_1J_hPTISR_Regions_Silver_${VERSION}
+sleep ${SLEEP}
+#rm -f config/bin_cfgs/Regions_2L_Silver.yaml # Clean up yaml
+#cat config/bin_cfgs/Regions_2L_0J_lPTISR_Silver.yaml >> config/bin_cfgs/Regions_2L_Silver.yaml
+#cat config/bin_cfgs/Regions_2L_1J_lPTISR_Silver.yaml >> config/bin_cfgs/Regions_2L_Silver.yaml
+#cat config/bin_cfgs/Regions_2L_0J_hPTISR_Silver.yaml >> config/bin_cfgs/Regions_2L_Silver.yaml
+#cat config/bin_cfgs/Regions_2L_1J_hPTISR_Silver.yaml >> config/bin_cfgs/Regions_2L_Silver.yaml
+#run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_2L_Silver.yaml --run-name Cascades_2L_Regions_Silver_${VERSION}
+#sleep ${SLEEP}
+run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_3L_Silver.yaml --run-name Cascades_3L_Regions_Silver_${VERSION}
+sleep ${SLEEP}
+run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_4L_Silver.yaml --run-name Cascades_4L_Regions_Silver_${VERSION}
+sleep ${SLEEP}
+#
+#rm -f config/bin_cfgs/Regions_Silver.yaml # Clean up yaml
+#cat config/bin_cfgs/Regions_2L_0J_lPTISR_Silver.yaml >> config/bin_cfgs/Regions_Silver.yaml
+#cat config/bin_cfgs/Regions_2L_1J_lPTISR_Silver.yaml >> config/bin_cfgs/Regions_Silver.yaml
+#cat config/bin_cfgs/Regions_2L_0J_hPTISR_Silver.yaml >> config/bin_cfgs/Regions_Silver.yaml
+#cat config/bin_cfgs/Regions_2L_1J_hPTISR_Silver.yaml >> config/bin_cfgs/Regions_Silver.yaml
+#cat config/bin_cfgs/Regions_3L_Silver.yaml >> config/bin_cfgs/Regions_Silver.yaml
+#cat config/bin_cfgs/Regions_4L_Silver.yaml >> config/bin_cfgs/Regions_Silver.yaml
+#run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_Silver.yaml --run-name Cascades_Regions_234L_Silver_${VERSION}
 #sleep ${SLEEP}
 #
-#rm -f config/bin_cfgs/Regions.yaml # Clean up Regions.yaml
-#cat config/bin_cfgs/Regions_2L.yaml >> config/bin_cfgs/Regions.yaml
-#cat config/bin_cfgs/Regions_3L.yaml >> config/bin_cfgs/Regions.yaml
-#cat config/bin_cfgs/Regions_4L.yaml >> config/bin_cfgs/Regions.yaml
-#run_all --make-json --make-impacts --skip-compile --bins-cfg config/bin_cfgs/Regions.yaml --run-name Cascades_Regions_234L_${VERSION}
+run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_2L_0J_lPTISR_Bronze.yaml --run-name Cascades_2L_0J_lPTISR_Regions_Bronze_${VERSION}
+sleep ${SLEEP}
+run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_2L_0J_hPTISR_Bronze.yaml --run-name Cascades_2L_0J_hPTISR_Regions_Bronze_${VERSION}
+sleep ${SLEEP}
+run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_2L_1J_lPTISR_Bronze.yaml --run-name Cascades_2L_1J_lPTISR_Regions_Bronze_${VERSION}
+sleep ${SLEEP}
+run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_2L_1J_hPTISR_Bronze.yaml --run-name Cascades_2L_1J_hPTISR_Regions_Bronze_${VERSION}
+sleep ${SLEEP}
+#rm -f config/bin_cfgs/Regions_2L_Bronze.yaml # Clean up yaml
+#cat config/bin_cfgs/Regions_2L_0J_lPTISR_Bronze.yaml >> config/bin_cfgs/Regions_2L_Bronze.yaml
+#cat config/bin_cfgs/Regions_2L_1J_lPTISR_Bronze.yaml >> config/bin_cfgs/Regions_2L_Bronze.yaml
+#cat config/bin_cfgs/Regions_2L_0J_hPTISR_Bronze.yaml >> config/bin_cfgs/Regions_2L_Bronze.yaml
+#cat config/bin_cfgs/Regions_2L_1J_hPTISR_Bronze.yaml >> config/bin_cfgs/Regions_2L_Bronze.yaml
+#run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_2L_Bronze.yaml --run-name Cascades_2L_Regions_Bronze_${VERSION}
+#sleep ${SLEEP}
+run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_3L_Bronze.yaml --run-name Cascades_3L_Regions_Bronze_${VERSION}
+sleep ${SLEEP}
+run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_4L_Bronze.yaml --run-name Cascades_4L_Regions_Bronze_${VERSION}
+sleep ${SLEEP}
+#
+#rm -f config/bin_cfgs/Regions_Bronze.yaml # Clean up yaml
+#cat config/bin_cfgs/Regions_2L_0J_lPTISR_Bronze.yaml >> config/bin_cfgs/Regions_Bronze.yaml
+#cat config/bin_cfgs/Regions_2L_1J_lPTISR_Bronze.yaml >> config/bin_cfgs/Regions_Bronze.yaml
+#cat config/bin_cfgs/Regions_2L_0J_hPTISR_Bronze.yaml >> config/bin_cfgs/Regions_Bronze.yaml
+#cat config/bin_cfgs/Regions_2L_1J_hPTISR_Bronze.yaml >> config/bin_cfgs/Regions_Bronze.yaml
+#cat config/bin_cfgs/Regions_3L_Bronze.yaml >> config/bin_cfgs/Regions_Bronze.yaml
+#cat config/bin_cfgs/Regions_4L_Bronze.yaml >> config/bin_cfgs/Regions_Bronze.yaml
+#run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_Bronze.yaml --run-name Cascades_Regions_234L_Bronze_${VERSION}
+#sleep ${SLEEP}
+#
+#rm -f config/bin_cfgs/Regions.yaml # Clean up yaml
+#cat config/bin_cfgs/Regions_2L_0J_lPTISR_Gold.yaml >> config/bin_cfgs/Regions.yaml
+#cat config/bin_cfgs/Regions_2L_0J_lPTISR_Silver.yaml >> config/bin_cfgs/Regions.yaml
+#cat config/bin_cfgs/Regions_2L_0J_lPTISR_Bronze.yaml >> config/bin_cfgs/Regions.yaml
+#cat config/bin_cfgs/Regions_2L_1J_lPTISR_Gold.yaml >> config/bin_cfgs/Regions.yaml
+#cat config/bin_cfgs/Regions_2L_1J_lPTISR_Silver.yaml >> config/bin_cfgs/Regions.yaml
+#cat config/bin_cfgs/Regions_2L_1J_lPTISR_Bronze.yaml >> config/bin_cfgs/Regions.yaml
+#cat config/bin_cfgs/Regions_2L_0J_hPTISR_Gold.yaml >> config/bin_cfgs/Regions.yaml
+#cat config/bin_cfgs/Regions_2L_0J_hPTISR_Silver.yaml >> config/bin_cfgs/Regions.yaml
+#cat config/bin_cfgs/Regions_2L_0J_hPTISR_Bronze.yaml >> config/bin_cfgs/Regions.yaml
+#cat config/bin_cfgs/Regions_2L_1J_hPTISR_Gold.yaml >> config/bin_cfgs/Regions.yaml
+#cat config/bin_cfgs/Regions_2L_1J_hPTISR_Silver.yaml >> config/bin_cfgs/Regions.yaml
+#cat config/bin_cfgs/Regions_2L_1J_hPTISR_Bronze.yaml >> config/bin_cfgs/Regions.yaml
+#cat config/bin_cfgs/Regions_3L_Gold.yaml >> config/bin_cfgs/Regions.yaml
+#cat config/bin_cfgs/Regions_3L_Silver.yaml >> config/bin_cfgs/Regions.yaml
+#cat config/bin_cfgs/Regions_3L_Bronze.yaml >> config/bin_cfgs/Regions.yaml
+#cat config/bin_cfgs/Regions_4L_Gold.yaml >> config/bin_cfgs/Regions.yaml
+#cat config/bin_cfgs/Regions_4L_Silver.yaml >> config/bin_cfgs/Regions.yaml
+#cat config/bin_cfgs/Regions_4L_Bronze.yaml >> config/bin_cfgs/Regions.yaml
+#run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions.yaml --run-name Cascades_Regions_234L_${VERSION}
 #sleep ${SLEEP}
 
 # Plotting studies
-VERSION="${VERSION}_Plots"
-run_all --make-json --make-root --bins-cfg config/bin_cfgs/SuperBin2L.yaml --hist-cfg config/hist_cfgs/hist_SuperBin2L.yaml --run-name Cascades_2L_SuperBin_Plots_${VERSION}
-sleep ${SLEEP}
-run_all --make-json --make-root --bins-cfg config/bin_cfgs/SuperBin3L.yaml --hist-cfg config/hist_cfgs/hist_SuperBin3L.yaml --run-name Cascades_3L_SuperBin_Plots_${VERSION}
-sleep ${SLEEP}
-run_all --make-json --make-root --bins-cfg config/bin_cfgs/SuperBin4L.yaml --hist-cfg config/hist_cfgs/hist_SuperBin4L.yaml --run-name Cascades_4L_SuperBin_Plots_${VERSION}
-sleep ${SLEEP}
+#VERSION="${VERSION}_Plots_Mperp_Tuning"
+#run_all --make-json --make-root --bins-cfg config/bin_cfgs/Regions_2L_NoMperp.yaml --hist-cfg config/hist_cfgs/hist_RISR_Mperp.yaml --run-name Cascades_2L_${VERSION}
+#sleep ${SLEEP}
+#run_all --make-json --make-root --bins-cfg config/bin_cfgs/Regions_3L_NoMperp.yaml --hist-cfg config/hist_cfgs/hist_RISR_Mperp.yaml --run-name Cascades_3L_${VERSION}
+#sleep ${SLEEP}
+#run_all --make-json --make-root --bins-cfg config/bin_cfgs/Regions_4L_NoMperp.yaml --hist-cfg config/hist_cfgs/hist_RISR_Mperp.yaml --run-name Cascades_4L_${VERSION}
+#sleep ${SLEEP}
 
 sleep ${SLEEP} # final sleep just to hold user from accidentally submitting something before last sub is out the door
 echo "Submitted Regions!"

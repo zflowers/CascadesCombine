@@ -15,7 +15,12 @@ void Plot_Hist1D(TH1* h) {
     h->GetYaxis()->SetTitle(("N_{events} / "+std::to_string(int(lumi))+" fb^{-1}").c_str());
     h->GetYaxis()->SetRangeUser(h->GetMinimum()*0.9, 1.1*h->GetMaximum());
     TLatex l; l.SetTextFont(42); l.SetNDC();
-    l.SetTextSize(0.035); l.DrawLatex(0.57,0.943,m_Title[ExtractProcName(title)].c_str());
+    std::string proc_title = title;
+    if(proc_title.find("TChiWZ") != std::string::npos)
+        proc_title = makeSMSChiTitle(proc_title);
+    else
+        proc_title = m_Title[ExtractProcName(proc_title)];
+    l.SetTextSize(0.035); l.DrawLatex(0.57,0.943,proc_title.c_str());
     l.SetTextSize(0.04); l.DrawLatex(0.01,0.943,"#bf{CMS} Simulation Preliminary");
     l.SetTextSize(0.045); l.DrawLatex(0.7,0.04,ExtractBinName(title).c_str());
     TString pdfName = Form("%spdfs/%s/%s.pdf", outputDir.c_str(), ExtractBinName(title).c_str(), title.c_str());
@@ -41,7 +46,12 @@ void Plot_Hist2D(TH2* h) {
     h->GetXaxis()->CenterTitle(); h->GetYaxis()->CenterTitle();
     h->GetZaxis()->SetTitle(("N_{events} / "+std::to_string(int(lumi))+" fb^{-1}").c_str());
     TLatex l; l.SetTextFont(42); l.SetNDC();
-    l.SetTextSize(0.035); l.DrawLatex(0.65,0.943,m_Title[ExtractProcName(title)].c_str());
+    std::string proc_title = title;
+    if(proc_title.find("TChiWZ") != std::string::npos)
+        proc_title = makeSMSChiTitle(proc_title);
+    else
+        proc_title = m_Title[ExtractProcName(proc_title)];
+    l.SetTextSize(0.035); l.DrawLatex(0.65,0.943,proc_title.c_str());
     l.SetTextSize(0.04); l.DrawLatex(0.01,0.943,"#bf{CMS} Simulation Preliminary");
     l.SetTextSize(0.045); l.DrawLatex(0.7,0.04,ExtractBinName(title).c_str());
     TString pdfName = Form("%spdfs/%s/%s.pdf", outputDir.c_str(), ExtractBinName(title).c_str(), title.c_str());
@@ -88,7 +98,12 @@ void Plot_Eff(TEfficiency* e){
     e->GetPaintedGraph()->GetYaxis()->SetRangeUser(0.,1.05);
 
     TLatex l; l.SetTextFont(42); l.SetNDC();
-    l.SetTextSize(0.035); l.DrawLatex(0.65,0.943,m_Title[ExtractProcName(title)].c_str());
+    std::string proc_title = title;
+    if(proc_title.find("TChiWZ") != std::string::npos)
+        proc_title = makeSMSChiTitle(proc_title);
+    else
+        proc_title = m_Title[ExtractProcName(proc_title)];
+    l.SetTextSize(0.035); l.DrawLatex(0.65,0.943,proc_title.c_str());
     l.SetTextSize(0.04); l.DrawLatex(0.01,0.943,"#bf{CMS} Simulation Preliminary");
     l.SetTextSize(0.045); l.DrawLatex(0.7,0.04,ExtractBinName(title).c_str());
     TString pdfName = Form("%spdfs/%s/%s.pdf", outputDir.c_str(), ExtractBinName(title).c_str(), title.c_str());
@@ -190,14 +205,21 @@ void Plot_Stack(const string& hname,
     leg->SetShadowColor(kWhite);
     if (h_BKG) leg->AddEntry(h_BKG,"SM total","L");
     for (size_t i=0;i<bkgHists.size();++i) if(bkgHists[i]) leg->AddEntry(bkgHists[i],m_Title[ExtractProcName(bkgHists[i]->GetName())].c_str(),"F");
-    for (size_t i=0;i<sigHists.size();++i) if(sigHists[i]) {
-        std::string tmp_label = m_Title[ExtractProcName(sigHists[i]->GetName())];
-        if (signal_boost != 1.0) {
-            std::ostringstream boost_str;
-            boost_str << std::setprecision(3) << std::defaultfloat << signal_boost;
-            tmp_label += " * " + boost_str.str();
+    for (size_t i=0;i<sigHists.size();++i) {
+        if(sigHists[i]) {
+            std::string proc_title = sigHists[i]->GetName();
+            if(proc_title.find("TChiWZ") != std::string::npos)
+                proc_title = makeSMSChiTitle(proc_title);
+            else
+                proc_title = m_Title[ExtractProcName(proc_title)];
+            std::string tmp_label = proc_title;
+            if (signal_boost != 1.0) {
+                std::ostringstream boost_str;
+                boost_str << std::setprecision(3) << std::defaultfloat << signal_boost;
+                tmp_label += " * " + boost_str.str();
+            }
+            leg->AddEntry(sigHists[i], tmp_label.c_str(), "L");
         }
-        leg->AddEntry(sigHists[i], tmp_label.c_str(), "L");
     }
     if (h_DATA) leg->AddEntry(h_DATA,"Data","P");
     leg->Draw();
@@ -344,14 +366,21 @@ void Plot_CutFlow(const std::string &hname,
     leg->SetShadowColor(kWhite);
     if (h_BKG) leg->AddEntry(h_BKG,"SM total","L");
     for (size_t i=0;i<bkgHists.size();++i) if(bkgHists[i]) leg->AddEntry(bkgHists[i],m_Title[ExtractProcName(bkgHists[i]->GetName())].c_str(),"L");
-    for (size_t i=0;i<sigHists.size();++i) if(sigHists[i]) {
-        std::string tmp_label = m_Title[ExtractProcName(sigHists[i]->GetName())];
-        if (signal_boost != 1.0) {
-            std::ostringstream boost_str;
-            boost_str << std::setprecision(3) << std::defaultfloat << signal_boost;
-            tmp_label += " * " + boost_str.str();
+    for (size_t i=0;i<sigHists.size();++i) {
+        if(sigHists[i]) {
+            std::string proc_title = sigHists[i]->GetName();
+            if(proc_title.find("TChiWZ") != std::string::npos)
+                proc_title = makeSMSChiTitle(proc_title);
+            else
+                proc_title = m_Title[ExtractProcName(proc_title)];
+            std::string tmp_label = proc_title;
+            if (signal_boost != 1.0) {
+                std::ostringstream boost_str;
+                boost_str << std::setprecision(3) << std::defaultfloat << signal_boost;
+                tmp_label += " * " + boost_str.str();
+            }
+            leg->AddEntry(sigHists[i], tmp_label.c_str(), "L");
         }
-        leg->AddEntry(sigHists[i], tmp_label.c_str(), "L");
     }
     if (h_DATA) leg->AddEntry(h_DATA,"Data","P");
     leg->Draw();
@@ -816,7 +845,12 @@ void MakeAndPlotCutflow2D(
     }
     // Y labels
     for (int iy=0; iy<ny; ++iy) {
-        h2->GetYaxis()->SetBinLabel(iy+1, m_Title[yOrder[iy]].c_str());
+        std::string proc_title = yOrder[iy];
+        if(proc_title.find("TChiWZ") != std::string::npos)
+            proc_title = makeSMSChiTitle(proc_title);
+        else
+            proc_title = m_Title[yOrder[iy]];
+        h2->GetYaxis()->SetBinLabel(iy+1, proc_title.c_str());
     }
 
     // --- 9) fill contents. For Zbi collect signal Zbi values for z-range override ---

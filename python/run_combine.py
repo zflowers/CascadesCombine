@@ -722,15 +722,22 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
         print(f"[run_combine] Running BF.x with input {flattened_json} & output {output_dir}", flush=True)
         subprocess.run(["./"+exe_dir+"/BF.x", flattened_json, output_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
 
+        # Convert Gauss Params To Gammas
+        print("[run_combine] Launching nuisance conversion jobs...", flush=True)
+        for directory in os.listdir(output_dir):
+            for datacard in os.listdir(output_dir+'/'+directory):
+                subprocess.run(["./"+exe_dir+"/ConvertGaussToGamma.x", output_dir+'/'+directory+'/'+datacard], check=True, stdout=sys.stdout, stderr=sys.stderr)
+
         # combine
         print("[run_combine] Launching combine jobs...", flush=True)
         subprocess.run(["bash", macro_dir+"/launchCombine.sh", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
 
-        # significances
-        print(f"[run_combine] Yields for {bins_cfg}")
-        print_events(flattened_json)
+        # yields
+        #print(f"[run_combine] Yields for {bins_cfg}")
+        #print_events(flattened_json)
 
         try:
+            # significances
             print("[run_combine] Collecting significances...", flush=True)
             subprocess.run(["python3", "-u", macro_dir+"/CollectSignificance.py", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
         except Exception: # typical failure is because a signal process has 0 events but that shouldn't crash things

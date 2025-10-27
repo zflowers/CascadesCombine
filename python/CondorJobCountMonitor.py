@@ -1,5 +1,6 @@
 import time
 import subprocess
+import os
 from pathlib import Path
 from typing import Iterable, Tuple, Optional, List
 
@@ -25,6 +26,7 @@ class CondorJobCountMonitor:
     def __init__(self, threshold: int = 10000, verbose: bool = False):
         self.verbose = verbose
         self.set_threshold(threshold)
+        self.username = os.environ.get("USER", "") 
 
     def set_threshold(self, threshold: int):
         self.threshold = max(1, int(threshold))
@@ -270,7 +272,6 @@ class CondorJobCountMonitor:
             check_count += 1
             time.sleep(5)
     
-    
     def wait_until_jobs_below(self, clusters: Optional[Iterable[Tuple[str, Optional[str]]]] = None):
         check_count = 0
         active_clusters = list(clusters) if clusters is not None else None
@@ -278,7 +279,28 @@ class CondorJobCountMonitor:
         while True:
             try:
                 if active_clusters is None:
-                    total_jobs = self.get_total_jobs(clusters=None)
+                    # check all schedds; proceed if any one of them drops below threshold
+                    cmd = self._condor_q_cmd(cluster_id="", total=True)
+                    output = subprocess.check_output(cmd, shell=True, text=True)
+                    total_jobs_per_schedd = []
+    
+                    # parse the per-schedd job totals for your username
+                    for line in output.splitlines():
+                        if f"Total for {self.username}:" in line:
+                            parts = line.split()
+                            try:
+                                idx = parts.index("jobs;")
+                                n_jobs = int(parts[idx - 1])
+                                total_jobs_per_schedd.append(n_jobs)
+                            except (ValueError, IndexError):
+                                continue
+    
+                    if not total_jobs_per_schedd:
+                        print("[CondorJobCountMonitor] Could not parse any schedd totals, retrying...", flush=True)
+                        total_jobs = -1
+                    else:
+                        total_jobs = min(total_jobs_per_schedd)  # proceed if *any* schedd drops below threshold
+    
                 else:
                     total_jobs = 0
                     new_active = []
