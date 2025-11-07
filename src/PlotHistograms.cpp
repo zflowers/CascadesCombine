@@ -120,7 +120,7 @@ int main(int argc, char* argv[]) {
             if(!h) continue;
             const string& proc = pp.first;
         
-            if(proc=="data"||proc=="Data") { dataHist = h; continue; }
+            if(proc=="data" || proc=="Data" || proc=="data_obs") { dataHist = h; continue; }
             if(tool.BkgDict.count(proc)) {
                 bkgHists.push_back(h); 
                 bkgProcs.push_back(proc); 

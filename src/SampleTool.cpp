@@ -29,6 +29,7 @@ SampleTool::SampleTool(){
   LumiDict["Summer20UL18_106X_SMS"] = 286. + 138.;
 
   string pathPrefix = "root://cmseos.fnal.gov//store/user/lpcsusylep/NTUPLES_Cascades_v6/";
+  //string pathPrefix = "root://cmseos.fnal.gov//store/user/lpcsusylep/NTUPLES_Cascades_v7/";
 
   MasterDict["ttbar"] = {
     pathPrefix + "Summer23BPix_130X/TTto2L2Nu-2Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer23BPix_130X.root",
@@ -346,7 +347,7 @@ SampleTool::SampleTool(){
     pathPrefix + "Summer22_130X/WWZto4L2Nu_4F_TuneCP5_13p6TeV_amcatnlo-pythia8_Summer22_130X.root",
     pathPrefix + "Summer22_130X/WWto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8_Summer22_130X.root",
     pathPrefix + "Summer22_130X/WWto4Q_TuneCP5_13p6TeV_powheg-pythia8_Summer22_130X.root",
-    pathPrefix + "Summer22_130X/WWtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer22_130X.root",
+    // bugged for some reason? pathPrefix + "Summer22_130X/WWtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer22_130X.root",
     pathPrefix + "Summer22_130X/WZGtoLNuZG_TuneCP5_13p6TeV_amcatnlo-pythia8_Summer22_130X.root",
     pathPrefix + "Summer22_130X/WZZ_TuneCP5_13p6TeV_amcatnlo-pythia8_Summer22_130X.root",
     pathPrefix + "Summer22_130X/WZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer22_130X.root",
@@ -706,7 +707,7 @@ void SampleTool::LoadSigs( const stringlist& siglist ){
 }
 
 void SampleTool::LoadAllBkgs() {
-    stringlist allBkgs = {"ttbar","ST","DY","ZInv","DBTB","QCD","Wjets"};
+    stringlist allBkgs = {"ttbar","ST","DY","ZInv","DBTB","QCD","Wjets","top","boson","Vfakeleps"};
     LoadBkgs(allBkgs);
 }
 

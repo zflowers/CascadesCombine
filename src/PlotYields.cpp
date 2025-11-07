@@ -46,11 +46,13 @@ int main(int argc, char* argv[]) {
     json j;
     jsonFile >> j;
 
+    bool hasData = false;
     // Make map from JSON yields
     std::map<std::string, std::map<std::string, TH1*>> cutflowMap;
     for (auto& [binName, procMap] : j.items()) {
         // Loop over processes
         for (auto& [procName, values] : procMap.items()) {
+            if (procName.find("data") != std::string::npos || procName.find("Data") != std::string::npos) hasData = true;
             if (!values.is_array() || values.size() < 3) {
                 cerr << "[WARN] Skipping " << binName << " : " << procName << " (bad format)" << endl;
                 continue;
@@ -67,9 +69,11 @@ int main(int argc, char* argv[]) {
     
     // build global 2D cutflows from cutflowMap
     MakeAndPlotCutflow2D(cutflowMap, "GlobalCutflow", "yield", 1.0);
-    MakeAndPlotCutflow2D(cutflowMap, "GlobalCutflow", "SoB",   1.0);
-    MakeAndPlotCutflow2D(cutflowMap, "GlobalCutflow", "SoverSqrtB", 1.0);
-    MakeAndPlotCutflow2D(cutflowMap, "GlobalCutflow", "Zbi", 3.0); // 3% systematic
+    if(!hasData){
+        MakeAndPlotCutflow2D(cutflowMap, "GlobalCutflow", "SoB",   1.0);
+        MakeAndPlotCutflow2D(cutflowMap, "GlobalCutflow", "SoverSqrtB", 1.0);
+        MakeAndPlotCutflow2D(cutflowMap, "GlobalCutflow", "Zbi", 3.0); // 3% systematic
+    }
 
     outFile->Close();
 

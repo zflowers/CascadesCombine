@@ -724,23 +724,25 @@ void MakeAndPlotCutflow2D(
 
     int nx = (int)bins.size();
 
-    // --- 2) collect set of all processes across bins (skip data) ---
+    // --- 2) collect set of all processes across bins ---
     std::set<std::string> procSet;
     for (const auto &bp : cutflowMap) {
         for (const auto &pp : bp.second) {
             const std::string &pname = pp.first;
-            if(pname == "data" || pname == "Data") continue;
+            //if(pname == "data" || pname == "Data" || pname == "data_obs") continue;
             procSet.insert(pname);
         }
     }
 
     // --- 3) classify processes into bkg / sig (use tool) ---
-    std::vector<std::string> allBkgs, allSigs;
+    std::vector<std::string> allBkgs, allSigs, allData;
     for (const auto &p : procSet) {
         if (tool.BkgDict.count(p)) allBkgs.push_back(p);
         else if (std::find(tool.SignalKeys.begin(), tool.SignalKeys.end(), p) != tool.SignalKeys.end()
                  || p.find("SMS") != std::string::npos || p.find("Cascades") != std::string::npos)
             allSigs.push_back(p);
+        else if (p.find("data") != std::string::npos || p.find("Data") != std::string::npos)
+            allData.push_back(p);
         else
             allBkgs.push_back(p); // default unknown -> background
     }
@@ -781,6 +783,7 @@ void MakeAndPlotCutflow2D(
     // Ensure all bkgs/sigs exist in yields map (may be empty vectors already)
     for (const auto &b : allBkgs) if(!yields.count(b)) yields[b] = std::vector<double>(nx,0.0);
     for (const auto &s : allSigs) if(!yields.count(s)) yields[s] = std::vector<double>(nx,0.0);
+    for (const auto &s : allData) if(!yields.count(s)) yields[s] = std::vector<double>(nx,0.0);
 
     // --- 5) compute total background per bin ---
     std::vector<double> totalBkg(nx, 0.0);

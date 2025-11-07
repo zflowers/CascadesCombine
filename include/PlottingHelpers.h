@@ -204,6 +204,9 @@ std::string makeSMSChiTitle(const std::string& key) {
 
 void loadFormatMaps(){
 
+  m_Title["data_obs"] = "Data Obs";
+  m_Color["data_obs"] = kBlack;
+
   m_Title["ttbar"] = "t #bar{t} + X";
   m_Color["ttbar"] = 7011;
   //m_Color["ttbar"] = 8003;
@@ -293,8 +296,6 @@ void loadFormatMaps(){
 
   m_Title["SMS_TChiWZ_Sandwich_SMS_300_290"] = makeSMSChiTitle("SMS_TChiWZ_Sandwich_SMS_300_290");
   m_Title["SMS_TChiWZ_SMS_300_290"] = makeSMSChiTitle("SMS_TChiWZ_SMS_300_290");
-  m_Color["SMS_TChiWZ_Sandwich_SMS_300_290"] = 7043;
-  m_Color["SMS_TChiWZ_SMS_300_290"] = 7072;
 
   m_Title["SMS_Gluinos_SMS_1000_900"] = "T1qqqq 1000 900";
   m_Color["SMS_Gluinos_SMS_1000_900"] = 7071;

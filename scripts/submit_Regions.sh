@@ -24,7 +24,7 @@ run_all() {
 echo "Submitting Regions..."
 BINS_PER_JOB=60
 SLEEP=70
-VERSION="v200"
+VERSION="v201"
 make clean
 make all -j 8
 
@@ -90,15 +90,15 @@ sleep ${SLEEP}
 #sleep ${SLEEP}
 
 # CR Fit
-rm -f config/bin_cfgs/Regions_Bronze.yaml # Clean up yaml
-cat config/bin_cfgs/Regions_2L_0J_lPTISR_Bronze.yaml >> config/bin_cfgs/Regions_Bronze.yaml
-cat config/bin_cfgs/Regions_2L_1J_lPTISR_Bronze.yaml >> config/bin_cfgs/Regions_Bronze.yaml
-cat config/bin_cfgs/Regions_2L_0J_hPTISR_Bronze.yaml >> config/bin_cfgs/Regions_Bronze.yaml
-cat config/bin_cfgs/Regions_2L_1J_hPTISR_Bronze.yaml >> config/bin_cfgs/Regions_Bronze.yaml
-cat config/bin_cfgs/Regions_3L_Bronze.yaml >> config/bin_cfgs/Regions_Bronze.yaml
-cat config/bin_cfgs/Regions_4L_Bronze.yaml >> config/bin_cfgs/Regions_Bronze.yaml
-run_all --processes-cfg config/process_cfgs/data_processes.yaml --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_Bronze.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_CRs_234L_Bronze_${VERSION}
-sleep ${SLEEP}
+#rm -f config/bin_cfgs/Regions_Bronze.yaml # Clean up yaml
+#cat config/bin_cfgs/Regions_2L_0J_lPTISR_Bronze.yaml >> config/bin_cfgs/Regions_Bronze.yaml
+#cat config/bin_cfgs/Regions_2L_1J_lPTISR_Bronze.yaml >> config/bin_cfgs/Regions_Bronze.yaml
+#cat config/bin_cfgs/Regions_2L_0J_hPTISR_Bronze.yaml >> config/bin_cfgs/Regions_Bronze.yaml
+#cat config/bin_cfgs/Regions_2L_1J_hPTISR_Bronze.yaml >> config/bin_cfgs/Regions_Bronze.yaml
+#cat config/bin_cfgs/Regions_3L_Bronze.yaml >> config/bin_cfgs/Regions_Bronze.yaml
+#cat config/bin_cfgs/Regions_4L_Bronze.yaml >> config/bin_cfgs/Regions_Bronze.yaml
+#run_all --processes-cfg config/process_cfgs/data_processes.yaml --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_Bronze.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_CRs_234L_Bronze_${VERSION}
+#sleep ${SLEEP}
 
 # Plotting studies
 #VERSION="${VERSION}_Plots_Mperp_Tuning"

@@ -17,7 +17,7 @@ for WS in "${dcdir}"/*/*_workspace.root; do
     combineTool.py \
       -M FitDiagnostics \
       -d "$WSFILE" \
-      -m 125 \
+      -m 120 \
       --saveShapes \
       --saveWithUncertainties
     popd > /dev/null || exit 1

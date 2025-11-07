@@ -103,18 +103,22 @@ void BuildFit::WriteJsonAsFlatHists(JSONFactory* j, const std::string &outFile, 
     }
 
     int nWritten = 0;
+    bool hasData = false;
 
     for (auto itBin = j->j.begin(); itBin != j->j.end(); ++itBin) {
         const std::string origBin = itBin.key();       // original (map) key
         const std::string bin = SanitizeName(origBin); // sanitized for ROOT names
         json &binJson = itBin.value();
 
-        double binTotal = 0.0; // sum of background yields (used for data_obs if no external map)
+        double binTotal = 0.0; // sum of background yields (used for data_obs if no data)
         int binRaw = 0;
+        int binData = 0;
 
         for (auto itProc = binJson.begin(); itProc != binJson.end(); ++itProc) {
+            bool isData = false;
             const std::string procOrig = itProc.key();
             const std::string proc = SanitizeName(procOrig);
+            if (proc.find("data") != std::string::npos || proc.find("Data") != std::string::npos) {isData = true; hasData = true;}
             const json &vals = itProc.value();
             if (!vals.is_array() || vals.size() <= IDX_ERR) continue;
 
@@ -124,13 +128,16 @@ void BuildFit::WriteJsonAsFlatHists(JSONFactory* j, const std::string &outFile, 
 
             std::string hname = bin + "__" + proc;
 
-            // accumulate totals for data_obs only for non-signal processes
-            if (!BFTool::ContainsAnySubstring(procOrig, sigkeys)) {
+            // accumulate totals for data_obs only for bkg processes
+            if (!BFTool::ContainsAnySubstring(procOrig, sigkeys) && !isData) {
                 binTotal += sumW;
                 binRaw   += static_cast<int>(nRaw + 0.5);
             }
-            else if(BFTool::ContainsAnySubstring(procOrig, sigkeys)) {
+            if(BFTool::ContainsAnySubstring(procOrig, sigkeys)) {
                 hname += "120"; // add dummy mass value for sig
+            }
+            if(isData){
+                binData = nRaw;
             }
 
             TH1F *h = new TH1F(hname.c_str(), hname.c_str(), 1, 0, 1);
@@ -144,9 +151,9 @@ void BuildFit::WriteJsonAsFlatHists(JSONFactory* j, const std::string &outFile, 
             ++nWritten;
         }
 
-        // If caller provided an obs_rates pointer, fill it with the computed binTotal.
         if (out_obs_rates) {
-            (*out_obs_rates)[origBin] = static_cast<float>(binTotal);
+            if(hasData) (*out_obs_rates)[origBin] = static_cast<float>(binData);
+            else (*out_obs_rates)[origBin] = static_cast<float>(binTotal);
         }
 
         // Write data_obs using either the external map (if caller already computed/filled it),
@@ -163,7 +170,8 @@ void BuildFit::WriteJsonAsFlatHists(JSONFactory* j, const std::string &outFile, 
         TH1F *hdata = new TH1F(dataName.c_str(), dataName.c_str(), 1, 0, 1);
         hdata->Sumw2();
         hdata->SetBinContent(1, asimov_val);
-        hdata->SetEntries(static_cast<int>(asimov_val + 0.5));
+        if(hasData) hdata->SetEntries(binData);
+        else hdata->SetEntries(static_cast<int>(asimov_val + 0.5));
         hdata->Write();
         delete hdata;
     }
