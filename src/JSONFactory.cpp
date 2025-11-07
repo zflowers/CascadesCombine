@@ -19,6 +19,7 @@ JSONFactory::JSONFactory(std::map<std::string, Bin*> analysisbins){
 }
 
 JSONFactory::JSONFactory(std::string filename){
+        json_file_name = filename;
 	std::ifstream ifs(filename);
 	j = json::parse(ifs);
 

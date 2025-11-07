@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-import os, sys, subprocess, argparse, re, shutil, time, random
+import os, sys, subprocess, argparse, re, shutil, time, random, hashlib
 from pathlib import Path
 import importlib.util
 from collections import defaultdict
+from typing import Optional, Union
 from CondorJobCountMonitor import CondorJobCountMonitor
 
 # ----------------------------------------
@@ -27,6 +28,45 @@ pySampleTool = load_pybind_module("pySampleTool", libs_dir)
 def sanitize(s):
     s = re.sub(r'[^A-Za-z0-9_.-]', '_', s)
     return s[:200]
+
+def sanitize_for_base(s: str, maxlen: int = 240) -> str:
+    s = re.sub(r'[^A-Za-z0-9_.-]', '_', s)
+    return s[:maxlen]
+
+def make_condor_dir_name(bin_name: str, bins_cfg_path: Optional[Union[str, Path]] = None) -> str:
+    """
+    Produce a short stable condor directory name for the given bin group.
+    Keeps final length bounded while remaining human-readable and unique.
+    Preference order:
+      - If bins_cfg_path exists and follows pattern bin_group_XXX__safefirst, use XXX and safefirst.
+      - Otherwise include a short safe prefix and append an 8-hex sha1 digest of bin_name.
+    """
+    # safe-stem extraction
+    stem = None
+    try:
+        if bins_cfg_path:
+            p = Path(bins_cfg_path)
+            stem = p.stem
+    except Exception:
+        stem = None
+
+    if stem:
+        stem_safe = re.sub(r'[^A-Za-z0-9_.-]', '_', stem)
+        # if submitJobs used "bin_group_XXX__safeFirst" pattern, try to preserve that XXX
+        m = re.match(r'bin_group_(\d{3})__(.+)', stem_safe)
+        if m:
+            idx = m.group(1)
+            sf = m.group(2)[:50]
+            digest = hashlib.sha1(bin_name.encode()).hexdigest()[:8]
+            return f"group_{idx}__{sf}__{digest}"
+        # otherwise use the stem + digest
+        digest = hashlib.sha1(bin_name.encode()).hexdigest()[:8]
+        return f"group__{stem_safe[:50]}__{digest}"
+
+    # fallback: use a sanitized prefix from bin_name + digest
+    digest = hashlib.sha1(bin_name.encode()).hexdigest()[:8]
+    safe = sanitize(bin_name)[:120]
+    return f"{safe}__{digest}"
 
 def _flatten_field(value):
     if value is None:
@@ -60,24 +100,45 @@ def get_auto_THRESHOLD():
 # Write helper scripts (merge/hadd)
 # ----------------------------------------
 def write_merge_script(bin_name, condor_bin_dir: Path, json_dirname="json"):
-    """Make a merge script that expects json files to be in condor_bin_dir/json"""
+    """Make a merge script that expects json files to be in condor_bin_dir/json
+
+    The script calls the run-local exe `exe/mergeJSONs.x` with two quoted args:
+      1) merged output JSON path (condor_bin_dir/<bin_safe>.json)
+      2) input json directory (condor_bin_dir/json)
+    """
     merge_script_path = condor_bin_dir / "mergeJSONs.sh"
+
+    # Use the sanitized directory name as the canonical bin name (this is what
+    # write_submit_file uses for the condor bin directory).
+    bin_safe = condor_bin_dir.name
+
+    # Determine paths (resolve exe relative to the condor bin dir so the
+    # script works even if executed from elsewhere)
+    exe_candidate = (condor_bin_dir / ".." / ".." / "exe" / "mergeJSONs.x").resolve()
+    merged_out = (condor_bin_dir / f"{bin_safe}.json").resolve()
+    json_dir = (condor_bin_dir / json_dirname).resolve()
+
     with open(merge_script_path, "w") as f:
         f.write("#!/usr/bin/env bash\n")
-        f.write("# Auto-generated merge script\n")
-        f.write(f"{condor_bin_dir}/../../exe/mergeJSONs.x {condor_bin_dir}/{bin_name} {condor_bin_dir}/{json_dirname}\n")
+        f.write("set -euo pipefail\n")
+        f.write("# Auto-generated merge script (safe quoting for grouped bins)\n")
+        f.write(f'EXEC="{exe_candidate.as_posix()}"\n')
+        f.write(f'OUT="{merged_out.as_posix()}"\n')
+        f.write(f'INDIR="{json_dir.as_posix()}"\n')
+        f.write('mkdir -p "$(dirname "$OUT")"\n')
+        f.write('echo "[mergeJSONs] Running: $EXEC $OUT $INDIR"\n')
+        f.write('"$EXEC" "$OUT" "$INDIR"\n')
+
     os.chmod(merge_script_path, 0o755)
 
 def write_hadd_script(bin_name, condor_bin_dir: Path, root_dirname="root"):
     hadd_script_path = condor_bin_dir / "haddROOTs.sh"
-    os.makedirs(hadd_script_path.parent, exist_ok=True)
+    merged_root = condor_bin_dir / f"{condor_bin_dir.name}.root"
     with open(hadd_script_path, "w") as f:
         f.write("#!/usr/bin/env bash\n")
         f.write("# Auto-generated per-bin hadd script\n")
-        f.write(
-            f"hadd -f {condor_bin_dir}/{bin_name}.root {condor_bin_dir}/{root_dirname}/*.root > /dev/null 2>&1 || "
-            f"hadd -f {condor_bin_dir}/{bin_name}.root {condor_bin_dir}/{root_dirname}/*.root\n"
-        )
+        f.write(f'hadd -f "{merged_root.as_posix()}" "{(condor_bin_dir / root_dirname / "*.root").as_posix()}" > /dev/null 2>&1 || ')
+        f.write(f'hadd -f "{merged_root.as_posix()}" "{(condor_bin_dir / root_dirname / "*.root").as_posix()}"\n')
     os.chmod(hadd_script_path, 0o755)
 
 # ----------------------------------------
@@ -168,12 +229,14 @@ def write_submit_file(
     lumi=1,
     make_json=True,
     make_root=True,
-    dryrun=False
+    dryrun=False,
+    bins_cfg: str = ""
 ):
     """
     condor_base_dir is the directory that will hold per-bin subdirs (e.g. runs/.../condor)
     """
-    bin_safe = sanitize(bin_name)
+    # Prefer a short stable group-based condor dir when possible (avoids long concatenated names).
+    bin_safe = make_condor_dir_name(bin_name, bins_cfg if bins_cfg else None)
     bin_dir = condor_base_dir / bin_safe
     if bin_dir.exists():
         shutil.rmtree(bin_dir)
@@ -245,7 +308,14 @@ def write_submit_file(
         sig_type = job.get("sig_type", None)
         sms_filters = job.get("sms_filters", [])
 
-        base = sanitize(f"{bin_name}_{ds}_{fname_stem}" + (f"_{sms_filters[0]}" if sms_filters else ""))
+        #base = sanitize(f"{bin_name}_{ds}_{fname_stem}" + (f"_{sms_filters[0]}" if sms_filters else ""))
+        sub_stem = Path(submit_path).stem
+        base_raw = f"{sub_stem}_{ds}_{fname_stem}"
+        if sms_filters:
+            base_raw += f"_{sms_filters[0]}"
+        # sanitize but keep informative length
+        base = sanitize_for_base(base_raw, maxlen=240)
+        job["base"] = base
 
         # Collect outputs/remaps for this job
         job["remap_outputs"] = job.get("remap_outputs", [])
@@ -275,6 +345,18 @@ def write_submit_file(
             job.setdefault("transfer_input_files", []).append(str(bfi_path))
             all_inputs.add(str(bfi_path))
 
+        # If bins YAML provided, stage it for transfer into each job CWD
+        bins_cfg_map = {}
+        if bins_cfg:
+            bcfg_path = Path(bins_cfg)
+            if bcfg_path.exists():
+                import yaml
+                bins_cfg_map = yaml.safe_load(bcfg_path.read_text()) or {}
+                # Ensure the exact file is transferred to job CWD (use basename)
+                all_inputs.add(str(bcfg_path.resolve()))
+            else:
+                print(f"[createJobs] WARNING: requested --bins-cfg not found: {bins_cfg}", file=sys.stderr)
+
         # Flatten fields
         cuts_flat = _flatten_field(job.get("cuts", ""))
         lep_cuts_flat = _flatten_field(job.get("lep_cuts", "")).replace(" ", "")
@@ -286,6 +368,38 @@ def write_submit_file(
             f"--bin {bin_name}",
             f"--file {fpath}",
         ]
+
+        # If a bins-cfg was provided and bin_name is a group (semicolon-separated),
+        # expand per-bin cut fields from the YAML and append them in the same order
+        if bins_cfg_map and ";" in bin_name:
+            # parse bins in the same order as provided
+            bins_list = [b.strip() for b in bin_name.split(";") if b.strip()]
+            for b in bins_list:
+                bcfg = bins_cfg_map.get(b, {}) or {}
+                # Append each per-bin field as its own repeated CLI flag (order preserved)
+                if bcfg.get("cuts"):
+                    args_list.append(f"--cuts {_flatten_field(bcfg.get('cuts'))}")
+                if bcfg.get("lep-cuts"):
+                    args_list.append(f"--lep-cuts {_flatten_field(bcfg.get('lep-cuts')).replace(' ', '')}")
+                if bcfg.get("predefined-cuts"):
+                    args_list.append(f"--predefined-cuts {_flatten_field(bcfg.get('predefined-cuts'))}")
+                if bcfg.get("user-cuts"):
+                    args_list.append(f"--user-cuts {_flatten_field(bcfg.get('user-cuts'))}")
+            # Also pass the basename of the bins-cfg file so BFI_condor can read it locally if desired
+            args_list.append(f"--bins-cfg {Path(bins_cfg).name}")
+        else:
+            # Original behavior: pass single/flattened cuts passed in job config (works for single-bin createJobs calls)
+            if cuts_flat:
+                args_list.append(f"--cuts {cuts_flat}")
+            if lep_cuts_flat:
+                args_list.append(f"--lep-cuts {lep_cuts_flat}")
+            if predef_flat:
+                args_list.append(f"--predefined-cuts {predef_flat}")
+            if user_flat:
+                args_list.append(f"--user-cuts {user_flat}")
+            # if bins_cfg provided but bin_name is single, still pass the file in
+            if bins_cfg:
+                args_list.append(f"--bins-cfg {Path(bins_cfg).name}")
 
         # Make-json / make-root options
         if make_json:
@@ -483,6 +597,7 @@ def main():
     parser.add_argument("--sig_processes", nargs="+", default=[], help="List of signal process names")
     parser.add_argument("--sms-filters", nargs="*", default=[], help="Optional list of SMS trees to filter")
     parser.add_argument("--bin", default="TEST")
+    parser.add_argument("--bins-cfg", default="", help="Path to bins YAML used to fetch per-bin cuts when grouping bins")
     parser.add_argument("--cuts", default="Nlep>=2;MET>=150")
     parser.add_argument("--lep-cuts", default=">=1OSSF")
     parser.add_argument("--predefined-cuts", default="Cleaning")
@@ -545,7 +660,8 @@ def main():
         lumi=args.lumi,
         make_json=args.make_json,
         make_root=args.make_root,
-        dryrun=args.dryrun
+        dryrun=args.dryrun,
+        bins_cfg=args.bins_cfg
     )
 
 if __name__ == "__main__":

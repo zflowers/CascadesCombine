@@ -73,7 +73,7 @@ stringlist BuildFit::ExtractSignalDetails( std::string signalPoint){
 
 }
 
-stringlist BuildFit::GetBinSet( JSONFactory* j){
+stringlist BuildFit::GetBinSet(JSONFactory* j){
     stringlist bins{};
         for (json::iterator it = j->j.begin(); it != j->j.end(); ++it) {
                 //std::cout << it.key() <<"\n";
@@ -82,12 +82,105 @@ stringlist BuildFit::GetBinSet( JSONFactory* j){
         return bins;
 }
 
+std::string BuildFit::SanitizeName(const std::string &s) {
+    std::string out;
+    out.reserve(s.size());
+    for (char c : s) {
+        if (isalnum(c) || c == '_' || c == '-') out += c;
+        else out += '_';
+    }
+    return out;
+}
+
+void BuildFit::WriteJsonAsFlatHists(JSONFactory* j, const std::string &outFile, std::map<std::string,float>* out_obs_rates) {
+    constexpr int IDX_RAW  = 0; // raw events
+    constexpr int IDX_SUMW = 1; // weighted yield
+    constexpr int IDX_ERR  = 2; // stat error on weighted yield
+
+    TFile *f = TFile::Open(outFile.c_str(), "RECREATE");
+    if (!f || f->IsZombie()) {
+        std::cerr << "[ERROR] Could not create ROOT file " << outFile << std::endl;
+    }
+
+    int nWritten = 0;
+
+    for (auto itBin = j->j.begin(); itBin != j->j.end(); ++itBin) {
+        const std::string origBin = itBin.key();       // original (map) key
+        const std::string bin = SanitizeName(origBin); // sanitized for ROOT names
+        json &binJson = itBin.value();
+
+        double binTotal = 0.0; // sum of background yields (used for data_obs if no external map)
+        int binRaw = 0;
+
+        for (auto itProc = binJson.begin(); itProc != binJson.end(); ++itProc) {
+            const std::string procOrig = itProc.key();
+            const std::string proc = SanitizeName(procOrig);
+            const json &vals = itProc.value();
+            if (!vals.is_array() || vals.size() <= IDX_ERR) continue;
+
+            double nRaw = vals[IDX_RAW].get<double>();
+            double sumW = vals[IDX_SUMW].get<double>();
+            double err  = vals[IDX_ERR].get<double>();
+
+            std::string hname = bin + "__" + proc;
+
+            // accumulate totals for data_obs only for non-signal processes
+            if (!BFTool::ContainsAnySubstring(procOrig, sigkeys)) {
+                binTotal += sumW;
+                binRaw   += static_cast<int>(nRaw + 0.5);
+            }
+            else if(BFTool::ContainsAnySubstring(procOrig, sigkeys)) {
+                hname += "120"; // add dummy mass value for sig
+            }
+
+            TH1F *h = new TH1F(hname.c_str(), hname.c_str(), 1, 0, 1);
+            h->Sumw2();
+            h->SetBinContent(1, sumW);
+            h->SetBinError(1, err);
+            h->SetEntries(nRaw);
+
+            h->Write();
+            delete h;
+            ++nWritten;
+        }
+
+        // If caller provided an obs_rates pointer, fill it with the computed binTotal.
+        if (out_obs_rates) {
+            (*out_obs_rates)[origBin] = static_cast<float>(binTotal);
+        }
+
+        // Write data_obs using either the external map (if caller already computed/filled it),
+        // or the binTotal computed here.
+        double asimov_val = binTotal;
+        if (out_obs_rates == nullptr) {
+            // no external map provided; use binTotal already computed
+        } else {
+            // prefer the value the caller might have passed in already
+            asimov_val = static_cast<double>((*out_obs_rates)[origBin]);
+        }
+
+        std::string dataName = bin + "__data_obs";
+        TH1F *hdata = new TH1F(dataName.c_str(), dataName.c_str(), 1, 0, 1);
+        hdata->Sumw2();
+        hdata->SetBinContent(1, asimov_val);
+        hdata->SetEntries(static_cast<int>(asimov_val + 0.5));
+        hdata->Write();
+        delete hdata;
+    }
+
+    f->Write();
+    f->Close();
+    delete f;
+
+    std::cout << "[INFO] Wrote " << nWritten << " histograms to " << outFile << std::endl;
+}
+
 void BuildFit::AddFloatingNorms(stringlist bkgprocs){
     cb.SetFlag("filters-use-regex", true);
     for (const auto& proc: bkgprocs){
         cb.cp().process({proc})
-            .AddSyst(cb, "scale_"+proc, "rateParam", SystMap<>::init(1.0));
-            //.AddSyst(cb, "scale_"+proc, "lnN", SystMap<>::init(1.1));
+            //.AddSyst(cb, "scale_"+proc, "rateParam", SystMap<>::init(1.0));
+            .AddSyst(cb, "scale_"+proc, "lnN", SystMap<>::init(1.2));
     }
     cb.SetFlag("filters-use-regex", false);
 }
@@ -113,7 +206,7 @@ void BuildFit::AddMCStatProcByProc(const std::string& bin, JSONFactory* j) {
 
         // basic sanity
         if (sumG2 <= 0.0) continue; // no info to compute gen variance
-        if (sumW == 0.0) continue;  // nothing to attach a multiplicative nuisance to
+        //if (sumW <= 0.0) continue;  // nothing to attach a multiplicative nuisance to
 
         double fracErrGen = std::sqrt(sumG2) / std::abs(sumG); // scale-invariant fractional error
         if (!std::isfinite(fracErrGen)) continue;
@@ -232,9 +325,9 @@ void BuildFit::AddRaSys(const stringlist& binset, const stringlist& procs){
 
 void BuildFit::AddPTISRSys(const stringlist& binset, const stringlist& procs){
     cb.SetFlag("filters-use-regex", true);
-    cb.cp().process(procs).bin({".*2L.*0J.*Ph.*"})
+    cb.cp().process(procs).bin({".*2L.*0J.*P350.*"})
         .AddSyst(cb, "PTISR_2L_0J", "lnN", SystMap<>::init(1.10));
-    cb.cp().process(procs).bin({".*2L.*1J.*Ph.*"})
+    cb.cp().process(procs).bin({".*2L.*1J.*P350.*"})
         .AddSyst(cb, "PTISR_2L_1J", "lnN", SystMap<>::init(1.10));
     //for (const auto& bin: binset){
     //  if(bin.find("_P") == std::string::npos) continue;
@@ -251,7 +344,6 @@ void BuildFit::BuildAsimovFit(JSONFactory* j, std::string signalPoint, std::stri
     ch::Categories cats = BuildCats(j);
     //std::cout<<"building obs rates \n";
     std::map<std::string, float> obs_rates;
-    BuildAsimovData(obs_rates, j);
     //std::cout<<"Getting process list\n";
     stringlist bkgprocs = GetBkgProcs(j);
     //std::cout<<"Parse Signal point\n";
@@ -260,26 +352,72 @@ void BuildFit::BuildAsimovFit(JSONFactory* j, std::string signalPoint, std::stri
     //cb.SetVerbosity(3);
     cb.AddObservations({"*"}, {signalDetails[0]}, {"13.6TeV"}, {signalDetails[1]}, cats);
     cb.AddProcesses(   {"*"}, {signalDetails[0]}, {"13.6TeV"}, {signalDetails[1]}, bkgprocs, cats, false);
-    cb.AddProcesses(   {signalDetails[2]}, {signalDetails[0]}, {"13.6TeV"}, {signalDetails[1]}, {signalPoint}, cats, true);
-    cb.ForEachObs([&](ch::Observation *x){
-        x->set_rate(obs_rates[x->bin()]);
-    });
-    cb.ForEachProc([&j](ch::Process *x) {
-        //std::cout<<x->bin()<<" "<<x->process()<<"\n";
-        json json_array = j->j[x->bin()][x->process()];
-        x->set_rate(json_array[1].get<float>());
-    });
+    //cb.AddProcesses(   {signalDetails[2]}, {signalDetails[0]}, {"13.6TeV"}, {signalDetails[1]}, {signalPoint}, cats, true);
+    cb.AddProcesses(   {"120"}, {signalDetails[0]}, {"13.6TeV"}, {signalDetails[1]}, {signalPoint}, cats, true);
+
+    std::string fullPathString = j->json_file_name;
+    std::filesystem::path p(fullPathString);
+    std::filesystem::path parentPath = p.parent_path();
+    std::string json_to_root_file = std::string(parentPath)+"/json_shapes_flat.root";
+    WriteJsonAsFlatHists(j, json_to_root_file, &obs_rates);
+    TFile* json_root_file = TFile::Open(json_to_root_file.c_str(), "UPDATE");
+    if (!json_root_file || json_root_file->IsZombie()) {
+        throw std::runtime_error("Cannot open " + json_to_root_file);
+    }
+    // collect bins that actually contain the signal process in JSON
+    std::vector<std::string> bins_with_signal;
+    for (auto itBin = j->j.begin(); itBin != j->j.end(); ++itBin) {
+        const std::string binname = itBin.key(); // raw bin name (CH expects raw names)
+        const json &binJson = itBin.value();
+        if (binJson.contains(signalPoint)) {
+            bins_with_signal.push_back(binname);
+        }
+    }
+    cb.cp().backgrounds().ExtractShapes(json_to_root_file, "$BIN__$PROCESS", "$BIN__$PROCESS__$SYSTEMATIC");
+    
+    // Only extract signal shapes for bins where we actually have signal histograms
+    if (!bins_with_signal.empty()) {
+    cb.cp().signals().ExtractShapes(json_to_root_file, "$BIN__$PROCESS$MASS", "$BIN__$PROCESS$MASS__$SYSTEMATIC");
+        std::cout << "extracted signals for " << bins_with_signal.size() << " bins\n";
+    } else {
+        std::cout << "[WARN] No bins contain signal '" << signalPoint << "' in JSON - skipping signal ExtractShapes.\n";
+    }
+
+    //BuildAsimovData(obs_rates, j);
+    //cb.ForEachObs([&](ch::Observation *x){
+    //    x->set_rate(obs_rates[x->bin()]);
+    //});
+    //cb.ForEachProc([&j](ch::Process *x) {
+    //    //std::cout<<x->bin()<<" "<<x->process()<<"\n";
+    //    const auto& bin = x->bin();
+    //    const auto& proc = x->process();
+    //    if (!j->j.contains(bin) || !j->j[bin].contains(proc)) {
+    //        x->set_rate(0.0);
+    //        return;
+    //    }
+    //    json json_array = j->j[x->bin()][x->process()];
+    //    x->set_rate(json_array[1].get<float>());
+    //});
+
+    cb.FilterProcs([](ch::Process const *p){ return p->rate() <= 0; });
 
     stringlist binset = GetBinSet(j);
     //for (const auto& bin: binset){
     //    cb.cp().bin({bin}).AddSyst(cb, bin+"_DummySys", "lnN", SystMap<>::init(1.03)); // 3% over each bin
     //}
-    AddMCStatBinByBin(j);
+    cb.cp().SetAutoMCStats(cb, 0.); // 0.1
+    //AddMCStatBinByBin(j);
     AddFloatingNorms(bkgprocs);
     AddPTISRSys(binset, bkgprocs);
     AddRaSys(binset, bkgprocs);
     //AddZSys(binset, bkgprocs);
     //std::cout << "Printing systematics..." << std::endl; cb.PrintSysts();
     //cb.PrintAll();
-    cb.WriteDatacard(datacard_dir+"/"+signalPoint+"/"+signalPoint+".txt");
-}    
+    cb.FilterSysts([](ch::Systematic const *s){ return s->value_u() == 1.0 && s->value_d() == 1.0; });
+    cb.WriteDatacard(datacard_dir+"/"+signalPoint+"/"+signalPoint+".txt", *json_root_file);
+    //cb.WriteDatacard(datacard_dir+"/"+signalPoint+"/"+signalPoint+".txt");//,datacard_dir+"/"+signalPoint+"/bbbshapes.root");
+    //cb.WriteDatacard(datacard_dir+"/"+signalPoint+"/"+signalPoint+".txt","");//,datacard_dir+"/"+signalPoint+"/bbbshapes.root");
+    json_root_file->Close();
+    delete json_root_file;
+}
+

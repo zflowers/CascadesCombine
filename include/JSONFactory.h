@@ -20,7 +20,7 @@ class JSONFactory{
 	void WriteJSON(std::string filename);
 
 	std::vector<std::string> sigkeys = { "Cascades", "SMS" };
-
+        std::string json_file_name;
 };
 
 #endif

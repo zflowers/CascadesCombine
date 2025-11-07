@@ -20,22 +20,24 @@ chmod +x BFI_condor.x
 
 clean_arg() { echo "$1" | tr -d '\n' | tr -d '\r' | xargs; }
 
+# --- initialize variables ---
 BIN=""
 ROOTFILE=""
 OUTPUT_JSON=""
 OUTPUT_HIST=""
 HIST_YAML=""
-CUTS=""
-LEP_CUTS=""
-PREDEF_CUTS=""
-USER_CUTS=""
+CUTS_MULTI=""
+LEP_CUTS_MULTI=""
+PREDEF_CUTS_MULTI=""
+USER_CUTS_MULTI=""
+BINS_CFG=""
 SIG_TYPE=""
 LUMI=""
 SMS_FILTERS=""
 JSON_FLAG=""
 HIST_FLAG=""
 
-# --- Parse arguments ---
+# --- Parse arguments (updated to collect repeated per-bin flags) ---
 while [[ $# -gt 0 ]]; do
     key="$1"
     case $key in
@@ -51,17 +53,48 @@ while [[ $# -gt 0 ]]; do
         --root-output) OUTPUT_HIST=$(clean_arg "$2"); shift 2;;
         --hist-yaml) HIST_YAML=$(clean_arg "$2"); shift 2;;
 
-        # Cuts
-        --cuts) CUTS=$(clean_arg "$2"); shift 2;;
-        --lep-cuts) LEP_CUTS=$(clean_arg "$2"); shift 2;;
-        --predefined-cuts) PREDEF_CUTS=$(clean_arg "$2"); shift 2;;
-        --user-cuts) USER_CUTS=$(clean_arg "$2"); shift 2;;
+        # Cuts (collect repeated occurrences)
+        --cuts)
+            if [[ -z "$CUTS_MULTI" ]]; then
+                CUTS_MULTI="$(clean_arg "$2")"
+            else
+                CUTS_MULTI="${CUTS_MULTI}|||$(clean_arg "$2")"
+            fi
+            shift 2
+            ;;
+        --lep-cuts)
+            if [[ -z "$LEP_CUTS_MULTI" ]]; then
+                LEP_CUTS_MULTI="$(clean_arg "$2")"
+            else
+                LEP_CUTS_MULTI="${LEP_CUTS_MULTI}|||$(clean_arg "$2")"
+            fi
+            shift 2
+            ;;
+        --predefined-cuts)
+            if [[ -z "$PREDEF_CUTS_MULTI" ]]; then
+                PREDEF_CUTS_MULTI="$(clean_arg "$2")"
+            else
+                PREDEF_CUTS_MULTI="${PREDEF_CUTS_MULTI}|||$(clean_arg "$2")"
+            fi
+            shift 2
+            ;;
+        --user-cuts)
+            if [[ -z "$USER_CUTS_MULTI" ]]; then
+                USER_CUTS_MULTI="$(clean_arg "$2")"
+            else
+                USER_CUTS_MULTI="${USER_CUTS_MULTI}|||$(clean_arg "$2")"
+            fi
+            shift 2
+            ;;
+
+        # bins-cfg (accept and keep basename)
+        --bins-cfg) BINS_CFG=$(clean_arg "$2"); shift 2;;
 
         # Other options
         --sig-type) SIG_TYPE=$(clean_arg "$2"); shift 2;;
         --lumi) LUMI=$(clean_arg "$2"); shift 2;;
 
-        # Multi-value argument
+        # Multi-value argument handling for sms filters kept as before
         --sms-filters)
             shift
             SMS_FILTERS=""
@@ -100,10 +133,35 @@ CMD="./BFI_condor.x --bin \"$BIN\" --file \"$ROOTFILE\""
 [[ -n "$OUTPUT_HIST" ]] && CMD="$CMD --root-output \"$OUTPUT_HIST\""
 [[ -n "$HIST_YAML" ]] && CMD="$CMD --hist-yaml \"$HIST_YAML\""
 
-[[ -n "$CUTS" ]] && CMD="$CMD --cuts \"$CUTS\""
-[[ -n "$LEP_CUTS" ]] && CMD="$CMD --lep-cuts \"$LEP_CUTS\""
-[[ -n "$PREDEF_CUTS" ]] && CMD="$CMD --predefined-cuts \"$PREDEF_CUTS\""
-[[ -n "$USER_CUTS" ]] && CMD="$CMD --user-cuts \"$USER_CUTS\""
+# If we collected per-bin repeated cuts, pass them as a single --cuts-multi argument (||| as delimiter)
+if [[ -n "$CUTS_MULTI" ]]; then
+    CMD="$CMD --cuts-multi \"$CUTS_MULTI\""
+elif [[ -n "$CUTS" ]]; then
+    CMD="$CMD --cuts \"$CUTS\""
+fi
+
+if [[ -n "$LEP_CUTS_MULTI" ]]; then
+    CMD="$CMD --lep-cuts-multi \"$LEP_CUTS_MULTI\""
+elif [[ -n "$LEP_CUTS" ]]; then
+    CMD="$CMD --lep-cuts \"$LEP_CUTS\""
+fi
+
+if [[ -n "$PREDEF_CUTS_MULTI" ]]; then
+    CMD="$CMD --predefined-cuts-multi \"$PREDEF_CUTS_MULTI\""
+elif [[ -n "$PREDEF_CUTS" ]]; then
+    CMD="$CMD --predefined-cuts \"$PREDEF_CUTS\""
+fi
+
+if [[ -n "$USER_CUTS_MULTI" ]]; then
+    CMD="$CMD --user-cuts-multi \"$USER_CUTS_MULTI\""
+elif [[ -n "$USER_CUTS" ]]; then
+    CMD="$CMD --user-cuts \"$USER_CUTS\""
+fi
+
+# Keep passing --bins-cfg basename for debugging / future expansion
+if [[ -n "$BINS_CFG" ]]; then
+    CMD="$CMD --bins-cfg \"$BINS_CFG\""
+fi
 
 [[ -n "$SIG_TYPE" ]] && CMD="$CMD --sig-type \"$SIG_TYPE\""
 [[ -n "$LUMI" ]] && CMD="$CMD --lumi \"$LUMI\""

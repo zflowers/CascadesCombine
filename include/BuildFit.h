@@ -8,6 +8,10 @@
 #include <map>
 #include <string>
 #include <algorithm>
+#include <filesystem>
+
+#include <TFile.h>
+#include <TH1F.h>
 
 #include "CombineHarvester/CombineTools/interface/CombineHarvester.h"
 #include "CombineHarvester/CombineTools/interface/Observation.h"
@@ -26,6 +30,8 @@ class BuildFit{
     ch::CombineHarvester cb{};
     
     ch::Categories BuildCats(JSONFactory* j);
+    std::string SanitizeName(const std::string &s);
+    void WriteJsonAsFlatHists(JSONFactory* j, const std::string &outFile, std::map<std::string,float>* out_obs_rates = nullptr);
     std::vector<std::string> GetBkgProcs(JSONFactory* j);
     std::vector<std::string> ExtractSignalDetails( std::string signalPoint);
     std::vector<std::string> GetBinSet( JSONFactory* j);

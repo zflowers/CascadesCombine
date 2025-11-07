@@ -207,10 +207,18 @@ void loadFormatMaps(){
   m_Title["ttbar"] = "t #bar{t} + X";
   m_Color["ttbar"] = 7011;
   //m_Color["ttbar"] = 8003;
+  
+  m_Title["top"] = "t + X";
+  m_Color["top"] = 7011;
+  //m_Color["top"] = 8003;
 
   m_Title["ST"] = "single top";
   m_Color["ST"] = 7010;
   //m_Color["ST"] = 8004;
+
+  m_Title["Vfakeleps"] = "fakes";
+  m_Color["Vfakeleps"] = 7001;
+  //m_Color["Vfakeleps"] = 8001;
 
   m_Title["DB"] = "dibosons";
   m_Color["DB"] = 7051;
@@ -223,6 +231,10 @@ void loadFormatMaps(){
   m_Title["DBTB"] = "di & tri-bosons";
   m_Color["DBTB"] = 7050;
   //m_Color["DBTB"] = 8006;
+
+  m_Title["boson"] = "boson";
+  m_Color["boson"] = 7050;
+  //m_Color["boson"] = 8006;
 
   m_Title["ZDY"] = "Z / #gamma* + jets";
   m_Color["ZDY"] = 7000;

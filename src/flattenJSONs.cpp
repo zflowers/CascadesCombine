@@ -116,4 +116,3 @@ int main(int argc, char** argv) {
     std::cout << "Merged flattened JSON written to " << outputFile << "\n";
     return 0;
 }
-

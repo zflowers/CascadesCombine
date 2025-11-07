@@ -23,6 +23,8 @@ def parse_args():
                    help="Generate ROOT outputs")
     p.add_argument("--make-impacts", action="store_true",
                    help="Generate Impacts")
+    p.add_argument("--make-FD", action="store_true",
+                   help="Generate FitDiagnostics")
     p.add_argument("--lumi", dest="lumi", type=str, default="-1",
                    help="Lumi to scale everything to overriding SampleTool values")
     p.add_argument("--run-name", dest="run_name", type=str, default=None,
@@ -31,6 +33,8 @@ def parse_args():
                    help="Optional pass in existing run dir and make new run dir that takes the existing BFI output as input to do BF and later steps")
     p.add_argument("--skip-compile", action="store_true",
                    help="Skip running the compile step")
+    p.add_argument("--bins-per-job", type=int, default=4,
+                   help="Number of bins to group per job")
     return p.parse_args()
 
 def early_setup(run_name, existing_run_name=None):
@@ -248,6 +252,7 @@ def prepare_run_and_stage_assets_copy(
         "launchCombine.sh",
         "launchT2W.sh",
         "launchImpacts.sh",
+        "launchFitDiagnostics.sh",
     ]
     if not existing_run_dir:
         include_items.extend([
@@ -337,14 +342,14 @@ def build_binaries():
         raise
     print("[run_combine] Build finished.", flush=True)
 
-def submit_jobs(config, processes, hist, make_json=False, make_root=False, lumi="1.", run_dir=None):
+def submit_jobs(config, processes, hist, make_json=False, make_root=False, lumi="1.", run_dir=None, bins_per_job=1):
     """
     Runs submitJobs.py to generate Condor scripts.
     """
     if not run_dir:
         print("[run_combine] submit_jobs needs a run directory!", flush=True)
         sys.exit(0)
-    cmd = ["python3", "python/submitJobs.py", "--bins-cfg", config, "--processes-cfg", processes, "--lumi", lumi, "--run-dir", run_dir]
+    cmd = ["python3", "python/submitJobs.py", "--bins-cfg", config, "--processes-cfg", processes, "--lumi", lumi, "--run-dir", run_dir, "--bins-per-job", str(bins_per_job)]
 
     if make_json:
         cmd.append("--make-json")
@@ -540,6 +545,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
     print(f"[run_combine] Using run directory: {run_dir}", flush=True)
 
     make_impacts = args.make_impacts
+    make_FD = args.make_FD
     if args.existing_run_dir:
         existing_run_dir = args.existing_run_dir
         config_dir = os.path.join(existing_run_dir, "configs")
@@ -654,7 +660,8 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             make_json=make_json,
             make_root=make_root,
             lumi=lumi,
-            run_dir=condor_dir
+            run_dir=condor_dir,
+            bins_per_job=args.bins_per_job
         )
 
         # Create merge scripts (master merge should live in the run condor dir)
@@ -664,7 +671,31 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
         # Wait for jobs to finish; pass condor path to functions that need it
         condor_time_start = time.time()
         print("[run_combine] Waiting for condor jobs to finish...", flush=True)
-        loaded_bins = load_bins(bins_cfg)
+        
+        # Prefer bins_list* text file if present, since it records actual job group dirs
+        auto_bins = _read_condor_bins_list(condor_dir)
+        if auto_bins:
+            loaded_bins = auto_bins
+        else:
+            # Fallback: detect subdirectories created by createJobs.py
+            try:
+                condor_path = Path(condor_dir)
+                if condor_path.is_dir():
+                    detected = [d.name for d in condor_path.iterdir() if d.is_dir()]
+                else:
+                    detected = []
+            except Exception as e:
+                print(f"[run_combine] Warning: failed to list condor dir '{condor_dir}': {e}", flush=True)
+                detected = []
+        
+            if detected:
+                loaded_bins = sorted(detected)
+                print(f"[run_combine] Using detected condor work dirs", flush=True)
+            else:
+                # Final fallback: YAML bins (old behavior)
+                loaded_bins = load_bins(bins_cfg)
+                print(f"[run_combine] No condor work dirs found; falling back to YAML bin list ({len(loaded_bins)} bins).", flush=True)
+        
         idle_time_seconds = wait_for_jobs(work_dirs=loaded_bins, condor=condor_dir)
 
         # Run checkJobs loop and resubmit if necessary
@@ -752,7 +783,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
         print("[run_combine] Plotting significances with command:", " ".join(plot_cmd), flush=True)
         subprocess.run(plot_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
-        if make_impacts:
+        if make_impacts or make_FD:
             # T2W
             T2W_cmd = [
                 "bash",
@@ -763,6 +794,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             print("[run_combine] Running T2W with command:", " ".join(T2W_cmd), flush=True)
             subprocess.run(T2W_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
+        if make_impacts:
             # Impacts
             impacts_cmd = [
                 "bash",
@@ -788,6 +820,17 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                         _copy_file(impacts_pdf, dst_file)
                     except Exception as e:
                         print(f"[run_combine] Warning: failed to copy {impacts_pdf}: {e}", flush=True)
+
+        if make_FD:
+            # FitDiagnostics
+            FD_cmd = [
+                "bash",
+                macro_dir+"/launchFitDiagnostics.sh",
+                output_dir,
+                run_dir
+            ]
+            print("[run_combine] Running FitDiagnostics with command:", " ".join(FD_cmd), flush=True)
+            subprocess.run(FD_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
     print("[run_combine] All steps completed.", flush=True)
     end_time = time.time()

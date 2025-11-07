@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import os, sys, argparse, subprocess, yaml, re, time
+import os, sys, argparse, subprocess, yaml, re, time, json, hashlib
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -33,12 +33,23 @@ def load_processes(cfg_path):
     sms_filters = cfg.get("sms_filters", [])
     return bkg, sig, sms_filters
 
-def build_command(bin_name, cfg, bkg_processes, sig_processes, sms_filters, make_json, make_root, hist_yaml, lumi, run_dir):
+def _sanitize_for_condor_dir(s: str) -> str:
+    return re.sub(r'[^A-Za-z0-9_.-]', '_', s)[:200]
+
+def build_command(bin_name, cfg, bkg_processes, sig_processes, sms_filters,
+                  make_json, make_root, hist_yaml, lumi, run_dir,
+                  bins_cfg_path):
+    """
+    bins_cfg_path: path to the per-group JSON file that contains bin->cfg mapping.
+                   This file will be passed to createJobs.py as --bins-cfg so that
+                   createJobs can stage it into the job and forward per-bin cuts.
+    """
     cmd = [
         "python3", "python/createJobs.py",
         "--bkg_processes", *bkg_processes,
         "--sig_processes", *sig_processes,
         "--bin", bin_name,
+        "--bins-cfg", str(bins_cfg_path),
         "--cuts", cfg.get("cuts","").replace('\n',''),
         "--lep-cuts", cfg.get("lep-cuts","").replace('\n',''),
         "--predefined-cuts", cfg.get("predefined-cuts","").replace('\n',''),
@@ -64,7 +75,6 @@ def build_command(bin_name, cfg, bkg_processes, sig_processes, sms_filters, make
     return cmd
 
 def submit_job(cmd):
-    print("[submitJobs] Submit command:", " ".join(cmd))
     if not dryrun:
         subprocess.run(cmd)
         time.sleep(0.5)
@@ -78,12 +88,15 @@ def main():
     parser = argparse.ArgumentParser(description="Submit BFI jobs by calling python/createJobs.py")
     parser.add_argument("--dryrun", action="store_true")
     parser.add_argument("--lumi", type=str, default="1.")
-    parser.add_argument("--bins-cfg", type=str, default="config/bin_cfgs/examples.yaml", help="YAML file with bin definitions")
+    parser.add_argument("--bins-cfg", type=str, default="config/bin_cfgs/examples.yaml",
+                        help="YAML file with bin definitions")
     parser.add_argument("--processes-cfg", type=str, default="config/process_cfgs/processes.yaml")
     parser.add_argument("--make-json", action="store_true", help="Pass --make-json to createJobs.py")
     parser.add_argument("--make-root", action="store_true", help="Pass --make-root to createJobs.py")
     parser.add_argument("--hist-yaml", type=str, default=None, help="YAML file for histogram configuration")
-    parser.add_argument("--run-dir", type=str, default="condor", help="directing for holding condor info")
+    parser.add_argument("--run-dir", type=str, default="condor", help="directory for holding condor info")
+    parser.add_argument("--bins-per-job", type=int, default=1,
+                        help="Number of bins to pass to each createJobs invocation (grouped as semicolon-separated list). Default: 1")
     args = parser.parse_args()
 
     # Default behavior: make JSON if neither specified
@@ -95,17 +108,19 @@ def main():
     dryrun = args.dryrun
     lumi = args.lumi
     run_dir = args.run_dir
+    bins_per_job = max(1, int(args.bins_per_job))
     os.makedirs(run_dir, exist_ok=True)
 
     # Load processes
     bkg_processes, sig_processes, sms_filters = load_processes(args.processes_cfg)
 
-    # Load bins
+    # Load bins YAML (master)
     bins_cfg_path = Path(args.bins_cfg)
     bins = {}
     if bins_cfg_path.exists():
         with open(bins_cfg_path) as f:
             bins = yaml.safe_load(f) or {}
+            # normalize and strip inline comments
             for k, v in bins.items():
                 if isinstance(v, dict):
                     for key in ("cuts", "lep-cuts", "predefined-cuts", "user-cuts"):
@@ -115,14 +130,89 @@ def main():
         print(f"[submitJobs] ERROR: bins cfg not found: {args.bins_cfg}", file=sys.stderr)
         sys.exit(1)
 
-    # Build commands
+    # Build commands (group bins into chunks of size bins_per_job)
     jobs = []
     print("\n===== BEGIN BIN DEFINITIONS =====\n")
-    for bin_name, cfg in bins.items():
-        cmd = build_command(bin_name, cfg, bkg_processes, sig_processes, sms_filters, make_json, make_root, args.hist_yaml, lumi, run_dir)
+
+    # preserve YAML order
+    bin_items = list(bins.items())
+
+    # make groups
+    groups = []
+    if bins_per_job <= 1:
+        # trivial grouping: one bin per group
+        for (bin_name, cfg) in bin_items:
+            groups.append([(bin_name, cfg)])
+    else:
+        # Use slicing to guarantee every bin is included, even in a partial final chunk
+        for i in range(0, len(bin_items), bins_per_job):
+            chunk = bin_items[i:i + bins_per_job]
+            if chunk:
+                groups.append(chunk)
+
+    # Debug: show groups before creating group JSONs
+    print(f"[submitJobs] bins_per_job={bins_per_job}; total_bins={len(bin_items)}; created {len(groups)} groups")
+    for gi, g in enumerate(groups):
+        names = [bn for (bn, _) in g]
+        print(f"[submitJobs]  group {gi:03d}: {names}")
+
+    # For each group write a JSON file that contains only that group's bins
+    # then call createJobs with --bin "A;B;C" and --bins-cfg pointing to that per-group JSON
+    for gi, group in enumerate(groups):
+        group_bin_names = [bn for (bn, _) in group]
+        combined_bin_arg = ";".join(group_bin_names)
+        # For createJobs we still need a 'cfg' argument for build_command; pick the first bin's cfg
+        first_cfg = group[0][1] if group else {}
+
+        # prepare per-group JSON file (so createJobs/condor job will have exact per-bin cut configs)
+        safe_first = re.sub(r'[^A-Za-z0-9_.-]', '_', group_bin_names[0]) if group_bin_names else f"group{gi}"
+        group_json_name = f"bin_group_{gi:03d}__{safe_first}.json"
+        group_json_path = Path(run_dir) / group_json_name
+
+        # content: mapping bin_name -> its dict (cuts, lep-cuts, etc)
+        group_dict = {}
+        for (bn, bcfg) in group:
+            # ensure only primitive serializable values
+            entry = {}
+            for key in ("cuts", "lep-cuts", "predefined-cuts", "user-cuts"):
+                entry[key] = bcfg.get(key, "")
+            # preserve any other metadata in the bin YAML block
+            for k,v in bcfg.items():
+                if k not in entry:
+                    entry[k] = v
+            group_dict[bn] = entry
+
+        with open(group_json_path, "w") as gj:
+            json.dump(group_dict, gj, indent=2)
+
+        # Build command that points createJobs at the group JSON (not the full master YAML)
+        cmd = build_command(combined_bin_arg, first_cfg, bkg_processes, sig_processes, sms_filters,
+                            make_json, make_root, args.hist_yaml, lumi, run_dir, group_json_path)
         jobs.append(cmd)
-        print(f"[BIN-DEF] bin={bin_name} cuts={cfg.get('cuts')} lep-cuts={cfg.get('lep-cuts')} predefined-cuts={cfg.get('predefined-cuts')} user-cuts={cfg.get('user-cuts')}")
+
+        # print a helpful line about what we created
+        print(f"[BIN-GROUP] group_index={gi} bins={combined_bin_arg} -> group-file={group_json_path}")
+
     print("===== END BIN DEFINITIONS =====\n")
+    # Write a bins_list file so downstream tools know the exact condor work dirs created.
+    # The list contains the actual condor directory names (what createJobs will create).
+    bins_list_path = Path(run_dir) / f"bins_list_{int(time.time())}.txt"
+    with open(bins_list_path, "w") as blf:
+        for gi, group in enumerate(groups):
+            group_bin_names = [bn for (bn, _) in group]
+            combined = ";".join(group_bin_names)
+    
+            # safe_first: sanitized first bin name (falls back to group index)
+            if group_bin_names:
+                safe_first = re.sub(r'[^A-Za-z0-9_.-]', '_', group_bin_names[0])[:50]
+            else:
+                safe_first = f"group{gi:03d}"
+    
+            digest = hashlib.sha1(combined.encode()).hexdigest()[:8]
+            condor_dir_name = f"group_{gi:03d}__{safe_first}__{digest}"
+            blf.write(condor_dir_name + "\n")
+
+    print(f"[submitJobs] Wrote condor bins list to {bins_list_path}")
 
     if limit_submit is not None:
         jobs = jobs[:limit_submit]
@@ -135,3 +225,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

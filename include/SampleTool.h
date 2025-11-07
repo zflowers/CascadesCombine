@@ -29,6 +29,14 @@ class SampleTool{
 	
 	void PrintDict( map<string, stringlist>& d );
 	void PrintKeys( stringlist sl );
+        template <typename... Keys>
+        stringlist mergeEntriesSafe(
+            const std::map<std::string, stringlist>& dict,
+            const Keys&... keys) const;
+
+        stringlist mergeEntriesList(
+            const std::map<std::string, stringlist>& dict,
+            const stringlist& keys) const;
 
 };
 

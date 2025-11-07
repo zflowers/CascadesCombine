@@ -93,6 +93,8 @@ int main(int argc, char** argv) {
         std::string label = procs[i];
         auto it = m_Title.find(procs[i]);
         if (it != m_Title.end()) label = it->second;
+        else if(label.find("TChiWZ") != std::string::npos)
+            label = makeSMSChiTitle(label);
         hFrame->GetXaxis()->SetBinLabel(i + 1, label.c_str());
     }
     hFrame->GetXaxis()->SetTitle("Signal Process");

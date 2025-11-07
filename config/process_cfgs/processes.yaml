@@ -1,12 +1,15 @@
 processes:
   bkg:
-    - ttbar
-    - ST
-    - DY
-    - DBTB
-    - Wjets
-    - ZInv
-    - QCD
+    #- ttbar
+    #- ST
+    - top
+    #- DBTB
+    #- DY
+    - boson
+    - Vfakeleps
+    #- Wjets
+    #- ZInv
+    #- QCD
 
   sig:
     - Cascades
@@ -14,8 +17,8 @@ processes:
     #- SMS_TChiWZ_Sandwich
 
 sms_filters:
-  - SMS_300_290
   - SMS_300_295
+  - SMS_300_290
   - SMS_300_280
   - SMS_300_270
   - SMS_300_260

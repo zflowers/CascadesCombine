@@ -7,7 +7,7 @@ CXXFLAGS += -I$(CMSSW_BASE)/src/yaml-cpp/include
 LDFLAGS = $(shell root-config --glibs)
 LDFLAGS  += -L$(CMSSW_BASE)/src/yaml-cpp/build -lyaml-cpp
 ROOTCFLAGS  = $(shell root-config --cflags)
-LIBS = -lCombineHarvesterCombineTools
+LIBS = -lCombineHarvesterCombineTools -lRooFitCore -lRooFit -lRooStats
 LIBPATH = -L../../lib/el9_amd64_gcc12/
 
 # --- Directories ---
