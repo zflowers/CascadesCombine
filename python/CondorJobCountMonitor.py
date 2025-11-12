@@ -28,7 +28,10 @@ class CondorJobCountMonitor:
         self.set_threshold(threshold)
         self.username = os.environ.get("USER", "") 
 
-    def set_threshold(self, threshold: int):
+    def set_threshold(self, u_threshold: int):
+        threshold = u_threshold
+        if threshold < 0: # use auto threshold
+            threshold = self.get_auto_THRESHOLD()
         self.threshold = max(1, int(threshold))
 
     # ---------------------------
@@ -342,6 +345,21 @@ class CondorJobCountMonitor:
                 print(f"[CondorJobCountMonitor] Error while waiting for jobs: {e}", flush=True)
             check_count += 1
             time.sleep(5)
+
+    def get_auto_THRESHOLD(self):
+        result = subprocess.run(
+            ["condor_config_val", "-dump"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=True
+        )   
+        for line in result.stdout.splitlines():
+            if line.startswith("MAX_JOBS_PER_OWNER"):
+                _, value = line.split("=")
+                return int(int(value.strip()) * 0.95)
+                break
+        return 10000 # default fallback
 
 if __name__ == "__main__":
         condor_monitor = CondorJobCountMonitor(threshold=1,verbose=False)

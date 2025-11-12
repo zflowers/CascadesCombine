@@ -33,6 +33,8 @@ def parse_args():
                    help="Optional pass in existing run dir and make new run dir that takes the existing BFI output as input to do BF and later steps")
     p.add_argument("--skip-compile", action="store_true",
                    help="Skip running the compile step")
+    p.add_argument("--only-yields", action="store_true",
+                   help="Stop after getting yields")
     p.add_argument("--bins-per-job", type=int, default=4,
                    help="Number of bins to group per job")
     return p.parse_args()
@@ -212,6 +214,7 @@ def prepare_run_and_stage_assets_copy(
     include_dir = run_path / "include"
     src_dir = run_path / "src"
     combine_dir = run_path / "combine"
+    condor_BF_dir = run_path / "condor_BF"
 
     # -------------------------
     # 1) Copy selected config files
@@ -305,6 +308,7 @@ def prepare_run_and_stage_assets_copy(
         "src_dir": str(src_dir),
         "macro_dir": str(macro_dir),
         "combine": str(combine_dir),
+        "condor_BF": str(condor_BF_dir),
         "debug_log": str(run_path / "debug_run_combine.debug"),
         "bins_cfg": str(config_bin_path),
         "processes_cfg": str(configs_processes_path),
@@ -400,6 +404,21 @@ def get_flattened_root_path(run_dir=None):
         raise FileNotFoundError(f"No final root files found in {run_dir}/")
     return hadd_file
 
+def extract_signals(json_file):
+    """
+    Takes in a flattened json and extracts the names of the signals inside using the first bin
+    """
+    signals = []
+    with open(json_file, "r") as f:
+        data = json.load(f)
+    for bin_name, processes in data.items():
+        for proc_name, values in processes.items():
+            if len(values) > 1:
+                if "SMS" in proc_name or "Cascade" in proc_name:
+                    signals.append(proc_name)
+        break # end after first bin
+    return signals
+
 def print_events(json_file):
     with open(json_file, "r") as f:
         data = json.load(f)
@@ -466,7 +485,7 @@ def wait_for_jobs(work_dirs = None, condor="condor"):
     monitor.wait_until_jobs_below(clusters=clusters)
     return idle_time_end - idle_time_start
 
-def run_checkjobs_loop_parallel(condor_dir=None, work_dirs=None, no_resubmit=False, max_resubmits=3, check_json=False, check_root=False, condor="condor"):
+def run_checkjobs_loop_parallel(condor_dir=None, work_dirs=None, no_resubmit=False, max_resubmits=3, check_json=False, check_root=False):
     """
     Check all work directories with checkJobs.py, resubmit failing jobs across
     all directories in one cycle, then wait once for all resubmitted jobs to finish.
@@ -529,12 +548,79 @@ def run_checkjobs_loop_parallel(condor_dir=None, work_dirs=None, no_resubmit=Fal
 
         # wait once for all resubmitted jobs across all dirs
         print(f"[run_combine] Resubmitted jobs in {resubmitted_dirs}. Waiting for all resubmitted jobs to finish...", flush=True)
-        wait_for_jobs(work_dirs,condor_dir)
+        wait_for_jobs(work_dirs, condor_dir)
         time.sleep(3) # buffer time for new outputs to transfer before recheck
         # after wait, loop again to re-run checkJobs across all dirs
 
     # reached max attempts
     print(f"[run_combine] Reached max_resubmits ({max_resubmits}). Giving up.", file=sys.stderr, flush=True)
+    return False
+
+def run_checkjobs_loop_parallel_BF(condor_dir=None, work_dirs=None, no_resubmit=False, max_resubmits=3):
+    """
+    Check all BF work directories with checkJobsBF.py, resubmit failing jobs across
+    all directories in one cycle, then wait once for all resubmitted jobs to finish.
+    Returns True if no failed jobs remain (proceed), False on error or if max resubmits reached.
+    """
+    if not condor_dir:
+        print("[run_combine] run_checkjobs_loop_parallel_BF needs a condor_dir!", flush=True)
+        sys.exit(0)
+    if not work_dirs:
+        print("[run_combine] run_checkjobs_loop_parallel_BF needs work_dirs!", flush=True)
+        sys.exit(0)
+
+    attempt = 0
+    check_marker_no_failed = "[checkJobsBF] No failed jobs to resubmit."
+    check_marker_resub_ok = "[checkJobsBF] Resubmit submitted successfully."
+
+    while attempt < max_resubmits:
+        attempt += 1
+        print(f"[run_combine] Running checkJobsBF for {work_dirs} (attempt {attempt}/{max_resubmits})...", flush=True)
+
+        resubmitted_dirs = []
+        any_unexpected = False
+
+        for work_dir in work_dirs:
+            check_cmd = ["python3", "python/checkJobsBF.py", work_dir, "--root-dir", condor_dir]
+            proc = subprocess.run(check_cmd, capture_output=True, text=True)
+
+            # Print outputs (labeled)
+            if proc.stderr:
+                print(f"----- checkJobsBF stderr ({work_dir}) -----", file=sys.stderr, flush=True)
+                print(proc.stderr, file=sys.stderr, flush=True)
+
+            if proc.returncode != 0:
+                print(f"[run_combine] checkJobsBF.py returned non-zero ({proc.returncode}) for {work_dir}. Aborting.", file=sys.stderr, flush=True)
+                return False
+
+            stdout_lines = [line.strip() for line in (proc.stdout or "").splitlines()]
+            if any(check_marker_no_failed == line for line in stdout_lines):
+                continue
+            elif any(check_marker_resub_ok == line for line in stdout_lines):
+                resubmitted_dirs.append(work_dir)
+            else:
+                print(f"[run_combine] Unexpected checkJobsBF output for {work_dir}. See printed stdout/stderr above.", file=sys.stderr, flush=True)
+                any_unexpected = True
+
+        if any_unexpected:
+            return False
+
+        if not resubmitted_dirs:
+            print("[run_combine] No failed jobs remaining in any BF work_dir. Proceeding.", flush=True)
+            return True
+
+        if no_resubmit:
+            print(f"[run_combine] BF Resubmissions would be performed in {resubmitted_dirs}, but no_resubmit=True. Stopping.", flush=True)
+            return False
+
+        # wait once for all resubmitted jobs across all dirs
+        print(f"[run_combine] Resubmitted BF jobs in {resubmitted_dirs}. Waiting for all resubmitted jobs to finish...", flush=True)
+        wait_for_jobs(work_dirs, condor_dir)
+        time.sleep(3) # buffer time for new outputs to transfer before recheck
+        # after wait, loop again to re-run checkJobs across all dirs
+
+    # reached max attempts
+    print(f"[run_combine] Reached max_resubmits ({max_resubmits}) for BF. Giving up.", file=sys.stderr, flush=True)
     return False
 
 # ----- main workflow -----
@@ -707,7 +793,6 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             max_resubmits=args.max_resubmits,
             check_json=make_json,
             check_root=make_root,
-            condor=condor_dir
         )
         if not ok:
             print("[run_combine] checkJobs step did not complete successfully. Aborting further steps.", file=sys.stderr)
@@ -736,9 +821,9 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             subprocess.run(plot_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
     if make_json:
+        flattened_json = get_flattened_json_path(run_dir=run_dir)
         if not args.existing_run_dir:
             # Plot Yields
-            flattened_json = get_flattened_json_path(run_dir=run_dir)
             plot_cmd = [
                 "./"+exe_dir+"/PlotYields.x",
                 "-i", flattened_json,
@@ -747,90 +832,113 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             ]
             print("[run_combine] Plotting yields with command:", " ".join(plot_cmd), flush=True)
             subprocess.run(plot_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
+        if not args.only_yields:
+            output_dir = run_info["datacards_dir"]
+            condor_BF = run_info["condor_BF"]
+            # local BF
+            print(f"[run_combine] Running BF.x with input {flattened_json} & output {output_dir}", flush=True)
+            subprocess.run(["./"+exe_dir+"/BF.x", flattened_json, output_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
+            # condor BF
+            #signals = extract_signals(flattened_json)
+            #for sig in signals:
+            #    BF_condor_cmd = ["python3", "python/submitBFJobs.py", "--output-dir", output_dir, "--logs-dir", f'{condor_BF}/{sig}/', "--json", flattened_json, "--signal", sig, "--submit-file", f'{condor_BF}/{sig}/job_{sig}.sub']
+            #    BF_condor_proc = subprocess.run(BF_condor_cmd, capture_output=True, text=True)
 
-        # BF
-        output_dir = run_info["datacards_dir"]
-        print(f"[run_combine] Running BF.x with input {flattened_json} & output {output_dir}", flush=True)
-        subprocess.run(["./"+exe_dir+"/BF.x", flattened_json, output_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
+            #idle_time_seconds_BF = wait_for_jobs(work_dirs=signals, condor=condor_BF)
+            ## Run checkJobs loop and resubmit if necessary
+            #print("[run_combine] Checking for failed jobs and resubmitting if necessary...", flush=True)
+            #ok = run_checkjobs_loop_parallel_BF(
+            #    condor_dir=condor_BF,
+            #    work_dirs=signals,
+            #    no_resubmit=False,
+            #    max_resubmits=args.max_resubmits,
+            #)
+            #if not ok:
+            #    print("[run_combine] BF checkJobs step did not complete successfully. Aborting further steps.", file=sys.stderr)
+            #    sys.exit(1)
+            #condor_time_end_BF = time.time()
+            #condor_time_seconds_BF = condor_time_end_BF - condor_time_start_BF
 
-        # Convert Gauss Params To Gammas
-        print("[run_combine] Launching nuisance conversion jobs...", flush=True)
-        for directory in os.listdir(output_dir):
-            for datacard in os.listdir(output_dir+'/'+directory):
-                subprocess.run(["./"+exe_dir+"/ConvertGaussToGamma.x", output_dir+'/'+directory+'/'+datacard], check=True, stdout=sys.stdout, stderr=sys.stderr)
 
-        # combine
-        print("[run_combine] Launching combine jobs...", flush=True)
-        subprocess.run(["bash", macro_dir+"/launchCombine.sh", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
 
-        # yields
-        #print(f"[run_combine] Yields for {bins_cfg}")
-        #print_events(flattened_json)
+            # Convert Gauss Params To Gammas only needed when autoMCstats is not used
+            # print("[run_combine] Launching nuisance conversion jobs...", flush=True)
+            #for directory in os.listdir(output_dir):
+            #    for datacard in os.listdir(output_dir+'/'+directory):
+            #        subprocess.run(["./"+exe_dir+"/ConvertGaussToGamma.x", output_dir+'/'+directory+'/'+datacard], check=True, stdout=sys.stdout, stderr=sys.stderr)
 
-        try:
-            # significances
-            print("[run_combine] Collecting significances...", flush=True)
-            subprocess.run(["python3", "-u", macro_dir+"/CollectSignificance.py", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
-        except Exception: # typical failure is because a signal process has 0 events but that shouldn't crash things
-            pass
+            # combine
+            print("[run_combine] Launching combine jobs...", flush=True)
+            subprocess.run(["bash", macro_dir+"/launchCombine.sh", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
 
-        # plot significances
-        plot_cmd = [
-            "./"+exe_dir+"/PlotSignificances.x",
-            "-i", run_dir+"/Significance_datacards.txt",
-            "-o", plots_dir
-        ]
-        print("[run_combine] Plotting significances with command:", " ".join(plot_cmd), flush=True)
-        subprocess.run(plot_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
+            # yields
+            #print(f"[run_combine] Yields for {bins_cfg}")
+            #print_events(flattened_json)
 
-        if make_impacts or make_FD:
-            # T2W
-            T2W_cmd = [
-                "bash",
-                macro_dir+"/launchT2W.sh",
-                output_dir,
-                run_dir
+            try:
+                # significances
+                print("[run_combine] Collecting significances...", flush=True)
+                subprocess.run(["python3", "-u", macro_dir+"/CollectSignificance.py", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
+            except Exception: # typical failure is because a signal process has 0 events but that shouldn't crash things
+                pass
+
+            # plot significances
+            plot_cmd = [
+                "./"+exe_dir+"/PlotSignificances.x",
+                "-i", run_dir+"/Significance_datacards.txt",
+                "-o", plots_dir
             ]
-            print("[run_combine] Running T2W with command:", " ".join(T2W_cmd), flush=True)
-            subprocess.run(T2W_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
+            print("[run_combine] Plotting significances with command:", " ".join(plot_cmd), flush=True)
+            subprocess.run(plot_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
-        if make_impacts:
-            # Impacts
-            impacts_cmd = [
-                "bash",
-                macro_dir+"/launchImpacts.sh",
-                output_dir,
-                run_dir
-            ]
-            print("[run_combine] Running impacts with command:", " ".join(impacts_cmd), flush=True)
-            subprocess.run(impacts_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
+            if make_impacts or make_FD:
+                # T2W
+                T2W_cmd = [
+                    "bash",
+                    macro_dir+"/launchT2W.sh",
+                    output_dir,
+                    run_dir
+                ]
+                print("[run_combine] Running T2W with command:", " ".join(T2W_cmd), flush=True)
+                subprocess.run(T2W_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
-            # Collect all impacts.pdf into plots/pdfs/impacts
-            impacts_src_root = output_dir  # datacards dir
-            impacts_dst_root = os.path.join(plots_dir, "pdfs", "impacts")
-            os.makedirs(impacts_dst_root, exist_ok=True)
+            if make_impacts:
+                # Impacts
+                impacts_cmd = [
+                    "bash",
+                    macro_dir+"/launchImpacts.sh",
+                    output_dir,
+                    run_dir
+                ]
+                print("[run_combine] Running impacts with command:", " ".join(impacts_cmd), flush=True)
+                subprocess.run(impacts_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
-            print(f"[run_combine] Collecting impacts.pdf files into {impacts_dst_root}", flush=True)
-            for subdir in os.listdir(impacts_src_root):
-                subdir_path = os.path.join(impacts_src_root, subdir)
-                impacts_pdf = os.path.join(subdir_path, "impacts.pdf")
-                if os.path.isdir(subdir_path) and os.path.isfile(impacts_pdf):
-                    dst_file = os.path.join(impacts_dst_root, f"impacts__{subdir}.pdf")
-                    try:
-                        _copy_file(impacts_pdf, dst_file)
-                    except Exception as e:
-                        print(f"[run_combine] Warning: failed to copy {impacts_pdf}: {e}", flush=True)
+                # Collect all impacts.pdf into plots/pdfs/impacts
+                impacts_src_root = output_dir  # datacards dir
+                impacts_dst_root = os.path.join(plots_dir, "pdfs", "impacts")
+                os.makedirs(impacts_dst_root, exist_ok=True)
 
-        if make_FD:
-            # FitDiagnostics
-            FD_cmd = [
-                "bash",
-                macro_dir+"/launchFitDiagnostics.sh",
-                output_dir,
-                run_dir
-            ]
-            print("[run_combine] Running FitDiagnostics with command:", " ".join(FD_cmd), flush=True)
-            subprocess.run(FD_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
+                print(f"[run_combine] Collecting impacts.pdf files into {impacts_dst_root}", flush=True)
+                for subdir in os.listdir(impacts_src_root):
+                    subdir_path = os.path.join(impacts_src_root, subdir)
+                    impacts_pdf = os.path.join(subdir_path, "impacts.pdf")
+                    if os.path.isdir(subdir_path) and os.path.isfile(impacts_pdf):
+                        dst_file = os.path.join(impacts_dst_root, f"impacts__{subdir}.pdf")
+                        try:
+                            _copy_file(impacts_pdf, dst_file)
+                        except Exception as e:
+                            print(f"[run_combine] Warning: failed to copy {impacts_pdf}: {e}", flush=True)
+
+            if make_FD:
+                # FitDiagnostics
+                FD_cmd = [
+                    "bash",
+                    macro_dir+"/launchFitDiagnostics.sh",
+                    output_dir,
+                    run_dir
+                ]
+                print("[run_combine] Running FitDiagnostics with command:", " ".join(FD_cmd), flush=True)
+                subprocess.run(FD_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
     print("[run_combine] All steps completed.", flush=True)
     end_time = time.time()

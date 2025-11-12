@@ -57,11 +57,11 @@ std::vector<std::string> BuildFit::GetBkgProcs(JSONFactory* j){
 	return bkgprocsunique;
 }
 
-stringlist BuildFit::ExtractSignalDetails( std::string signalPoint){
+stringlist BuildFit::ExtractSignalDetails(std::string signalPoint){
 
     stringlist splitPoint = BFTool::SplitString( signalPoint, "_");
     std::string analysis = splitPoint[0];
-    std::string channel = "gamma";    
+    std::string channel = "dummy";    
     //pad for mass?
     std::string mass = "";
     for( long unsigned int i=1; i< splitPoint.size(); i++){
@@ -180,15 +180,15 @@ void BuildFit::WriteJsonAsFlatHists(JSONFactory* j, const std::string &outFile, 
     f->Close();
     delete f;
 
-    std::cout << "[INFO] Wrote " << nWritten << " histograms to " << outFile << std::endl;
+    std::cout << "[BuildFit] Wrote " << nWritten << " histograms to " << outFile << std::endl;
 }
 
 void BuildFit::AddFloatingNorms(stringlist bkgprocs){
     cb.SetFlag("filters-use-regex", true);
     for (const auto& proc: bkgprocs){
         cb.cp().process({proc})
-            //.AddSyst(cb, "scale_"+proc, "rateParam", SystMap<>::init(1.0));
-            .AddSyst(cb, "scale_"+proc, "lnN", SystMap<>::init(1.2));
+            .AddSyst(cb, "scale_"+proc, "rateParam", SystMap<>::init(1.0));
+            //.AddSyst(cb, "scale_"+proc, "lnN", SystMap<>::init(1.2));
     }
     cb.SetFlag("filters-use-regex", false);
 }
@@ -355,18 +355,17 @@ void BuildFit::BuildAsimovFit(JSONFactory* j, std::string signalPoint, std::stri
     //std::cout<<"Getting process list\n";
     stringlist bkgprocs = GetBkgProcs(j);
     //std::cout<<"Parse Signal point\n";
-    stringlist signalDetails = ExtractSignalDetails( signalPoint);
+    stringlist signalDetails = ExtractSignalDetails(signalPoint);
     //std::cout<<"Build cb objects\n";
     //cb.SetVerbosity(3);
     cb.AddObservations({"*"}, {signalDetails[0]}, {"13.6TeV"}, {signalDetails[1]}, cats);
-    cb.AddProcesses(   {"*"}, {signalDetails[0]}, {"13.6TeV"}, {signalDetails[1]}, bkgprocs, cats, false);
-    //cb.AddProcesses(   {signalDetails[2]}, {signalDetails[0]}, {"13.6TeV"}, {signalDetails[1]}, {signalPoint}, cats, true);
-    cb.AddProcesses(   {"120"}, {signalDetails[0]}, {"13.6TeV"}, {signalDetails[1]}, {signalPoint}, cats, true);
+    cb.AddProcesses({"*"}, {signalDetails[0]}, {"13.6TeV"}, {signalDetails[1]}, bkgprocs, cats, false);
+    cb.AddProcesses({"120"}, {signalDetails[0]}, {"13.6TeV"}, {signalDetails[1]}, {signalPoint}, cats, true);
 
     std::string fullPathString = j->json_file_name;
     std::filesystem::path p(fullPathString);
     std::filesystem::path parentPath = p.parent_path();
-    std::string json_to_root_file = std::string(parentPath)+"/json_shapes_flat.root";
+    std::string json_to_root_file = std::string(parentPath)+"/datacards/"+signalPoint+"/json_shapes_flat.root";
     WriteJsonAsFlatHists(j, json_to_root_file, &obs_rates);
     TFile* json_root_file = TFile::Open(json_to_root_file.c_str(), "UPDATE");
     if (!json_root_file || json_root_file->IsZombie()) {
@@ -385,10 +384,10 @@ void BuildFit::BuildAsimovFit(JSONFactory* j, std::string signalPoint, std::stri
     
     // Only extract signal shapes for bins where we actually have signal histograms
     if (!bins_with_signal.empty()) {
-    cb.cp().signals().ExtractShapes(json_to_root_file, "$BIN__$PROCESS$MASS", "$BIN__$PROCESS$MASS__$SYSTEMATIC");
-        std::cout << "extracted signals for " << bins_with_signal.size() << " bins\n";
+        cb.cp().signals().ExtractShapes(json_to_root_file, "$BIN__$PROCESS$MASS", "$BIN__$PROCESS$MASS__$SYSTEMATIC");
+        std::cout << "[BuildFit] extracted signals for " << bins_with_signal.size() << " bins\n";
     } else {
-        std::cout << "[WARN] No bins contain signal '" << signalPoint << "' in JSON - skipping signal ExtractShapes.\n";
+        std::cerr << "[BuildFit WARN] No bins contain signal '" << signalPoint << "' in JSON - skipping signal ExtractShapes.\n";
     }
 
     //BuildAsimovData(obs_rates, j);

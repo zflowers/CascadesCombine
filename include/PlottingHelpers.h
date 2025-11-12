@@ -219,7 +219,7 @@ void loadFormatMaps(){
   m_Color["ST"] = 7010;
   //m_Color["ST"] = 8004;
 
-  m_Title["Vfakeleps"] = "fakes";
+  m_Title["Vfakeleps"] = "fake enriched";
   m_Color["Vfakeleps"] = 7001;
   //m_Color["Vfakeleps"] = 8001;
 

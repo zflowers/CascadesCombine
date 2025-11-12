@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import os, sys, subprocess, argparse, re, shutil, time, random, hashlib
+import os, sys, subprocess, argparse, re, shutil, time, random, hashlib, glob
 from pathlib import Path
 import importlib.util
 from collections import defaultdict
@@ -81,21 +81,6 @@ def _flatten_field(value):
     joined = joined.replace('"', '\\"')
     return joined
 
-def get_auto_THRESHOLD():
-    result = subprocess.run(
-        ["condor_config_val", "-dump"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        check=True
-    )   
-    for line in result.stdout.splitlines():
-        if line.startswith("MAX_JOBS_PER_OWNER"):
-            _, value = line.split("=")
-            return int(int(value.strip()) * 0.95)
-            break
-    return 10000 # default fallback
-
 # ----------------------------------------
 # Write helper scripts (merge/hadd)
 # ----------------------------------------
@@ -117,17 +102,24 @@ def write_merge_script(bin_name, condor_bin_dir: Path, json_dirname="json"):
     exe_candidate = (condor_bin_dir / ".." / ".." / "exe" / "mergeJSONs.x").resolve()
     merged_out = (condor_bin_dir / f"{bin_safe}.json").resolve()
     json_dir = (condor_bin_dir / json_dirname).resolve()
+    yaml_pattern = os.path.join(condor_bin_dir, "../../configs/*_processes.yaml")
+    files = glob.glob(yaml_pattern)
+    yaml_file = "config/process_cfgs/processes.yaml"
+    if files:
+        files.sort(key=os.path.getmtime, reverse=True)
+        yaml_file = files[0]
 
     with open(merge_script_path, "w") as f:
         f.write("#!/usr/bin/env bash\n")
         f.write("set -euo pipefail\n")
-        f.write("# Auto-generated merge script (safe quoting for grouped bins)\n")
+        f.write("# Auto-generated merge script\n")
         f.write(f'EXEC="{exe_candidate.as_posix()}"\n')
         f.write(f'OUT="{merged_out.as_posix()}"\n')
         f.write(f'INDIR="{json_dir.as_posix()}"\n')
+        f.write(f'YAML="{yaml_file}"\n')
         f.write('mkdir -p "$(dirname "$OUT")"\n')
-        f.write('echo "[mergeJSONs] Running: $EXEC $OUT $INDIR"\n')
-        f.write('"$EXEC" "$OUT" "$INDIR"\n')
+        f.write('echo "[mergeJSONs] Running: $EXEC $OUT $INDIR --processes $YAML"\n')
+        f.write('"$EXEC" "$OUT" "$INDIR" --processes "$YAML"\n')
 
     os.chmod(merge_script_path, 0o755)
 
@@ -183,13 +175,13 @@ def build_jobs(tool, bin_name, cuts, lep_cuts, predef_cuts, user_cuts, sms_filte
             "hist_yaml": hist_yaml_file,
         }
 
-    # Background jobs
-    for ds, files in tool.BkgDict.items():
+    # Background (and data, if data were loaded into BkgDict)
+    for ds, files in getattr(tool, "BkgDict", {}).items():
         for fpath in files:
             jobs.append(make_base_job(ds, fpath))
 
     # Signal jobs
-    for ds, files in tool.SigDict.items():
+    for ds, files in getattr(tool, "SigDict", {}).items():
         for fpath in files:
             base = make_base_job(ds, fpath)
 
@@ -476,7 +468,7 @@ def write_submit_file(
         ]
     
         # Hold condor submissions if over max threshold
-        condor_monitor = CondorJobCountMonitor(threshold=get_auto_THRESHOLD()*.95,verbose=False)
+        condor_monitor = CondorJobCountMonitor(threshold=-1,verbose=False)
         condor_monitor.wait_until_jobs_below()
 
         while attempt < max_retries and not success:
@@ -594,8 +586,9 @@ def write_submit_file(
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--bkg_processes", nargs="+", default=[], help="List of background process names")
-    parser.add_argument("--sig_processes", nargs="+", default=[], help="List of signal process names")
+    parser.add_argument("--sig_processes", nargs="*", default=[], help="List of signal process names")
     parser.add_argument("--sms-filters", nargs="*", default=[], help="Optional list of SMS trees to filter")
+    parser.add_argument("--data_processes", nargs="*", default=[], help="List of data process names")
     parser.add_argument("--bin", default="TEST")
     parser.add_argument("--bins-cfg", default="", help="Path to bins YAML used to fetch per-bin cuts when grouping bins")
     parser.add_argument("--cuts", default="Nlep>=2;MET>=150")
@@ -611,6 +604,10 @@ def main():
     parser.add_argument("--dryrun", "--dry-run", action="store_true")
     parser.add_argument("--run-dir", type=str, default="condor", help="Directory to hold condor outputs (per-run condor dir)")
     args = parser.parse_args()
+    if args.sig_processes and args.data_processes:
+        print("User asked for jobs with both signal and data!")
+        print("This has the potential to unblind!")
+        print("Remove this if block only when ready to unblind!")
 
     # Set condor base dir from argument (make absolute to be unambiguous in logs)
     condor_base = Path(args.run_dir).resolve()
@@ -625,14 +622,31 @@ def main():
 
     # Parse job list via pySampleTool
     tool = pySampleTool.SampleTool()
-    tool.LoadBkgs(args.bkg_processes)
+
+    # Combine background + data processes into the background load so that data
+    # processes become available in tool.BkgDict and are turned into jobs the same way.
+    bkg_list = list(args.bkg_processes or [])
+    data_list = list(args.data_processes or [])
+    tool.LoadBkgs(bkg_list)
+    tool.LoadData(data_list)
+
+    # Signal handling: optional (sig may be empty or missing in config)
+    # Set SMS filters if provided, this should be done before loading signals if the BFTool expects that.
     if args.sms_filters:
         sms_filters = args.sms_filters
-        pySampleTool.BFTool.SetFilterSignalsSMS(sms_filters)
-        tool.LoadSigs(args.sig_processes)
+        try:
+            pySampleTool.BFTool.SetFilterSignalsSMS(sms_filters)
+        except Exception:
+            # be tolerant if the binding doesn't provide this method
+            pass
     else:
-        tool.LoadSigs(args.sig_processes)
-        sms_filters = pySampleTool.BFTool.GetFilterSignalsSMS()
+        try:
+            sms_filters = pySampleTool.BFTool.GetFilterSignalsSMS()
+        except Exception:
+            sms_filters = []
+
+    # Always attempt to load signals (safe for empty list)
+    tool.LoadSigs(args.sig_processes or [])
 
     # Build jobs
     jobs = build_jobs(
@@ -666,3 +680,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

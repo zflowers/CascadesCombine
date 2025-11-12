@@ -38,7 +38,9 @@ std::vector<std::string> JSONFactory::GetSigProcs(){
                         }
                 }
         }
-        return sigprocs;
+	std::set<std::string> my_sig_set(sigprocs.begin(), sigprocs.end());
+	std::vector<std::string> sigprocsunique(my_sig_set.begin(), my_sig_set.end());
+        return sigprocsunique;
 }
 
 void JSONFactory::WriteJSON(std::string filename){

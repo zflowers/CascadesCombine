@@ -706,6 +706,26 @@ void SampleTool::LoadSigs( const stringlist& siglist ){
     }
 }
 
+void SampleTool::LoadData(const stringlist& datalist) {
+    for (long unsigned int i = 0; i < datalist.size(); i++) {
+        const std::string& name = datalist[i];
+
+        // Check if dataset exists in the master list
+        if (MasterDict.count(name) == 0) {
+            std::cout << "Data: " << name << " not found ... skipping ...\n";
+            continue;
+        }
+
+        DataDict[name] = MasterDict[name];
+    }
+}
+
+void SampleTool::LoadAllData() {
+    //stringlist allData = {"Data_2016", "Data_2016APV", "Data_2017", "Data_2018", "Data_2022", "Data_2022EE", "Data_2023", "Data_2023BPix"};
+    stringlist allData = {"Data_2018"};
+    LoadData(allData);
+}
+
 void SampleTool::LoadAllBkgs() {
     stringlist allBkgs = {"ttbar","ST","DY","ZInv","DBTB","QCD","Wjets","top","boson","Vfakeleps"};
     LoadBkgs(allBkgs);
@@ -720,9 +740,11 @@ void SampleTool::LoadAllFromMaster() {
     for (const auto &kv : MasterDict) {
         const std::string &group = kv.first;
         const stringlist &files = kv.second;
-        // Rule: treat "Cascades" or anything containing "SMS" as signal
+
         if (group == "Cascades" || group.find("SMS") != std::string::npos) {
             SigDict[group] = files;
+        } else if (group.find("Data") != std::string::npos || group.find("data") != std::string::npos) {
+            DataDict[group] = files;
         } else {
             BkgDict[group] = files;
         }

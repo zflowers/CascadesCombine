@@ -8,7 +8,7 @@ rundir="${2:-runs/latest}"
 
 echo "[launchFitDiagnostics] Using datacard directory: $dcdir"
 
-# Run FitDiagnostics initial fit for each workspace
+# Run FitDiagnostics initial fit for first workspace
 for WS in "${dcdir}"/*/*_workspace.root; do
     WSDIR="$(dirname "$WS")"
     WSFILE="$(basename "$WS")"
@@ -21,5 +21,6 @@ for WS in "${dcdir}"/*/*_workspace.root; do
       --saveShapes \
       --saveWithUncertainties
     popd > /dev/null || exit 1
+    break
 done
 

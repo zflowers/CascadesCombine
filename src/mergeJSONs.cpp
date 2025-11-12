@@ -8,8 +8,10 @@
 #include <vector>
 #include <unordered_set>
 #include <cmath>
+#include <set>
 #include <nlohmann/json.hpp>
 #include "SampleTool.h"
+#include <yaml-cpp/yaml.h>
 
 namespace fs = std::filesystem;
 using json = nlohmann::json;
@@ -28,28 +30,118 @@ using json = nlohmann::json;
  * - Silent on expected missing bins/processes (this is the chosen silent mode).
  */
 
+// Load preferred groups from YAML file (reads processes.bkg and processes.sig in order)
+static std::vector<std::string> loadPreferredGroupsFromYaml(const std::string &yamlPath) {
+    std::vector<std::string> out;
+    try {
+        YAML::Node root = YAML::LoadFile(yamlPath);
+        if (!root) return out;
+
+        if (root["processes"]) {
+            YAML::Node procs = root["processes"];
+            if (procs["bkg"] && procs["bkg"].IsSequence()) {
+                for (const auto &n : procs["bkg"]) {
+                    if (n.IsScalar()) out.push_back(n.as<std::string>());
+                }
+            }
+            if (procs["sig"] && procs["sig"].IsSequence()) {
+                for (const auto &n : procs["sig"]) {
+                    if (n.IsScalar()) out.push_back(n.as<std::string>());
+                }
+            }
+        }
+    } catch (const std::exception &e) {
+        std::cerr << "[loadPreferredGroupsFromYaml] Failed to read YAML '" << yamlPath << "': " << e.what() << "\n";
+    }
+    return out;
+}
+
 bool mergeJSONsFlattenedWithFileBreakdown(const std::vector<std::string> &inputFiles,
                                           const std::string &outMergedFile,
-                                          const std::string &outFilesFile = "")
+                                          const std::string &outFilesFile = "",
+                                          const std::vector<std::string> &preferredGroups = {})
 {
     SampleTool ST;
     ST.LoadAllFromMaster();
 
-    auto resolveGroup = [&ST](const std::string &jsonKey) -> std::string {
-        std::string keyBase = fs::path(jsonKey).filename().string();
-
-        for (const auto &kv : ST.MasterDict) {       // kv.first = canonical group
-            for (const auto &entry : kv.second) {    // entry = full path
-                std::string entryBase = fs::path(entry).filename().string();
-
-                // Use starts-with match against the prefix (text up to first underscore)
-                auto pos = entryBase.find("_");
-                std::string prefix = (pos == std::string::npos) ? entryBase : entryBase.substr(0, pos);
-                if (!prefix.empty() && keyBase.rfind(prefix, 0) == 0)
-                    return kv.first;
+    // helper to get prefix (text before first underscore) from filename
+    auto getPrefix = [](const std::string &fname) -> std::string {
+        std::string base = fs::path(fname).filename().string();
+        auto pos = base.find("_");
+        return (pos == std::string::npos) ? base : base.substr(0, pos);
+    };
+    
+    // Recursive expansion of a group into concrete entries (avoid cycles)
+    std::function<void(const std::string&, std::unordered_set<std::string>&, std::unordered_set<std::string>&)> expandGroupRec;
+    expandGroupRec = [&ST, &expandGroupRec](const std::string &group,
+                                           std::unordered_set<std::string> &out,
+                                           std::unordered_set<std::string> &visited) -> void {
+        if (visited.find(group) != visited.end()) return; // avoid cycles
+        visited.insert(group);
+    
+        auto it = ST.MasterDict.find(group);
+        if (it == ST.MasterDict.end()) return;
+    
+        for (const auto &entry : it->second) {
+            // If the entry is itself a group key, recurse; otherwise treat it as a file path
+            if (ST.MasterDict.find(entry) != ST.MasterDict.end()) {
+                expandGroupRec(entry, out, visited);
+            } else {
+                out.insert(entry);
             }
         }
-        return jsonKey; // fallback to original key
+    };
+    
+    // Cache expanded entries per group to avoid repeated recursion
+    std::unordered_map<std::string, std::vector<std::string>> expandedCache;
+    auto getExpandedEntries = [&expandedCache, &expandGroupRec](const std::string &group) -> const std::vector<std::string>& {
+        auto cit = expandedCache.find(group);
+        if (cit != expandedCache.end()) return cit->second;
+    
+        std::unordered_set<std::string> expandedSet;
+        std::unordered_set<std::string> visited;
+        expandGroupRec(group, expandedSet, visited);
+    
+        // If expansion returned nothing (maybe entries were raw paths stored directly) leave it empty
+        std::vector<std::string> vec;
+        vec.reserve(expandedSet.size());
+        for (const auto &s : expandedSet) vec.push_back(s);
+    
+        // cache and return
+        auto ret = expandedCache.emplace(group, std::move(vec));
+        return ret.first->second;
+    };
+    
+    // The resolveGroup logic: check YAML preferredGroups first (in order),
+    // then fall back to checking all groups.
+    auto resolveGroup = [&ST, &preferredGroups, &getExpandedEntries, &getPrefix](const std::string &jsonKey) -> std::string {
+        std::string keyBase = fs::path(jsonKey).filename().string();
+    
+        // 1) Preferred groups first (YAML order)
+        for (const auto &pref : preferredGroups) {
+            const auto &entries = getExpandedEntries(pref);
+            for (const auto &entry : entries) {
+                std::string p = getPrefix(entry);
+                if (!p.empty() && keyBase.rfind(p, 0) == 0) {
+                    return pref;
+                }
+            }
+        }
+    
+        // 2) Fallback: scan all groups
+        for (const auto &kv : ST.MasterDict) {
+            const std::string &group = kv.first;
+            const auto &entries = getExpandedEntries(group);
+            for (const auto &entry : entries) {
+                std::string p = getPrefix(entry);
+                if (!p.empty() && keyBase.rfind(p, 0) == 0) {
+                    return group;
+                }
+            }
+        }
+    
+        // 3) No match -> return original key (unchanged)
+        return jsonKey;
     };
 
     // fileContribs[bin][group][filePath] -> array{count, sumW, err (unused here), sumG, sumG2, var}
@@ -190,10 +282,6 @@ bool mergeJSONsFlattenedWithFileBreakdown(const std::vector<std::string> &inputF
     auto filesBreakdown = fileContribs; // copy
 
     // ----- NEW: write one merged JSON per bin (robust to arbitrary job-grouping) -----
-    // baseOut is the path without trailing .json (main already computed baseOut earlier if you added it,
-    // otherwise derive base from outMergedFile by stripping ".json").
-    // We'll compute a base path from outMergedFile parameter (`outMergedFile` passed to function)
-
     auto make_safe = [](const std::string &s) -> std::string {
         std::string out;
         out.reserve(s.size());
@@ -300,14 +388,35 @@ bool mergeJSONsFlattenedWithFileBreakdown(const std::vector<std::string> &inputF
 }
 
 int main(int argc, char **argv) {
-    if (argc < 3 || argc > 4) {
-        std::cerr << "Usage: " << argv[0] << " merged output_directory [--per_file]\n";
+    // Usage: prog merged output_directory [--per_file] [--processes <yaml>]
+    if (argc < 3) {
+        std::cerr << "Usage: " << argv[0] << " merged output_directory [--per_file] [--processes <yaml>]\n";
         return 1;
     }
 
     std::string outFile = argv[1];
     std::string jsonDir = argv[2];
-    bool per_file = (argc == 4 && std::string(argv[3]) == "--per_file");
+    bool per_file = false;
+    std::string processesYaml;
+
+    // parse optional flags (flexible order)
+    for (int i = 3; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "--per_file") {
+            per_file = true;
+        } else if (arg == "--processes") {
+            if (i + 1 < argc) {
+                processesYaml = argv[++i];
+            } else {
+                std::cerr << "[mergeJSONs] --processes requires a YAML file path\n";
+                return 1;
+            }
+        } else {
+            std::cerr << "[mergeJSONs] Unknown option: " << arg << "\n";
+            std::cerr << "Usage: " << argv[0] << " merged output_directory [--per_file] [--processes <yaml>]\n";
+            return 1;
+        }
+    }
 
     // Normalize outFile: if user passed "something.json" strip the .json to avoid producing "something.json.json"
     std::string baseOut = outFile;
@@ -330,12 +439,19 @@ int main(int argc, char **argv) {
         return 2;
     }
 
+    std::vector<std::string> preferredGroups;
+    if (!processesYaml.empty()) {
+        preferredGroups = loadPreferredGroupsFromYaml(processesYaml);
+        if (preferredGroups.empty())
+            std::cerr << "[mergeJSONs] Warning: no preferred groups loaded from '" << processesYaml << "'\n";
+    }
+
     std::string mergedName = baseOut + ".json";
     std::string filesName  = baseOut + "_files.json";
 
     bool success = per_file ?
-        mergeJSONsFlattenedWithFileBreakdown(inputs, mergedName, filesName) :
-        mergeJSONsFlattenedWithFileBreakdown(inputs, mergedName, "");
+        mergeJSONsFlattenedWithFileBreakdown(inputs, mergedName, filesName, preferredGroups) :
+        mergeJSONsFlattenedWithFileBreakdown(inputs, mergedName, "", preferredGroups);
 
     if (!success) return 3;
 

@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <vector>
 #include <cmath>
+#include <string>
 #include <nlohmann/json.hpp>
 
 namespace fs = std::filesystem;

@@ -28,15 +28,17 @@ def strip_inline_comments(s):
 def load_processes(cfg_path):
     with open(cfg_path, "r") as f:
         cfg = yaml.safe_load(f)
-    bkg = cfg.get("processes", {}).get("bkg", [])
-    sig = cfg.get("processes", {}).get("sig", [])
+    processes = cfg.get("processes", {}) or {}
+    bkg = processes.get("bkg", []) or []
+    sig = processes.get("sig", []) or []
+    data = processes.get("data", []) or []
     sms_filters = cfg.get("sms_filters", [])
-    return bkg, sig, sms_filters
+    return bkg, sig, data, sms_filters
 
 def _sanitize_for_condor_dir(s: str) -> str:
     return re.sub(r'[^A-Za-z0-9_.-]', '_', s)[:200]
 
-def build_command(bin_name, cfg, bkg_processes, sig_processes, sms_filters,
+def build_command(bin_name, cfg, bkg_processes, sig_processes, data_processes, sms_filters,
                   make_json, make_root, hist_yaml, lumi, run_dir,
                   bins_cfg_path):
     """
@@ -48,6 +50,7 @@ def build_command(bin_name, cfg, bkg_processes, sig_processes, sms_filters,
         "python3", "python/createJobs.py",
         "--bkg_processes", *bkg_processes,
         "--sig_processes", *sig_processes,
+        "--data_processes", *data_processes,
         "--bin", bin_name,
         "--bins-cfg", str(bins_cfg_path),
         "--cuts", cfg.get("cuts","").replace('\n',''),
@@ -112,7 +115,7 @@ def main():
     os.makedirs(run_dir, exist_ok=True)
 
     # Load processes
-    bkg_processes, sig_processes, sms_filters = load_processes(args.processes_cfg)
+    bkg_processes, sig_processes, data_processes, sms_filters = load_processes(args.processes_cfg)
 
     # Load bins YAML (master)
     bins_cfg_path = Path(args.bins_cfg)
@@ -186,7 +189,7 @@ def main():
             json.dump(group_dict, gj, indent=2)
 
         # Build command that points createJobs at the group JSON (not the full master YAML)
-        cmd = build_command(combined_bin_arg, first_cfg, bkg_processes, sig_processes, sms_filters,
+        cmd = build_command(combined_bin_arg, first_cfg, bkg_processes, sig_processes, data_processes, sms_filters,
                             make_json, make_root, args.hist_yaml, lumi, run_dir, group_json_path)
         jobs.append(cmd)
 

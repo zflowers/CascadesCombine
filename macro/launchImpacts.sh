@@ -8,7 +8,7 @@ rundir="${2:-runs/latest}"
 
 echo "[launchImpacts] Using datacard directory: $dcdir"
 
-# Run Impacts initial fit for each workspace
+# Run Impacts initial fit for first workspace
 for WS in "${dcdir}"/*/*_workspace.root; do
     WSDIR="$(dirname "$WS")"
     WSFILE="$(basename "$WS")"
@@ -17,13 +17,14 @@ for WS in "${dcdir}"/*/*_workspace.root; do
     combineTool.py \
       -M Impacts \
       -d "$WSFILE" \
-      -m 125 \
+      -m 120 \
       --doInitialFit
       #--robustFit 1 \
     popd > /dev/null || exit 1
+    break
 done
 
-# Run Impacts fits for each workspace
+# Run Impacts fits for first workspace
 for WS in "${dcdir}"/*/*_workspace.root; do
     WSDIR="$(dirname "$WS")"
     WSFILE="$(basename "$WS")"
@@ -32,13 +33,14 @@ for WS in "${dcdir}"/*/*_workspace.root; do
     combineTool.py \
       -M Impacts \
       -d "$WSFILE" \
-      -m 125 \
+      -m 120 \
       --doFits
       #--robustFit 1 \
     popd > /dev/null || exit 1
+    break
 done
 
-# Make Impacts results for each workspace
+# Make Impacts results for first workspace
 for WS in "${dcdir}"/*/*_workspace.root; do
     WSDIR="$(dirname "$WS")"
     WSFILE="$(basename "$WS")"
@@ -47,13 +49,14 @@ for WS in "${dcdir}"/*/*_workspace.root; do
     combineTool.py \
       -M Impacts \
       -d "$WSFILE" \
-      -m 125 \
+      -m 120 \
       -o impacts.json
       #--robustFit 1 \
     popd > /dev/null || exit 1
+    break
 done
 
-# Plot Impacts results for each workspace
+# Plot Impacts results for first workspace
 for WS in "${dcdir}"/*/*_workspace.root; do
     WSDIR="$(dirname "$WS")"
     WSFILE="$(basename "$WS")"
@@ -63,4 +66,5 @@ for WS in "${dcdir}"/*/*_workspace.root; do
       -i impacts.json \
       -o impacts
     popd > /dev/null || exit 1
+    break
 done

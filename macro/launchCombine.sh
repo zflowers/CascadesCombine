@@ -25,5 +25,4 @@ combineTool.py \
   -d "${dcdir}"/*/*.txt \
   --there \
   --parallel 4 \
-  -v 2 \
   --job-dir "${rundir}/combine"
