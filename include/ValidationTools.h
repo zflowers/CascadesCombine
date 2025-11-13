@@ -10,6 +10,7 @@
 #include <string>
 #include <map>
 #include <unordered_map>
+#include "TInterpreter.h"
 #pragma once
 
 // ==================================================
@@ -61,7 +62,7 @@ bool TryValidateType(ROOT::RDF::RNode node,
                     unsigned next = std::min(nCheck * 2u, maxCheck);
                     return TryValidateType<T>(node, dv, next, maxCheck);
                 } else {
-                    std::cerr << "[BFI_condor] WARNING: '" << dv.name
+                    std::cerr << "[ValidationTools] WARNING: '" << dv.name
                               << "' evaluated as " << typeid(T).name()
                               << " but produced no finite values in first " << maxCheck << " events.\n";
                 }
@@ -83,7 +84,7 @@ bool TryValidateType(ROOT::RDF::RNode node,
                         unsigned next = std::min(nCheck * 2u, maxCheck);
                         return TryValidateType<T>(node, dv, next, maxCheck);
                     } else {
-                        std::cerr << "[BFI_condor] WARNING: '" << dv.name
+                        std::cerr << "[ValidationTools] WARNING: '" << dv.name
                                   << "' evaluated as container of " << typeid(Inner).name()
                                   << " but produced no finite inner values.\n";
                     }
@@ -95,7 +96,7 @@ bool TryValidateType(ROOT::RDF::RNode node,
                         unsigned next = std::min(nCheck * 2u, maxCheck);
                         return TryValidateType<T>(node, dv, next, maxCheck);
                     } else {
-                        std::cerr << "[BFI_condor] WARNING: '" << dv.name
+                        std::cerr << "[ValidationTools] WARNING: '" << dv.name
                                   << "' evaluated as container type " << typeid(T).name()
                                   << " but returned empty sequence.\n";
                     }
@@ -109,7 +110,7 @@ bool TryValidateType(ROOT::RDF::RNode node,
                     unsigned next = std::min(nCheck * 2u, maxCheck);
                     return TryValidateType<T>(node, dv, next, maxCheck);
                 } else {
-                    std::cerr << "[BFI_condor] WARNING: '" << dv.name
+                    std::cerr << "[ValidationTools] WARNING: '" << dv.name
                               << "' evaluated as " << typeid(T).name()
                               << " but returned empty vector.\n";
                 }
@@ -147,7 +148,7 @@ inline bool ValidateDerivedVar(ROOT::RDF::RNode node,
         if (TryValidateType<ROOT::VecOps::RVec<unsigned long long>>(tmpNode, dv, nCheck, maxCheck)) return true;
         if (TryValidateType<ROOT::VecOps::RVec<bool>>(tmpNode, dv, nCheck, maxCheck))   return true;
 
-        std::cerr << "[BFI_condor] ERROR validating '" << dv.name
+        std::cerr << "[ValidationTools] ERROR validating '" << dv.name
                   << "' from expression: " << dv.expr << "\n";
         if (dv.expr.find("/") != std::string::npos &&
             dv.expr.find("SafeDiv") == std::string::npos) {
@@ -159,7 +160,7 @@ inline bool ValidateDerivedVar(ROOT::RDF::RNode node,
         }
         return false;
     } catch (const std::exception &e) {
-        std::cerr << "[BFI_condor] WARNING: Exception validating '" << dv.name
+        std::cerr << "[ValidationTools] WARNING: Exception validating '" << dv.name
                   << "': " << e.what() << "\n";
         return false;
     }
@@ -182,7 +183,7 @@ inline bool ValidateUserCut(ROOT::RDF::RNode node,
         }
         return true;
     } catch (const std::exception &e) {
-        std::cerr << "[BFI_condor] ERROR: Cut '" << cut.name
+        std::cerr << "[ValidationTools] ERROR: Cut '" << cut.name
                   << "' with expression '" << cut.expression
                   << "' is invalid: " << e.what() << "\n";
         return false;
@@ -202,7 +203,7 @@ ValidateCuts(ROOT::RDF::RNode node,
         if (ValidateUserCut(node, cut, nCheck, maxCheck)) {
             valid[name] = cut;
         } else {
-            std::cerr << "[BFI_condor] Skipping invalid cut '" << name << "'\n";
+            std::cerr << "[ValidationTools] Skipping invalid cut '" << name << "'\n";
         }
     }
     return valid;

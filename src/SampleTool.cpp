@@ -31,7 +31,7 @@ SampleTool::SampleTool(){
   string pathPrefix = "root://cmseos.fnal.gov//store/user/lpcsusylep/NTUPLES_Cascades_v6/";
   //string pathPrefix = "root://cmseos.fnal.gov//store/user/lpcsusylep/NTUPLES_Cascades_v7/";
 
-  MasterDict["ttbar"] = {
+  MasterDict["ttbar_2023BPix"] = {
     pathPrefix + "Summer23BPix_130X/TTto2L2Nu-2Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer23BPix_130X.root",
     pathPrefix + "Summer23BPix_130X/TTtoLminusNu2Q-2Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer23BPix_130X.root",
     pathPrefix + "Summer23BPix_130X/TTtoLplusNu2Q-2Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer23BPix_130X.root",
@@ -45,6 +45,8 @@ SampleTool::SampleTool(){
     pathPrefix + "Summer23BPix_130X/TTLNu-1Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer23BPix_130X.root",
     pathPrefix + "Summer23BPix_130X/TTHto2B_M-125_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
     pathPrefix + "Summer23BPix_130X/TTHtoNon2B_M-125_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
+  };
+  MasterDict["ttbar_2022"] = {
     pathPrefix + "Summer22_130X/TTG-1Jets_PTG-100to200_TuneCP5_13p6TeV_amcatnloFXFXold-pythia8_Summer22_130X.root",
     pathPrefix + "Summer22_130X/TTG-1Jets_PTG-10to100_TuneCP5_13p6TeV_amcatnloFXFXold-pythia8_Summer22_130X.root",
     pathPrefix + "Summer22_130X/TTHto2B_M-125_TuneCP5_13p6TeV_powheg-pythia8_Summer22_130X.root",
@@ -60,6 +62,8 @@ SampleTool::SampleTool(){
     pathPrefix + "Summer22_130X/TTtoLminusNu2Q-3Jets_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer22_130X.root",
     pathPrefix + "Summer22_130X/TTtoLplusNu2Q-3Jets_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer22_130X.root",
     pathPrefix + "Summer22_130X/TZQB-ZtoLL-TtoL-CPV_TuneCP5_13p6TeV_madgraph-pythia8_Summer22_130X.root",
+  };
+  MasterDict["ttbar_2018"] = {
     pathPrefix + "Summer20UL18_106X/TGJets_TuneCP5_13TeV-amcatnlo-madspin-pythia8_Summer20UL18_106X.root",
     pathPrefix + "Summer20UL18_106X/TTGJets_TuneCP5_13TeV-amcatnloFXFX-madspin-pythia8_Summer20UL18_106X.root",
     pathPrefix + "Summer20UL18_106X/TTJets_DiLept_TuneCP5_13TeV-madgraphMLM-pythia8_Summer20UL18_106X.root",
@@ -74,6 +78,8 @@ SampleTool::SampleTool(){
     pathPrefix + "Summer20UL18_106X/tZq_ll_4f_ckm_NLO_TuneCP5_13TeV-amcatnlo-pythia8_Summer20UL18_106X.root",
     pathPrefix + "Summer20UL18_106X/ttHToNonbb_M125_TuneCP5_13TeV-powheg-pythia8_Summer20UL18_106X.root",
     pathPrefix + "Summer20UL18_106X/ttHTobb_M125_TuneCP5_13TeV-powheg-pythia8_Summer20UL18_106X.root",
+  };
+  MasterDict["ttbar_2017"] = {
     pathPrefix + "Summer20UL17_106X/tZq_ll_4f_ckm_NLO_TuneCP5_13TeV-amcatnlo-pythia8_Summer20UL17_106X.root",
     pathPrefix + "Summer20UL17_106X/ttHToNonbb_M125_TuneCP5_13TeV-powheg-pythia8_Summer20UL17_106X.root",
     pathPrefix + "Summer20UL17_106X/ttHTobb_M125_TuneCP5_13TeV-powheg-pythia8_Summer20UL17_106X.root",
@@ -90,6 +96,8 @@ SampleTool::SampleTool(){
     pathPrefix + "Summer20UL17_106X/TTWW_TuneCP5_13TeV-madgraph-pythia8_Summer20UL17_106X.root",
     pathPrefix + "Summer20UL17_106X/TTZToLLNuNu_M-10_TuneCP5_13TeV-amcatnlo-pythia8_Summer20UL17_106X.root",
     pathPrefix + "Summer20UL17_106X/TTZToQQ_TuneCP5_13TeV-amcatnlo-pythia8_Summer20UL17_106X.root",
+  };
+  MasterDict["ttbar_2016"] = {
     pathPrefix + "Summer20UL16_106X/tZq_ll_4f_ckm_NLO_TuneCP5_13TeV-amcatnlo-pythia8_Summer20UL16_106X.root",
     pathPrefix + "Summer20UL16_106X/ttHToNonbb_M125_TuneCP5_13TeV-powheg-pythia8_Summer20UL16_106X.root",
     pathPrefix + "Summer20UL16_106X/ttHTobb_M125_TuneCP5_13TeV-powheg-pythia8_Summer20UL16_106X.root",
@@ -106,6 +114,8 @@ SampleTool::SampleTool(){
     pathPrefix + "Summer20UL16_106X/TTWW_TuneCP5_13TeV-madgraph-pythia8_Summer20UL16_106X.root",
     pathPrefix + "Summer20UL16_106X/TTZToLLNuNu_M-10_TuneCP5_13TeV-amcatnlo-pythia8_Summer20UL16_106X.root",
     pathPrefix + "Summer20UL16_106X/TTZToQQ_TuneCP5_13TeV-amcatnlo-pythia8_Summer20UL16_106X.root",
+  };
+  MasterDict["ttbar_2016APV"] = {
     pathPrefix + "Summer20UL16APV_106X/tZq_ll_4f_ckm_NLO_TuneCP5_13TeV-amcatnlo-pythia8_Summer20UL16APV_106X.root",
     pathPrefix + "Summer20UL16APV_106X/ttHToNonbb_M125_TuneCP5_13TeV-powheg-pythia8_Summer20UL16APV_106X.root",
     pathPrefix + "Summer20UL16APV_106X/ttHTobb_M125_TuneCP5_13TeV-powheg-pythia8_Summer20UL16APV_106X.root",
@@ -123,6 +133,18 @@ SampleTool::SampleTool(){
     pathPrefix + "Summer20UL16APV_106X/TTZToLLNuNu_M-10_TuneCP5_13TeV-amcatnlo-pythia8_Summer20UL16APV_106X.root",
     pathPrefix + "Summer20UL16APV_106X/TTZToQQ_TuneCP5_13TeV-amcatnlo-pythia8_Summer20UL16APV_106X.root",
   };
+
+  MasterDict["ttbar"] = mergeEntriesList(
+    MasterDict,
+    {
+      "ttbar_2023BPix",
+      "ttbar_2022",
+      "ttbar_2018",
+      "ttbar_2017",
+      "ttbar_2016",
+      "ttbar_2016APV",
+    }
+  );
 
   MasterDict["ST"] = {
     pathPrefix + "Summer23BPix_130X/TBbartoLplusNuBbar-s-channel-4FS_TuneCP5_13p6TeV_amcatnlo-pythia8_Summer23BPix_130X.root",

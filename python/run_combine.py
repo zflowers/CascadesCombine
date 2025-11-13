@@ -35,7 +35,7 @@ def parse_args():
                    help="Skip running the compile step")
     p.add_argument("--only-yields", action="store_true",
                    help="Stop after getting yields")
-    p.add_argument("--bins-per-job", type=int, default=4,
+    p.add_argument("--bins-per-job", type=int, default=10,
                    help="Number of bins to group per job")
     return p.parse_args()
 

@@ -202,3 +202,73 @@ static std::vector<DerivedVar> loadDerivedVariablesYAML(const std::string &yamlP
     }
     return vars;
 }
+
+// Keeps RDataFrame alive while returning a convenient RNode
+struct BaseNodeHandle {
+    std::shared_ptr<ROOT::RDataFrame> df; // owns the RDataFrame lifetime
+    ROOT::RDF::RNode node;                // node built from *df
+};
+
+// Build the common base node (weights + lepton counts + pair kinematics).
+// Caller is responsible for calling ROOT::EnableImplicitMT(...) to set MT state
+// BEFORE calling this helper so the returned RNode is constructed under the
+// desired implicit-MT configuration.
+static BaseNodeHandle MakeBaseNode(const std::string &tree_name,
+                                   const std::string &rootFilePath,
+                                   BuildFitInput *BFI,
+                                   double Lumi) {
+    auto df = std::make_shared<ROOT::RDataFrame>(tree_name, rootFilePath);
+
+    // scale weights
+    ROOT::RDF::RNode node = (*df)
+        .Define("weight_scaled",[Lumi](double w){return w*Lumi;},{"weight"})
+        .Define("weight_sq_scaled", [Lumi](double w2){ return w2 * Lumi * Lumi; }, {"weight2"})
+        .Define("mc_genweight", [](double gw, double xsec){ return gw * xsec; }, {"genweight","XSec"})
+        .Define("mc_genweight_sq", [](double gw, double xsec){ return gw * gw * xsec * xsec; }, {"genweight","XSec"});
+
+    // lepton counts / kinematics (keep same sequence as original)
+    node = BFI->DefineLeptonPairCounts(node,"");
+    node = BFI->DefineLeptonPairCounts(node,"A");
+    node = BFI->DefineLeptonPairCounts(node,"B");
+    node = BFI->DefinePairKinematics(node,"");
+    node = BFI->DefinePairKinematics(node,"A");
+    node = BFI->DefinePairKinematics(node,"B");
+
+    return {df, node};
+}
+
+// returns a pair: (handle, loaded_node)
+// - `handle` keeps underlying RDataFrame resources alive
+// - `loaded_node` is the RNode with derived vars defined and user cuts loaded
+static std::pair<BaseNodeHandle, ROOT::RDF::RNode>
+MakeTotalsNode(const std::string &tree_name,
+               const std::string &rootFilePath,
+               BuildFitInput *BFI,
+               double Lumi,
+               const std::vector<DerivedVar> &derivedVars,
+               std::map<std::string, CutDef> &allUserCuts){
+
+    RegisterSafeHelpers();
+    // Construct a base handle (this keeps the underlying RDataFrame alive)
+    BaseNodeHandle handle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi);
+    ROOT::RDF::RNode node = handle.node;
+
+    // Define derived variables (best-effort)
+    for (const auto &dv : derivedVars) {
+        try {
+            node = node.Define(dv.name, dv.expr);
+        } catch (const std::exception &e) {
+            std::cerr << "[BFI_condor] WARNING (MakeTotalsNode): Failed to define '"
+                      << dv.name << "' : " << e.what() << std::endl;
+        } catch (...) {
+            std::cerr << "[BFI_condor] WARNING (MakeTotalsNode): Failed to define '"
+                      << dv.name << "' : unknown exception\n";
+        }
+    }
+
+    // Load user cuts onto this node (fills/uses allUserCuts)
+    ROOT::RDF::RNode loaded_node = BuildFitInput::loadCutsUser(node, allUserCuts);
+
+    return { std::move(handle), loaded_node };
+}
+

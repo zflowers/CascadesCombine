@@ -107,6 +107,10 @@ def main():
     make_root = args.make_root
     if not (make_json or make_root):
         make_json = True
+    if make_root: # extra resources for histograms
+        global memory, cpus
+        memory = "2 GB"
+        cpus = "2"
 
     dryrun = args.dryrun
     lumi = args.lumi
