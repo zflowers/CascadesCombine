@@ -50,7 +50,7 @@ template <typename T>
 bool TryValidateType(ROOT::RDF::RNode node,
                      const DerivedVar &dv,
                      unsigned nCheck = 50,
-                     unsigned maxCheck = 5000) {
+                     unsigned maxCheck = 50000) {
     try {
         auto subset = node.Range(0, static_cast<long>(nCheck));
         auto vals = subset.Take<T>(dv.name + "_test").GetValue();
@@ -128,7 +128,7 @@ bool TryValidateType(ROOT::RDF::RNode node,
 inline bool ValidateDerivedVar(ROOT::RDF::RNode node,
                                const DerivedVar &dv,
                                unsigned nCheck = 50,
-                               unsigned maxCheck = 5000) {
+                               unsigned maxCheck = 50000) {
     try {
         ROOT::RDF::RNode tmpNode = node.Define(dv.name + "_test", dv.expr);
 
@@ -172,7 +172,7 @@ inline bool ValidateDerivedVar(ROOT::RDF::RNode node,
 inline bool ValidateUserCut(ROOT::RDF::RNode node,
                             const CutDef &cut,
                             unsigned nCheck = 50,
-                            unsigned maxCheck = 5000) {
+                            unsigned maxCheck = 50000) {
     try {
         auto subset = node.Range(0, static_cast<long>(nCheck));
         auto count = subset.Filter(cut.expression, cut.name).Count().GetValue();
@@ -197,7 +197,7 @@ inline std::map<std::string, CutDef>
 ValidateCuts(ROOT::RDF::RNode node,
              const std::map<std::string, CutDef>& cuts,
              unsigned nCheck = 50,
-             unsigned maxCheck = 5000) {
+             unsigned maxCheck = 50000) {
     std::map<std::string, CutDef> valid;
     for (const auto &[name, cut] : cuts) {
         if (ValidateUserCut(node, cut, nCheck, maxCheck)) {

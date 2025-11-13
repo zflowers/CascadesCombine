@@ -26,6 +26,7 @@ ROOTFILE=""
 OUTPUT_JSON=""
 OUTPUT_HIST=""
 HIST_YAML=""
+PROC_YAML=""
 CUTS_MULTI=""
 LEP_CUTS_MULTI=""
 PREDEF_CUTS_MULTI=""
@@ -52,6 +53,7 @@ while [[ $# -gt 0 ]]; do
         --json-output) OUTPUT_JSON=$(clean_arg "$2"); shift 2;;
         --root-output) OUTPUT_HIST=$(clean_arg "$2"); shift 2;;
         --hist-yaml) HIST_YAML=$(clean_arg "$2"); shift 2;;
+        --proc-yaml) PROC_YAML=$(clean_arg "$2"); shift 2;;
 
         # Cuts (collect repeated occurrences)
         --cuts)
@@ -122,6 +124,7 @@ fi
 OUTPUT_JSON=$(basename "$OUTPUT_JSON")
 OUTPUT_HIST=$(basename "$OUTPUT_HIST")
 [[ -n "$HIST_YAML" ]] && HIST_YAML=$(basename "$HIST_YAML")
+[[ -n "$PROC_YAML" ]] && PROC_YAML=$(basename "$PROC_YAML")
 
 # --- Build command as a single quoted string ---
 CMD="./BFI_condor.x --bin \"$BIN\" --file \"$ROOTFILE\""
@@ -132,6 +135,7 @@ CMD="./BFI_condor.x --bin \"$BIN\" --file \"$ROOTFILE\""
 [[ -n "$HIST_FLAG" ]] && CMD="$CMD $HIST_FLAG"
 [[ -n "$OUTPUT_HIST" ]] && CMD="$CMD --root-output \"$OUTPUT_HIST\""
 [[ -n "$HIST_YAML" ]] && CMD="$CMD --hist-yaml \"$HIST_YAML\""
+[[ -n "$PROC_YAML" ]] && CMD="$CMD --proc-yaml \"$PROC_YAML\""
 
 # If we collected per-bin repeated cuts, pass them as a single --cuts-multi argument (||| as delimiter)
 if [[ -n "$CUTS_MULTI" ]]; then

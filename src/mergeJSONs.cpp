@@ -11,7 +11,6 @@
 #include <set>
 #include <nlohmann/json.hpp>
 #include "SampleTool.h"
-#include <yaml-cpp/yaml.h>
 
 namespace fs = std::filesystem;
 using json = nlohmann::json;
@@ -30,40 +29,14 @@ using json = nlohmann::json;
  * - Silent on expected missing bins/processes (this is the chosen silent mode).
  */
 
-// Load preferred groups from YAML file (reads processes.bkg and processes.sig in order)
-static std::vector<std::string> loadPreferredGroupsFromYaml(const std::string &yamlPath) {
-    std::vector<std::string> out;
-    try {
-        YAML::Node root = YAML::LoadFile(yamlPath);
-        if (!root) return out;
-
-        if (root["processes"]) {
-            YAML::Node procs = root["processes"];
-            if (procs["bkg"] && procs["bkg"].IsSequence()) {
-                for (const auto &n : procs["bkg"]) {
-                    if (n.IsScalar()) out.push_back(n.as<std::string>());
-                }
-            }
-            if (procs["sig"] && procs["sig"].IsSequence()) {
-                for (const auto &n : procs["sig"]) {
-                    if (n.IsScalar()) out.push_back(n.as<std::string>());
-                }
-            }
-        }
-    } catch (const std::exception &e) {
-        std::cerr << "[loadPreferredGroupsFromYaml] Failed to read YAML '" << yamlPath << "': " << e.what() << "\n";
-    }
-    return out;
-}
-
-bool mergeJSONsFlattenedWithFileBreakdown(const std::vector<std::string> &inputFiles,
+bool mergeJSONsFlattenedWithFileBreakdown(
+                                          SampleTool& ST,
+                                          const std::vector<std::string> &inputFiles,
                                           const std::string &outMergedFile,
                                           const std::string &outFilesFile = "",
-                                          const std::vector<std::string> &preferredGroups = {})
+                                          const std::vector<std::string> &preferredGroups = {}
+                                         )
 {
-    SampleTool ST;
-    ST.LoadAllFromMaster();
-
     // helper to get prefix (text before first underscore) from filename
     auto getPrefix = [](const std::string &fname) -> std::string {
         std::string base = fs::path(fname).filename().string();
@@ -439,9 +412,11 @@ int main(int argc, char **argv) {
         return 2;
     }
 
+    SampleTool ST;
+    ST.LoadAllFromMaster();
     std::vector<std::string> preferredGroups;
     if (!processesYaml.empty()) {
-        preferredGroups = loadPreferredGroupsFromYaml(processesYaml);
+        preferredGroups = ST.loadPreferredGroupsFromYaml(processesYaml);
         if (preferredGroups.empty())
             std::cerr << "[mergeJSONs] Warning: no preferred groups loaded from '" << processesYaml << "'\n";
     }
@@ -450,8 +425,8 @@ int main(int argc, char **argv) {
     std::string filesName  = baseOut + "_files.json";
 
     bool success = per_file ?
-        mergeJSONsFlattenedWithFileBreakdown(inputs, mergedName, filesName, preferredGroups) :
-        mergeJSONsFlattenedWithFileBreakdown(inputs, mergedName, "", preferredGroups);
+        mergeJSONsFlattenedWithFileBreakdown(ST, inputs, mergedName, filesName, preferredGroups) :
+        mergeJSONsFlattenedWithFileBreakdown(ST, inputs, mergedName, "", preferredGroups);
 
     if (!success) return 3;
 

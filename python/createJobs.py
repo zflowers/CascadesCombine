@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import os, sys, subprocess, argparse, re, shutil, time, random, hashlib, glob
+import os, sys, subprocess, argparse, re, shutil, time, random, hashlib, glob, yaml
 from pathlib import Path
 import importlib.util
 from collections import defaultdict
@@ -84,7 +84,7 @@ def _flatten_field(value):
 # ----------------------------------------
 # Write helper scripts (merge/hadd)
 # ----------------------------------------
-def write_merge_script(bin_name, condor_bin_dir: Path, json_dirname="json"):
+def write_merge_script(bin_name, condor_bin_dir: Path, json_dirname="json", proc_yaml_file=""):
     """Make a merge script that expects json files to be in condor_bin_dir/json
 
     The script calls the run-local exe `exe/mergeJSONs.x` with two quoted args:
@@ -102,12 +102,6 @@ def write_merge_script(bin_name, condor_bin_dir: Path, json_dirname="json"):
     exe_candidate = (condor_bin_dir / ".." / ".." / "exe" / "mergeJSONs.x").resolve()
     merged_out = (condor_bin_dir / f"{bin_safe}.json").resolve()
     json_dir = (condor_bin_dir / json_dirname).resolve()
-    yaml_pattern = os.path.join(condor_bin_dir, "../../configs/*_processes.yaml")
-    files = glob.glob(yaml_pattern)
-    yaml_file = "config/process_cfgs/processes.yaml"
-    if files:
-        files.sort(key=os.path.getmtime, reverse=True)
-        yaml_file = files[0]
 
     with open(merge_script_path, "w") as f:
         f.write("#!/usr/bin/env bash\n")
@@ -116,7 +110,7 @@ def write_merge_script(bin_name, condor_bin_dir: Path, json_dirname="json"):
         f.write(f'EXEC="{exe_candidate.as_posix()}"\n')
         f.write(f'OUT="{merged_out.as_posix()}"\n')
         f.write(f'INDIR="{json_dir.as_posix()}"\n')
-        f.write(f'YAML="{yaml_file}"\n')
+        f.write(f'YAML="{proc_yaml_file}"\n')
         f.write('mkdir -p "$(dirname "$OUT")"\n')
         f.write('echo "[mergeJSONs] Running: $EXEC $OUT $INDIR --processes $YAML"\n')
         f.write('"$EXEC" "$OUT" "$INDIR" --processes "$YAML"\n')
@@ -129,8 +123,10 @@ def write_hadd_script(bin_name, condor_bin_dir: Path, root_dirname="root"):
     with open(hadd_script_path, "w") as f:
         f.write("#!/usr/bin/env bash\n")
         f.write("# Auto-generated per-bin hadd script\n")
-        f.write(f'hadd -f "{merged_root.as_posix()}" "{(condor_bin_dir / root_dirname / "*.root").as_posix()}" > /dev/null 2>&1 || ')
-        f.write(f'hadd -f "{merged_root.as_posix()}" "{(condor_bin_dir / root_dirname / "*.root").as_posix()}"\n')
+        f.write(
+            f'hadd -f "{merged_root.as_posix()}" {condor_bin_dir.as_posix()}/{root_dirname}/*.root > /dev/null 2>&1 || '
+            f'hadd -f "{merged_root.as_posix()}" {condor_bin_dir.as_posix()}/{root_dirname}/*.root\n'
+        )
     os.chmod(hadd_script_path, 0o755)
 
 # ----------------------------------------
@@ -258,6 +254,13 @@ def write_submit_file(
     for d in (log_dir, out_dir, err_dir, json_dir, root_dir):
         d.mkdir(parents=True, exist_ok=True)
 
+    proc_yaml_pattern = os.path.join(bin_dir, "../../configs/*_processes.yaml")
+    files = glob.glob(proc_yaml_pattern)
+    proc_yaml_file = "config/process_cfgs/processes.yaml"
+    if files:
+        files.sort(key=os.path.getmtime, reverse=True)
+        proc_yaml_file = files[0]
+
     submit_path = bin_dir / f"{bin_safe}.sub"
 
     # Header
@@ -332,7 +335,17 @@ def write_submit_file(
                 job.setdefault("transfer_input_files", []).append(str(hist_yaml_path))
                 all_inputs.add(str(hist_yaml_path))
 
-        # Ensure run-local BFI_condor.x (if found) is transferred to the job's working dir
+        # Determine proc_yaml_path for job transfer
+        if proc_yaml_file:
+            candidate = run_root / "configs" / Path(proc_yaml_file).name
+            if candidate.exists():
+                proc_yaml_path = candidate.resolve()
+            else:
+                proc_yaml_path = Path(proc_yaml_file).resolve()
+            job.setdefault("transfer_input_files", []).append(str(proc_yaml_path))
+            all_inputs.add(str(proc_yaml_path))
+
+         # Ensure run-local BFI_condor.x (if found) is transferred to the job's working dir
         if bfi_path:
             job.setdefault("transfer_input_files", []).append(str(bfi_path))
             all_inputs.add(str(bfi_path))
@@ -342,7 +355,6 @@ def write_submit_file(
         if bins_cfg:
             bcfg_path = Path(bins_cfg)
             if bcfg_path.exists():
-                import yaml
                 bins_cfg_map = yaml.safe_load(bcfg_path.read_text()) or {}
                 # Ensure the exact file is transferred to job CWD (use basename)
                 all_inputs.add(str(bcfg_path.resolve()))
@@ -392,6 +404,8 @@ def write_submit_file(
             # if bins_cfg provided but bin_name is single, still pass the file in
             if bins_cfg:
                 args_list.append(f"--bins-cfg {Path(bins_cfg).name}")
+
+        args_list.append(f"--proc-yaml {proc_yaml_file}")
 
         # Make-json / make-root options
         if make_json:
@@ -576,7 +590,7 @@ def write_submit_file(
     
             print(f"[createJobs] Submitted bin {bin_name} ({len(jobs)} jobs) via schedd {schedd or '(unknown)'}")
             if make_json:
-                write_merge_script(bin_name, bin_dir, json_dirname="json")
+                write_merge_script(bin_name, bin_dir, json_dirname="json", proc_yaml_file=proc_yaml_file)
             if make_root:
                 write_hadd_script(bin_name, bin_dir, root_dirname="root")
 
@@ -657,7 +671,7 @@ def main():
         args.predefined_cuts,
         args.user_cuts,
         sms_filters,
-        hist_yaml_file=args.hist_yaml if args.hist_yaml else None
+        hist_yaml_file=args.hist_yaml if args.hist_yaml else None,
     )
 
     # If a hist YAML was provided, store it in each job (reference staged configs if available)

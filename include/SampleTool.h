@@ -5,6 +5,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include "yaml-cpp/yaml.h"
 #include "BuildFitTools.h"
 
 using namespace std;
@@ -40,6 +41,7 @@ class SampleTool{
         stringlist mergeEntriesList(
             const std::map<std::string, stringlist>& dict,
             const stringlist& keys) const;
+	stringlist loadPreferredGroupsFromYaml(const std::string &yamlPath);
 
 };
 

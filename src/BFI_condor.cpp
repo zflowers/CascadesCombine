@@ -13,7 +13,7 @@ static void usage(const char* me) {
     std::cerr << "Usage: " << me
               << " --bin BINNAME[;BINNAME2;...] --file ROOTFILE [--json-output OUT.json] "
                  "[--root-output OUT.root] [--cuts CUT1;CUT2;...] [--lep-cuts LEPCUT1;LEPCUT2;...] "
-                 "[--predefined-cuts NAME1;NAME2;...] [--user-cuts NAME1;NAME2;...] [--hist] [--hist-yaml HISTS.yaml] [--json]\n\n";
+                 "[--predefined-cuts NAME1;NAME2;...] [--user-cuts NAME1;NAME2;...] [--hist] [--hist-yaml HISTS.yaml] [--json] [--proc-yaml PROCS.yaml]\n\n";
     std::cerr << "Required arguments:\n";
     std::cerr << "  --bin           Name (or semicolon-separated list) of the bin(s) to process (e.g. TEST or BIN1;BIN2)\n";
     std::cerr << "  --file          Path to one ROOT file to process\n\n";
@@ -27,6 +27,7 @@ static void usage(const char* me) {
     std::cerr << "  --user-cuts        Semicolon-separated list of user cuts\n";
     std::cerr << "  --hist             Fill histograms\n";
     std::cerr << "  --hist-yaml        YAML file defining histogram expressions\n";
+    std::cerr << "  --proc-yaml        YAML file containg processes inputted for ST lookup\n";
     std::cerr << "  --json             Write JSON yields\n";
     std::cerr << "  --signal           Mark this process as signal\n";
     std::cerr << "  --sig-type TYPE    Specify signal type (sets --signal automatically)\n";
@@ -64,7 +65,7 @@ int main(int argc, char** argv) {
     std::string binArg, cutsStr, lepCutsStr, predefCutsStr, userCutsStr, rootFilePath, outputJsonPathBase, sampleName, histOutputPath, cutsMultiStr, lepCutsMultiStr, predefCutsMultiStr, userCutsMultiStr, binsCfgName;
     std::vector<std::string> smsFilters;
     bool isSignal=false, doHist=false, doJSON=false;
-    std::string sigType, histYamlPath;
+    std::string sigType, histYamlPath, procYamlPath;
     double Lumi=1.0;
 
     static struct option long_options[] = {
@@ -82,6 +83,7 @@ int main(int argc, char** argv) {
         {"sms-filters", required_argument, 0, 'm'},
         {"hist", no_argument, 0, 'H'},
         {"hist-yaml", required_argument, 0, 'y'},
+        {"proc-yaml", required_argument, 0, 'd'},
         {"json", no_argument, 0, 'J'},
         {"root-output", required_argument, 0, 'O'},
         {"cuts-multi", required_argument, 0, 'M'},
@@ -110,6 +112,7 @@ int main(int argc, char** argv) {
             case 'm': smsFilters=BFTool::SplitString(optarg,","); break;
             case 'H': doHist=true; break;
             case 'y': histYamlPath=optarg; break;
+            case 'd': procYamlPath=optarg; break;
             case 'J': doJSON=true; break;
             case 'O': histOutputPath = optarg; break;
             case 'M': cutsMultiStr = optarg; break;
@@ -242,34 +245,18 @@ int main(int argc, char** argv) {
     // totalsByBin[bin][processKey] = {nEntries, sW, err2_sum, sG, sG2}
 
     std::string processName = "";
+    ST.LoadAllFromMaster();
+    auto preferredGroups = ST.loadPreferredGroupsFromYaml(procYamlPath);
     if(isSignal && sigType == "cascades")
         processName = BFTool::GetSignalTokensCascades(rootFilePath);
     else if(isSignal && sigType == "sms")
-        processName = GetProcessNameFromKey(rootFilePath) + "_" + BFTool::GetFilterSignalsSMS()[0];
+        processName = GetProcessNameFromKey(rootFilePath, preferredGroups) + "_" + BFTool::GetFilterSignalsSMS()[0];
     else
-        processName = GetProcessNameFromKey(rootFilePath);
+        processName = GetProcessNameFromKey(rootFilePath, preferredGroups);
 
     // processTree will now compute per-bin results by reusing a single df_with_lep
     auto processTree=[&](const std::string &tree_name, const std::string &key){
         if(doHist) histFile->cd();
-        ROOT::RDataFrame df(tree_name, rootFilePath);
-
-        // Scale weights
-        auto df_scaled = df.Define("weight_scaled",[Lumi](double w){return w*Lumi;},{"weight"})
-                           .Define("weight_sq_scaled", [Lumi](double w2){ return w2 * Lumi * Lumi; }, {"weight2"})
-                           .Define("mc_genweight", [](double gw, double xsec){ return gw * xsec; }, {"genweight","XSec"})
-                           .Define("mc_genweight_sq", [](double gw, double xsec){ return gw * gw * xsec * xsec; }, {"genweight","XSec"});
-
-        // Lepton counts / kinematics
-        auto df_with_lep = BFI->DefineLeptonPairCounts(df_scaled,"");
-        df_with_lep = BFI->DefineLeptonPairCounts(df_with_lep,"A");
-        df_with_lep = BFI->DefineLeptonPairCounts(df_with_lep,"B");
-        df_with_lep = BFI->DefinePairKinematics(df_with_lep,"");
-        df_with_lep = BFI->DefinePairKinematics(df_with_lep,"A");
-        df_with_lep = BFI->DefinePairKinematics(df_with_lep,"B");
-
-        // --- Base node to be copied per-bin ---
-        ROOT::RDF::RNode base_node = df_with_lep;
 
         // --- Define any other derived variables from YAML (these are independent of bin) ---
         std::vector<DerivedVar> derivedVars;
@@ -277,27 +264,40 @@ int main(int argc, char** argv) {
             derivedVars = loadDerivedVariablesYAML(histYamlPath);
         }
 
+        // --- Base node to be copied per-bin ---
+        if(ROOT::IsImplicitMTEnabled()) ROOT::DisableImplicitMT(); // disable MT for validation
+        BaseNodeHandle valHandle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi);
+        ROOT::RDF::RNode base_node_val = valHandle.node; // RNode constructed under IMT OFF
+
         // --- Validate derived variables (on base node) ---
+        std::vector<DerivedVar> validatedDerivedVars;
         for (const auto &dv : derivedVars) {
-            ValidateDerivedVarNode(base_node, dv);
+            if(ValidateDerivedVarNode(base_node_val, dv))
+                validatedDerivedVars.push_back(dv);
         }
 
-        // --- Define derived variables on base node ---
-        for(const auto &dv : derivedVars){
-            try{
-                base_node = base_node.Define(dv.name, dv.expr);
-            }catch(const std::exception &e){
-                std::cerr << "[BFI_condor] WARNING: Failed to define derived variable '"
-                          << dv.name << "' Expression: " << dv.expr
-                          << " Exception: " << e.what() << "\n";
-            }
-        }
-
-        // --- Load all user cuts once (uses the base node) ---
+        // --- Load all user cuts with base_node_val ---
         std::map<std::string, CutDef> allUserCuts;
-        ROOT::RDF::RNode loaded_node = BuildFitInput::loadCutsUser(base_node, allUserCuts);
+        base_node_val = BuildFitInput::loadCutsUser(base_node_val, allUserCuts, true);
 
         for (const auto &bin : binNames) {
+            if(ROOT::IsImplicitMTEnabled()) ROOT::DisableImplicitMT(); // disable MT for validation
+            BaseNodeHandle bin_valHandle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi);
+            ROOT::RDF::RNode bin_base_node_val = bin_valHandle.node; // RNode constructed under IMT OFF
+
+            // --- Define validated derived variables on base node ---
+            for(const auto &dv : validatedDerivedVars){
+                try{
+                    bin_base_node_val = bin_base_node_val.Define(dv.name, dv.expr);
+                }catch(const std::exception &e){
+                    std::cerr << "[BFI_condor] WARNING: Failed to define derived variable '"
+                              << dv.name << "' Expression: " << dv.expr
+                              << " Exception: " << e.what() << "\n";
+                }
+            }
+
+            base_node_val = BuildFitInput::loadCutsUser(base_node_val, allUserCuts, false);
+
             // Retrieve the already-expanded bin-specific cuts
             const auto &finalCutsExpanded = finalCutsExpandedMap.at(bin);
         
@@ -314,34 +314,127 @@ int main(int argc, char** argv) {
                     continue;
                 }
                 const auto &cut = it->second;
-                std::string expanded = BFI->ExpandMacros(cut.expression); // ExpandMacros may depend on bin
+                std::string expanded = BFI->ExpandMacros(cut.expression);
                 if (!expanded.empty())
                     validUserCuts.push_back({cutName, expanded});
             }
  
-            // Start from loaded_node for this bin (keeps derived variables & user-cuts definitions)
-            ROOT::RDF::RNode node = loaded_node;
-        
-            // --- Build ordered cuts list (bin-specific final cuts + user cuts)
-            std::vector<std::string> cutsOrdered;
-            std::vector<std::string> cutLabels;
-            for (const auto &c : finalCutsExpanded) { if (!c.empty()) { cutsOrdered.push_back(c); } }
-            for (const auto &cl : cutsVec) { cutLabels.push_back(cl); }
-            for (const auto &cl : lepCutsVec) { cutLabels.push_back(cl); }
-            for (const auto &cl : predefCutsVec) { cutLabels.push_back(cl); }
-            for (const auto &uc : validUserCuts) { cutsOrdered.push_back(uc.expr); cutLabels.push_back(uc.name); }
-            const int Ncuts = static_cast<int>(cutsOrdered.size());
-
+            ROOT::RDF::RNode node = bin_base_node_val;
+       
             // --- Histograms / CutFlow per-bin ---
             if(doHist){
                 if(histFile) histFile->cd();
+
+                // --- Build ordered cuts list (bin-specific final cuts + user cuts)
+                // Ensure every cutsOrdered entry has a corresponding human-readable label
+                std::vector<std::string> cutsOrdered;
+                std::vector<std::string> cutLabels;
+                
+                // helper to create a readable, length-limited label from an expression
+                auto make_readable_label = [&](const std::string &expr) -> std::string {
+                    // basic sanitization: remove excessive whitespace and enclosing parentheses
+                    std::string s = expr;
+                    // trim
+                    auto l = s.find_first_not_of(" \t\n\r");
+                    auto r = s.find_last_not_of(" \t\n\r");
+                    if (l == std::string::npos) s = "";
+                    else s = s.substr(l, r - l + 1);
+                
+                    // remove outer parentheses if present
+                    if (s.size() > 2 && s.front() == '(' && s.back() == ')') {
+                        s = s.substr(1, s.size() - 2);
+                        // trim again
+                        l = s.find_first_not_of(" \t\n\r");
+                        r = s.find_last_not_of(" \t\n\r");
+                        if (l == std::string::npos) s = "";
+                        else s = s.substr(l, r - l + 1);
+                    }
+                
+                    // collapse multiple spaces
+                    std::string out;
+                    bool lastSpace = false;
+                    for (char ch : s) {
+                        if (isspace((unsigned char)ch)) {
+                            if (!lastSpace) { out.push_back(' '); lastSpace = true; }
+                        } else {
+                            out.push_back(ch);
+                            lastSpace = false;
+                        }
+                    }
+                    s = out;
+                
+                    // truncate to reasonable length for axis label
+                    const size_t maxLen = 52;
+                    if (s.size() > maxLen) {
+                        // smart truncation: keep beginning and end
+                        std::string head = s.substr(0, 28);
+                        std::string tail = s.substr(s.size() - 16);
+                        s = head + "..." + tail;
+                    }
+                
+                    if (s.empty()) s = std::string("Cut_") + std::to_string(cutLabels.size() + 1);
+                    return s;
+                };
+                
+                // --- Determine which CLI cut lists correspond to this bin ---
+                // Default to global single-bin values
+                size_t binIndex = std::distance(binNames.begin(), std::find(binNames.begin(), binNames.end(), bin));
+                std::vector<std::string> cutsCLI = cutsVec;
+                std::vector<std::string> lepCLI = lepCutsVec;
+                std::vector<std::string> predefCLI = predefCutsVec;
+                
+                if (!cutsMultiStr.empty() || !lepCutsMultiStr.empty() || !predefCutsMultiStr.empty()) {
+                    // Recompute per-bin CLI args using same logic as above
+                    std::vector<std::string> cutsParts = split_on_delim(cutsMultiStr, "|||");
+                    std::vector<std::string> lepParts = split_on_delim(lepCutsMultiStr, "|||");
+                    std::vector<std::string> predefParts = split_on_delim(predefCutsMultiStr, "|||");
+                
+                    if (binIndex < cutsParts.size()) cutsCLI = splitTopLevel(cutsParts[binIndex]);
+                    if (binIndex < lepParts.size())  lepCLI  = splitTopLevel(lepParts[binIndex]);
+                    if (binIndex < predefParts.size()) predefCLI = splitTopLevel(predefParts[binIndex]);
+                }
+                
+                // Add finalCutsExpanded with best-effort labels (prefer CLI names if supplied)
+                for (size_t idx = 0; idx < finalCutsExpanded.size(); ++idx) {
+                    const auto &c = finalCutsExpanded[idx];
+                    if (c.empty()) continue;
+                
+                    cutsOrdered.push_back(c);
+                
+                    std::string label;
+                    // try to use CLI-provided names in order
+                    if (idx < cutsCLI.size() && !cutsCLI[idx].empty()) {
+                        label = cutsCLI[idx];
+                    }
+                    else if (idx - cutsCLI.size() < lepCLI.size() && (idx >= cutsCLI.size()) && !lepCLI[idx - cutsCLI.size()].empty()) {
+                        label = lepCLI[idx - cutsCLI.size()];
+                    }
+                    else if (idx - cutsCLI.size() - lepCLI.size() < predefCLI.size() && (idx >= cutsCLI.size() + lepCLI.size()) && !predefCLI[idx - cutsCLI.size() - lepCLI.size()].empty()) {
+                        label = predefCLI[idx - cutsCLI.size() - lepCLI.size()];
+                    }
+                    else {
+                        label = make_readable_label(c);
+                    }
+                
+                    cutLabels.push_back(label);
+                }
+                
+                // Append user cuts with their explicit names (they should be human-readable)
+                for (const auto &uc : validUserCuts) {
+                    cutsOrdered.push_back(uc.expr);
+                    // use uc.name if non-empty, else fall back to trimmed expression
+                    if (!uc.name.empty()) cutLabels.push_back(uc.name);
+                    else cutLabels.push_back(make_readable_label(uc.expr));
+                }
+                
+                const int Ncuts = static_cast<int>(cutsOrdered.size());
 
                 // Book CutFlow specific to (bin, process)
                 std::string cfName = bin + "__" + processName + "__CutFlow";
                 auto hist_CutFlow = std::make_shared<TH1D>(cfName.c_str(), cfName.c_str(), Ncuts+1, 0.0, double(Ncuts+1));
                 hist_CutFlow->Sumw2();
 
-                // Total events from NTUPLES (no cuts) using node (which is base node with derived vars & user definitions)
+                // Total events from NTUPLES (no cuts)
                 auto sumW_NoCuts = node.Sum<double>("weight_scaled");
                 auto sumW2_NoCuts = node.Sum<double>("weight_sq_scaled");
                 double sW_NoCuts = sumW_NoCuts.GetValue();
@@ -414,9 +507,6 @@ int main(int argc, char** argv) {
                 std::vector<HistFilterPlan> plans(N);
                 std::vector<char> keep(N, 0);
 
-                // --- VALIDATION PASS (MT OFF) per-bin ---
-                ROOT::EnableImplicitMT(0);
-
                 for (size_t i = 0; i < N; ++i) {
                     const auto &h = histDefs[i];
                     plans[i] = BuildHistFilterPlan(h, BFI, allUserCuts);
@@ -429,7 +519,10 @@ int main(int argc, char** argv) {
                 }
 
                 // --- FILL PASS (MT ON) per-bin ---
-                ROOT::EnableImplicitMT(); // turn on multi-threading once
+                if(!ROOT::IsImplicitMTEnabled()) ROOT::EnableImplicitMT(); // turn on multi-threading for filling
+                BaseNodeHandle fillHandle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi);
+                ROOT::RDF::RNode base_node_fill = fillHandle.node; // RNode constructed under IMT ON
+                base_node_fill = BuildFitInput::loadCutsUser(base_node_fill, allUserCuts, false);
 
                 std::cout << "[BFI_condor] Filling histograms (bin=" << bin << ")\n";
                 for (size_t i = 0; i < N; ++i) {
@@ -438,19 +531,20 @@ int main(int argc, char** argv) {
                     std::string hname = bin + "__" + processName + "__" + h.name;
 
                     // Use the recorded plan; appliedUserCuts were stored in validation
-                    FillHistFromPlan(node, plans[i], h, hname);
+                    FillHistFromPlan(base_node_fill, plans[i], h, hname);
                 }
             } // end doHist
-
-            // --- Apply filters to node (finalCuts + validUserCuts) for JSON & optionally histograms if hist logic needs)
-            for (const auto &c : finalCutsExpanded) if (!c.empty()) node = node.Filter(c);
-            for (const auto &vc : validUserCuts) node = node.Filter(vc.expr);
 
             // --- JSON output per-bin ---
             if(doJSON){
                 std::cout << "[BFI_condor] Filling json (bin=" << bin << ")\n";
-                ROOT::EnableImplicitMT();
-                auto json_node = node;
+                if(!ROOT::IsImplicitMTEnabled()) ROOT::EnableImplicitMT(); 
+                BaseNodeHandle jsonHandle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi);
+                ROOT::RDF::RNode json_node = jsonHandle.node; // RNode constructed under IMT ON
+                // --- Apply filters to node for JSON 
+                json_node = BuildFitInput::loadCutsUser(json_node, allUserCuts, false);
+                for (const auto &c : finalCutsExpanded) if (!c.empty()) json_node = json_node.Filter(c);
+                for (const auto &vc : validUserCuts) json_node = json_node.Filter(vc.expr);
                 auto cnt = json_node.Count();
                 auto sumW = json_node.Sum<double>("weight_scaled");
                 auto sumW2 = json_node.Sum<double>("weight_sq_scaled");

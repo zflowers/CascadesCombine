@@ -1,19 +1,57 @@
 #include "BuildFitInput.h"
 #include <iostream>
+#include <limits>
 #include <TLorentzVector.h>
 
 // -------------------------------------
 // User-defined cuts loader (with examples)
 // -------------------------------------
-ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<std::string, CutDef>& ValidCuts){
+ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<std::string, CutDef>& ValidCuts, bool run_validation){
     std::map<std::string, CutDef> cuts;
 
+    // --- lead S jet pt < threshold (45 GeV) ---
     CutDef cut_leadSjetPt;
     cut_leadSjetPt.name = "leadSjet_pt";
     cut_leadSjetPt.columns = {"PT_jet", "index_jet_S", "Njet_S"};
     cut_leadSjetPt.expression =
         "(Njet_S == 0) || (Njet_S > 0 && SafeIndex(PT_jet, SafeIndex(index_jet_S, 0, -1), -1.0) < 45)";
     cuts[cut_leadSjetPt.name] = cut_leadSjetPt;
+
+    // --- min DeltaR between any two leptons ---
+    if (node.HasColumn("minDeltaR_leps") == false) {
+        node = node.Define("minDeltaR_leps",
+            [](const std::vector<double> &pt,
+               const std::vector<double> &eta,
+               const std::vector<double> &phi,
+               const std::vector<double> &mass) -> double {
+        
+                // determine safe element count
+                size_t n = std::min(std::min(pt.size(), eta.size()), std::min(phi.size(), mass.size()));
+                if (n < 2) return 999.0; // sentinel for "no pair"
+        
+                double minDR = std::numeric_limits<double>::infinity();
+                for (size_t i = 0; i + 1 < n; ++i) {
+                    TLorentzVector li;
+                    li.SetPtEtaPhiM(pt[i], eta[i], phi[i], mass[i]);
+                    for (size_t j = i + 1; j < n; ++j) {
+                        TLorentzVector lj;
+                        lj.SetPtEtaPhiM(pt[j], eta[j], phi[j], mass[j]);
+                        double dr = li.DeltaR(lj);
+                        if (dr < minDR) minDR = dr;
+                    }
+                }
+                return (minDR == std::numeric_limits<double>::infinity()) ? 999.0 : minDR;
+            },
+            {"PT_lep","Eta_lep","Phi_lep","M_lep"}
+        );
+    }
+    
+    // require lep min DeltaR > 0.02
+    CutDef cut_minDR_ll;
+    cut_minDR_ll.name = "minDR_ll_gt_0p02";
+    cut_minDR_ll.columns = {"minDeltaR_leps"};
+    cut_minDR_ll.expression = "minDeltaR_leps > 0.02";
+    cuts[cut_minDR_ll.name] = cut_minDR_ll;
 
     //node = node
     //    .Define("My_p4_lep0_a", [](const std::vector<double> &pt,
@@ -239,7 +277,11 @@ ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<st
     }, {"p4_jet0_vect", "p4_jet1_vect"});
     // Used *_vect in the names to avoid conflicts with the scalar-versions above.
     */
+    if (run_validation) validateCutsUser(node, ValidCuts, cuts);
+    return node;
+}
 
+void BuildFitInput::validateCutsUser(ROOT::RDF::RNode &node, std::map<std::string, CutDef>& ValidCuts, std::map<std::string, CutDef>& cuts){
     // Validate the cuts that the user wrote
     ValidCuts = ValidateCuts(node, cuts);
     for (const auto &kv : cuts) {
@@ -248,5 +290,4 @@ ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<st
                       << "\" failed validation and will be ignored.\n";
         }
     }
-    return node;
 }

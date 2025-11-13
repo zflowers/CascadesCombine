@@ -8,14 +8,14 @@
 #include <memory>
 #include <filesystem>
 #include <optional>
-
-#include "yaml-cpp/yaml.h"
-
+#include <unordered_set>
+#include <unordered_map>
 #include "SampleTool.h"
 #include "DefineUserHists.h"
 
 namespace fs = std::filesystem;
 
+SampleTool ST;
 inline std::string GetSampleNameFromKey(const std::string& keyOrPath) {
     size_t lastSlash = keyOrPath.find_last_of("/\\");
     std::string name = (lastSlash == std::string::npos) ? keyOrPath : keyOrPath.substr(lastSlash + 1);
@@ -24,7 +24,83 @@ inline std::string GetSampleNameFromKey(const std::string& keyOrPath) {
     return name;
 }
 
-// put this in the same header where ST and fs are visible
+inline std::string GetProcessNameFromKey(const std::string &keyOrPath,
+                                         const std::vector<std::string> &preferredGroups = {})
+{
+    // --- Helper: get prefix before first underscore ---
+    auto getPrefix = [](const std::string &fname) -> std::string {
+        std::string base = fs::path(fname).filename().string();
+        auto pos = base.find("_");
+        return (pos == std::string::npos) ? base : base.substr(0, pos);
+    };
+
+    // --- Recursive group expansion (same as in mergeJSONs.cpp) ---
+    std::function<void(const std::string&, std::unordered_set<std::string>&, std::unordered_set<std::string>&)> expandGroupRec;
+    expandGroupRec = [&expandGroupRec](const std::string &group,
+                                            std::unordered_set<std::string> &out,
+                                            std::unordered_set<std::string> &visited) -> void {
+        if (visited.find(group) != visited.end()) return;
+        visited.insert(group);
+
+        auto it = ST.MasterDict.find(group);
+        if (it == ST.MasterDict.end()) return;
+
+        for (const auto &entry : it->second) {
+            if (ST.MasterDict.find(entry) != ST.MasterDict.end()) {
+                expandGroupRec(entry, out, visited);
+            } else {
+                out.insert(entry);
+            }
+        }
+    };
+
+    // --- Cached expansion ---
+    std::unordered_map<std::string, std::vector<std::string>> expandedCache;
+    auto getExpandedEntries = [&expandedCache, &expandGroupRec](const std::string &group) -> const std::vector<std::string>& {
+        auto cit = expandedCache.find(group);
+        if (cit != expandedCache.end()) return cit->second;
+
+        std::unordered_set<std::string> expandedSet, visited;
+        expandGroupRec(group, expandedSet, visited);
+        std::vector<std::string> vec(expandedSet.begin(), expandedSet.end());
+        auto ret = expandedCache.emplace(group, std::move(vec));
+        return ret.first->second;
+    };
+
+    // --- Resolution logic ---
+    auto resolveGroup = [&preferredGroups, &getExpandedEntries, &getPrefix](const std::string &jsonKey) -> std::string {
+        std::string keyBase = fs::path(jsonKey).filename().string();
+
+        // 1) Try preferred groups (YAML order)
+        for (const auto &pref : preferredGroups) {
+            const auto &entries = getExpandedEntries(pref);
+            for (const auto &entry : entries) {
+                std::string p = getPrefix(entry);
+                if (!p.empty() && keyBase.rfind(p, 0) == 0) {
+                    return pref;
+                }
+            }
+        }
+
+        // 2) Fallback: search all groups
+        for (const auto &kv : ST.MasterDict) {
+            const auto &group = kv.first;
+            const auto &entries = getExpandedEntries(group);
+            for (const auto &entry : entries) {
+                std::string p = getPrefix(entry);
+                if (!p.empty() && keyBase.rfind(p, 0) == 0) {
+                    return group;
+                }
+            }
+        }
+
+        // 3) No match -> fallback to filename
+        return keyBase;
+    };
+
+    return resolveGroup(keyOrPath);
+}
+
 inline double GetLumiFromKey(const std::string& keyOrPath) {
     SampleTool ST;
     ST.LoadAllFromMaster();
@@ -41,7 +117,6 @@ inline double GetLumiFromKey(const std::string& keyOrPath) {
     };
 
     // Use stripSuffixes later when not mixing and matching signals across eras
-    // For now just explicitly set SMS xsecs in SampleTool
     // Helper: search for the best (longest) LumiDict key appearing as a path-segment prefix
     auto findLumiKeyInString = [&ST, &stripSuffixes](const std::string &s) -> std::optional<std::string> {
         std::string best;
@@ -86,27 +161,10 @@ inline double GetLumiFromKey(const std::string& keyOrPath) {
     }
 
     // 3) Give up
-    std::cerr << "Warning: GetLumiFromKey could not determine lumi for '" << keyOrPath << "'. Returning 0.\n";
-    return 0.0;
+    std::cerr << "Warning: GetLumiFromKey could not determine lumi for '" << keyOrPath << "'. Returning 1.0\n";
+    return 1.0;
 }
 
-inline std::string GetProcessNameFromKey(const std::string& keyOrPath) {
-    SampleTool ST;
-    ST.LoadAllFromMaster();
-    auto resolveGroup = [&ST](const std::string &Key) -> std::string {
-        std::string keyBase = fs::path(Key).filename().string();    
-        for (const auto &kv : ST.MasterDict) {       // kv.first = canonical group
-            for (const auto &entry : kv.second) {    // entry = full path
-                std::string entryBase = fs::path(entry).filename().string();
-                if (keyBase == entryBase)
-                    return kv.first;
-            }
-        }
-        return keyBase; // fallback
-    };
-
-    return resolveGroup(keyOrPath);
-}
 
 static bool buildCutsForBin(BuildFitInput* BFI,
                             const std::vector<std::string>& normalCuts,
@@ -235,40 +293,5 @@ static BaseNodeHandle MakeBaseNode(const std::string &tree_name,
     node = BFI->DefinePairKinematics(node,"B");
 
     return {df, node};
-}
-
-// returns a pair: (handle, loaded_node)
-// - `handle` keeps underlying RDataFrame resources alive
-// - `loaded_node` is the RNode with derived vars defined and user cuts loaded
-static std::pair<BaseNodeHandle, ROOT::RDF::RNode>
-MakeTotalsNode(const std::string &tree_name,
-               const std::string &rootFilePath,
-               BuildFitInput *BFI,
-               double Lumi,
-               const std::vector<DerivedVar> &derivedVars,
-               std::map<std::string, CutDef> &allUserCuts){
-
-    RegisterSafeHelpers();
-    // Construct a base handle (this keeps the underlying RDataFrame alive)
-    BaseNodeHandle handle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi);
-    ROOT::RDF::RNode node = handle.node;
-
-    // Define derived variables (best-effort)
-    for (const auto &dv : derivedVars) {
-        try {
-            node = node.Define(dv.name, dv.expr);
-        } catch (const std::exception &e) {
-            std::cerr << "[BFI_condor] WARNING (MakeTotalsNode): Failed to define '"
-                      << dv.name << "' : " << e.what() << std::endl;
-        } catch (...) {
-            std::cerr << "[BFI_condor] WARNING (MakeTotalsNode): Failed to define '"
-                      << dv.name << "' : unknown exception\n";
-        }
-    }
-
-    // Load user cuts onto this node (fills/uses allUserCuts)
-    ROOT::RDF::RNode loaded_node = BuildFitInput::loadCutsUser(node, allUserCuts);
-
-    return { std::move(handle), loaded_node };
 }
 

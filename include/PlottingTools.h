@@ -17,7 +17,7 @@ void Plot_Hist1D(TH1* h) {
     TLatex l; l.SetTextFont(42); l.SetNDC();
     std::string proc_title = title;
     if(proc_title.find("TChiWZ") != std::string::npos)
-        proc_title = makeSMSChiTitle(proc_title);
+        proc_title = makeSMSChiTitle(ExtractProcName(proc_title));
     else
         proc_title = m_Title[ExtractProcName(proc_title)];
     l.SetTextSize(0.035); l.DrawLatex(0.57,0.943,proc_title.c_str());
@@ -48,7 +48,7 @@ void Plot_Hist2D(TH2* h) {
     TLatex l; l.SetTextFont(42); l.SetNDC();
     std::string proc_title = title;
     if(proc_title.find("TChiWZ") != std::string::npos)
-        proc_title = makeSMSChiTitle(proc_title);
+        proc_title = makeSMSChiTitle(ExtractProcName(proc_title));
     else
         proc_title = m_Title[ExtractProcName(proc_title)];
     l.SetTextSize(0.035); l.DrawLatex(0.65,0.943,proc_title.c_str());
@@ -100,7 +100,7 @@ void Plot_Eff(TEfficiency* e){
     TLatex l; l.SetTextFont(42); l.SetNDC();
     std::string proc_title = title;
     if(proc_title.find("TChiWZ") != std::string::npos)
-        proc_title = makeSMSChiTitle(proc_title);
+        proc_title = makeSMSChiTitle(ExtractProcName(proc_title));
     else
         proc_title = m_Title[ExtractProcName(proc_title)];
     l.SetTextSize(0.035); l.DrawLatex(0.65,0.943,proc_title.c_str());
@@ -209,7 +209,7 @@ void Plot_Stack(const string& hname,
         if(sigHists[i]) {
             std::string proc_title = sigHists[i]->GetName();
             if(proc_title.find("TChiWZ") != std::string::npos)
-                proc_title = makeSMSChiTitle(proc_title);
+                proc_title = makeSMSChiTitle(ExtractProcName(proc_title));
             else
                 proc_title = m_Title[ExtractProcName(proc_title)];
             std::string tmp_label = proc_title;
@@ -335,7 +335,7 @@ void Plot_CutFlow(const std::string &hname,
         h->SetLineWidth(2);
         h->SetLineStyle(7);
         int color = kBlack;
-        auto it = m_Color.find(ExtractProcName(bkgHists[i]->GetName()));
+        auto it = m_Color.find(ExtractProcName(sigHists[i]->GetName()));
         if (it != m_Color.end()) {
             color = it->second;
         } else {
@@ -370,7 +370,7 @@ void Plot_CutFlow(const std::string &hname,
         if(sigHists[i]) {
             std::string proc_title = sigHists[i]->GetName();
             if(proc_title.find("TChiWZ") != std::string::npos)
-                proc_title = makeSMSChiTitle(proc_title);
+                proc_title = makeSMSChiTitle(ExtractProcName(proc_title));
             else
                 proc_title = m_Title[ExtractProcName(proc_title)];
             std::string tmp_label = proc_title;
