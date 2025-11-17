@@ -33,11 +33,12 @@ class BuildFit{
     std::string SanitizeName(const std::string &s);
     void WriteJsonAsFlatHists(JSONFactory* j, const std::string &outFile, std::map<std::string,float>* out_obs_rates = nullptr);
     std::vector<std::string> GetBkgProcs(JSONFactory* j);
+    bool HasDataObs(JSONFactory* j);
     std::vector<std::string> ExtractSignalDetails( std::string signalPoint);
     std::vector<std::string> GetBinSet( JSONFactory* j);
     void AddFloatingNorms(stringlist bkgprocs);
-    void BuildAsimovFit(JSONFactory* j, std::string signaPoint, std::string datacard_dir);
     void BuildAsimovData(std::map<std::string, float>& obs_rates, JSONFactory* j);
+    void BuildFitSkeleton(JSONFactory* j, const std::string &signalPoint, const std::string &datacard_dir);
     void AddMCStatBinByBin(JSONFactory* j);
     void AddMCStatProcByProc(const std::string& bin, JSONFactory* j);
     void AddPTISRSys(const stringlist& binset, const stringlist& procs);

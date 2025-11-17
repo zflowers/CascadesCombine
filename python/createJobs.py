@@ -171,8 +171,13 @@ def build_jobs(tool, bin_name, cuts, lep_cuts, predef_cuts, user_cuts, sms_filte
             "hist_yaml": hist_yaml_file,
         }
 
-    # Background (and data, if data were loaded into BkgDict)
+    # Background
     for ds, files in getattr(tool, "BkgDict", {}).items():
+        for fpath in files:
+            jobs.append(make_base_job(ds, fpath))
+
+    # Data
+    for ds, files in getattr(tool, "DataDict", {}).items():
         for fpath in files:
             jobs.append(make_base_job(ds, fpath))
 
@@ -618,10 +623,10 @@ def main():
     parser.add_argument("--dryrun", "--dry-run", action="store_true")
     parser.add_argument("--run-dir", type=str, default="condor", help="Directory to hold condor outputs (per-run condor dir)")
     args = parser.parse_args()
-    if args.sig_processes and args.data_processes:
-        print("User asked for jobs with both signal and data!")
-        print("This has the potential to unblind!")
-        print("Remove this if block only when ready to unblind!")
+    #if args.sig_processes and args.data_processes:
+    #    print("User asked for jobs with both signal and data!")
+    #    print("This has the potential to unblind!")
+    #    print("Remove this if block only when ready to unblind!")
 
     # Set condor base dir from argument (make absolute to be unambiguous in logs)
     condor_base = Path(args.run_dir).resolve()

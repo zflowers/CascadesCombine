@@ -9,12 +9,12 @@
 namespace fs = std::filesystem;
 
 int main(int argc, char** argv) {
-    // Default values
+    // --- Default values ---
     std::string input_json = "./json/test_cascades.json";
     std::string datacard_dir = "datacards_cascades";
-    std::string signal = ""; // leave empty to parse all
+    std::string signal = "";   // leave empty to parse all signals
 
-    // Override defaults if arguments are provided
+    // --- Override defaults from CLI ---
     if (argc > 1) input_json = argv[1];
     if (argc > 2) datacard_dir = argv[2];
     if (argc > 3) signal = argv[3];
@@ -22,24 +22,32 @@ int main(int argc, char** argv) {
     std::cout << "Using input JSON: " << input_json << "\n";
     std::cout << "Using datacard directory: " << datacard_dir << "\n";
 
+    // --- Load JSON ---
     JSONFactory* j = new JSONFactory(input_json);
 
-    std::vector<std::string> signals;
-    if (signal == "") signals = j->GetSigProcs();
-    else signals.push_back(signal);
+    // --- Get list of signals or control tags ---
+    std::vector<std::string> targets;
+    if (signal.empty())
+        targets = j->GetSigProcs();
+    else
+        targets.push_back(signal);
 
-    // regenerate datacard directories
+    // --- Recreate datacard output directory ---
     fs::path dir_path = datacard_dir;
     fs::remove_all(dir_path);
 
-    for (long unsigned int i = 0; i < signals.size(); i++) {
+    // --- Loop over each signal (or control tag) ---
+    for (size_t i = 0; i < targets.size(); ++i) {
+        const std::string &tag = targets[i];
         BuildFit* BF = new BuildFit();
-        fs::create_directories(datacard_dir + "/" + signals[i]);
-        BF->BuildAsimovFit(j, signals[i], datacard_dir);
-	delete BF;
-        std::cout << "Wrote datacard to: " << datacard_dir << "/" << signals[i] << ".txt" << std::endl;
+        fs::create_directories(datacard_dir + "/" + tag);
+
+        BF->BuildFitSkeleton(j, tag, datacard_dir);
+
+        delete BF;
+        std::cout << "Wrote datacard to: " << datacard_dir << "/" << tag << ".txt\n";
     }
 
-    delete j; // clean up
+    delete j;
     return 0;
 }

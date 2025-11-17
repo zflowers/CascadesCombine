@@ -837,7 +837,8 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             condor_BF = run_info["condor_BF"]
             # local BF
             print(f"[run_combine] Running BF.x with input {flattened_json} & output {output_dir}", flush=True)
-            subprocess.run(["./"+exe_dir+"/BF.x", flattened_json, output_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
+            BF_cmd = ["./"+exe_dir+"/BF.x", flattened_json, output_dir]
+            subprocess.run(BF_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
             # condor BF
             #signals = extract_signals(flattened_json)
             #for sig in signals:
@@ -860,8 +861,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             #condor_time_seconds_BF = condor_time_end_BF - condor_time_start_BF
 
 
-
-            # Convert Gauss Params To Gammas only needed when autoMCstats is not used
+            # Convert Gauss Params To Gammas only needed when autoMCstats is not used and instead custom MCStatBBB is used
             # print("[run_combine] Launching nuisance conversion jobs...", flush=True)
             #for directory in os.listdir(output_dir):
             #    for datacard in os.listdir(output_dir+'/'+directory):
@@ -875,11 +875,11 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             #print(f"[run_combine] Yields for {bins_cfg}")
             #print_events(flattened_json)
 
+            # significances
             try:
-                # significances
                 print("[run_combine] Collecting significances...", flush=True)
                 subprocess.run(["python3", "-u", macro_dir+"/CollectSignificance.py", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
-            except Exception: # typical failure is because a signal process has 0 events but that shouldn't crash things
+            except Exception: # typical failure is because a signal process has 0 events in any bins
                 pass
 
             # plot significances

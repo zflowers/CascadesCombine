@@ -729,7 +729,6 @@ void MakeAndPlotCutflow2D(
     for (const auto &bp : cutflowMap) {
         for (const auto &pp : bp.second) {
             const std::string &pname = pp.first;
-            //if(pname == "data" || pname == "Data" || pname == "data_obs") continue;
             procSet.insert(pname);
         }
     }
@@ -746,6 +745,10 @@ void MakeAndPlotCutflow2D(
         else
             allBkgs.push_back(p); // default unknown -> background
     }
+
+    // Clear sigs if data is in json to prevent accidental unblinding
+    // Can remove this safety check after approval
+    if (!allData.empty()) allSigs.clear();
 
     // --- 4) build yields[proc][binIndex] (binIndex: 0..nx-1) ---
     std::map<std::string, std::vector<double>> yields;
@@ -827,8 +830,9 @@ void MakeAndPlotCutflow2D(
         yOrder.push_back("Total Bkg");
         for (const auto &s : allSigs) yOrder.push_back(s);
     } else {
-        // signals, Total Bkg, backgrounds
+        // signals, data, Total Bkg, backgrounds
         for (const auto &s : allSigs) yOrder.push_back(s);
+        for (const auto &d : allData) yOrder.push_back(d);
         yOrder.push_back("Total Bkg");
         for (const auto &b : allBkgs) yOrder.push_back(b);
     }
@@ -850,8 +854,11 @@ void MakeAndPlotCutflow2D(
         std::string proc_title = yOrder[iy];
         if(proc_title.find("TChiWZ") != std::string::npos)
             proc_title = makeSMSChiTitle(proc_title);
-        else
-            proc_title = m_Title[yOrder[iy]];
+        else {
+          auto it = m_Title.find(proc_title);
+          if (it != m_Title.end() && !it->second.empty())
+              proc_title = it->second;
+        }
         h2->GetYaxis()->SetBinLabel(iy+1, proc_title.c_str());
     }
 
@@ -878,13 +885,16 @@ void MakeAndPlotCutflow2D(
                     }
                 }
             } else {
+                double pY = (yields.count(procName) ? yields[procName][oldBin] : 0.0);
                 if(procName == "Total Bkg") {
                     if(mode == "yield") val = B;
                     else if(mode == "SoB") val = (B > 0.0 ? 1.0 : 0.0);
                     else if(mode == "SoverSqrtB") val = (sqrtB > 0.0 ? sqrtB : 0.0);
                     else val = B;
+                } else if((procName.find("data") != std::string::npos || procName.find("Data") != std::string::npos)) {
+                    if(mode == "SoB") val = (B > 0.0 ? pY / B : 0.0);
+                    else val = pY;
                 } else {
-                    double pY = (yields.count(procName) ? yields[procName][oldBin] : 0.0);
                     if(mode == "yield") val = pY;
                     else if(mode == "SoB") val = (B > 0.0 ? pY / B : 0.0);
                     else if(mode == "SoverSqrtB") val = (sqrtB > 0.0 ? pY / sqrtB : 0.0);

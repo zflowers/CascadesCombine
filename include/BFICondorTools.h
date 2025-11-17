@@ -192,8 +192,8 @@ static bool buildCutsForBin(BuildFitInput* BFI,
 static bool writePartialJSON(
     const std::string& outPath,
     const std::string& binname,
-    const std::map<std::string, std::map<std::string, std::array<double,5>>>& fileResults,
-    const std::map<std::string, std::array<double,5>>& totals)
+    const std::map<std::string, std::map<std::string, std::array<double,3>>>& fileResults,
+    const std::map<std::string, std::array<double,3>>& totals)
 {
     std::ofstream ofs(outPath);
     if (!ofs) return false;
@@ -223,9 +223,7 @@ static bool writePartialJSON(
                 ofs << "        \"" << fkv.first << "\": ["
                     << (long long)fkv.second[0] << ", "
                     << fkv.second[1] << ", "
-                    << fkv.second[2] << ", "
-                    << fkv.second[3] << ", "
-                    << fkv.second[4] << "]";
+                    << fkv.second[2] << "]";
             }
         }
 
@@ -234,10 +232,7 @@ static bool writePartialJSON(
         ofs << "      \"totals\": ["
             << (long long)totalVals[0] << ", "
             << totalVals[1] << ", "
-            << totalVals[2] << ", "
-            << totalVals[3] << ", "
-            << totalVals[4] << "]\n";
-
+            << totalVals[2] << "]\n";
         ofs << "    }";
     }
 
@@ -281,8 +276,7 @@ static BaseNodeHandle MakeBaseNode(const std::string &tree_name,
     ROOT::RDF::RNode node = (*df)
         .Define("weight_scaled",[Lumi](double w){return w*Lumi;},{"weight"})
         .Define("weight_sq_scaled", [Lumi](double w2){ return w2 * Lumi * Lumi; }, {"weight2"})
-        .Define("mc_genweight", [](double gw, double xsec){ return gw * xsec; }, {"genweight","XSec"})
-        .Define("mc_genweight_sq", [](double gw, double xsec){ return gw * gw * xsec * xsec; }, {"genweight","XSec"});
+    ;
 
     // lepton counts / kinematics (keep same sequence as original)
     node = BFI->DefineLeptonPairCounts(node,"");

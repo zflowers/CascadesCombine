@@ -238,11 +238,11 @@ int main(int argc, char** argv) {
         sigType=(rootFilePath.find("SMS")!=std::string::npos)?"sms":"cascades";
 
     // Containers to accumulate per-bin results
-    std::map<std::string, std::map<std::string,std::map<std::string,std::array<double,5>>>> fileResultsByBin;
-    // fileResultsByBin[bin][processKey][rootFilePath] = {nEntries, sW, err, sG, sG2}
+    std::map<std::string, std::map<std::string,std::map<std::string,std::array<double,3>>>> fileResultsByBin;
+    // fileResultsByBin[bin][processKey][rootFilePath] = {nEntries, sW, err}
 
-    std::map<std::string, std::map<std::string,std::array<double,5>>> totalsByBin;
-    // totalsByBin[bin][processKey] = {nEntries, sW, err2_sum, sG, sG2}
+    std::map<std::string, std::map<std::string,std::array<double,3>>> totalsByBin;
+    // totalsByBin[bin][processKey] = {nEntries, sW, err2_sum}
 
     std::string processName = "";
     ST.LoadAllFromMaster();
@@ -548,15 +548,11 @@ int main(int argc, char** argv) {
                 auto cnt = json_node.Count();
                 auto sumW = json_node.Sum<double>("weight_scaled");
                 auto sumW2 = json_node.Sum<double>("weight_sq_scaled");
-                auto sumG = json_node.Sum<double>("mc_genweight");
-                auto sumG2 = json_node.Sum<double>("mc_genweight_sq");
             
                 unsigned long long n_entries = cnt.GetValue();
                 double sW = sumW.GetValue();
                 double sW2Val = sumW2.GetValue();
                 double err = (sW2Val>=0)?std::sqrt(sW2Val):0.0;
-                double sG = sumG.GetValue();
-                double sG2 = sumG2.GetValue();
             
                 // --- NEW: accumulate totals per-process per-file only ONCE ---
                 if (fileResultsByBin.find(bin) == fileResultsByBin.end() ||
@@ -564,15 +560,13 @@ int main(int argc, char** argv) {
                     fileResultsByBin[bin][key].find(rootFilePath) == fileResultsByBin[bin][key].end())
                 {
                     // record per-bin, per-process, per-rootfile
-                    fileResultsByBin[bin][key][rootFilePath] = { (double)n_entries, sW, err, sG, sG2 };
+                    fileResultsByBin[bin][key][rootFilePath] = { (double)n_entries, sW, err};
             
                     // Accumulate totals (do this only once per process per file)
                     auto &tot = totalsByBin[bin][key];
                     tot[0] += (double)n_entries;
                     tot[1] += sW;
                     tot[2] += err*err; // we accumulate err^2 and sqrt later
-                    tot[3] += sG;
-                    tot[4] += sG2;
                 }
             }
         } // end loop over bins
@@ -614,7 +608,7 @@ int main(int argc, char** argv) {
 
                 // Ensure per-bin totals have stddev (sqrt of variance) for writeout.
                 // Create a local copy so we do not mutate the on-disk accumulation semantics.
-                std::map<std::string, std::array<double,5>> totals_for_write;
+                std::map<std::string, std::array<double,3>> totals_for_write;
                 auto itT = totalsByBin.find(bin);
                 if (itT != totalsByBin.end()) {
                     totals_for_write = itT->second;
@@ -624,7 +618,7 @@ int main(int argc, char** argv) {
                 }
 
                 // fileResults for this bin
-                std::map<std::string, std::map<std::string,std::array<double,5>>> files_for_write;
+                std::map<std::string, std::map<std::string,std::array<double,3>>> files_for_write;
                 auto itF = fileResultsByBin.find(bin);
                 if (itF != fileResultsByBin.end()) {
                     files_for_write = itF->second;
@@ -653,9 +647,7 @@ int main(int argc, char** argv) {
                             ofs << "        \"" << fkv.first << "\": ["
                                 << (long long)fkv.second[0] << ", "
                                 << fkv.second[1] << ", "
-                                << fkv.second[2] << ", "
-                                << fkv.second[3] << ", "
-                                << fkv.second[4] << "]";
+                                << fkv.second[2] << "]";
                         }
                     }
 
@@ -664,9 +656,7 @@ int main(int argc, char** argv) {
                     ofs << "      \"totals\": ["
                         << (long long)totalVals[0] << ", "
                         << totalVals[1] << ", "
-                        << totalVals[2] << ", "
-                        << totalVals[3] << ", "
-                        << totalVals[4] << "]\n";
+                        << totalVals[2] << "]\n";
 
                     ofs << "    }";
                 } // end samples loop

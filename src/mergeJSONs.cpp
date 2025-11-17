@@ -16,26 +16,20 @@ namespace fs = std::filesystem;
 using json = nlohmann::json;
 
 /*
- * Merge flattened JSONs that use the 6-element totals layout:
- * [ count, sumW, err = sqrt(sumW2), sumG, sumG2, var = sum(err^2) ]
+ * Merge flattened JSONs that use the 3-element totals layout:
+ * [ count, sumW, err = sqrt(sumW2) ]
  *
- * Behavior:
- * - Accumulate contributions at the per-file level so that files present in
- *   multiple input JSONs aren't double-counted.
- * - sumG and sumG2 (generator-level sums) are added only once per (group, file).
- * - If a file-level entry provides only err (index 2) but not var (index 5),
- *   var = err^2 is computed. If only var is provided, err = sqrt(var) is computed
- *   when writing per-file output.
- * - Silent on expected missing bins/processes (this is the chosen silent mode).
+ * Internally store index 2 = sumW2 (variance) while merging,
+ * and output the final third element as sqrt(sumW2).
  */
 
 bool mergeJSONsFlattenedWithFileBreakdown(
-                                          SampleTool& ST,
-                                          const std::vector<std::string> &inputFiles,
-                                          const std::string &outMergedFile,
-                                          const std::string &outFilesFile = "",
-                                          const std::vector<std::string> &preferredGroups = {}
-                                         )
+    SampleTool& ST,
+    const std::vector<std::string> &inputFiles,
+    const std::string &outMergedFile,
+    const std::string &outFilesFile = "",
+    const std::vector<std::string> &preferredGroups = {}
+)
 {
     // helper to get prefix (text before first underscore) from filename
     auto getPrefix = [](const std::string &fname) -> std::string {
@@ -43,7 +37,7 @@ bool mergeJSONsFlattenedWithFileBreakdown(
         auto pos = base.find("_");
         return (pos == std::string::npos) ? base : base.substr(0, pos);
     };
-    
+
     // Recursive expansion of a group into concrete entries (avoid cycles)
     std::function<void(const std::string&, std::unordered_set<std::string>&, std::unordered_set<std::string>&)> expandGroupRec;
     expandGroupRec = [&ST, &expandGroupRec](const std::string &group,
@@ -51,10 +45,10 @@ bool mergeJSONsFlattenedWithFileBreakdown(
                                            std::unordered_set<std::string> &visited) -> void {
         if (visited.find(group) != visited.end()) return; // avoid cycles
         visited.insert(group);
-    
+
         auto it = ST.MasterDict.find(group);
         if (it == ST.MasterDict.end()) return;
-    
+
         for (const auto &entry : it->second) {
             // If the entry is itself a group key, recurse; otherwise treat it as a file path
             if (ST.MasterDict.find(entry) != ST.MasterDict.end()) {
@@ -64,32 +58,31 @@ bool mergeJSONsFlattenedWithFileBreakdown(
             }
         }
     };
-    
+
     // Cache expanded entries per group to avoid repeated recursion
     std::unordered_map<std::string, std::vector<std::string>> expandedCache;
     auto getExpandedEntries = [&expandedCache, &expandGroupRec](const std::string &group) -> const std::vector<std::string>& {
         auto cit = expandedCache.find(group);
         if (cit != expandedCache.end()) return cit->second;
-    
+
         std::unordered_set<std::string> expandedSet;
         std::unordered_set<std::string> visited;
         expandGroupRec(group, expandedSet, visited);
-    
-        // If expansion returned nothing (maybe entries were raw paths stored directly) leave it empty
+
         std::vector<std::string> vec;
         vec.reserve(expandedSet.size());
         for (const auto &s : expandedSet) vec.push_back(s);
-    
+
         // cache and return
         auto ret = expandedCache.emplace(group, std::move(vec));
         return ret.first->second;
     };
-    
+
     // The resolveGroup logic: check YAML preferredGroups first (in order),
     // then fall back to checking all groups.
     auto resolveGroup = [&ST, &preferredGroups, &getExpandedEntries, &getPrefix](const std::string &jsonKey) -> std::string {
         std::string keyBase = fs::path(jsonKey).filename().string();
-    
+
         // 1) Preferred groups first (YAML order)
         for (const auto &pref : preferredGroups) {
             const auto &entries = getExpandedEntries(pref);
@@ -100,7 +93,7 @@ bool mergeJSONsFlattenedWithFileBreakdown(
                 }
             }
         }
-    
+
         // 2) Fallback: scan all groups
         for (const auto &kv : ST.MasterDict) {
             const std::string &group = kv.first;
@@ -112,13 +105,13 @@ bool mergeJSONsFlattenedWithFileBreakdown(
                 }
             }
         }
-    
+
         // 3) No match -> return original key (unchanged)
         return jsonKey;
     };
 
-    // fileContribs[bin][group][filePath] -> array{count, sumW, err (unused here), sumG, sumG2, var}
-    std::map<std::string, std::map<std::string, std::map<std::string, std::array<double,6>>>> fileContribs;
+    // fileContribs[bin][group][filePath] -> array{count, sumW, sumW2}
+    std::map<std::string, std::map<std::string, std::map<std::string, std::array<double,3>>>> fileContribs;
 
     // Read all input JSONs and populate fileContribs
     for (const auto &fname : inputFiles) {
@@ -153,31 +146,21 @@ bool mergeJSONsFlattenedWithFileBreakdown(
 
                         double fcnt = 0.0;
                         double fsumW = 0.0;
-                        double ferr = 0.0;
-                        double fsumG = 0.0;
-                        double fsumG2 = 0.0;
-                        double fvar = 0.0;
+                        double fvar = 0.0; // store sumW2 internally
 
                         if (fjson.is_array()) {
                             if (fjson.size() > 0 && !fjson[0].is_null()) fcnt = fjson[0].get<double>();
                             if (fjson.size() > 1 && !fjson[1].is_null()) fsumW = fjson[1].get<double>();
-                            if (fjson.size() > 2 && !fjson[2].is_null()) ferr = fjson[2].get<double>();
-                            if (fjson.size() > 3 && !fjson[3].is_null()) fsumG = fjson[3].get<double>();
-                            if (fjson.size() > 4 && !fjson[4].is_null()) fsumG2 = fjson[4].get<double>();
-                            if (fjson.size() > 5 && !fjson[5].is_null()) fvar = fjson[5].get<double>();
+                            if (fjson.size() > 2 && !fjson[2].is_null()) {
+                                double ferr = fjson[2].get<double>();
+                                fvar = ferr * ferr;
+                            }
                         }
-
-                        // Recover missing variance/err if one is present
-                        if (fvar == 0.0 && ferr != 0.0) fvar = ferr * ferr;
-                        if (ferr == 0.0 && fvar != 0.0) ferr = std::sqrt(fvar);
 
                         auto &dst = fileContribs[binName][group][filePath];
                         dst[0] += fcnt;
                         dst[1] += fsumW;
-                        // store raw variance in index 5 for merging; index 2 will be computed when needed
-                        dst[5] += fvar;
-                        dst[3] += fsumG;
-                        dst[4] += fsumG2;
+                        dst[2] += fvar;
                     }
                 } else {
                     // fallback: attribute totals to a synthetic file key unique to this input JSON + sample key
@@ -185,67 +168,42 @@ bool mergeJSONsFlattenedWithFileBreakdown(
 
                     double tcnt = 0.0;
                     double tsumW = 0.0;
-                    double terr = 0.0;
-                    double tsumG = 0.0;
-                    double tsumG2 = 0.0;
                     double tvar = 0.0;
 
                     if (totalsJson.is_array()) {
                         if (totalsJson.size() > 0 && !totalsJson[0].is_null()) tcnt = totalsJson[0].get<double>();
                         if (totalsJson.size() > 1 && !totalsJson[1].is_null()) tsumW = totalsJson[1].get<double>();
-                        if (totalsJson.size() > 2 && !totalsJson[2].is_null()) terr = totalsJson[2].get<double>();
-                        if (totalsJson.size() > 3 && !totalsJson[3].is_null()) tsumG = totalsJson[3].get<double>();
-                        if (totalsJson.size() > 4 && !totalsJson[4].is_null()) tsumG2 = totalsJson[4].get<double>();
-                        if (totalsJson.size() > 5 && !totalsJson[5].is_null()) tvar = totalsJson[5].get<double>();
+                        if (totalsJson.size() > 2 && !totalsJson[2].is_null()) {
+                            double terr = totalsJson[2].get<double>();
+                            tvar = terr * terr;
+                        }
                     }
-
-                    if (tvar == 0.0 && terr != 0.0) tvar = terr * terr;
-                    if (terr == 0.0 && tvar != 0.0) terr = std::sqrt(tvar);
 
                     std::string syntheticFileKey = std::string("__src__:") + fs::path(fname).filename().string() + ":" + origKey;
                     auto &dst = fileContribs[binName][group][syntheticFileKey];
                     dst[0] += tcnt;
                     dst[1] += tsumW;
-                    dst[5] += tvar;
-                    dst[3] += tsumG;
-                    dst[4] += tsumG2;
+                    dst[2] += tvar;
                 }
             } // end sampleItem
         } // end binItem
     } // end inputFiles loop
 
     // Build merged totals by summing file-level contributions.
-    // Ensure sumG/sumG2 are counted only once per (group, filePath).
-    std::map<std::string, std::map<std::string, std::array<double,6>>> merged; // merged[bin][group] -> arr
-    std::map<std::string, std::map<std::string, std::unordered_set<std::string>>> seenRawPerBinGroup;
-
+    std::map<std::string, std::map<std::string, std::array<double,3>>> merged; // merged[bin][group] -> arr
     for (const auto &binPair : fileContribs) {
         const std::string binName = binPair.first;
         for (const auto &groupPair : binPair.second) {
             const std::string group = groupPair.first;
 
-            std::array<double,6> acc = {0.,0.,0.,0.,0.,0.};
-            auto &seenSet = seenRawPerBinGroup[binName][group];
-
+            std::array<double,3> acc = {0.,0.,0.}; // [count, sumW, sumW2]
             for (const auto &filePair : groupPair.second) {
-                const std::string filePath = filePair.first;
-                const std::array<double,6> &farr = filePair.second;
+                const std::array<double,3> &farr = filePair.second;
 
-                // Always accumulate per-bin quantities (count, sumW, var)
                 acc[0] += farr[0];
                 acc[1] += farr[1];
-                acc[5] += farr[5];
-
-                // Only add raw generator sums once per (group, file)
-                if (seenSet.find(filePath) == seenSet.end()) {
-                    acc[3] += farr[3];
-                    acc[4] += farr[4];
-                    seenSet.insert(filePath);
-                }
-            } // end per-file loop
-
-            // compute final err = sqrt(var)
-            acc[2] = std::sqrt(acc[5]);
+                acc[2] += farr[2]; // sum variances (sum of sumW2)
+            }
 
             merged[binName][group] = acc;
         }
@@ -282,13 +240,12 @@ bool mergeJSONsFlattenedWithFileBreakdown(
 
         json single;
         for (const auto &samplePair : samples) {
+            const auto &arr = samplePair.second;
+            double err = std::sqrt(arr[2]); // arr[2] is sumW2
             single[binName][samplePair.first] = {
-                samplePair.second[0], // count
-                samplePair.second[1], // sumW
-                samplePair.second[2], // sqrt(var)
-                samplePair.second[3], // sumG
-                samplePair.second[4], // sumG2
-                samplePair.second[5]  // var
+                arr[0], // count
+                arr[1], // sumW
+                err     // sqrt(sumW2)
             };
         }
 
@@ -315,31 +272,27 @@ bool mergeJSONsFlattenedWithFileBreakdown(
         for (const auto &binPair : fileContribs) {
             const std::string &binName = binPair.first;
             const auto &sampleMap = binPair.second;
-    
+
             for (const auto &samplePair : sampleMap) {
                 const std::string &sampleName = samplePair.first;
-    
+
                 for (const auto &filePair : samplePair.second) {
                     const std::string &filePath = filePair.first;
                     const auto &farr = filePair.second;
-    
-                    // Ensure err is sqrt(var) if missing
-                    double ferr = farr[2];
-                    double fvar = farr[5];
-                    if (ferr == 0.0 && fvar != 0.0) ferr = std::sqrt(fvar);
-    
+
+                    double fvar = farr[2];
+                    double ferr = 0.0;
+                    if (fvar != 0.0) ferr = std::sqrt(fvar);
+
                     outFiles[binName][sampleName][filePath] = {
                         farr[0],   // count
                         farr[1],   // sumW
-                        ferr,      // err
-                        farr[3],   // sumG
-                        farr[4],   // sumG2
-                        farr[5]    // var
+                        ferr       // err = sqrt(sumW2)
                     };
                 }
             }
         }
-    
+
         // atomic-ish write
         std::ofstream ofs(outFilesFile + ".tmp");
         if (!ofs.is_open()) {
@@ -348,7 +301,7 @@ bool mergeJSONsFlattenedWithFileBreakdown(
         }
         ofs << outFiles.dump(4) << "\n";
         ofs.close();
-    
+
         std::error_code ec;
         fs::rename(outFilesFile + ".tmp", outFilesFile, ec);
         if (ec) {

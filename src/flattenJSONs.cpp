@@ -1,8 +1,8 @@
 // flattenJSONs.cpp
 // Scans one or more input directories for per-file JSONs (the analyzer output),
 // merges them into a single flattened JSON, and writes the result.
-// The flattened layout uses 6 elements per sample:
-// [ count, sumW, err = sqrt(sumW²), sumG, sumG2, var = sum(err²) ]
+// The flattened layout uses 3 elements per sample:
+// [ count, sumW, err = sqrt(sum of sumW2) ]
 
 #include <iostream>
 #include <fstream>
@@ -10,6 +10,7 @@
 #include <vector>
 #include <cmath>
 #include <string>
+#include <map>
 #include <nlohmann/json.hpp>
 
 namespace fs = std::filesystem;
@@ -23,6 +24,9 @@ int main(int argc, char** argv) {
 
     json mergedFlattened;
     fs::path outputFile = argv[argc - 1];
+
+    // We keep an auxiliary accumulator for sumW2 (variance) per bin/sample
+    std::map<std::string, std::map<std::string, double>> accVar; // accVar[bin][sample] = sumW2
 
     // loop over input directories
     for (int argi = 1; argi < argc - 1; ++argi) {
@@ -52,55 +56,43 @@ int main(int argc, char** argv) {
 
             // --- merge logic: for each bin/sample add arrays into mergedFlattened ---
             for (auto &binPair : j.items()) {
-                const std::string &binName = binPair.key();
+                const std::string binName = binPair.key();
                 for (auto &samplePair : binPair.value().items()) {
-                    const std::string &sampleName = samplePair.key();
+                    const std::string sampleName = samplePair.key();
                     const auto &arr = samplePair.value();
 
-                    // Ensure structure exists and initialize to 6 zeros if needed
+                    // Ensure structure exists and initialize to 3 zeros if needed
                     if (!mergedFlattened.contains(binName))
                         mergedFlattened[binName] = json::object();
                     if (!mergedFlattened[binName].contains(sampleName))
-                        mergedFlattened[binName][sampleName] = json::array({0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
+                        mergedFlattened[binName][sampleName] = json::array({0.0, 0.0, 0.0});
 
                     // Read input array safely (support input arrays of size 3..6)
                     double cnt = 0.0;
                     double sumW = 0.0;
-                    double err = 0.0;   // sqrt(sumW2)
-                    double sumG = 0.0;
-                    double sumG2 = 0.0;
                     double var = 0.0;
+                    double err = 0.0;   // sqrt(sumW2) if present
 
                     if (arr.is_array()) {
                         if (arr.size() > 0 && !arr[0].is_null()) cnt = arr[0].get<double>();
                         if (arr.size() > 1 && !arr[1].is_null()) sumW = arr[1].get<double>();
                         if (arr.size() > 2 && !arr[2].is_null()) err = arr[2].get<double>();
-                        if (arr.size() > 3 && !arr[3].is_null()) sumG = arr[3].get<double>();
-                        if (arr.size() > 4 && !arr[4].is_null()) sumG2 = arr[4].get<double>();
-                        if (arr.size() > 5 && !arr[5].is_null()) var = arr[5].get<double>();
+                        var = err * err;
                     } else {
                         std::cerr << "Unexpected JSON format in " << entry.path() << " for " << sampleName << "\n";
                         continue;
                     }
 
-                    // If input didn't provide var, recover it from err
-                    if (var == 0.0) var = err * err;
-
                     // Accumulate into mergedFlattened
                     double oldCnt  = mergedFlattened[binName][sampleName][0].get<double>();
                     double oldSumW = mergedFlattened[binName][sampleName][1].get<double>();
-                    double oldVar  = mergedFlattened[binName][sampleName][5].get<double>();
-                    double oldSumG = mergedFlattened[binName][sampleName][3].get<double>();
-                    double oldSumG2 = mergedFlattened[binName][sampleName][4].get<double>();
 
                     mergedFlattened[binName][sampleName][0] = oldCnt + cnt;
                     mergedFlattened[binName][sampleName][1] = oldSumW + sumW;
-                    mergedFlattened[binName][sampleName][4] = oldSumG2 + sumG2;
-                    mergedFlattened[binName][sampleName][3] = oldSumG + sumG;
-                    mergedFlattened[binName][sampleName][5] = oldVar + var;
 
-                    // update the sqrt(sumW2) slot to reflect the new variance
-                    mergedFlattened[binName][sampleName][2] = std::sqrt(mergedFlattened[binName][sampleName][5].get<double>());
+                    // accumulate sumW2 in auxiliary map and update the sqrt slot
+                    accVar[binName][sampleName] += var;
+                    mergedFlattened[binName][sampleName][2] = std::sqrt(accVar[binName][sampleName]);
                 }
             }
         }
@@ -117,3 +109,4 @@ int main(int argc, char** argv) {
     std::cout << "Merged flattened JSON written to " << outputFile << "\n";
     return 0;
 }
+

@@ -57,6 +57,16 @@ std::vector<std::string> BuildFit::GetBkgProcs(JSONFactory* j){
 	return bkgprocsunique;
 }
 
+bool BuildFit::HasDataObs(JSONFactory* j) {
+    for (auto &bin : j->j.items()) {
+        for (auto &proc : bin.value().items()) {
+            if (strcasecmp(proc.key().c_str(), "data_obs") == 0 || proc.key().find("data") != std::string::npos || proc.key().find("Data") != std::string::npos)
+                return true;
+        }
+    }
+    return false;
+}
+
 stringlist BuildFit::ExtractSignalDetails(std::string signalPoint){
 
     stringlist splitPoint = BFTool::SplitString( signalPoint, "_");
@@ -103,7 +113,7 @@ void BuildFit::WriteJsonAsFlatHists(JSONFactory* j, const std::string &outFile, 
     }
 
     int nWritten = 0;
-    bool hasData = false;
+    bool hasData = HasDataObs(j);
 
     for (auto itBin = j->j.begin(); itBin != j->j.end(); ++itBin) {
         const std::string origBin = itBin.key();       // original (map) key
@@ -118,7 +128,7 @@ void BuildFit::WriteJsonAsFlatHists(JSONFactory* j, const std::string &outFile, 
             bool isData = false;
             const std::string procOrig = itProc.key();
             const std::string proc = SanitizeName(procOrig);
-            if (proc.find("data") != std::string::npos || proc.find("Data") != std::string::npos) {isData = true; hasData = true;}
+            if (proc.find("data") != std::string::npos || proc.find("Data") != std::string::npos) isData = true;
             const json &vals = itProc.value();
             if (!vals.is_array() || vals.size() <= IDX_ERR) continue;
 
@@ -348,15 +358,11 @@ void BuildFit::AddPTISRSys(const stringlist& binset, const stringlist& procs){
     cb.SetFlag("filters-use-regex", false);
 }
 
-void BuildFit::BuildAsimovFit(JSONFactory* j, std::string signalPoint, std::string datacard_dir){
+void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, const std::string& datacard_dir){
     ch::Categories cats = BuildCats(j);
-    //std::cout<<"building obs rates \n";
     std::map<std::string, float> obs_rates;
-    //std::cout<<"Getting process list\n";
     stringlist bkgprocs = GetBkgProcs(j);
-    //std::cout<<"Parse Signal point\n";
     stringlist signalDetails = ExtractSignalDetails(signalPoint);
-    //std::cout<<"Build cb objects\n";
     //cb.SetVerbosity(3);
     cb.AddObservations({"*"}, {signalDetails[0]}, {"13.6TeV"}, {signalDetails[1]}, cats);
     cb.AddProcesses({"*"}, {signalDetails[0]}, {"13.6TeV"}, {signalDetails[1]}, bkgprocs, cats, false);
@@ -390,29 +396,13 @@ void BuildFit::BuildAsimovFit(JSONFactory* j, std::string signalPoint, std::stri
         std::cerr << "[BuildFit WARN] No bins contain signal '" << signalPoint << "' in JSON - skipping signal ExtractShapes.\n";
     }
 
-    //BuildAsimovData(obs_rates, j);
-    //cb.ForEachObs([&](ch::Observation *x){
-    //    x->set_rate(obs_rates[x->bin()]);
-    //});
-    //cb.ForEachProc([&j](ch::Process *x) {
-    //    //std::cout<<x->bin()<<" "<<x->process()<<"\n";
-    //    const auto& bin = x->bin();
-    //    const auto& proc = x->process();
-    //    if (!j->j.contains(bin) || !j->j[bin].contains(proc)) {
-    //        x->set_rate(0.0);
-    //        return;
-    //    }
-    //    json json_array = j->j[x->bin()][x->process()];
-    //    x->set_rate(json_array[1].get<float>());
-    //});
-
     cb.FilterProcs([](ch::Process const *p){ return p->rate() <= 0; });
 
     stringlist binset = GetBinSet(j);
     //for (const auto& bin: binset){
     //    cb.cp().bin({bin}).AddSyst(cb, bin+"_DummySys", "lnN", SystMap<>::init(1.03)); // 3% over each bin
     //}
-    cb.cp().SetAutoMCStats(cb, 0.); // 0.1
+    //cb.cp().SetAutoMCStats(cb, 0.); // 0.1 // Turns on autoMCstats
     //AddMCStatBinByBin(j);
     AddFloatingNorms(bkgprocs);
     AddPTISRSys(binset, bkgprocs);
@@ -427,4 +417,3 @@ void BuildFit::BuildAsimovFit(JSONFactory* j, std::string signalPoint, std::stri
     json_root_file->Close();
     delete json_root_file;
 }
-

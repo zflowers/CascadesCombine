@@ -3,10 +3,7 @@
 SampleTool::SampleTool(){
 
   // Make sure data lumi is set to 1.:
-  LumiDict["Data_2018"] = 1.;
-  LumiDict["Data_2017"] = 1.;
-  LumiDict["Data_2016APV"] = 1.;
-  LumiDict["Data_2016"] = 1.;
+  LumiDict["Summer20UL18_106X_Data"] = 1.;
 
   LumiDict["Summer20UL16APV_106X"] = 16.8;
   LumiDict["Summer20UL16_106X"] = 19.5;
@@ -28,8 +25,9 @@ SampleTool::SampleTool(){
   LumiDict["Summer23BPix_130X_Cascades"] = 286. + 138.;
   LumiDict["Summer20UL18_106X_SMS"] = 286. + 138.;
 
-  string pathPrefix = "root://cmseos.fnal.gov//store/user/lpcsusylep/NTUPLES_Cascades_v6/";
-  //string pathPrefix = "root://cmseos.fnal.gov//store/user/lpcsusylep/NTUPLES_Cascades_v7/";
+  string pathPrefix = "root://cmseos.fnal.gov//store/user/lpcsusylep/";
+  pathPrefix += "NTUPLES_Cascades_v6/";
+  //pathPrefix += "NTUPLES_Cascades_v7/";
 
   MasterDict["ttbar_2023BPix"] = {
     pathPrefix + "Summer23BPix_130X/TTto2L2Nu-2Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer23BPix_130X.root",

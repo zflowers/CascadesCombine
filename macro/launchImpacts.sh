@@ -62,7 +62,7 @@ for WS in "${dcdir}"/*/*_workspace.root; do
     WSFILE="$(basename "$WS")"
     echo "[launchImpacts] Making Impacts plot in $WSDIR for $WSFILE"
     pushd "$WSDIR" > /dev/null || exit 1
-    plotImpacts.py \
+    python3 $CMSSW_BASE/src/HiggsAnalysis/CombinedLimit/scripts/plotImpacts.py \
       -i impacts.json \
       -o impacts
     popd > /dev/null || exit 1

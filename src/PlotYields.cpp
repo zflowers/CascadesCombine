@@ -69,9 +69,9 @@ int main(int argc, char* argv[]) {
     
     // build global 2D cutflows from cutflowMap
     MakeAndPlotCutflow2D(cutflowMap, "GlobalCutflow", "yield", 1.0);
+    MakeAndPlotCutflow2D(cutflowMap, "GlobalCutflow", "SoB",   1.0);
+    MakeAndPlotCutflow2D(cutflowMap, "GlobalCutflow", "SoverSqrtB", 1.0);
     if(!hasData){
-        MakeAndPlotCutflow2D(cutflowMap, "GlobalCutflow", "SoB",   1.0);
-        MakeAndPlotCutflow2D(cutflowMap, "GlobalCutflow", "SoverSqrtB", 1.0);
         MakeAndPlotCutflow2D(cutflowMap, "GlobalCutflow", "Zbi", 3.0); // 3% systematic
     }
 

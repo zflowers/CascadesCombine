@@ -8,6 +8,7 @@
 // -------------------------------------
 ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<std::string, CutDef>& ValidCuts, bool run_validation){
     std::map<std::string, CutDef> cuts;
+    RegisterSafeHelpers();
 
     // --- lead S jet pt < threshold (45 GeV) ---
     CutDef cut_leadSjetPt;
