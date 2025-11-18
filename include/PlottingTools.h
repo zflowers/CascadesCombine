@@ -121,7 +121,8 @@ void Plot_Stack(const string& hname,
                 vector<TH1*>& bkgHists,
                 vector<TH1*>& sigHists,
                 TH1* dataHist = nullptr,
-                double signal_boost = 1.0)
+                double signal_boost = 1.0
+               )
 {
     if (bkgHists.empty() && (sigHists.empty() || !dataHist)) return;
     vector<TH1*> allHists = bkgHists; allHists.insert(allHists.end(), sigHists.begin(), sigHists.end());
@@ -146,18 +147,44 @@ void Plot_Stack(const string& hname,
     }
     TH1D* h_DATA = nullptr;
     if (dataHist) h_DATA = (TH1D*) dataHist->Clone("TOT_DATA");
+    double pad_ysplit = 0.5;
 
     string canvas_name = "can_stack_" + hname;
     TCanvas* can = new TCanvas(canvas_name.c_str(), canvas_name.c_str(), 1200, 700);
     can->SetLeftMargin(hlo);
     can->SetRightMargin(hhi);
+    if(h_DATA) {
+        can->SetLeftMargin(hlo-0.02);
+        can->SetRightMargin(hhi-0.1);
+    }
     can->SetBottomMargin(hbo);
     can->SetTopMargin(hto);
     can->SetGridx(); can->SetGridy();
+    can->cd();
+    TPad* pad_top = nullptr;
+    if(h_DATA){
+        pad_top = new TPad("pad_top", "pad_top", 0.0, pad_ysplit, 1.0, 1.0);
+        pad_top->SetBottomMargin(0.01);
+        pad_top->SetLeftMargin(can->GetLeftMargin());
+        pad_top->SetRightMargin(can->GetRightMargin());
+        pad_top->SetGridx(true);
+        pad_top->SetGridy(true);
+        pad_top->Draw();
+        pad_top->cd();
+    }
+
     TH1* axisHist = !allHists.empty() ? allHists.front() : nullptr;
     if (!axisHist) return;
     DrawLogSmart(axisHist, "HIST");
     axisHist->GetYaxis()->SetRangeUser(max(0.9*hmin, 1e-6), 1.1*hmax);
+    axisHist->GetYaxis()->CenterTitle();
+    axisHist->GetYaxis()->SetTitle(("N_{events}"));// / "+std::to_string(int(lumi))+" fb^{-1}").c_str());
+    if(h_DATA){
+        axisHist->GetXaxis()->SetLabelSize(0.0);
+        axisHist->GetYaxis()->SetTitleSize(0.05);
+        axisHist->GetYaxis()->SetTitleOffset(0.45);
+        axisHist->GetYaxis()->SetLabelSize(0.05);
+    }
 
     for (size_t i = 0; i < bkgHists.size(); ++i) { TH1* h = bkgHists[i]; if (!h || h->GetEntries()==0) continue;
         h->SetLineColor(kBlack); h->SetLineWidth(1);
@@ -166,14 +193,14 @@ void Plot_Stack(const string& hname,
         if (it != m_Color.end()) {
             color = it->second;
         } else {
-            // Fallback to rotating palette
             color = fallbackColors[fallbackIndex % fallbackColors.size()];
             fallbackIndex++;
             m_Color[it->first] = color;
         }
         h->SetMarkerColor(color);
         h->SetFillColor(color); h->SetFillStyle(1001);
-        DrawLogSmart(h, "SAME HIST"); }
+        DrawLogSmart(h, "SAME HIST"); 
+    }
 
     if (h_BKG) { h_BKG->SetLineWidth(3); h_BKG->SetLineColor(kRed); DrawLogSmart(h_BKG, "SAME HIST"); }
 
@@ -185,26 +212,104 @@ void Plot_Stack(const string& hname,
         if (it != m_Color.end()) {
             color = it->second;
         } else {
-            // Fallback to rotating palette
             color = fallbackColors[fallbackIndex % fallbackColors.size()];
             fallbackIndex++;
             m_Color[it->first] = color;
         }
         h->SetLineColor(color);
         h->SetMarkerColor(color);
-        h->Scale(signal_boost); DrawLogSmart(h, "SAME HIST"); }
+        h->Scale(signal_boost); DrawLogSmart(h, "SAME HIST"); 
+    }
 
     if (h_DATA) { h_DATA->SetMarkerStyle(20); h_DATA->SetMarkerSize(0.8); h_DATA->SetLineColor(kBlack); DrawLogSmart(h_DATA, "SAME E"); }
 
-    // Add Legend
-    TLegend* leg = new TLegend(1.-hhi+0.01, 1.- (bkgHists.size()+sigHists.size()+2)*(1.-0.49)/9., 0.98, 1.-hto-0.005);
+    TPad* pad_ratio = nullptr;
+
+    if (h_BKG && h_DATA && h_BKG->GetEntries() > 0 && h_DATA->GetEntries() > 0) {
+
+        can->cd();
+        pad_ratio = new TPad("pad_ratio", "pad_ratio", 0.0, 0.05, 1.0, pad_ysplit);
+        pad_ratio->SetTopMargin(0.01);
+        pad_ratio->SetBottomMargin(0.35);
+        pad_ratio->SetLeftMargin(can->GetLeftMargin());
+        pad_ratio->SetRightMargin(can->GetRightMargin());
+        pad_ratio->SetGridx(true);
+        pad_ratio->SetGridy(true);
+        pad_ratio->Draw();
+        pad_ratio->cd();
+
+        TH1D* h_ratio = (TH1D*) h_DATA->Clone("h_ratio");
+        h_ratio->Divide(h_BKG);
+        h_ratio->SetTitle("");
+        float XLabelSize = 0.08;
+        if (h_ratio->GetNbinsX() > 5) XLabelSize -= 0.001f * (h_ratio->GetNbinsX() - 5);
+        if (XLabelSize < 0.015) XLabelSize = 0.015;
+        h_ratio->GetXaxis()->SetLabelSize(XLabelSize);
+        //h_ratio->GetXaxis()->LabelsOption("v");
+        h_ratio->GetXaxis()->SetLabelOffset(0.02);
+        h_ratio->GetYaxis()->SetTitle("#frac{data}{bkg model}");
+        h_ratio->GetYaxis()->CenterTitle();
+        h_ratio->GetYaxis()->SetNdivisions(505);
+        h_ratio->GetYaxis()->SetTitleSize(0.05);
+        h_ratio->GetYaxis()->SetTitleOffset(0.45);
+        h_ratio->GetYaxis()->SetLabelSize(0.05);
+
+        double rmin = 1e9;
+        double rmax = -1e9;
+        for (int i = 1; i <= h_ratio->GetNbinsX(); ++i) {
+            double val = h_ratio->GetBinContent(i);
+            double err = h_ratio->GetBinError(i);
+            if (val == 0 && err == 0) continue; // skip empty bins
+        
+            double low  = val - err;
+            double high = val + err;
+        
+            if (low  < rmin) rmin = low;
+            if (high > rmax) rmax = high;
+        }
+        
+        // Add a small padding
+        double padding = 0.05 * (rmax - rmin);
+        if (rmin - padding <= 0) rmin = 0.01; // avoid zero if using log scale
+        else rmin -= padding;
+        rmax += padding;
+        
+        h_ratio->GetYaxis()->SetRangeUser(rmin, rmax);
+
+        h_ratio->SetMarkerStyle(20);
+        h_ratio->SetMarkerSize(0.85);
+        h_ratio->SetLineColor(kBlack);
+
+        h_ratio->Draw("EP");
+        pad_ratio->Modified();
+    }
+
+    if(h_DATA) { can->cd(); pad_top->cd(); }
+
+    double legX1SHIFT = 0.;
+    double legX2SHIFT = 0.;
+    double legY1SHIFT = 0.;
+    double legY2SHIFT = 0.;
+
+    if(h_DATA){
+        legX1SHIFT = 0.1;
+        legX2SHIFT = 0.02;
+        legY1SHIFT = -0.12;
+        legY2SHIFT = 0.;
+    }
+
+    double textsize = 0.038;
+    if(h_DATA) textsize = 0.05;
+    TLegend* leg = new TLegend(1.-hhi+0.01+legX1SHIFT, 1.- (bkgHists.size()+sigHists.size()+2)*(1.-0.49)/9.+legY1SHIFT, 0.98+legX2SHIFT, 1.-hto-0.005+legY2SHIFT);
     leg->SetTextFont(132);
-    leg->SetTextSize(0.039);
+    leg->SetTextSize(textsize);
     leg->SetFillColor(kWhite);
     leg->SetLineColor(kWhite);
     leg->SetShadowColor(kWhite);
+
     if (h_BKG) leg->AddEntry(h_BKG,"SM total","L");
     for (size_t i=0;i<bkgHists.size();++i) if(bkgHists[i]) leg->AddEntry(bkgHists[i],m_Title[ExtractProcName(bkgHists[i]->GetName())].c_str(),"F");
+
     for (size_t i=0;i<sigHists.size();++i) {
         if(sigHists[i]) {
             std::string proc_title = sigHists[i]->GetName();
@@ -221,21 +326,55 @@ void Plot_Stack(const string& hname,
             leg->AddEntry(sigHists[i], tmp_label.c_str(), "L");
         }
     }
-    if (h_DATA) leg->AddEntry(h_DATA,"Data","P");
+    if (h_DATA) leg->AddEntry(h_DATA,"Data","EP");
     leg->Draw();
 
     TLatex l;
     l.SetNDC();
-    l.SetTextSize(0.04);
+    l.SetTextSize(textsize);
     l.SetTextFont(42);
-    l.DrawLatex(0.1,0.943,"#bf{#it{CMS}} Internal 13 TeV Simulation");
-    l.DrawLatex(0.7,0.943,ExtractBinName(string(axisHist->GetName())).c_str());
+    
+    // Dynamic positions based on margins
+    double mleft  = can->GetLeftMargin();
+    double mright = 1.0 - can->GetRightMargin();
+    double mtop   = 1.0 - can->GetTopMargin();
+    //double mleft  = pad_top->GetLeftMargin();
+    //double mright = 1.0 - pad_top->GetRightMargin();
+    //double mtop   = 1.0 - pad_top->GetTopMargin();
+    
+    double xmin = mleft;
+    double xmax = mright;
+    double ytop = mtop + 0.012;
+    
+    l.SetTextAlign(11);
+    l.DrawLatex(xmin, ytop, "#bf{#it{CMS}} Internal 13 TeV work-in-progress");
+    l.SetTextAlign(31);
+    l.DrawLatex(xmax, ytop, ExtractBinName(string(axisHist->GetName())).c_str()); 
 
     if(outFile){ outFile->cd(); can->Write(0, TObject::kWriteDelete); }
-    TString stackPdf = Form("%spdfs/%s/%s.pdf", outputDir.c_str(), ExtractBinName(bkgHists[0]->GetName()).c_str(), canvas_name.c_str());
+    std::string BinName = SanitizeString(ExtractBinName(bkgHists[0]->GetName()));
+    if(BinName.empty()) BinName = SanitizeString(hname);
+    TString stackPdf = Form("%spdfs/%s/%s.pdf", outputDir.c_str(), BinName.c_str(), SanitizeString(canvas_name).c_str());
     gErrorIgnoreLevel = 1001; can->SaveAs(stackPdf); gErrorIgnoreLevel = 0;
 
     delete can; if(h_BKG) delete h_BKG; if(h_DATA) delete h_DATA;
+}
+
+void PlotMergedStack(const std::string& mergedName,
+                     const CombinedBinHists& mergedHists,
+                     double signalBoost = 1.0)
+{
+    // Convert CombinedBinHists -> vectors for Plot_Stack
+    StackPlotInput stackInput = ConvertToStackInput(mergedHists);
+
+    // Skip if nothing to plot
+    if (stackInput.bkgHists.empty() && stackInput.sigHists.empty() && !stackInput.dataHist) {
+        std::cerr << "[warning] Nothing to plot for merged group: " << mergedName << std::endl;
+        return;
+    }
+
+    // Call the existing Plot_Stack helper
+    Plot_Stack(mergedName, stackInput.bkgHists, stackInput.sigHists, stackInput.dataHist, signalBoost);
 }
 
 // ----------------------

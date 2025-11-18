@@ -15,6 +15,8 @@ def parse_args():
                    help="YAML config file containing process definitions")
     p.add_argument("--hist-cfg", dest="hist_cfg", type=str, default="config/hist_cfgs/hist_examples.yaml",
                    help="YAML config file containing histogram definitions")
+    p.add_argument("--FDpattern-cfg", dest="FDpattern_cfg", type=str, default="config/FDpattern_cfgs/FDpattern_examples.txt",
+                   help="YAML config file containing FD bin pattern definitions")
     p.add_argument("--stress-test", dest="stress_test", action="store_true",
                    help="Run stress test")
     p.add_argument("--make-json", action="store_true",
@@ -187,6 +189,7 @@ def prepare_run_and_stage_assets_copy(
     bins_cfg: str,
     processes_cfg: str,
     hists_cfg: Optional[str] = None,
+    FDpattern_cfg: Optional[str] = None,
     existing_run_dir: Optional[bool] = False,
 ):
     """
@@ -228,6 +231,9 @@ def prepare_run_and_stage_assets_copy(
     if hists_cfg:
         configs_hist_path = _copy_file(hists_cfg, configs_dir)
         configs_hist_path = _rename_with_suffix(configs_hist_path, "_hists", configs_dir)
+    if FDpattern_cfg:
+        configs_FDpattern_path = _copy_file(FDpattern_cfg, configs_dir)
+        configs_FDpattern_path = _rename_with_suffix(configs_FDpattern_path, "_FDpattern", configs_dir)
 
     # -------------------------
     # 2) Copy all *.x exes
@@ -313,6 +319,7 @@ def prepare_run_and_stage_assets_copy(
         "bins_cfg": str(config_bin_path),
         "processes_cfg": str(configs_processes_path),
         "hist_cfg": str(configs_hist_path) if hists_cfg else None,
+        "FDpattern_cfg": str(configs_FDpattern_path) if FDpattern_cfg else None,
         "staged_exes": staged_exes,
     }
 
@@ -638,6 +645,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
         bins_files = glob.glob(os.path.join(config_dir, "*bins.yaml"))
         hists_files = glob.glob(os.path.join(config_dir, "*hists.yaml"))
         processes_files = glob.glob(os.path.join(config_dir, "*processes.yaml"))
+        FDpatterns_files = glob.glob(os.path.join(config_dir, "*FDpattern.txt"))
 
         if not bins_files:
             raise FileNotFoundError(f"No '*bins.yaml' file found in {config_dir}")
@@ -647,6 +655,10 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             raise FileNotFoundError(f"No '*hists.yaml' file found in {config_dir}")
         elif len(hists_files) > 1:
             print(f"[run_combine] Warning: Multiple '*hists.yaml' files found. Using the first one.")
+        if not FDpatterns_files:
+            raise FileNotFoundError(f"No '*FDpattern.txt' file found in {config_dir}")
+        elif len(FDpatterns_files) > 1:
+            print(f"[run_combine] Warning: Multiple '*FDpattern.txt' files found. Using the first one.")
         if not processes_files:
             raise FileNotFoundError(f"No '*processes.yaml' file found in {config_dir}")
         elif len(processes_files) > 1:
@@ -655,6 +667,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
         bins_cfg = bins_files[0]
         hist_cfg = hists_files[0]
         processes_cfg = processes_files[0]
+        FDpattern_cfg = FDpatterns_files[0]
         make_json = os.path.isfile(os.path.join(existing_run_dir, "flattened.json"))
         make_root = False
         
@@ -669,6 +682,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
         bins_cfg = args.bins_cfg
         hist_cfg = args.hist_cfg
         processes_cfg = args.processes_cfg
+        FDpattern_cfg = args.FDpattern_cfg
         make_json = args.make_json
         make_root = args.make_root
         if not make_json and not make_root:
@@ -694,7 +708,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             build_binaries()
 
         # Stage files into the run directory (configs, exe, src, include, condor, plots, macro, etc.)
-        run_dir_map = prepare_run_and_stage_assets_copy(run_info, bins_cfg, processes_cfg, hist_cfg, True if args.existing_run_dir else False)
+        run_dir_map = prepare_run_and_stage_assets_copy(run_info, bins_cfg, processes_cfg, hist_cfg, FDpattern_cfg, True if args.existing_run_dir else False)
         # merge staged mapping into run_info so downstream code can use run_info everywhere
         run_info.update(run_dir_map)
 
@@ -724,6 +738,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
     bins_cfg = run_info.get("bins_cfg", bins_cfg)
     processes_cfg = run_info.get("processes_cfg", processes_cfg)
     hist_cfg = run_info.get("hist_cfg", hist_cfg)
+    FDpattern_cfg = run_info.get("FDpattern_cfg", FDpattern_cfg)
 
     # convenience local paths
     condor_dir = run_info.get("condor_dir")
@@ -939,6 +954,28 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                 ]
                 print("[run_combine] Running FitDiagnostics with command:", " ".join(FD_cmd), flush=True)
                 subprocess.run(FD_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
+                # Plot FD
+                FD_output_name = 'fitDiagnostics.Test.root'
+                FD_files = [os.path.abspath(f) for f in glob.glob(os.path.join(output_dir, '**', FD_output_name), recursive=True)]
+                for FD_file in FD_files:
+                    FD_plot_cmd_prefit = [
+                        "./"+exe_dir+"/PlotFitDiagnostics.x",
+                        "-i", FD_file,
+                        "-o", plots_dir,
+                        "-t", "shapes_prefit",
+                        "--patternFile", FDpattern_cfg
+                    ]
+                    print("[run_combine] Running FitDiagnostics plotter with command:", " ".join(FD_plot_cmd_prefit), flush=True)
+                    subprocess.run(FD_plot_cmd_prefit, check=True, stdout=sys.stdout, stderr=sys.stderr)
+                    FD_plot_cmd_postfit = [
+                        "./"+exe_dir+"/PlotFitDiagnostics.x",
+                        "-i", FD_file,
+                        "-o", plots_dir,
+                        "-t", "shapes_fit_b",
+                        "--patternFile", FDpattern_cfg
+                    ]
+                    print("[run_combine] Running FitDiagnostics plotter with command:", " ".join(FD_plot_cmd_postfit), flush=True)
+                subprocess.run(FD_plot_cmd_postfit, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
     print("[run_combine] All steps completed.", flush=True)
     end_time = time.time()

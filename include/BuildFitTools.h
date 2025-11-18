@@ -22,7 +22,7 @@
 #include <TClass.h>
 #include <TCollection.h>
 #include <TLorentzVector.h>
-#include "TInterpreter.h"
+#include <TInterpreter.h>
 #include <ROOT/RDataFrame.hxx>
 #include <ROOT/RVec.hxx>
 

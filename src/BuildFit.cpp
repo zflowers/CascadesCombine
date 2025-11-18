@@ -43,7 +43,7 @@ std::vector<std::string> BuildFit::GetBkgProcs(JSONFactory* j){
                 std::string binname = it.key();
                 for (json::iterator it2 = it.value().begin(); it2 != it.value().end(); ++it2){
                 //      std::cout<< it2.key()<<"\n";
-                        if( BFTool::ContainsAnySubstring( it2.key(), sigkeys)){
+                        if(BFTool::ContainsAnySubstring(it2.key(), sigkeys) || it2.key().find("data") != std::string::npos || it2.key().find("Data") != std::string::npos){
                                 continue;
                         }
                         else{
@@ -402,8 +402,8 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
     //for (const auto& bin: binset){
     //    cb.cp().bin({bin}).AddSyst(cb, bin+"_DummySys", "lnN", SystMap<>::init(1.03)); // 3% over each bin
     //}
-    //cb.cp().SetAutoMCStats(cb, 0.); // 0.1 // Turns on autoMCstats
     //AddMCStatBinByBin(j);
+    cb.cp().SetAutoMCStats(cb, 0.); // 0.1 // Turns on autoMCstats
     AddFloatingNorms(bkgprocs);
     AddPTISRSys(binset, bkgprocs);
     AddRaSys(binset, bkgprocs);

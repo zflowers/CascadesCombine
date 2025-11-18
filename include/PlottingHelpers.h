@@ -11,6 +11,7 @@
 #include <limits>
 #include <cmath>
 #include <fstream>
+#include <regex>
 
 #include <TFile.h>
 #include <TH1.h>
@@ -29,6 +30,8 @@
 #include <TMultiGraph.h>
 #include <TGraphAsymmErrors.h>
 #include <TPaveText.h>
+#include <TDirectory.h>
+#include <TInterpreter.h>
 
 #include "SampleTool.h"
 
@@ -51,6 +54,15 @@ double hto = 0.07;
 // ----------------------
 // Helpers
 // ----------------------
+
+std::string SanitizeString(const std::string& name) {
+    std::string out;
+    for (char c : name) {
+        if (std::isalnum(c) || c=='_' || c=='-') out += c;
+        //else out += '_';
+    }
+    return out;
+}
 
 void SetMinimumBinContent(TH1* h, double minVal) {
     if (!h) return;
@@ -204,8 +216,11 @@ std::string makeSMSChiTitle(const std::string& key) {
 
 void loadFormatMaps(){
 
-  m_Title["data_obs"] = "Data Obs";
+  m_Title["data_obs"] = "Data";
   m_Color["data_obs"] = kBlack;
+
+  m_Title["data"] = "Data";
+  m_Color["data"] = kBlack;
 
   m_Title["ttbar"] = "t #bar{t} + X";
   m_Color["ttbar"] = 7011;
@@ -215,13 +230,29 @@ void loadFormatMaps(){
   m_Color["top"] = 7011;
   //m_Color["top"] = 8003;
 
-  m_Title["ST"] = "single top";
-  m_Color["ST"] = 7010;
-  //m_Color["ST"] = 8004;
-
   m_Title["Vfakeleps"] = "fake enriched";
   m_Color["Vfakeleps"] = 7001;
   //m_Color["Vfakeleps"] = 8001;
+
+  m_Title["boson"] = "boson";
+  m_Color["boson"] = 7050;
+  //m_Color["boson"] = 8006;
+
+  m_Title["top_2018"] = "t + X";
+  m_Color["top_2018"] = 7011;
+  //m_Color["top_2018"] = 8003;
+
+  m_Title["Vfakeleps_2018"] = "fake enriched";
+  m_Color["Vfakeleps_2018"] = 7001;
+  //m_Color["Vfakeleps_2018"] = 8001;
+
+  m_Title["boson_2018"] = "boson";
+  m_Color["boson_2018"] = 7050;
+  //m_Color["boson_2018"] = 8006;
+
+  m_Title["ST"] = "single top";
+  m_Color["ST"] = 7010;
+  //m_Color["ST"] = 8004;
 
   m_Title["DB"] = "dibosons";
   m_Color["DB"] = 7051;
@@ -234,10 +265,6 @@ void loadFormatMaps(){
   m_Title["DBTB"] = "di & tri-bosons";
   m_Color["DBTB"] = 7050;
   //m_Color["DBTB"] = 8006;
-
-  m_Title["boson"] = "boson";
-  m_Color["boson"] = 7050;
-  //m_Color["boson"] = 8006;
 
   m_Title["ZDY"] = "Z / #gamma* + jets";
   m_Color["ZDY"] = 7000;
@@ -370,6 +397,271 @@ void loadFormatMaps(){
   m_Color["Total Bkg"] = 7000;
 
 }
+
+//struct GroupDef {
+//    std::string groupName;
+//    std::vector<std::string> patterns;
+//};
+//
+//using GroupedHists = std::map<std::string, std::map<std::string, TH1F*>>;
+
+//GroupedHists MergeBinsForTree(TDirectory* shapesDir,
+//                              const std::vector<GroupDef>& groups){}
+//
+//void MakeStackPlot(const std::string& outname,
+//                   const std::map<std::string, TH1F*>& bkgHists,
+//                   TH1F* dataHist,
+//                   TH1F* sigHist = nullptr,
+//                   const std::string& title = ""){}
+
+// FitDiagnostic Helpers
+
+TH1D* TGraphToTH1(TGraphAsymmErrors* g, const std::string& name) {
+    if (!g) return nullptr;
+    int nbins = g->GetN();
+    double xmin = g->GetX()[0] - g->GetEXlow()[0];
+    double xmax = g->GetX()[nbins-1] + g->GetEXhigh()[nbins-1];
+
+    TH1D* h = new TH1D(name.c_str(), name.c_str(), nbins, xmin, xmax);
+    for (int i=0; i<nbins; ++i) {
+        h->SetBinContent(i+1, g->GetY()[i]);
+        h->SetBinError(i+1, 0.5*(g->GetEYlow()[i]+g->GetEYhigh()[i]));
+    }
+    return h;
+}
+
+struct MergedBinGroup {
+    std::string group_name;
+    std::vector<std::string> bin_names;
+};
+
+static std::vector<std::string> LoadPatternsFromFile(const std::string& file)
+{
+    std::vector<std::string> out;
+    if (file.empty()) return out;
+
+    std::ifstream fin(file);
+    if (!fin) {
+        std::cerr << "[ERROR] Could not open pattern file: " << file << "\n";
+        return out;
+    }
+
+    std::string line;
+    while (std::getline(fin, line)) {
+        // Trim leading whitespace
+        line.erase(line.begin(), std::find_if(line.begin(), line.end(),
+                    [](unsigned char ch){ return !std::isspace(ch); }));
+        // Trim trailing whitespace
+        line.erase(std::find_if(line.rbegin(), line.rend(),
+                    [](unsigned char ch){ return !std::isspace(ch); }).base(), line.end());
+        if (line.empty()) continue;
+        if (line[0] == '#') continue;
+        out.push_back(line);
+    }
+    return out;
+}
+
+static std::string WildcardToRegex(const std::string& pat)
+{
+    std::string r = "^";
+    for (char c : pat) {
+        if (c == '*') r += ".*";
+        else if (c == '?') r += ".";
+        else if (std::isalnum(c)) r += c;
+        else {
+            r += '\\';
+            r += c;
+        }
+    }
+    r += "$";
+    return r;
+}
+
+std::vector<MergedBinGroup>
+BuildMergedBinGroups(const std::vector<std::string>& all_bins,
+                     const std::vector<std::string>& cli_patterns,
+                     const std::string& pattern_file)
+{
+    std::vector<std::string> patterns = cli_patterns;
+
+    // append file patterns
+    std::vector<std::string> file_patterns = LoadPatternsFromFile(pattern_file);
+    patterns.insert(patterns.end(), file_patterns.begin(), file_patterns.end());
+
+    std::vector<MergedBinGroup> groups;
+
+    // identity fallback (no patterns)
+    if (patterns.empty()) {
+        for (size_t i = 0; i < all_bins.size(); ++i) {
+            MergedBinGroup g;
+            g.group_name = all_bins[i];
+            g.bin_names.push_back(all_bins[i]);
+            groups.push_back(g);
+        }
+        return groups;
+    }
+
+    // compile regex patterns
+    std::vector<std::regex> regex_patterns;
+    for (const auto& p : patterns) {
+        regex_patterns.push_back(std::regex(WildcardToRegex(p)));
+    }
+
+    // build groups
+    for (size_t i = 0; i < patterns.size(); ++i) {
+        MergedBinGroup g;
+        g.group_name = patterns[i];
+        for (const auto& bin : all_bins) {
+            if (std::regex_search(bin, regex_patterns[i])) {
+                g.bin_names.push_back(bin);
+            }
+        }
+        if (g.bin_names.empty()) {
+            std::cerr << "[warning] Pattern '" << patterns[i]
+                      << "' matched 0 bins\n";
+        }
+        groups.push_back(g);
+    }
+
+    // warn about leftover bins (not in any pattern)
+    for (const auto& bin : all_bins) {
+        bool matched = false;
+        for (const auto& g : groups) {
+            for (const auto& b : g.bin_names) {
+                if (b == bin) { matched = true; break; }
+            }
+            if (matched) break;
+        }
+        //if (!matched) std::cerr << "[warning] Bin '" << bin << "' did not match any pattern, skipping\n";
+    }
+
+    return groups;
+}
+
+struct CombinedBinHists {
+    map<string, unique_ptr<TH1>> bkg;      // backgrounds
+    map<string, unique_ptr<TH1>> signal;   // signals
+    map<string, unique_ptr<TH1>> data;     // data
+};
+
+CombinedBinHists LoadAndCombineBinHists(TDirectory* treeDir,
+                                        const std::string& binTag,
+                                        const std::vector<std::string>& binsToCombine)
+{
+    CombinedBinHists out;
+
+    if (!treeDir) {
+        std::cerr << "[ERROR] Invalid TDirectory pointer passed to LoadAndCombineBinHists\n";
+        return out;
+    }
+
+    auto MakeHistName = [](const std::string& bin, const std::string& proc) { return SanitizeString(bin)+"__"+proc+"__FD"; };
+
+    // Map from process name to vector of bin contents/errors
+    struct BinContent { double content; double error; };
+    std::map<std::string, std::vector<BinContent>> bkgContents;
+    std::map<std::string, std::vector<BinContent>> sigContents;
+    std::map<std::string, std::vector<BinContent>> dataContents;
+    std::vector<std::string> finalBinLabels;
+
+    for (const auto& bin : binsToCombine) {
+        TDirectory* binDir = dynamic_cast<TDirectory*>(treeDir->Get(bin.c_str()));
+        if (!binDir) {
+            std::cerr << "[warning] Bin directory '" << bin << "' not found, skipping.\n";
+            continue;
+        }
+        finalBinLabels.push_back(bin);
+
+        TIter next(binDir->GetListOfKeys());
+        TKey* key;
+        while ((key = (TKey*)next())) {
+            TObject* obj = key->ReadObj();
+            if (!obj) continue;
+
+            std::string procName = obj->GetName();
+
+            // Handle data_obs TGraphAsymmErrors
+            if (obj->InheritsFrom(TGraphAsymmErrors::Class())) {
+                auto g = dynamic_cast<TGraphAsymmErrors*>(obj);
+                if (!g) continue;
+
+                double y = g->GetY()[0];
+                double e = 0.5*(g->GetEYlow()[0] + g->GetEYhigh()[0]);
+                dataContents[procName].push_back({y, e});
+                continue;
+            }
+
+            // Only process TH1 objects
+            if (!obj->InheritsFrom(TH1::Class())) continue;
+            TH1* h = dynamic_cast<TH1*>(obj);
+            if (!h) continue;
+
+            // Skip totals/covariance
+            if (procName.find("total") != std::string::npos) continue;
+
+            bool isSignal = (procName.find("SMS") != std::string::npos || procName.find("Cascade") != std::string::npos);
+
+            auto& targetContents = isSignal ? sigContents : bkgContents;
+            double content = h->GetBinContent(1);
+            double error = h->GetBinError(1);
+            targetContents[procName].push_back({content, error});
+        }
+    }
+
+    // Now build concatenated histograms with bin labels
+    auto BuildConcatHist = [&](const std::string& name,
+                                const std::vector<BinContent>& vals,
+                                const std::vector<std::string>& labels) -> std::unique_ptr<TH1>
+    {
+        int nbins = vals.size();
+        TH1D* h = new TH1D(name.c_str(), name.c_str(), nbins, 0.5, nbins + 0.5);
+    
+        for (int i = 0; i < nbins; ++i) {
+            h->SetBinContent(i + 1, vals[i].content);
+            h->SetBinError(i + 1, vals[i].error);
+            if (i < (int)labels.size())
+                h->GetXaxis()->SetBinLabel(i + 1, labels[i].c_str());
+        }
+    
+        h->SetDirectory(nullptr);
+        return std::unique_ptr<TH1>(h);
+    };
+
+    for (auto& [proc, vals] : bkgContents) out.bkg[proc] = BuildConcatHist(MakeHistName(binTag, proc), vals, finalBinLabels);
+    for (auto& [proc, vals] : sigContents) out.signal[proc] = BuildConcatHist(MakeHistName(binTag, proc), vals, finalBinLabels);
+    for (auto& [proc, vals] : dataContents) out.data[proc] = BuildConcatHist(MakeHistName(binTag, proc), vals, finalBinLabels);
+    return out;
+}
+
+struct StackPlotInput {
+    std::vector<TH1*> bkgHists;
+    std::vector<TH1*> sigHists;
+    TH1* dataHist = nullptr;
+};
+
+StackPlotInput ConvertToStackInput(const CombinedBinHists& mergedHists) {
+    StackPlotInput out;
+
+    // Background
+    for (const auto& [name, hptr] : mergedHists.bkg)
+        if (hptr) out.bkgHists.push_back(hptr.get());
+
+    // Signal
+    for (const auto& [name, hptr] : mergedHists.signal)
+        if (hptr) out.sigHists.push_back(hptr.get());
+
+    // Data
+    if (!mergedHists.data.empty()) {
+        auto it = mergedHists.data.begin();
+        if (it->second) {
+            out.dataHist = it->second.get();
+        }
+        out.sigHists.clear(); // remove signal if data exists to prevent accidental unblinding
+    }
+    return out;
+}
+
+// End FD Helpers
 
 struct HistId {
     string bin; string proc; string var; 

@@ -38,10 +38,12 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    int max_Nsig = 10; // maximum number of signals to read in from file
+    int Nsig = 0;
     std::vector<std::string> procs;
     std::vector<double> vals;
     std::string line;
-    while (std::getline(ifs, line)) {
+    while (std::getline(ifs, line) && Nsig < max_Nsig) {
         if (line.empty()) continue;
         std::istringstream iss(line);
         std::string proc;
@@ -49,6 +51,7 @@ int main(int argc, char** argv) {
         if (!(iss >> proc >> sig)) continue; // skip malformed lines
         procs.push_back(proc);
         vals.push_back(sig);
+        Nsig++;
     }
     ifs.close();
 
