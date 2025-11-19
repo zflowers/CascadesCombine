@@ -38,26 +38,6 @@ static void usage(const char* me) {
     std::cerr << "  --help             Display this help message\n";
 }
 
-static std::string makePathForBin(const std::string &base, const std::string &bin, const std::string &sampleName) {
-    // If base is empty, default to <bin>_<sampleName>.json
-    if (base.empty()) {
-        return bin + "_" + sampleName + ".json";
-    }
-    // If placeholder present, replace it
-    size_t pos = base.find("{bin}");
-    if (pos != std::string::npos) {
-        std::string s = base;
-        s.replace(pos, 5, bin);
-        return s;
-    }
-    // Insert _<bin> before final extension
-    size_t dot = base.find_last_of('.');
-    if (dot == std::string::npos) {
-        return base + "_" + bin;
-    }
-    return base.substr(0, dot) + "_" + bin + base.substr(dot);
-}
-
 // ----------------------
 // Main
 // ----------------------
@@ -276,13 +256,13 @@ int main(int argc, char** argv) {
             derivedVars = loadDerivedVariablesYAML(histYamlPath);
         }
 
+        std::vector<DerivedVar> validatedDerivedVars;
         // --- Base node to be copied per-bin ---
         if(ROOT::IsImplicitMTEnabled()) ROOT::DisableImplicitMT(); // disable MT for validation
-        BaseNodeHandle valHandle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi, IsData, year);
+        BaseNodeHandle valHandle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi, IsData, year, validatedDerivedVars);
         ROOT::RDF::RNode base_node_val = valHandle.node; // RNode constructed under IMT OFF
 
         // --- Validate derived variables (on base node) ---
-        std::vector<DerivedVar> validatedDerivedVars;
         for (const auto &dv : derivedVars) {
             if(ValidateDerivedVarNode(base_node_val, dv))
                 validatedDerivedVars.push_back(dv);
@@ -294,21 +274,10 @@ int main(int argc, char** argv) {
 
         for (const auto &bin : binNames) {
             if(ROOT::IsImplicitMTEnabled()) ROOT::DisableImplicitMT(); // disable MT for validation
-            BaseNodeHandle bin_valHandle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi, IsData, year);
+            BaseNodeHandle bin_valHandle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi, IsData, year, validatedDerivedVars);
             ROOT::RDF::RNode bin_base_node_val = bin_valHandle.node; // RNode constructed under IMT OFF
 
-            // --- Define validated derived variables on base node ---
-            for(const auto &dv : validatedDerivedVars){
-                try{
-                    bin_base_node_val = bin_base_node_val.Define(dv.name, dv.expr);
-                }catch(const std::exception &e){
-                    std::cerr << "[BFI_condor] WARNING: Failed to define derived variable '"
-                              << dv.name << "' Expression: " << dv.expr
-                              << " Exception: " << e.what() << "\n";
-                }
-            }
-
-            base_node_val = BuildFitInput::loadCutsUser(base_node_val, allUserCuts, false);
+            bin_base_node_val = BuildFitInput::loadCutsUser(bin_base_node_val, allUserCuts, false);
 
             // Retrieve the already-expanded bin-specific cuts
             const auto &finalCutsExpanded = finalCutsExpandedMap.at(bin);
@@ -532,7 +501,7 @@ int main(int argc, char** argv) {
 
                 // --- FILL PASS (MT ON) per-bin ---
                 if(!ROOT::IsImplicitMTEnabled()) ROOT::EnableImplicitMT(); // turn on multi-threading for filling
-                BaseNodeHandle fillHandle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi, IsData, year);
+                BaseNodeHandle fillHandle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi, IsData, year, validatedDerivedVars);
                 ROOT::RDF::RNode base_node_fill = fillHandle.node; // RNode constructed under IMT ON
                 base_node_fill = BuildFitInput::loadCutsUser(base_node_fill, allUserCuts, false);
 
@@ -551,7 +520,7 @@ int main(int argc, char** argv) {
             if(doJSON){
                 std::cout << "[BFI_condor] Filling json (bin=" << bin << ")\n";
                 if(!ROOT::IsImplicitMTEnabled()) ROOT::EnableImplicitMT(); 
-                BaseNodeHandle jsonHandle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi, IsData, year);
+                BaseNodeHandle jsonHandle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi, IsData, year, validatedDerivedVars);
                 ROOT::RDF::RNode json_node = jsonHandle.node; // RNode constructed under IMT ON
                 // --- Apply filters to node for JSON 
                 json_node = BuildFitInput::loadCutsUser(json_node, allUserCuts, false);
@@ -645,24 +614,7 @@ int main(int argc, char** argv) {
             ofs.close();
 
             std::cout << "[BFI_condor] Wrote JSON output to: " << outputJsonPathBase << std::endl;
-        } else {
-            // No explicit --json-output given: preserve per-bin behavior (one file per bin)
-            for (const auto &bin : binNames) {
-                // Take sqrt of accumulated variance for this bin before writing (mutate the totalsByBin copy)
-                for (auto &proc_kv : totalsByBin[bin]) {
-                    proc_kv.second[2] = (proc_kv.second[2] >= 0.0) ? std::sqrt(proc_kv.second[2]) : 0.0;
-                }
-
-                std::string outPath = makePathForBin(outputJsonPathBase, bin, sampleName);
-                if(!writePartialJSON(outPath, bin, fileResultsByBin[bin], totalsByBin[bin])){
-                    std::cerr<<"[BFI_condor] ERROR writing JSON to "<<outPath<<"\n";
-                    delete BFI;
-                    return 5;
-                } else {
-                    std::cout << "[BFI_condor] Wrote JSON output to: " << outPath << std::endl;
-                }
-            }
-        }
+        } else { std::cout << "[BFI_condor] NEED TO PROVIDE --json-output"; }
     }
 
     if(histFile) histFile->Close();

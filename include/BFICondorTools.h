@@ -274,25 +274,6 @@ static void writeSamplesJSON(
     }
 }
 
-static bool writePartialJSON(
-    const std::string& outPath,
-    const std::string& binname,
-    const std::map<std::string, std::map<std::string, std::array<double,3>>>& fileResults,
-    const std::map<std::string, std::array<double,3>>& totals)
-{
-    std::ofstream ofs(outPath);
-    if (!ofs) return false;
-
-    ofs << "{\n";
-    ofs << "  \"" << binname << "\": {\n";
-
-    writeSamplesJSON(ofs, fileResults, totals, "  ");
-
-    ofs << "\n  }\n";
-    ofs << "}\n";
-    return true;
-}
-
 struct SystInfo {
     std::string tag;       // "METtrig"
     std::string nominal;   // "MetTrigSFweight"
@@ -422,7 +403,9 @@ static BaseNodeHandle MakeBaseNode(const std::string &tree_name,
                                    BuildFitInput *BFI,
                                    double Lumi,
                                    bool is_data,
-                                   int year)
+                                   int year,
+                                   std::vector<DerivedVar> validatedDerivedVars
+                                  )
 {
     auto df = std::make_shared<ROOT::RDataFrame>(tree_name, rootFilePath);
 
@@ -455,6 +438,17 @@ static BaseNodeHandle MakeBaseNode(const std::string &tree_name,
     node = BFI->DefinePairKinematics(node, "");
     node = BFI->DefinePairKinematics(node, "A");
     node = BFI->DefinePairKinematics(node, "B");
+
+    // --- Define validated derived variables on base node ---
+    for(const auto &dv : validatedDerivedVars){
+        try{
+            node = node.Define(dv.name, dv.expr);
+        }catch(const std::exception &e){
+            std::cerr << "[BFI_condor] WARNING: Failed to define derived variable '"
+                      << dv.name << "' Expression: " << dv.expr
+                      << " Exception: " << e.what() << "\n";
+        }
+    }
 
     return {df, node};
 }
