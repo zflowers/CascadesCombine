@@ -18,7 +18,6 @@ for WS in "${dcdir}"/*/*_workspace.root; do
       -M FitDiagnostics \
       -d "$WSFILE" \
       -m 120 \
-      -v 10 \
       --robustFit 1 \
       --robustHesse 1 \
       --saveShapes \
@@ -28,3 +27,4 @@ for WS in "${dcdir}"/*/*_workspace.root; do
     break
 done
 
+#-v 10 \

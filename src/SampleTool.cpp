@@ -3,12 +3,14 @@
 SampleTool::SampleTool(){
 
   // Make sure data lumi is set to 1.:
-  LumiDict["Summer20UL18_106X_Data"] = 1.;
+  //LumiDict["Summer20UL18_106X_Data"] = 1.;
 
   LumiDict["Summer20UL16APV_106X"] = 16.8;
   LumiDict["Summer20UL16_106X"] = 19.5;
   LumiDict["Summer20UL17_106X"] = 41.479680529;
-  LumiDict["Summer20UL18_106X"] = 21.077794578 + 0.95*38.662770624;
+  //LumiDict["Summer20UL18_106X"] = 21.077794578 + 0.95*38.662770624;
+  LumiDict["Summer20UL18_106X"] = 59.832475339;
+  LumiDict["HEM_LUMI"] = 21.077794578;
   LumiDict["Summer22_130X"] = 7.9804;
   LumiDict["Summer22EE_130X"] = 26.6717;
   LumiDict["Summer23_130X"] = 17.794;

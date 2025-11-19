@@ -34,6 +34,7 @@ static void usage(const char* me) {
     std::cerr << "  --lumi VALUE       Integrated luminosity to scale yields\n";
     std::cerr << "  --sample-name NAME Optional name of the sample\n";
     std::cerr << "  --sms-filters LIST Comma-separated list of SMS filters\n";
+    std::cerr << "  --systematics      Semicolon- or comma-separated list of systematic names\n";
     std::cerr << "  --help             Display this help message\n";
 }
 
@@ -64,6 +65,7 @@ int main(int argc, char** argv) {
     RegisterSafeHelpers();
     std::string binArg, cutsStr, lepCutsStr, predefCutsStr, userCutsStr, rootFilePath, outputJsonPathBase, sampleName, histOutputPath, cutsMultiStr, lepCutsMultiStr, predefCutsMultiStr, userCutsMultiStr, binsCfgName;
     std::vector<std::string> smsFilters;
+    std::vector<std::string> systematicNames;
     bool isSignal=false, doHist=false, doJSON=false;
     std::string sigType, histYamlPath, procYamlPath;
     double Lumi=1.0;
@@ -91,6 +93,7 @@ int main(int argc, char** argv) {
         {"predefined-cuts-multi", required_argument, 0, 'P'},
         {"user-cuts-multi", required_argument, 0, 'U'},
         {"bins-cfg", required_argument, 0, 'B'},
+        {"systematics", required_argument, 0, 'R'},
         {"help", no_argument, 0, 'h'},
         {0,0,0,0}
     };
@@ -120,11 +123,23 @@ int main(int argc, char** argv) {
             case 'P': predefCutsMultiStr = optarg; break;
             case 'U': userCutsMultiStr = optarg; break;
             case 'B': binsCfgName = optarg; break;
+            case 'R': systematicNames = splitTopLevel(optarg); break;
             case 'h':
             default: usage(argv[0]); return 1;
         }
     }
 
+    ST.LoadAllFromMaster();
+    bool IsData = SampleIsData(rootFilePath);
+    int year = 0;
+    if (rootFilePath.find("Summer20UL16_") != std::string::npos) year = 2016;
+    if (rootFilePath.find("Summer20UL16APV_") != std::string::npos) year = 2016;
+    if (rootFilePath.find("Summer20UL17_") != std::string::npos) year = 2017;
+    if (rootFilePath.find("Summer20UL18_") != std::string::npos) year = 2018;
+    if (rootFilePath.find("Summer22_") != std::string::npos) year = 2022;
+    if (rootFilePath.find("Summer22EE_") != std::string::npos) year = 2022;
+    if (rootFilePath.find("Summer23_") != std::string::npos) year = 2023;
+    if (rootFilePath.find("Summer23BPix_") != std::string::npos) year = 2023;
     if (Lumi <= 0.) Lumi = GetLumiFromKey(rootFilePath); // get lumi from ST for file
     if (sampleName.empty()) sampleName = GetSampleNameFromKey(rootFilePath);
     if (binArg.empty() || rootFilePath.empty() || (!doHist && !doJSON)) { usage(argv[0]); return 1; }
@@ -237,15 +252,12 @@ int main(int argc, char** argv) {
     if(isSignal && sigType.empty())
         sigType=(rootFilePath.find("SMS")!=std::string::npos)?"sms":"cascades";
 
-    // Containers to accumulate per-bin results
+    //std::map<std::string, std::map<std::string, std::map<std::string, FileYields>>> fileResultsByBin;
+    //std::map<std::string, std::map<std::string, ProcTotals>> totalsByBin;
     std::map<std::string, std::map<std::string,std::map<std::string,std::array<double,3>>>> fileResultsByBin;
-    // fileResultsByBin[bin][processKey][rootFilePath] = {nEntries, sW, err}
-
-    std::map<std::string, std::map<std::string,std::array<double,3>>> totalsByBin;
-    // totalsByBin[bin][processKey] = {nEntries, sW, err2_sum}
+    std::map<std::string, std::map<std::string, std::array<double,3>>> totalsByBin;
 
     std::string processName = "";
-    ST.LoadAllFromMaster();
     auto preferredGroups = ST.loadPreferredGroupsFromYaml(procYamlPath);
     if(isSignal && sigType == "cascades")
         processName = BFTool::GetSignalTokensCascades(rootFilePath);
@@ -266,7 +278,7 @@ int main(int argc, char** argv) {
 
         // --- Base node to be copied per-bin ---
         if(ROOT::IsImplicitMTEnabled()) ROOT::DisableImplicitMT(); // disable MT for validation
-        BaseNodeHandle valHandle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi);
+        BaseNodeHandle valHandle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi, IsData, year);
         ROOT::RDF::RNode base_node_val = valHandle.node; // RNode constructed under IMT OFF
 
         // --- Validate derived variables (on base node) ---
@@ -282,7 +294,7 @@ int main(int argc, char** argv) {
 
         for (const auto &bin : binNames) {
             if(ROOT::IsImplicitMTEnabled()) ROOT::DisableImplicitMT(); // disable MT for validation
-            BaseNodeHandle bin_valHandle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi);
+            BaseNodeHandle bin_valHandle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi, IsData, year);
             ROOT::RDF::RNode bin_base_node_val = bin_valHandle.node; // RNode constructed under IMT OFF
 
             // --- Define validated derived variables on base node ---
@@ -520,7 +532,7 @@ int main(int argc, char** argv) {
 
                 // --- FILL PASS (MT ON) per-bin ---
                 if(!ROOT::IsImplicitMTEnabled()) ROOT::EnableImplicitMT(); // turn on multi-threading for filling
-                BaseNodeHandle fillHandle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi);
+                BaseNodeHandle fillHandle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi, IsData, year);
                 ROOT::RDF::RNode base_node_fill = fillHandle.node; // RNode constructed under IMT ON
                 base_node_fill = BuildFitInput::loadCutsUser(base_node_fill, allUserCuts, false);
 
@@ -539,7 +551,7 @@ int main(int argc, char** argv) {
             if(doJSON){
                 std::cout << "[BFI_condor] Filling json (bin=" << bin << ")\n";
                 if(!ROOT::IsImplicitMTEnabled()) ROOT::EnableImplicitMT(); 
-                BaseNodeHandle jsonHandle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi);
+                BaseNodeHandle jsonHandle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi, IsData, year);
                 ROOT::RDF::RNode json_node = jsonHandle.node; // RNode constructed under IMT ON
                 // --- Apply filters to node for JSON 
                 json_node = BuildFitInput::loadCutsUser(json_node, allUserCuts, false);
@@ -624,43 +636,8 @@ int main(int argc, char** argv) {
                     files_for_write = itF->second;
                 }
 
-                // Iterate samples (keys in totals_for_write), same ordering logic as writePartialJSON
-                bool firstSample = true;
-                for (const auto &kv : totals_for_write) {
-                    if (!firstSample) ofs << ",\n";
-                    firstSample = false;
-
-                    const std::string& sname = kv.first;
-                    std::string sampleId = GetSampleNameFromKey(sname);
-                    const auto& totalVals = kv.second;
-
-                    ofs << "    \"" << sampleId << "\": {\n";
-                    ofs << "      \"files\": {\n";
-
-                    bool firstFile = true;
-                    auto itFiles = files_for_write.find(sname);
-                    if (itFiles != files_for_write.end()) {
-                        for (const auto& fkv : itFiles->second) {
-                            if (!firstFile) ofs << ",\n";
-                            firstFile = false;
-
-                            ofs << "        \"" << fkv.first << "\": ["
-                                << (long long)fkv.second[0] << ", "
-                                << fkv.second[1] << ", "
-                                << fkv.second[2] << "]";
-                        }
-                    }
-
-                    ofs << "\n      },\n";
-
-                    ofs << "      \"totals\": ["
-                        << (long long)totalVals[0] << ", "
-                        << totalVals[1] << ", "
-                        << totalVals[2] << "]\n";
-
-                    ofs << "    }";
-                } // end samples loop
-
+                // Iterate samples (keys in totals_for_write)
+                writeSamplesJSON(ofs, files_for_write, totals_for_write, "  ");
                 ofs << "\n  }"; // close this bin
             } // end bins loop
 

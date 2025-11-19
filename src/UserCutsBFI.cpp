@@ -18,6 +18,13 @@ ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<st
         "(Njet_S == 0) || (Njet_S > 0 && SafeIndex(PT_jet, SafeIndex(index_jet_S, 0, -1), -1.0) < 45)";
     cuts[cut_leadSjetPt.name] = cut_leadSjetPt;
 
+    // --- HEM Veto ---
+    CutDef cut_HEMVETO;
+    cut_HEMVETO.name = "HEM_Veto";
+    cut_HEMVETO.columns = {"pass_HEM"};
+    cut_HEMVETO.expression = "pass_HEM";
+    cuts[cut_HEMVETO.name] = cut_HEMVETO;
+
     // --- min DeltaR between any two leptons ---
     if (node.HasColumn("minDeltaR_leps") == false) {
         node = node.Define("minDeltaR_leps",

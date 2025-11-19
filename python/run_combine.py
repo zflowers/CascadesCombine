@@ -268,6 +268,7 @@ def prepare_run_and_stage_assets_copy(
             "DefineUserHists.h",
         ])
         src_items.extend([
+            "BFI_condor.cpp",
             "SampleTool.cpp",
             "PredefinedCutsBFI.cpp",
             "UserCutsBFI.cpp",

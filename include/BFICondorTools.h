@@ -15,6 +15,27 @@
 
 namespace fs = std::filesystem;
 
+// Small POD to keep nominal or variation yield info: {entries, sum, sumErr (stddev)}
+using YieldTriple = std::array<double,3>;
+
+// Systematic yields (each side stores a YieldTriple: entries, sum, err)
+struct SystYields {
+    YieldTriple up  = {0.0, 0.0, 0.0};
+    YieldTriple down= {0.0, 0.0, 0.0};
+};
+
+// Per-file result: nominal + per-syst up/down
+struct FileYields {
+    YieldTriple nominal = {0.0, 0.0, 0.0};
+    std::map<std::string, SystYields> systs; // keyed by SystInfo.tag
+};
+
+// Per-process totals: nominal + per-syst up/down
+struct ProcTotals {
+    YieldTriple nominal = {0.0, 0.0, 0.0};
+    std::map<std::string, SystYields> systs;
+};
+
 SampleTool ST;
 inline std::string GetSampleNameFromKey(const std::string& keyOrPath) {
     size_t lastSlash = keyOrPath.find_last_of("/\\");
@@ -101,6 +122,14 @@ inline std::string GetProcessNameFromKey(const std::string &keyOrPath,
     return resolveGroup(keyOrPath);
 }
 
+inline bool SampleIsData(const std::string& keyOrPath){
+    std::string sample = GetSampleNameFromKey(keyOrPath);
+    std::transform(sample.begin(), sample.end(), sample.begin(),
+               [](unsigned char c){ return std::tolower(c); });
+    if (sample.find("data") != std::string::npos) return true;
+    return false;
+}
+
 inline double GetLumiFromKey(const std::string& keyOrPath) {
     SampleTool ST;
     ST.LoadAllFromMaster();
@@ -165,7 +194,6 @@ inline double GetLumiFromKey(const std::string& keyOrPath) {
     return 1.0;
 }
 
-
 static bool buildCutsForBin(BuildFitInput* BFI,
                             const std::vector<std::string>& normalCuts,
                             const std::vector<std::string>& lepCuts,
@@ -189,59 +217,6 @@ static bool buildCutsForBin(BuildFitInput* BFI,
     return true;
 }
 
-static bool writePartialJSON(
-    const std::string& outPath,
-    const std::string& binname,
-    const std::map<std::string, std::map<std::string, std::array<double,3>>>& fileResults,
-    const std::map<std::string, std::array<double,3>>& totals)
-{
-    std::ofstream ofs(outPath);
-    if (!ofs) return false;
-
-    ofs << "{\n";
-    ofs << "  \"" << binname << "\": {\n";
-
-    bool firstSample = true;
-    for (const auto& kv : totals) {
-        if (!firstSample) ofs << ",\n";
-        firstSample = false;
-
-        const std::string& sname = kv.first;
-        std::string sampleId = GetSampleNameFromKey(sname);
-        const auto& totalVals = kv.second;
-
-        ofs << "    \"" << sampleId << "\": {\n";
-        ofs << "      \"files\": {\n";
-
-        bool firstFile = true;
-        auto itFiles = fileResults.find(sname);
-        if (itFiles != fileResults.end()) {
-            for (const auto& fkv : itFiles->second) {
-                if (!firstFile) ofs << ",\n";
-                firstFile = false;
-
-                ofs << "        \"" << fkv.first << "\": ["
-                    << (long long)fkv.second[0] << ", "
-                    << fkv.second[1] << ", "
-                    << fkv.second[2] << "]";
-            }
-        }
-
-        ofs << "\n      },\n";
-
-        ofs << "      \"totals\": ["
-            << (long long)totalVals[0] << ", "
-            << totalVals[1] << ", "
-            << totalVals[2] << "]\n";
-        ofs << "    }";
-    }
-
-    ofs << "\n  }\n";
-    ofs << "}\n";
-    ofs.close();
-    return true;
-}
-
 static std::vector<DerivedVar> loadDerivedVariablesYAML(const std::string &yamlPath) {
     std::vector<DerivedVar> vars;
     YAML::Node root = YAML::LoadFile(yamlPath);
@@ -256,10 +231,186 @@ static std::vector<DerivedVar> loadDerivedVariablesYAML(const std::string &yamlP
     return vars;
 }
 
+static void writeSamplesJSON(
+    std::ostream& os,
+    const std::map<std::string, std::map<std::string,std::array<double,3>>>& files_for_write,
+    const std::map<std::string, std::array<double,3>>& totals_for_write,
+    const std::string& indent = "  "
+)
+{
+    bool firstSample = true;
+    for (const auto& kv : totals_for_write) {
+        if (!firstSample) os << ",\n";
+        firstSample = false;
+
+        const std::string& sname = kv.first;
+        const auto& totalVals   = kv.second;
+        std::string sampleId    = GetSampleNameFromKey(sname);
+
+        os << indent << "  \"" << sampleId << "\": {\n";
+        os << indent << "    \"files\": {\n";
+
+        bool firstFile = true;
+        auto itFiles = files_for_write.find(sname);
+        if (itFiles != files_for_write.end()) {
+            for (const auto& fkv : itFiles->second) {
+                if (!firstFile) os << ",\n";
+                firstFile = false;
+
+                os << indent << "      \"" << fkv.first << "\": ["
+                   << (long long)fkv.second[0] << ", "
+                   << fkv.second[1] << ", "
+                   << fkv.second[2] << "]";
+            }
+        }
+
+        os << "\n" << indent << "    },\n";
+        os << indent << "    \"totals\": ["
+           << (long long)totalVals[0] << ", "
+           << totalVals[1] << ", "
+           << totalVals[2] << "]\n";
+
+        os << indent << "  }";
+    }
+}
+
+static bool writePartialJSON(
+    const std::string& outPath,
+    const std::string& binname,
+    const std::map<std::string, std::map<std::string, std::array<double,3>>>& fileResults,
+    const std::map<std::string, std::array<double,3>>& totals)
+{
+    std::ofstream ofs(outPath);
+    if (!ofs) return false;
+
+    ofs << "{\n";
+    ofs << "  \"" << binname << "\": {\n";
+
+    writeSamplesJSON(ofs, fileResults, totals, "  ");
+
+    ofs << "\n  }\n";
+    ofs << "}\n";
+    return true;
+}
+
+struct SystInfo {
+    std::string tag;       // "METtrig"
+    std::string nominal;   // "MetTrigSFweight"
+    std::string up;        // "MetTrigSFweight_up"
+    std::string down;      // "MetTrigSFweight_down"
+};
+
+static const std::vector<SystInfo> kDefaultSystematics = {
+    {"METtrig", "MetTrigSFweight", "MetTrigSFweight_up", "MetTrigSFweight_down"},
+    {"PU",      "PUweight",        "PUweight_up",        "PUweight_down"}
+};
+
+ROOT::RDF::RNode MultiSystWeights(ROOT::RDF::RNode node,
+                                  bool is_data,
+                                  int year,
+                                  const std::vector<SystInfo>& systs = kDefaultSystematics)
+{
+    if (is_data) {
+        return node
+            .Define("weight_scaled",    [](){ return 1.0; })
+            .Define("weight_sq_scaled", [](){ return 1.0; });
+    }
+
+    // --- Nominal product ---
+    node = node.Define(
+        "syst_nomin_product",
+        [year](double met, double pu) {
+            double metEff = (year > 2018 ? 1.0 : met); // hack since trigSF in Run3 samples set to 0
+            //return metEff * pu;
+            return 1.;
+        },
+        {"MetTrigSFweight", "PUweight"}
+    );
+
+    // --- Multiply base weight by nominal product ---
+    node = node.Define("weight_scaled",
+        [](double base, double sysNom) { return base * sysNom; },
+        {"weight_scaled_raw", "syst_nomin_product"}
+    );
+
+    node = node.Define("weight_sq_scaled",
+        [](double baseSq, double sysNom) { return baseSq * sysNom * sysNom; },
+        {"weight_sq_scaled_raw", "syst_nomin_product"}
+    );
+
+    // --- Up/Down variations ---
+    for (const auto& s : systs)
+    {
+        std::string colUp   = "weight_scaled_" + s.tag + "Up";
+        std::string colDown = "weight_scaled_" + s.tag + "Down";
+
+        node = node.Define(
+            colUp,
+            [=](double base, double nomProd, double nomVal, double upVal, double){
+                return base * nomProd * (upVal / nomVal);
+            },
+            {"weight_scaled_raw", "syst_nomin_product", s.nominal, s.up, s.down}
+        );
+
+        node = node.Define(
+            colDown,
+            [=](double base, double nomProd, double nomVal, double, double downVal){
+                return base * nomProd * (downVal / nomVal);
+            },
+            {"weight_scaled_raw", "syst_nomin_product", s.nominal, s.up, s.down}
+        );
+    }
+
+    return node;
+}
+
 // Keeps RDataFrame alive while returning a convenient RNode
 struct BaseNodeHandle {
     std::shared_ptr<ROOT::RDataFrame> df; // owns the RDataFrame lifetime
     ROOT::RDF::RNode node;                // node built from *df
+};
+
+// Small functor for computing per-event lumi
+struct EventLumi {
+    bool is_data;
+    int year;
+    double fullLumi;
+    double hemLumi;
+    bool is2018;
+
+    EventLumi(bool data, int y, double fLumi, double hLumi)
+        : is_data(data), year(y), fullLumi(fLumi), hemLumi(hLumi), is2018(y==2018) {}
+
+    double operator()(int runnum, bool hem_veto) const {
+        if (is_data) return 1.0;
+        return (is2018 && hem_veto) ? hemLumi : fullLumi;
+    }
+};
+
+// Small functor for computing pass_HEM
+struct PassHEM {
+    bool is_data;
+    int year;
+    bool is2018;
+
+    PassHEM(bool data, int y) : is_data(data), year(y), is2018(y==2018) {}
+
+    bool operator()(int runnum, bool hem_veto) const {
+        if (is_data) {
+            if (is2018 && runnum >= 319077 && hem_veto) return false;
+            else return true;
+        }
+        return true; // MC always passes
+    }
+};
+
+// Small functor for weight scaling using event_lumi
+struct WeightScaled {
+    bool is_data;
+    WeightScaled(bool data) : is_data(data) {}
+    double operator()(double w, double event_lumi) const {
+        return is_data ? 1.0 : w * event_lumi;
+    }
 };
 
 // Build the common base node (weights + lepton counts + pair kinematics).
@@ -269,23 +420,41 @@ struct BaseNodeHandle {
 static BaseNodeHandle MakeBaseNode(const std::string &tree_name,
                                    const std::string &rootFilePath,
                                    BuildFitInput *BFI,
-                                   double Lumi) {
+                                   double Lumi,
+                                   bool is_data,
+                                   int year)
+{
     auto df = std::make_shared<ROOT::RDataFrame>(tree_name, rootFilePath);
 
-    // scale weights
+    const double fullLumi = Lumi;
+    const double hemLumi  = ST.LumiDict.at("HEM_LUMI"); // assume key exists
+
+    // Instantiate functors
+    EventLumi eventLumi(is_data, year, fullLumi, hemLumi);
+    PassHEM passHEM(is_data, year);
+    WeightScaled weightScaled(is_data);
+
     ROOT::RDF::RNode node = (*df)
-        .Define("weight_scaled",[Lumi](double w){return w*Lumi;},{"weight"})
-        .Define("weight_sq_scaled", [Lumi](double w2){ return w2 * Lumi * Lumi; }, {"weight2"})
+        // event-by-event lumi and HEM pass flag
+        .Define("event_lumi", eventLumi, {"runnum", "HEM_Veto"})
+        .Define("pass_HEM",   passHEM,   {"runnum", "HEM_Veto"})
+
+        // scaled weights now include event_lumi directly
+        .Define("weight_scaled_raw",  weightScaled, {"weight", "event_lumi"})
+        .Define("weight_sq_scaled_raw",
+            [weightScaled](double w2, double el){ return weightScaled(w2, el) * el; },
+            {"weight2", "event_lumi"})
     ;
 
-    // lepton counts / kinematics (keep same sequence as original)
-    node = BFI->DefineLeptonPairCounts(node,"");
-    node = BFI->DefineLeptonPairCounts(node,"A");
-    node = BFI->DefineLeptonPairCounts(node,"B");
-    node = BFI->DefinePairKinematics(node,"");
-    node = BFI->DefinePairKinematics(node,"A");
-    node = BFI->DefinePairKinematics(node,"B");
+    node = MultiSystWeights(node, is_data, year);
+
+    // lepton counts / kinematics
+    node = BFI->DefineLeptonPairCounts(node, "");
+    node = BFI->DefineLeptonPairCounts(node, "A");
+    node = BFI->DefineLeptonPairCounts(node, "B");
+    node = BFI->DefinePairKinematics(node, "");
+    node = BFI->DefinePairKinematics(node, "A");
+    node = BFI->DefinePairKinematics(node, "B");
 
     return {df, node};
 }
-
