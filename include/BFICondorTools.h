@@ -303,7 +303,7 @@ ROOT::RDF::RNode MultiSystWeights(ROOT::RDF::RNode node,
         [year](double met, double pu) {
             double metEff = (year > 2018 ? 1.0 : met); // hack since trigSF in Run3 samples set to 0
             //return metEff * pu;
-            return 1.;
+            return 1.; // turn off while debugging
         },
         {"MetTrigSFweight", "PUweight"}
     );
@@ -361,10 +361,15 @@ struct EventLumi {
 
     EventLumi(bool data, int y, double fLumi, double hLumi)
         : is_data(data), year(y), fullLumi(fLumi), hemLumi(hLumi), is2018(y==2018) {}
-
+// https://cms-talk.web.cern.ch/t/question-about-hem15-16-issue-in-2018-ultra-legacy/38654/8?u=gagarwal
     double operator()(int runnum, bool hem_veto) const {
         if (is_data) return 1.0;
-        return (is2018 && hem_veto) ? hemLumi : fullLumi;
+        return fullLumi; // hack until we have v7 samples fully ready
+			 // in v7 we will apply the below code and setup
+			 // the LumiDict so that 2018 signal gets the
+			 // "nominal" for 18 (~59-ish) and we use other
+			 // Run2 years to scale up to Run3 years
+        //return (is2018 && hem_veto) ? hemLumi : fullLumi;
     }
 };
 
@@ -377,11 +382,8 @@ struct PassHEM {
     PassHEM(bool data, int y) : is_data(data), year(y), is2018(y==2018) {}
 
     bool operator()(int runnum, bool hem_veto) const {
-        if (is_data) {
-            if (is2018 && runnum >= 319077 && hem_veto) return false;
-            else return true;
-        }
-        return true; // MC always passes
+        if (is_data && is2018 && runnum >= 319077 && hem_veto) return false;
+        else return true;
     }
 };
 
