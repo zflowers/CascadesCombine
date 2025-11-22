@@ -232,10 +232,8 @@ int main(int argc, char** argv) {
     if(isSignal && sigType.empty())
         sigType=(rootFilePath.find("SMS")!=std::string::npos)?"sms":"cascades";
 
-    //std::map<std::string, std::map<std::string, std::map<std::string, FileYields>>> fileResultsByBin;
-    //std::map<std::string, std::map<std::string, ProcTotals>> totalsByBin;
-    std::map<std::string, std::map<std::string,std::map<std::string,std::array<double,3>>>> fileResultsByBin;
-    std::map<std::string, std::map<std::string, std::array<double,3>>> totalsByBin;
+    std::map<std::string, std::map<std::string, std::map<std::string, FileYields>>> fileResultsByBin;
+    std::map<std::string, std::map<std::string, ProcTotals>> totalsByBin;
 
     std::string processName = "";
     auto preferredGroups = ST.loadPreferredGroupsFromYaml(procYamlPath);
@@ -526,28 +524,101 @@ int main(int argc, char** argv) {
                 json_node = BuildFitInput::loadCutsUser(json_node, allUserCuts, false);
                 for (const auto &c : finalCutsExpanded) if (!c.empty()) json_node = json_node.Filter(c);
                 for (const auto &vc : validUserCuts) json_node = json_node.Filter(vc.expr);
+
+                // --- basic nominal ---
                 auto cnt = json_node.Count();
                 auto sumW = json_node.Sum<double>("weight_scaled");
                 auto sumW2 = json_node.Sum<double>("weight_sq_scaled");
-            
+                
                 unsigned long long n_entries = cnt.GetValue();
                 double sW = sumW.GetValue();
                 double sW2Val = sumW2.GetValue();
-                double err = (sW2Val>=0)?std::sqrt(sW2Val):0.0;
-            
-                // --- NEW: accumulate totals per-process per-file only ONCE ---
-                if (fileResultsByBin.find(bin) == fileResultsByBin.end() ||
-                    fileResultsByBin[bin].find(key) == fileResultsByBin[bin].end() ||
+                double err = (sW2Val >= 0.0) ? std::sqrt(sW2Val) : 0.0;
+                
+                // Prepare container for this file
+                FileYields fy;
+                fy.nominal = { (double)n_entries, sW, err };
+                
+                // --- For each systematic compute Up/Down sums ---
+                if(!IsData){
+                    for (const auto &s : kDefaultSystematics) {
+                        std::string colUp   = "weight_scaled_" + s.tag + "Up";
+                        std::string colDown = "weight_scaled_" + s.tag + "Down";
+                    
+                        // Sum for Up
+                        double sum_up = 0.0, sum2_up = 0.0;
+                        try {
+                            sum_up  = json_node.Sum<double>(colUp).GetValue();
+                            std::string colUp2 = colUp;
+                            colUp2.replace(0, strlen("weight_scaled_"), "weight_sq_");
+                            sum2_up = json_node.Sum<double>(colUp2).GetValue();
+                            // Note: if weight_sq_<syst> is not defined, instead use Sum of squared variation column if available.
+                        } catch (...) {
+                            // fallback: if weight_sq variant isn't present, estimate err from nominal relative uncertainty or leave 0.
+                            sum2_up = 0.0;
+                        }
+                        double err_up = (sum2_up >= 0.0) ? std::sqrt(sum2_up) : 0.0;
+                    
+                        // Sum for Down
+                        double sum_down = 0.0, sum2_down = 0.0;
+                        try {
+                            // recompute names since we mutated colUp above
+                            std::string colUpName = "weight_scaled_" + s.tag + "Up";
+                            std::string colDownName = "weight_scaled_" + s.tag + "Down";
+                            sum_down  = json_node.Sum<double>(colDownName).GetValue();
+                            // as above for sum2_down - might not have a weight_sq for each syst
+                            std::string colDown2 = colDown;
+                            colDown2.replace(0, strlen("weight_scaled_"), "weight_sq_");
+                            sum2_down = json_node.Sum<double>(colDown2).GetValue();
+                        } catch (...) {
+                            sum2_down = 0.0;
+                        }
+                        double err_down = (sum2_down >= 0.0) ? std::sqrt(sum2_down) : 0.0;
+                    
+                        // Record into file yields
+                        SystYields sy;
+                        sy.up   = { (double)n_entries, sum_up, err_up };
+                        sy.down = { (double)n_entries, sum_down, err_down };
+                        fy.systs[s.tag] = sy;
+                    }
+                }
+                
+                // --- NEW: store per-file result and accumulate into totals (only once per-file) ---
+                if (fileResultsByBin[bin].find(key) == fileResultsByBin[bin].end() ||
                     fileResultsByBin[bin][key].find(rootFilePath) == fileResultsByBin[bin][key].end())
                 {
-                    // record per-bin, per-process, per-rootfile
-                    fileResultsByBin[bin][key][rootFilePath] = { (double)n_entries, sW, err};
-            
-                    // Accumulate totals (do this only once per process per file)
+                    // Record per-bin, per-process, per-rootfile
+                    fileResultsByBin[bin][key][rootFilePath] = fy;
+                
+                    // Accumulate totals
                     auto &tot = totalsByBin[bin][key];
-                    tot[0] += (double)n_entries;
-                    tot[1] += sW;
-                    tot[2] += err*err; // we accumulate err^2 and sqrt later
+                
+                    // nominal
+                    tot.nominal[0] += (double)n_entries;
+                    tot.nominal[1] += sW;
+                    // accumulate variance (we will sqrt at the end) -> store as sum(sigma^2)
+                    // We will convert to final error by sqrt at finalization step; store as sum2 in tmp slot
+                    // To remain compatible with earlier flow, store accumulated squared error in nominal[2] temporarily
+                    tot.nominal[2] += (err * err);
+                
+                    // systematics accumulation
+                    if(!IsData){
+                        for (const auto &s_kv : fy.systs) {
+                            const std::string &stag = s_kv.first;
+                            const SystYields &sy = s_kv.second;
+                
+                            // Ensure entry exists
+                            auto &dest_syst = tot.systs[stag];
+                            // accumulate up
+                            dest_syst.up[0]  += sy.up[0];   // entries (will be the same)
+                            dest_syst.up[1]  += sy.up[1];   // sum
+                            dest_syst.up[2]  += (sy.up[2] * sy.up[2]); // accumulate variance (err^2)
+                            // accumulate down
+                            dest_syst.down[0]+= sy.down[0];
+                            dest_syst.down[1]+= sy.down[1];
+                            dest_syst.down[2]+= (sy.down[2] * sy.down[2]);
+                        }
+                    }
                 }
             }
         } // end loop over bins
@@ -564,57 +635,77 @@ int main(int argc, char** argv) {
     // finalize totals: convert accumulated err^2 -> sqrt(err^2)
     for (auto &bin_kv : totalsByBin) {
         for (auto &proc_kv : bin_kv.second) {
-            proc_kv.second[2] = std::sqrt(proc_kv.second[2]);
+            auto &tot = proc_kv.second;
+    
+            // nominal
+            tot.nominal[2] = std::sqrt(tot.nominal[2]);
+    
+            // each syst
+            for (auto &syst_kv : tot.systs) {
+                auto &sy = syst_kv.second;
+    
+                sy.up[2]   = std::sqrt(sy.up[2]);
+                sy.down[2] = std::sqrt(sy.down[2]);
+            }
         }
     }
 
     // write JSON: if an explicit --json-output base was given, produce a single aggregated JSON
-    // that contains one top-level key per bin. Otherwise, write per-bin JSON files
     if (doJSON) {
         if (!outputJsonPathBase.empty()) {
-            // Write a single JSON file with one top-level key per bin
             std::ofstream ofs(outputJsonPathBase);
             if (!ofs) {
                 std::cerr << "[BFI_condor] ERROR opening JSON for write: " << outputJsonPathBase << "\n";
                 delete BFI;
                 return 5;
             }
-
+    
             ofs << "{\n";
-
+    
             for (size_t ib = 0; ib < binNames.size(); ++ib) {
                 const auto &bin = binNames[ib];
                 if (ib) ofs << ",\n";
                 ofs << "  \"" << bin << "\": {\n";
-
-                // Ensure per-bin totals have stddev (sqrt of variance) for writeout.
-                // Create a local copy so we do not mutate the on-disk accumulation semantics.
-                std::map<std::string, std::array<double,3>> totals_for_write;
+    
+                // totals_for_write should mirror the in-memory totals type (ProcTotals)
+                std::map<std::string, ProcTotals> totals_for_write;
                 auto itT = totalsByBin.find(bin);
                 if (itT != totalsByBin.end()) {
                     totals_for_write = itT->second;
-                    for (auto &proc_kv : totals_for_write) {
-                        proc_kv.second[2] = (proc_kv.second[2] >= 0.0) ? std::sqrt(proc_kv.second[2]) : 0.0;
-                    }
                 }
-
-                // fileResults for this bin
-                std::map<std::string, std::map<std::string,std::array<double,3>>> files_for_write;
+    
+                std::map<std::string, std::map<std::string, FileYields>> files_for_write;
                 auto itF = fileResultsByBin.find(bin);
                 if (itF != fileResultsByBin.end()) {
-                    files_for_write = itF->second;
+                    const auto &procMap = itF->second; // process -> key -> filePath -> FileYields
+                
+                    for (const auto &proc_kv : procMap) {
+                        const std::string &proc = proc_kv.first;
+                        const auto &keyMap = proc_kv.second; // key -> filePath -> FileYields
+                
+                        // flatten: take all filePath -> FileYields for this process
+                        std::map<std::string, FileYields> mergedFiles;
+                        for (auto itF = keyMap.begin(); itF != keyMap.end(); ++itF) {
+                            const std::string &fName = itF->first;
+                            const FileYields &fy = itF->second;
+                            mergedFiles[fName] = fy;
+                        }
+                        files_for_write[proc] = mergedFiles;
+                    }
                 }
-
-                // Iterate samples (keys in totals_for_write)
+                  
+                // Iterate samples (process keys come from totals_for_write)
                 writeSamplesJSON(ofs, files_for_write, totals_for_write, "  ");
                 ofs << "\n  }"; // close this bin
             } // end bins loop
-
+    
             ofs << "\n}\n";
             ofs.close();
-
+    
             std::cout << "[BFI_condor] Wrote JSON output to: " << outputJsonPathBase << std::endl;
-        } else { std::cout << "[BFI_condor] NEED TO PROVIDE --json-output"; }
+        } else {
+            std::cout << "[BFI_condor] NEED TO PROVIDE --json-output";
+        }
     }
 
     if(histFile) histFile->Close();

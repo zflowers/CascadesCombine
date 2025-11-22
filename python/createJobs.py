@@ -25,6 +25,11 @@ pySampleTool = load_pybind_module("pySampleTool", libs_dir)
 # ----------------------------------------
 # Utilities
 # ----------------------------------------
+def chunk(lst, n):
+    """Yield successive n-sized chunks from lst."""
+    for i in range(0, len(lst), n):
+        yield lst[i:i+n]
+
 def sanitize(s):
     s = re.sub(r'[^A-Za-z0-9_.-]', '_', s)
     return s[:200]
@@ -158,6 +163,8 @@ getenv                  = True
 # ----------------------------------------
 def build_jobs(tool, bin_name, cuts, lep_cuts, predef_cuts, user_cuts, sms_filters, hist_yaml_file=None):
     jobs = []
+    # desired number of filters per job
+    sms_per_job = 10
 
     def make_base_job(ds, fpath):
         return {
@@ -191,18 +198,17 @@ def build_jobs(tool, bin_name, cuts, lep_cuts, predef_cuts, user_cuts, sms_filte
                 sig_type = "sms"
             elif "Cascades" in fpath:
                 sig_type = "cascades"
-
-            # one job per SMS filter if applicable
+            
             if sig_type == "sms" and sms_filters:
-                for filt in sms_filters:
+                for filt_group in chunk(sms_filters, sms_per_job):
                     job = {
                         **base,
                         "sig_type": sig_type,
-                        "sms_filters": [filt],
+                        "sms_filters": filt_group,
                     }
                     jobs.append(job)
             else:
-                job = {
+                job = { 
                     **base,
                     "sig_type": sig_type,
                 }
@@ -308,11 +314,11 @@ def write_submit_file(
         sig_type = job.get("sig_type", None)
         sms_filters = job.get("sms_filters", [])
 
-        #base = sanitize(f"{bin_name}_{ds}_{fname_stem}" + (f"_{sms_filters[0]}" if sms_filters else ""))
         sub_stem = Path(submit_path).stem
         base_raw = f"{sub_stem}_{ds}_{fname_stem}"
         if sms_filters:
-            base_raw += f"_{sms_filters[0]}"
+            filt_tag = "_".join(sms_filters)
+            base_raw += f"_{filt_tag}"
         # sanitize but keep informative length
         base = sanitize_for_base(base_raw, maxlen=240)
         job["base"] = base
@@ -434,7 +440,7 @@ def write_submit_file(
         if sig_type:
             args_list.append(f"--sig-type {sig_type}")
         if sms_filters:
-            args_list.extend(["--sms-filters", sms_filters[0]])
+            args_list.extend(["--sms-filters"] + sms_filters)
 
         args_str = " ".join(a for a in args_list if a and not a.isspace())
         job["args_str"] = args_str
@@ -484,6 +490,7 @@ def write_submit_file(
             "Attempting to submit jobs to",
             "Unable to connect to",
             "Failed to connect",
+            "Read failure during security negotiation",
         ]
     
         # Hold condor submissions if over max threshold

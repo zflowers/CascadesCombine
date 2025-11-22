@@ -147,8 +147,18 @@ void Plot_Stack(const string& hname,
     }
     TH1D* h_DATA = nullptr;
     if (dataHist) h_DATA = (TH1D*) dataHist->Clone("TOT_DATA");
-    double pad_ysplit = 0.5;
+    // --- Build total background uncertainty band ---
+    TH1D* h_BKG_ERR = nullptr;
+    if (h_BKG) {
+        h_BKG_ERR = (TH1D*) h_BKG->Clone("h_BKG_ERR");
+        h_BKG_ERR->SetFillColor(kGray+2);
+        h_BKG_ERR->SetFillStyle(3354);
+        h_BKG_ERR->SetLineWidth(0);
+        h_BKG_ERR->SetMarkerSize(0);
+    }
+    TH1D* h_ratio_err = nullptr;
 
+    double pad_ysplit = 0.5;
     string canvas_name = "can_stack_" + hname;
     TCanvas* can = new TCanvas(canvas_name.c_str(), canvas_name.c_str(), 1200, 700);
     can->SetLeftMargin(hlo);
@@ -222,6 +232,10 @@ void Plot_Stack(const string& hname,
     }
 
     if (h_DATA) { h_DATA->SetMarkerStyle(20); h_DATA->SetMarkerSize(0.8); h_DATA->SetLineColor(kBlack); DrawLogSmart(h_DATA, "SAME E"); }
+    // --- Draw uncertainty band on top pad ---
+    if (h_DATA && h_BKG_ERR) {
+        h_BKG_ERR->Draw("SAME E2");
+    }
 
     TPad* pad_ratio = nullptr;
 
@@ -281,6 +295,27 @@ void Plot_Stack(const string& hname,
         h_ratio->SetLineColor(kBlack);
 
         h_ratio->Draw("EP");
+        // --- Background uncertainty band in ratio plot ---
+        if (h_DATA && h_BKG_ERR) {
+            h_ratio_err = (TH1D*) h_BKG_ERR->Clone("h_ratio_err");
+            for (int i = 1; i <= h_ratio_err->GetNbinsX(); ++i) {
+                double bc = h_BKG->GetBinContent(i);
+                double be = h_BKG->GetBinError(i);
+                if (bc > 0) {
+                    h_ratio_err->SetBinContent(i, 1.0);
+                    h_ratio_err->SetBinError(i, be / bc);
+                } else {
+                    h_ratio_err->SetBinContent(i, 0);
+                    h_ratio_err->SetBinError(i, 0);
+                }
+            }
+            h_ratio_err->SetFillColor(kGray+2);
+            h_ratio_err->SetFillStyle(3354);
+            h_ratio_err->SetLineWidth(0);
+            h_ratio_err->SetMarkerSize(0);
+            h_ratio_err->Draw("SAME E2");
+        }
+
         pad_ratio->Modified();
     }
 
@@ -327,6 +362,7 @@ void Plot_Stack(const string& hname,
         }
     }
     if (h_DATA) leg->AddEntry(h_DATA,"Data","EP");
+    if (h_BKG_ERR) leg->AddEntry(h_BKG_ERR, "Bkg unc.", "F");
     leg->Draw();
 
     TLatex l;
@@ -357,7 +393,7 @@ void Plot_Stack(const string& hname,
     TString stackPdf = Form("%spdfs/%s/%s.pdf", outputDir.c_str(), BinName.c_str(), SanitizeString(canvas_name).c_str());
     gErrorIgnoreLevel = 1001; can->SaveAs(stackPdf); gErrorIgnoreLevel = 0;
 
-    delete can; if(h_BKG) delete h_BKG; if(h_DATA) delete h_DATA;
+    delete can; if(h_BKG) delete h_BKG; if(h_DATA) delete h_DATA; if(h_BKG_ERR) delete h_BKG_ERR; if(h_ratio_err) delete h_ratio_err;
 }
 
 void PlotMergedStack(const std::string& mergedName,

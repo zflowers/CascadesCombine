@@ -53,12 +53,22 @@ int main(int argc, char* argv[]) {
         // Loop over processes
         for (auto& [procName, values] : procMap.items()) {
             if (procName.find("data") != std::string::npos || procName.find("Data") != std::string::npos) hasData = true;
-            if (!values.is_array() || values.size() < 3) {
-                cerr << "[WARN] Skipping " << binName << " : " << procName << " (bad format)" << endl;
+
+            // Expect: { "nominal":[...], "systematics":{...} }
+            if (!values.contains("nominal")) {
+                cerr << "[WARN] Skipping " << binName << " : " << procName << " (missing nominal)" << endl;
                 continue;
             }
-            double weighted = values[1].get<double>(); // weighted events
-            double err      = values[2].get<double>(); // stat error
+            
+            const auto& nom = values["nominal"];
+            if (!nom.is_array() || nom.size() < 3) {
+                cerr << "[WARN] Bad nominal format for " << binName << " : " << procName << endl;
+                continue;
+            }
+            
+            double weighted = nom[1].get<double>(); // sumW
+            double err      = nom[2].get<double>(); // stat error
+
             // Create a 1-bin histogram
             TH1F* h = new TH1F(Form("%s__%s", binName.c_str(), procName.c_str()), Form("%s__%s", binName.c_str(), procName.c_str()), 1, 0, 1);
             h->SetBinContent(1, weighted);

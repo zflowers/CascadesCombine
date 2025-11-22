@@ -233,8 +233,8 @@ static std::vector<DerivedVar> loadDerivedVariablesYAML(const std::string &yamlP
 
 static void writeSamplesJSON(
     std::ostream& os,
-    const std::map<std::string, std::map<std::string,std::array<double,3>>>& files_for_write,
-    const std::map<std::string, std::array<double,3>>& totals_for_write,
+    const std::map<std::string, std::map<std::string, FileYields>>& files_for_write,
+    const std::map<std::string, ProcTotals>& totals_for_write,
     const std::string& indent = "  "
 )
 {
@@ -244,12 +244,12 @@ static void writeSamplesJSON(
         firstSample = false;
 
         const std::string& sname = kv.first;
-        const auto& totalVals   = kv.second;
-        std::string sampleId    = GetSampleNameFromKey(sname);
+        std::string sampleId     = GetSampleNameFromKey(sname);
 
         os << indent << "  \"" << sampleId << "\": {\n";
-        os << indent << "    \"files\": {\n";
 
+        // --- Files ---
+        os << indent << "    \"files\": {\n";
         bool firstFile = true;
         auto itFiles = files_for_write.find(sname);
         if (itFiles != files_for_write.end()) {
@@ -257,20 +257,40 @@ static void writeSamplesJSON(
                 if (!firstFile) os << ",\n";
                 firstFile = false;
 
-                os << indent << "      \"" << fkv.first << "\": ["
-                   << (long long)fkv.second[0] << ", "
-                   << fkv.second[1] << ", "
-                   << fkv.second[2] << "]";
+                const std::string& fname = fkv.first;
+                const FileYields& fy = fkv.second;
+
+                os << indent << "      \"" << fname << "\": {\n";
+
+                // Nominal
+                os << indent << "        \"nominal\": ["
+                   << (long long)fy.nominal[0] << ", "
+                   << fy.nominal[1] << ", "
+                   << fy.nominal[2] << "],\n";
+
+                // Systematics
+                os << indent << "        \"systematics\": {\n";
+                bool firstS = true;
+                for (const auto& s_kv : fy.systs) {
+                    if (!firstS) os << ",\n";
+                    firstS = false;
+
+                    const std::string& stag = s_kv.first;
+                    const SystYields& sy = s_kv.second;
+
+                    os << indent << "          \"" << stag << "\": {\n";
+                    os << indent << "            \"Up\":   ["
+                       << (long long)sy.up[0] << ", " << sy.up[1] << ", " << sy.up[2] << "],\n";
+                    os << indent << "            \"Down\": ["
+                       << (long long)sy.down[0] << ", " << sy.down[1] << ", " << sy.down[2] << "]\n";
+                    os << indent << "          }";
+                }
+                os << "\n" << indent << "        }\n"; // close systematics
+                os << indent << "      }"; // close file
             }
         }
-
-        os << "\n" << indent << "    },\n";
-        os << indent << "    \"totals\": ["
-           << (long long)totalVals[0] << ", "
-           << totalVals[1] << ", "
-           << totalVals[2] << "]\n";
-
-        os << indent << "  }";
+        os << "\n" << indent << "    }\n"; // close files
+        os << indent << "  }"; // close sample
     }
 }
 
@@ -302,8 +322,8 @@ ROOT::RDF::RNode MultiSystWeights(ROOT::RDF::RNode node,
         "syst_nomin_product",
         [year](double met, double pu) {
             double metEff = (year > 2018 ? 1.0 : met); // hack since trigSF in Run3 samples set to 0
-            //return metEff * pu;
-            return 1.; // turn off while debugging
+            return metEff * pu;
+            //return 1.; // turn off while debugging
         },
         {"MetTrigSFweight", "PUweight"}
     );
@@ -321,25 +341,29 @@ ROOT::RDF::RNode MultiSystWeights(ROOT::RDF::RNode node,
 
     // --- Up/Down variations ---
     for (const auto& s : systs)
-    {
+    {   
         std::string colUp   = "weight_scaled_" + s.tag + "Up";
         std::string colDown = "weight_scaled_" + s.tag + "Down";
-
+    
         node = node.Define(
             colUp,
-            [=](double base, double nomProd, double nomVal, double upVal, double){
-                return base * nomProd * (upVal / nomVal);
-            },
+            [=](double base, double nomProd, double nomVal, double upVal, double) {
+                double val = base * nomProd * (upVal / nomVal);
+                if (!std::isfinite(val)) val = base; // fallback if NaN or Inf
+                return val;
+            },  
             {"weight_scaled_raw", "syst_nomin_product", s.nominal, s.up, s.down}
-        );
-
+        );  
+    
         node = node.Define(
             colDown,
-            [=](double base, double nomProd, double nomVal, double, double downVal){
-                return base * nomProd * (downVal / nomVal);
-            },
+            [=](double base, double nomProd, double nomVal, double, double downVal) {
+                double val = base * nomProd * (downVal / nomVal);
+                if (!std::isfinite(val)) val = base; // fallback if NaN or Inf
+                return val;
+            },  
             {"weight_scaled_raw", "syst_nomin_product", s.nominal, s.up, s.down}
-        );
+        );  
     }
 
     return node;

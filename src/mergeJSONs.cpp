@@ -110,10 +110,15 @@ bool mergeJSONsFlattenedWithFileBreakdown(
         return jsonKey;
     };
 
-    // fileContribs[bin][group][filePath] -> array{count, sumW, sumW2}
-    std::map<std::string, std::map<std::string, std::map<std::string, std::array<double,3>>>> fileContribs;
+    // Types for clarity:
+    using Triple = std::array<double,3>; // [count, sumW, sumW2]
+    // fileContribs[bin][group][filePath] -> Triple (sumW2 stored)
+    std::map<std::string, std::map<std::string, std::map<std::string, Triple>>> fileContribs;
 
-    // Read all input JSONs and populate fileContribs
+    // fileSystContribs[bin][group][syst][direction]["filePath"] -> Triple
+    std::map<std::string, std::map<std::string, std::map<std::string, std::map<std::string, std::map<std::string, Triple>>>>> fileSystContribs;
+
+    // Read all input JSONs and populate fileContribs and fileSystContribs
     for (const auto &fname : inputFiles) {
         std::ifstream ifs(fname);
         if (!ifs.is_open()) {
@@ -144,10 +149,12 @@ bool mergeJSONsFlattenedWithFileBreakdown(
                         const std::string filePath = fkv.key();
                         const json &fjson = fkv.value();
 
+                        // --- read nominal ---
                         double fcnt = 0.0;
                         double fsumW = 0.0;
                         double fvar = 0.0; // store sumW2 internally
 
+                        // support both legacy array-at-file-level or object-with-"nominal"
                         if (fjson.is_array()) {
                             if (fjson.size() > 0 && !fjson[0].is_null()) fcnt = fjson[0].get<double>();
                             if (fjson.size() > 1 && !fjson[1].is_null()) fsumW = fjson[1].get<double>();
@@ -155,50 +162,76 @@ bool mergeJSONsFlattenedWithFileBreakdown(
                                 double ferr = fjson[2].get<double>();
                                 fvar = ferr * ferr;
                             }
+                        } else if (fjson.contains("nominal") && fjson["nominal"].is_array()) {
+                            const auto &nom = fjson["nominal"];
+                            if (nom.size() > 0 && !nom[0].is_null()) fcnt = nom[0].get<double>();
+                            if (nom.size() > 1 && !nom[1].is_null()) fsumW = nom[1].get<double>();
+                            if (nom.size() > 2 && !nom[2].is_null()) {
+                                double ferr = nom[2].get<double>();
+                                fvar = ferr * ferr;
+                            }
+                        } else {
+                            // If neither format is present, leave zeros and warn minimally.
+                            // (Don't abort; allow merging across partial outputs.)
                         }
 
                         auto &dst = fileContribs[binName][group][filePath];
                         dst[0] += fcnt;
                         dst[1] += fsumW;
                         dst[2] += fvar;
-                    }
+
+                        // --- read systematics (if present) ---
+                        if (fjson.contains("systematics") && fjson["systematics"].is_object()) {
+                            for (auto &systItem : fjson["systematics"].items()) {
+                                const std::string systName = systItem.key();
+                                const json &dirs = systItem.value();
+                                if (!dirs.is_object()) continue;
+
+                                for (auto &dirItem : dirs.items()) {
+                                    const std::string direction = dirItem.key(); // "Up" or "Down" or other
+                                    const json &arr = dirItem.value();
+
+                                    double scnt = 0.0;
+                                    double ssumW = 0.0;
+                                    double svar = 0.0;
+
+                                    if (arr.is_array()) {
+                                        if (arr.size() > 0 && !arr[0].is_null()) scnt  = arr[0].get<double>();
+                                        if (arr.size() > 1 && !arr[1].is_null()) ssumW = arr[1].get<double>();
+                                        if (arr.size() > 2 && !arr[2].is_null()) {
+                                            double serr = arr[2].get<double>();
+                                            svar = serr * serr;
+                                        }
+                                    } else if (arr.is_object()) {
+                                        // defensive: some producers might put a nested object; skip
+                                        continue;
+                                    }
+
+                                    auto &sdst = fileSystContribs[binName][group][systName][direction][filePath];
+                                    sdst[0] += scnt;
+                                    sdst[1] += ssumW;
+                                    sdst[2] += svar;
+                                } // dirItem
+                            } // systItem
+                        } // has systematics
+                    } // files loop
                 } else {
-                    // fallback: attribute totals to a synthetic file key unique to this input JSON + sample key
-                    const json totalsJson = sampleObj.contains("totals") ? sampleObj["totals"] : json();
-
-                    double tcnt = 0.0;
-                    double tsumW = 0.0;
-                    double tvar = 0.0;
-
-                    if (totalsJson.is_array()) {
-                        if (totalsJson.size() > 0 && !totalsJson[0].is_null()) tcnt = totalsJson[0].get<double>();
-                        if (totalsJson.size() > 1 && !totalsJson[1].is_null()) tsumW = totalsJson[1].get<double>();
-                        if (totalsJson.size() > 2 && !totalsJson[2].is_null()) {
-                            double terr = totalsJson[2].get<double>();
-                            tvar = terr * terr;
-                        }
-                    }
-
-                    std::string syntheticFileKey = std::string("__src__:") + fs::path(fname).filename().string() + ":" + origKey;
-                    auto &dst = fileContribs[binName][group][syntheticFileKey];
-                    dst[0] += tcnt;
-                    dst[1] += tsumW;
-                    dst[2] += tvar;
+                    std::cout << "[mergeJSONs] Need files key in JSON (bin=" << binName << ", sample=" << origKey << ")!\n";
                 }
             } // end sampleItem
         } // end binItem
     } // end inputFiles loop
 
     // Build merged totals by summing file-level contributions.
-    std::map<std::string, std::map<std::string, std::array<double,3>>> merged; // merged[bin][group] -> arr
+    std::map<std::string, std::map<std::string, Triple>> merged; // merged[bin][group] -> arr
     for (const auto &binPair : fileContribs) {
         const std::string binName = binPair.first;
         for (const auto &groupPair : binPair.second) {
             const std::string group = groupPair.first;
 
-            std::array<double,3> acc = {0.,0.,0.}; // [count, sumW, sumW2]
+            Triple acc = {0.,0.,0.}; // [count, sumW, sumW2]
             for (const auto &filePair : groupPair.second) {
-                const std::array<double,3> &farr = filePair.second;
+                const Triple &farr = filePair.second;
 
                 acc[0] += farr[0];
                 acc[1] += farr[1];
@@ -209,8 +242,35 @@ bool mergeJSONsFlattenedWithFileBreakdown(
         }
     }
 
+    // Build merged systematics by summing file-level syst contributions.
+    // mergedSyst[bin][group][syst][direction] -> Triple
+    std::map<std::string, std::map<std::string, std::map<std::string, std::map<std::string, Triple>>>> mergedSyst;
+    for (const auto &binPair : fileSystContribs) {
+        const std::string binName = binPair.first;
+        for (const auto &groupPair : binPair.second) {
+            const std::string group = groupPair.first;
+
+            for (const auto &systPair : groupPair.second) {
+                const std::string systName = systPair.first;
+
+                for (const auto &dirPair : systPair.second) {
+                    const std::string direction = dirPair.first;
+
+                    Triple acc = {0.,0.,0.};
+                    for (const auto &filePair : dirPair.second) {
+                        const Triple &farr = filePair.second;
+                        acc[0] += farr[0];
+                        acc[1] += farr[1];
+                        acc[2] += farr[2];
+                    }
+                    mergedSyst[binName][group][systName][direction] = acc;
+                }
+            }
+        }
+    }
+
     // Prepare filesBreakdown (just reformat fileContribs) if requested
-    auto filesBreakdown = fileContribs; // copy
+    auto filesBreakdown = fileContribs; // copy (nominal only); we'll build a richer outFiles when writing
 
     // ----- NEW: write one merged JSON per bin (robust to arbitrary job-grouping) -----
     auto make_safe = [](const std::string &s) -> std::string {
@@ -240,13 +300,32 @@ bool mergeJSONsFlattenedWithFileBreakdown(
 
         json single;
         for (const auto &samplePair : samples) {
+            const std::string sampleName = samplePair.first;
             const auto &arr = samplePair.second;
             double err = std::sqrt(arr[2]); // arr[2] is sumW2
-            single[binName][samplePair.first] = {
-                arr[0], // count
-                arr[1], // sumW
-                err     // sqrt(sumW2)
-            };
+
+            // main entry with nominal
+            json entry;
+            entry["nominal"] = json::array({ arr[0], arr[1], err });
+
+            // attach systematics if available for this bin/sample
+            auto binSystIt = mergedSyst.find(binName);
+            if (binSystIt != mergedSyst.end()) {
+                auto sampleSystIt = binSystIt->second.find(sampleName);
+                if (sampleSystIt != binSystIt->second.end()) {
+                    for (const auto &systPair : sampleSystIt->second) {
+                        const std::string &systName = systPair.first;
+                        for (const auto &dirPair : systPair.second) {
+                            const std::string &direction = dirPair.first;
+                            const Triple &a = dirPair.second;
+                            double aerr = std::sqrt(a[2]);
+                            entry["systematics"][systName][direction] = json::array({ a[0], a[1], aerr });
+                        }
+                    }
+                }
+            }
+
+            single[binName][sampleName] = entry;
         }
 
         // atomic-ish write: write to tmp then rename
@@ -284,11 +363,31 @@ bool mergeJSONsFlattenedWithFileBreakdown(
                     double ferr = 0.0;
                     if (fvar != 0.0) ferr = std::sqrt(fvar);
 
-                    outFiles[binName][sampleName][filePath] = {
-                        farr[0],   // count
-                        farr[1],   // sumW
-                        ferr       // err = sqrt(sumW2)
-                    };
+                    // build per-file entry including systematics if present
+                    json fileEntry;
+                    fileEntry["nominal"] = json::array({ farr[0], farr[1], ferr });
+
+                    // check for systematics for this file
+                    auto binSIt = fileSystContribs.find(binName);
+                    if (binSIt != fileSystContribs.end()) {
+                        auto sampSIt = binSIt->second.find(sampleName);
+                        if (sampSIt != binSIt->second.end()) {
+                            for (const auto &systPair : sampSIt->second) {
+                                const std::string &systName = systPair.first;
+                                for (const auto &dirPair : systPair.second) {
+                                    const std::string &direction = dirPair.first;
+                                    auto fileSIt = dirPair.second.find(filePath);
+                                    if (fileSIt != dirPair.second.end()) {
+                                        const Triple &ta = fileSIt->second;
+                                        double terr = (ta[2] != 0.0) ? std::sqrt(ta[2]) : 0.0;
+                                        fileEntry["systematics"][systName][direction] = json::array({ ta[0], ta[1], terr });
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    outFiles[binName][sampleName][filePath] = fileEntry;
                 }
             }
         }
@@ -388,4 +487,3 @@ int main(int argc, char **argv) {
 
     return 0;
 }
-

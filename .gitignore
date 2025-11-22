@@ -14,3 +14,4 @@ plots/*
 *.out
 runs/
 scripts/submit_Regions.sh
+*.nfs

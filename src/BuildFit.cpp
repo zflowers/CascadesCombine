@@ -102,169 +102,6 @@ std::string BuildFit::SanitizeName(const std::string &s) {
     return out;
 }
 
-/*
-// --- Replace the inner loop that currently processes `vals` with the block below ---
-
-// Determine canonical nominal values and a map of systematics (if present).
-double nRaw = 0.0, sumW = 0.0, err = 0.0;
-std::map<std::string, std::array<double,3>> syst_map; // key -> {nRaw, sumW, err}
-
-if (vals.is_array() && vals.size() > IDX_ERR) {
-    // legacy: vals is [count, yield, statErr]
-    nRaw = vals[IDX_RAW].get<double>();
-    sumW = vals[IDX_SUMW].get<double>();
-    err  = vals[IDX_ERR].get<double>();
-    // put into nominal slot so later code can treat uniformly
-    syst_map["nominal"] = {nRaw, sumW, err};
-} else if (vals.is_object()) {
-    // Extended: expect "nominal": [...], plus possible "SystUp"/"SystDown" keys
-    if (vals.contains("nominal") && vals["nominal"].is_array() && vals["nominal"].size() > IDX_ERR) {
-        auto &a = vals["nominal"];
-        nRaw = a[IDX_RAW].get<double>();
-        sumW = a[IDX_SUMW].get<double>();
-        err  = a[IDX_ERR].get<double>();
-        syst_map["nominal"] = {nRaw, sumW, err};
-    } else {
-        // Try to see if any numeric array present at top-level (defensive)
-        for (auto itk = vals.begin(); itk != vals.end(); ++itk) {
-            if (itk.value().is_array() && itk.value().size() > IDX_ERR) {
-                auto &a = itk.value();
-                nRaw = a[IDX_RAW].get<double>();
-                sumW = a[IDX_SUMW].get<double>();
-                err  = a[IDX_ERR].get<double>();
-                syst_map["nominal"] = {nRaw, sumW, err};
-                break;
-            }
-        }
-    }
-    // Now gather any Up/Down keys
-    for (auto itk = vals.begin(); itk != vals.end(); ++itk) {
-        std::string key = itk.key();
-        if (key == "nominal") continue;
-        if (itk.value().is_array() && itk.value().size() > IDX_ERR) {
-            auto &a = itk.value();
-            double rn = a[IDX_RAW].get<double>();
-            double rw = a[IDX_SUMW].get<double>();
-            double re = a[IDX_ERR].get<double>();
-            syst_map[key] = {rn, rw, re};
-        }
-    }
-}
-
-// If we didn't manage to find a nominal (shouldn't happen but be defensive), skip process
-if (syst_map.find("nominal") == syst_map.end()) {
-    std::cerr << "[WriteJsonAsFlatHists] WARNING: no nominal for proc " << procOrig << " in bin " << origBin << " — skipping\n";
-    continue;
-}
-
-// Build the base histogram name
-std::string base_hname = bin + "__" + proc;
-if(BFTool::ContainsAnySubstring(procOrig, sigkeys)) {
-    base_hname += "120"; // keep existing behavior
-}
-
-// Write nominal histogram (same as prior behavior)
-{
-    auto &nom = syst_map["nominal"];
-    double nRaw_nom = nom[0];
-    double sumW_nom = nom[1];
-    double err_nom  = nom[2];
-
-    // accumulate totals for data_obs only for bkg processes
-    if (!BFTool::ContainsAnySubstring(procOrig, sigkeys) && !isData) {
-        binTotal += sumW_nom;
-        binRaw   += static_cast<int>(nRaw_nom + 0.5);
-    }
-    if(isData){
-        binData = static_cast<int>(nRaw_nom + 0.5);
-    }
-
-    TH1F *h = new TH1F(base_hname.c_str(), base_hname.c_str(), 1, 0, 1);
-    h->Sumw2();
-    h->SetBinContent(1, sumW_nom);
-    h->SetBinError(1, err_nom);
-    h->SetEntries(static_cast<int>(nRaw_nom + 0.5));
-    h->Write();
-    delete h;
-    ++nWritten;
-}
-
-// Now write systematics histograms. We will write all keys in syst_map except "nominal".
-// Important: Combine/CH expects e.g. process_BTagSFUp and process_BTagSFDown — our keys should be named that way.
-// If an expected Up or Down is missing downstream, you can either add them to JSON or CH will fail
-// Therefore we also provide an option: if a syst has only one of Up/Down present, write the other as a copy of nominal.
-// To implement that behavior you can post-process or rely on JSON to contain both variants.
-// Here, we'll write whatever is present and also ensure both Up/Down exist for any syst family found.
-
- // Build a set of syst base names (strip trailing Up/Down if present)
- std::set<std::string> syst_basenames;
- for (const auto &kv : syst_map) {
-     if (kv.first == "nominal") continue;
-     std::string key = kv.first;
-     if (key.size() > 2 && (key.substr(key.size()-2) == "Up" || key.substr(key.size()-4) == "Down")) {
-         // normalize: if ends with Up/Down, take substring before that
-         if (key.size() > 2 && key.substr(key.size()-2) == "Up") key = key.substr(0, key.size()-2);
-         else if (key.size() > 4 && key.substr(key.size()-4) == "Down") key = key.substr(0, key.size()-4);
-     }
-     syst_basenames.insert(key);
- }
-
- // For each basename ensure we write both Up and Down
- for (const std::string &base : syst_basenames) {
-     std::string upKey   = base + "Up";
-     std::string downKey = base + "Down";
-
-     // Up
-     if (syst_map.find(upKey) != syst_map.end()) {
-         auto &v = syst_map[upKey];
-         TH1F *hup = new TH1F((base_hname + "_" + upKey).c_str(), (base_hname + "_" + upKey).c_str(), 1, 0, 1);
-         hup->Sumw2();
-         hup->SetBinContent(1, v[1]);
-         hup->SetBinError(1, v[2]);
-         hup->SetEntries(static_cast<int>(v[0] + 0.5));
-         hup->Write();
-         delete hup;
-         ++nWritten;
-     } else {
-         // write nominal copy to avoid missing histogram
-         auto &nom = syst_map["nominal"];
-         TH1F *hup = new TH1F((base_hname + "_" + upKey).c_str(), (base_hname + "_" + upKey).c_str(), 1, 0, 1);
-         hup->Sumw2();
-         hup->SetBinContent(1, nom[1]);
-         hup->SetBinError(1, nom[2]);
-         hup->SetEntries(static_cast<int>(nom[0] + 0.5));
-         hup->Write();
-         delete hup;
-         ++nWritten;
-     }
-
-     // Down
-     if (syst_map.find(downKey) != syst_map.end()) {
-         auto &v = syst_map[downKey];
-         TH1F *hdown = new TH1F((base_hname + "_" + downKey).c_str(), (base_hname + "_" + downKey).c_str(), 1, 0, 1);
-         hdown->Sumw2();
-         hdown->SetBinContent(1, v[1]);
-         hdown->SetBinError(1, v[2]);
-         hdown->SetEntries(static_cast<int>(v[0] + 0.5));
-         hdown->Write();
-         delete hdown;
-         ++nWritten;
-     } else {
-         // write nominal copy
-         auto &nom = syst_map["nominal"];
-         TH1F *hdown = new TH1F((base_hname + "_" + downKey).c_str(), (base_hname + "_" + downKey).c_str(), 1, 0, 1);
-         hdown->Sumw2();
-         hdown->SetBinContent(1, nom[1]);
-         hdown->SetBinError(1, nom[2]);
-         hdown->SetEntries(static_cast<int>(nom[0] + 0.5));
-         hdown->Write();
-         delete hdown;
-         ++nWritten;
-     }
- }
-
-*/
-
 void BuildFit::WriteJsonAsFlatHists(JSONFactory* j, const std::string &outFile, std::map<std::string,float>* out_obs_rates) {
     constexpr int IDX_RAW  = 0; // raw events
     constexpr int IDX_SUMW = 1; // weighted yield
@@ -292,9 +129,13 @@ void BuildFit::WriteJsonAsFlatHists(JSONFactory* j, const std::string &outFile, 
             const std::string procOrig = itProc.key();
             const std::string proc = SanitizeName(procOrig);
             if (proc.find("data") != std::string::npos || proc.find("Data") != std::string::npos) isData = true;
-            const json &vals = itProc.value();
+            const json &valsObj = itProc.value();
+            
+            if (!valsObj.contains("nominal")) continue;
+            const json &vals = valsObj["nominal"];
+            
             if (!vals.is_array() || vals.size() <= IDX_ERR) continue;
-
+            
             double nRaw = vals[IDX_RAW].get<double>();
             double sumW = vals[IDX_SUMW].get<double>();
             double err  = vals[IDX_ERR].get<double>();
@@ -322,6 +163,47 @@ void BuildFit::WriteJsonAsFlatHists(JSONFactory* j, const std::string &outFile, 
             h->Write();
             delete h;
             ++nWritten;
+
+            // --- Write systematics (if present) ---
+            if (valsObj.contains("systematics") && !isData) {
+                const json &systs = valsObj["systematics"];
+                for (auto itS = systs.begin(); itS != systs.end(); ++itS) {
+                    const std::string systNameOrig = itS.key();
+                    const std::string systName = SanitizeName(systNameOrig);
+                    const json &ud = itS.value();
+            
+                    // Expecting ud["Up"] and ud["Down"]
+                    for (std::string_view udKey : {"Up", "Down"}) {
+                        if (!ud.contains(std::string(udKey))) continue;
+                        const json &arr = ud[std::string(udKey)];
+                        if (!arr.is_array() || arr.size() <= IDX_ERR) continue; 
+                        double nRaw_ud = arr[IDX_RAW].get<double>();
+                        double sumW_ud = arr[IDX_SUMW].get<double>();
+                        double err_ud  = arr[IDX_ERR].get<double>();
+            
+                        // Combine expected name:
+                        //   bin__proc__systNameUp
+                        //   bin__proc__systNameDown
+                        std::string hsyst =
+                            bin + "__" + proc + "__" + systName + std::string(udKey);
+            
+                        // Signal naming: append dummy mass value
+                        if (BFTool::ContainsAnySubstring(procOrig, sigkeys)) {
+                            hsyst += "120";
+                        }
+            
+                        TH1F *hs = new TH1F(hsyst.c_str(), hsyst.c_str(), 1, 0, 1);
+                        hs->Sumw2();
+                        hs->SetBinContent(1, sumW_ud);
+                        hs->SetBinError(1, err_ud);
+                        hs->SetEntries(nRaw_ud);
+            
+                        hs->Write();
+                        delete hs;
+                        ++nWritten;
+                    }
+                }
+            }
         }
 
         if (out_obs_rates) {
@@ -414,6 +296,29 @@ void BuildFit::AddMCStatProcByProc(const std::string& bin, JSONFactory* j) {
     }
 }
 
+void BuildFit::AddShapeSystsFromJSON(JSONFactory* j) {
+    for (const auto& itBin : j->j.items()) {
+        const std::string& bin = itBin.key();
+        const json& binJson = itBin.value();
+
+        for (const auto& itProc : binJson.items()) {
+            const std::string proc = itProc.key();
+            const json& valsObj = itProc.value();
+
+            if (!valsObj.contains("systematics")) continue;
+            const json& systs = valsObj["systematics"];
+
+            for (const auto& itS : systs.items()) {
+                const std::string systName = SanitizeName(itS.key());
+                
+                // REGISTER this systematic with CombineHarvester
+                cb.cp().bin({bin}).process({proc})
+                    .AddSyst(cb, systName, "shape", SystMap<>::init(1.0));
+            }
+        }
+    }
+}
+
 // based on https://cms-analysis.github.io/HiggsAnalysis-CombinedLimit/part2/bin-wise-stats/?utm_source=chatgpt.com#description-of-the-algorithm
 void BuildFit::AddMCStatBinByBin(JSONFactory* j) {
     constexpr int IDX_COUNT = 0; // raw events
@@ -428,7 +333,7 @@ void BuildFit::AddMCStatBinByBin(JSONFactory* j) {
         double totalSumW = 0.0; // weighted
         int totalSum = 0; // raw
         double accumVar_gen = 0.0; // accumulate G2 (sum of gen_weight^2)
-        double accumG = 0.0;      // accumulate G
+        double accumG = 0.0;       // accumulate G
         double totalErr2_scaled = 0.0; // err sq
 
         // Step 1:
@@ -549,6 +454,7 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
             bins_with_signal.push_back(binname);
         }
     }
+    AddShapeSystsFromJSON(j); // needs to be before ExtractShapes
     cb.cp().backgrounds().ExtractShapes(json_to_root_file, "$BIN__$PROCESS", "$BIN__$PROCESS__$SYSTEMATIC");
     
     // Only extract signal shapes for bins where we actually have signal histograms

@@ -134,8 +134,11 @@ class CondorJobCountMonitor:
     
         transient_errors = [
             "Can't find address of local schedd",
+            "Querying the CMS LPC pool",
+            "Attempting to submit jobs to",
             "Unable to connect to",
             "Failed to connect",
+            "Read failure during security negotiation",
         ]
     
         while attempt < max_retries:
@@ -150,7 +153,7 @@ class CondorJobCountMonitor:
             except subprocess.CalledProcessError as e:
                 output = (e.output or "").strip()
                 if any(sig in output for sig in transient_errors):
-                    wait_time = min(backoff * attempt, 10)  # cap at 10s
+                    wait_time = min(backoff * attempt, 60)  # cap at 60s
                     print(f"[warn] condor_q transient schedd error "
                           f"(cluster={cluster_id}, schedd={schedd}, attempt={attempt}/{max_retries}). "
                           f"Retrying in {wait_time}s...")
@@ -273,7 +276,7 @@ class CondorJobCountMonitor:
             except Exception as e:
                 print(f"[CondorJobCountMonitor] Error retrieving job statuses: {e}", flush=True)
             check_count += 1
-            time.sleep(5)
+            time.sleep(15)
     
     def wait_until_jobs_below(self, clusters: Optional[Iterable[Tuple[str, Optional[str]]]] = None):
         check_count = 0
@@ -342,7 +345,7 @@ class CondorJobCountMonitor:
             except Exception as e:
                 print(f"[CondorJobCountMonitor] Error while waiting for jobs: {e}", flush=True)
             check_count += 1
-            time.sleep(5)
+            time.sleep(15)
 
     def get_auto_THRESHOLD(self):
         result = subprocess.run(

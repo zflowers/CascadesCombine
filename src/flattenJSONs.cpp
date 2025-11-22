@@ -1,8 +1,17 @@
 // flattenJSONs.cpp
 // Scans one or more input directories for per-file JSONs (the analyzer output),
 // merges them into a single flattened JSON, and writes the result.
-// The flattened layout uses 3 elements per sample:
-// [ count, sumW, err = sqrt(sum of sumW2) ]
+// Format: each sample has:
+//
+//   {
+//      "nominal": [cnt, sumW, err],
+//      "systematics": {
+//         "SYSTNAME": {
+//            "Up":   [cnt, sumW, err],
+//            "Down": [cnt, sumW, err]
+//         }
+//      }
+//   }
 
 #include <iostream>
 #include <fstream>
@@ -16,21 +25,53 @@
 namespace fs = std::filesystem;
 using json = nlohmann::json;
 
-int main(int argc, char** argv) {
+// Helper: read a 3-number array from JSON (cnt,sumW,err)
+static inline void readTriple(const json &arr, double &cnt, double &sumW, double &var)
+{
+    cnt = sumW = var = 0.0;
+    if (!arr.is_array()) return;
+
+    if (arr.size() > 0 && !arr[0].is_null()) cnt = arr[0].get<double>();
+    if (arr.size() > 1 && !arr[1].is_null()) sumW = arr[1].get<double>();
+
+    if (arr.size() > 2 && !arr[2].is_null()) {
+        double err = arr[2].get<double>();
+        var = err * err;
+    }
+}
+
+int main(int argc, char** argv)
+{
     if (argc < 3) {
-        std::cerr << "Usage: " << argv[0] << " <input_dir1> [<input_dir2> ...] <output_file>\n";
+        std::cerr << "Usage: " << argv[0]
+                  << " <input_dir1> [<input_dir2> ...] <output_file>\n";
         return 1;
     }
 
-    json mergedFlattened;
     fs::path outputFile = argv[argc - 1];
 
-    // We keep an auxiliary accumulator for sumW2 (variance) per bin/sample
-    std::map<std::string, std::map<std::string, double>> accVar; // accVar[bin][sample] = sumW2
+    // Final result structure:
+    // merged[bin][sample]["nominal"]                = array
+    // merged[bin][sample]["systematics"][syst][dir] = array
+    json merged;
 
-    // loop over input directories
+    // Variance accumulation stores sumW2
+    // nominalVar[bin][sample] = sumW2
+    // systVar[bin][sample][syst][dir] = sumW2
+    std::map<std::string,
+        std::map<std::string, double>> nominalVar;
+
+    std::map<std::string,
+        std::map<std::string,
+            std::map<std::string,
+                std::map<std::string, double>>>> systVar;
+
+    // ---------------------------
+    // Loop over input directories
+    // ---------------------------
     for (int argi = 1; argi < argc - 1; ++argi) {
         fs::path inputDir = argv[argi];
+
         if (!fs::exists(inputDir) || !fs::is_directory(inputDir)) {
             std::cerr << "Input path is not a directory: " << inputDir << "\n";
             continue;
@@ -49,63 +90,132 @@ int main(int argc, char** argv) {
             json j;
             try {
                 in >> j;
-            } catch (json::parse_error &e) {
-                std::cerr << "JSON parse error in file " << entry.path() << ": " << e.what() << "\n";
+            }
+            catch (json::parse_error &e) {
+                std::cerr << "JSON parse error in file "
+                          << entry.path() << ": " << e.what() << "\n";
                 continue;
             }
 
-            // --- merge logic: for each bin/sample add arrays into mergedFlattened ---
+            // ---------------------------
+            // Merge per-bin, per-sample
+            // ---------------------------
             for (auto &binPair : j.items()) {
                 const std::string binName = binPair.key();
-                for (auto &samplePair : binPair.value().items()) {
+                const json &binObj = binPair.value();
+
+                for (auto &samplePair : binObj.items()) {
                     const std::string sampleName = samplePair.key();
-                    const auto &arr = samplePair.value();
+                    const json &entryObj = samplePair.value();
 
-                    // Ensure structure exists and initialize to 3 zeros if needed
-                    if (!mergedFlattened.contains(binName))
-                        mergedFlattened[binName] = json::object();
-                    if (!mergedFlattened[binName].contains(sampleName))
-                        mergedFlattened[binName][sampleName] = json::array({0.0, 0.0, 0.0});
+                    // Ensure sample object exists
+                    if (!merged.contains(binName))
+                        merged[binName] = json::object();
+                    if (!merged[binName].contains(sampleName))
+                        merged[binName][sampleName] = json::object();
 
-                    // Read input array safely (support input arrays of size 3..6)
-                    double cnt = 0.0;
-                    double sumW = 0.0;
-                    double var = 0.0;
-                    double err = 0.0;   // sqrt(sumW2) if present
+                    json &outSample = merged[binName][sampleName];
 
-                    if (arr.is_array()) {
-                        if (arr.size() > 0 && !arr[0].is_null()) cnt = arr[0].get<double>();
-                        if (arr.size() > 1 && !arr[1].is_null()) sumW = arr[1].get<double>();
-                        if (arr.size() > 2 && !arr[2].is_null()) err = arr[2].get<double>();
-                        var = err * err;
-                    } else {
-                        std::cerr << "Unexpected JSON format in " << entry.path() << " for " << sampleName << "\n";
-                        continue;
+                    // ---------------------------------------
+                    // NOMINAL
+                    // ---------------------------------------
+                    if (entryObj.contains("nominal")) {
+                        double cnt, sumW, var;
+                        readTriple(entryObj["nominal"], cnt, sumW, var);
+
+                        // Initialize if first time
+                        if (!outSample.contains("nominal"))
+                            outSample["nominal"] = json::array({0.0, 0.0, 0.0});
+
+                        // Accumulation
+                        outSample["nominal"][0] =
+                            outSample["nominal"][0].get<double>() + cnt;
+
+                        outSample["nominal"][1] =
+                            outSample["nominal"][1].get<double>() + sumW;
+
+                        nominalVar[binName][sampleName] += var;
                     }
 
-                    // Accumulate into mergedFlattened
-                    double oldCnt  = mergedFlattened[binName][sampleName][0].get<double>();
-                    double oldSumW = mergedFlattened[binName][sampleName][1].get<double>();
+                    // ---------------------------------------
+                    // SYSTEMATICS
+                    // ---------------------------------------
+                    if (entryObj.contains("systematics")) {
+                        const json &systs = entryObj["systematics"];
 
-                    mergedFlattened[binName][sampleName][0] = oldCnt + cnt;
-                    mergedFlattened[binName][sampleName][1] = oldSumW + sumW;
+                        for (auto &systPair : systs.items()) {
+                            const std::string &systName = systPair.key();
+                            const json &dirs = systPair.value();
 
-                    // accumulate sumW2 in auxiliary map and update the sqrt slot
-                    accVar[binName][sampleName] += var;
-                    mergedFlattened[binName][sampleName][2] = std::sqrt(accVar[binName][sampleName]);
+                            for (auto &dirPair : dirs.items()) {
+                                const std::string &direction = dirPair.key();
+                                const json &arr = dirPair.value();
+
+                                double cnt, sumW, var;
+                                readTriple(arr, cnt, sumW, var);
+
+                                // Ensure structure exists
+                                if (!outSample.contains("systematics"))
+                                    outSample["systematics"] = json::object();
+                                if (!outSample["systematics"].contains(systName))
+                                    outSample["systematics"][systName] = json::object();
+                                if (!outSample["systematics"][systName].contains(direction))
+                                    outSample["systematics"][systName][direction] =
+                                        json::array({0.0, 0.0, 0.0});
+
+                                json &outArr = outSample["systematics"][systName][direction];
+
+                                outArr[0] = outArr[0].get<double>() + cnt;
+                                outArr[1] = outArr[1].get<double>() + sumW;
+
+                                systVar[binName][sampleName][systName][direction] += var;
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 
-    // write merged flattened json
+    // -----------------------------------------------------
+    // After merging all files, fill final sqrt(var) values
+    // -----------------------------------------------------
+    for (auto &binPair : merged.items()) {
+        const std::string &bin = binPair.key();
+        for (auto &samplePair : binPair.value().items()) {
+            const std::string &sample = samplePair.key();
+            json &obj = merged[bin][sample];
+
+            // nominal
+            if (obj.contains("nominal")) {
+                double v = nominalVar[bin][sample];
+                obj["nominal"][2] = std::sqrt(v);
+            }
+
+            // systematics
+            if (obj.contains("systematics")) {
+                for (auto &systPair : obj["systematics"].items()) {
+                    const std::string &systName = systPair.key();
+                    for (auto &dirPair : systPair.value().items()) {
+                        const std::string &direction = dirPair.key();
+                        double v = systVar[bin][sample][systName][direction];
+                        obj["systematics"][systName][direction][2] = std::sqrt(v);
+                    }
+                }
+            }
+        }
+    }
+
+    // -----------------------------------------------------
+    // Write merged output file
+    // -----------------------------------------------------
     std::ofstream out(outputFile);
     if (!out.is_open()) {
         std::cerr << "Failed to write output file: " << outputFile << "\n";
         return 2;
     }
 
-    out << mergedFlattened.dump(4);
+    out << merged.dump(4);
     std::cout << "Merged flattened JSON written to " << outputFile << "\n";
     return 0;
 }
