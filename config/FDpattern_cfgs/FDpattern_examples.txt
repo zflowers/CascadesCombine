@@ -1,6 +1,7 @@
-*2L_Bronze_0J_P250*
-*2L_Bronze_0J_P350*
-*2L_Bronze_1J_P250*
-*2L_Bronze_1J_P350*
-*3L_Bronze*
-*4L_Bronze*
+*2L_Bronze_0J_P250*!Btag
+*2L_Bronze_0J_P350*!Btag
+*2L_Bronze_1J_P250*!Btag
+*2L_Bronze_1J_P350*!Btag
+*3L_Bronze*!Btag
+*4L_Bronze*!Btag
+*Btag*
