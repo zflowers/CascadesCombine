@@ -301,15 +301,33 @@ struct SystInfo {
     std::string down;      // "MetTrigSFweight_down"
 };
 
-static const std::vector<SystInfo> kDefaultSystematics = {
+static const std::vector<SystInfo> kDefaultSFSystematics = {
     {"METtrig", "MetTrigSFweight", "MetTrigSFweight_up", "MetTrigSFweight_down"},
     {"PU",      "PUweight",        "PUweight_up",        "PUweight_down"}
+};
+
+static const std::vector<std::string> kDefaultTreeSystematics = {
+    //"JESUncer_CMS_scale_j_Total",
+    //"JERUncer_Total",
+    //"METUncer_UnClust"
+};
+
+// Combined container so callers can pass a single object
+struct SystematicsConfig {
+    std::vector<SystInfo> sf;       // internal SF (weight-based) systematics
+    std::vector<std::string> tree;  // tree-based systematics (strings - appended to tree name)
+};
+
+// default combined config
+static const SystematicsConfig kDefaultSystematicsConfig = {
+    kDefaultSFSystematics,
+    kDefaultTreeSystematics
 };
 
 ROOT::RDF::RNode MultiSystWeights(ROOT::RDF::RNode node,
                                   bool is_data,
                                   int year,
-                                  const std::vector<SystInfo>& systs = kDefaultSystematics)
+                                  const std::vector<SystInfo>& systs = kDefaultSFSystematics)
 {
     if (is_data) {
         return node

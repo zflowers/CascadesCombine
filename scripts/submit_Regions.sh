@@ -21,9 +21,9 @@ run_all() {
         echo "[run_all] Warning: Debug log does not exist yet at $DEBUG_LOG"
     fi
 }
-BINS_PER_JOB=100
+BINS_PER_JOB=50
 SLEEP=70
-VERSION="v289"
+VERSION="v295"
 make clean
 make all -j 8
 echo "Submitting Regions..."
@@ -64,6 +64,12 @@ echo "Submitting Regions..."
 #sleep ${SLEEP}
 #run_all --make-json --only-yields --skip-compile --bins-cfg config/bin_cfgs/Regions_4L_Bronze.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_4L_Regions_Bronze_${VERSION}
 #sleep ${SLEEP}
+#run_all --make-json --only-yields --skip-compile --bins-cfg config/bin_cfgs/Regions_top_sideband_Bronze.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_Regions_top_sideband_Bronze_${VERSION}
+#sleep ${SLEEP}
+#run_all --make-json --only-yields --skip-compile --bins-cfg config/bin_cfgs/Regions_top_sideband_Silver.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_Regions_top_sideband_Silver_${VERSION}
+#sleep ${SLEEP}
+#run_all --make-json --only-yields --skip-compile --bins-cfg config/bin_cfgs/Regions_top_sideband_Gold.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_Regions_top_sideband_Gold_${VERSION}
+#sleep ${SLEEP}
 
 # All Regions
 rm -f config/bin_cfgs/Regions.yaml # Clean up yaml
@@ -85,8 +91,11 @@ cat config/bin_cfgs/Regions_3L_Bronze.yaml >> config/bin_cfgs/Regions.yaml
 cat config/bin_cfgs/Regions_4L_Gold.yaml >> config/bin_cfgs/Regions.yaml
 cat config/bin_cfgs/Regions_4L_Silver.yaml >> config/bin_cfgs/Regions.yaml
 cat config/bin_cfgs/Regions_4L_Bronze.yaml >> config/bin_cfgs/Regions.yaml
-#run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_Regions_234L_${VERSION}
-#sleep ${SLEEP}
+cat config/bin_cfgs/Regions_top_sideband_Gold.yaml >> config/bin_cfgs/Regions.yaml
+cat config/bin_cfgs/Regions_top_sideband_Silver.yaml >> config/bin_cfgs/Regions.yaml
+cat config/bin_cfgs/Regions_top_sideband_Bronze.yaml >> config/bin_cfgs/Regions.yaml
+run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_Regions_234L_${VERSION}
+sleep ${SLEEP}
 #run_all --make-impacts --make-FD --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_Impacts_FD_Regions_234L_${VERSION}
 #sleep ${SLEEP}
 
@@ -98,6 +107,7 @@ cat config/bin_cfgs/Regions_2L_0J_hPTISR_Bronze.yaml >> config/bin_cfgs/Regions_
 cat config/bin_cfgs/Regions_2L_1J_hPTISR_Bronze.yaml >> config/bin_cfgs/Regions_Bronze_CR.yaml
 cat config/bin_cfgs/Regions_3L_Bronze.yaml >> config/bin_cfgs/Regions_Bronze_CR.yaml
 cat config/bin_cfgs/Regions_4L_Bronze.yaml >> config/bin_cfgs/Regions_Bronze_CR.yaml
+cat config/bin_cfgs/Regions_top_sideband_Bronze.yaml >> config/bin_cfgs/Regions_Bronze_CR.yaml
 #run_all --make-FD --processes-cfg config/process_cfgs/data_processes.yaml --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_Bronze_CR.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_CRs_FD_234L_Bronze_${VERSION}
 #sleep ${SLEEP}
 run_all --make-impacts --make-FD --processes-cfg config/process_cfgs/data_processes.yaml --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_Bronze_CR.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_CRs_Impacts_FD_234L_Bronze_${VERSION}

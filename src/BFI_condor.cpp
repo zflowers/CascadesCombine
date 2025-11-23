@@ -244,8 +244,30 @@ int main(int argc, char** argv) {
     else
         processName = GetProcessNameFromKey(rootFilePath, preferredGroups);
 
-    // processTree will now compute per-bin results by reusing a single df_with_lep
-    auto processTree=[&](const std::string &tree_name, const std::string &key){
+    // --- Build active systematics config ---
+    SystematicsConfig activeSystematics;
+    // always default SF systematics for now (can later allow CLI override)
+    activeSystematics.sf = kDefaultSFSystematics;
+
+    // if user passed -R, interpret these as tree-based syst names (override)
+    if (!systematicNames.empty()) {
+        // treat CLI list as tree systs (user override)
+        activeSystematics.tree = systematicNames;
+    } else {
+        // otherwise use built-in defaults
+        activeSystematics.tree = kDefaultTreeSystematics;
+    }
+
+    // Control whether to run internal (SF / weight-based) systematic block on the nominal pass.
+    bool runInternalSystsOnNominal = true;
+
+    // processTree compute per-bin results
+    auto processTree=[&](const std::string &tree_name,
+                         const std::string &key,
+                         const SystematicsConfig &sysCfg,
+                         bool runInternalSysts, // SF systs
+                         const std::string &treeSystTag,
+                         bool treeSystIsUp) {
         if(doHist) histFile->cd();
 
         // --- Define any other derived variables from YAML (these are independent of bin) ---
@@ -540,8 +562,8 @@ int main(int argc, char** argv) {
                 fy.nominal = { (double)n_entries, sW, err };
                 
                 // --- For each systematic compute Up/Down sums ---
-                if(!IsData){
-                    for (const auto &s : kDefaultSystematics) {
+                if(!IsData && runInternalSysts) {
+                    for (const auto &s : sysCfg.sf) {
                         std::string colUp   = "weight_scaled_" + s.tag + "Up";
                         std::string colDown = "weight_scaled_" + s.tag + "Down";
                     
@@ -583,7 +605,7 @@ int main(int argc, char** argv) {
                     }
                 }
                 
-                // --- NEW: store per-file result and accumulate into totals (only once per-file) ---
+                // --- store per-file result and accumulate into totals (only once per-file) ---
                 if (fileResultsByBin[bin].find(key) == fileResultsByBin[bin].end() ||
                     fileResultsByBin[bin][key].find(rootFilePath) == fileResultsByBin[bin][key].end())
                 {
@@ -625,12 +647,35 @@ int main(int argc, char** argv) {
     }; // end processTree
 
     // Dispatch tree(s)
-    if(!isSignal) processTree("KUAnalysis",sampleName);
-    else if(sigType=="cascades") processTree("KUAnalysis",BFTool::GetSignalTokensCascades(rootFilePath));
-    else if(sigType=="sms"){
-        for(const auto &tree_name:BFTool::GetSignalTokensSMS(rootFilePath))
-            processTree(tree_name,processName);
-    }else{std::cerr<<"[BFI_condor] Unknown sig-type: "<<sigType<<"\n"; delete BFI; return 4;}
+    std::string keyPT = sampleName; // key for processTree
+
+    auto doTrees = [&](const std::string &baseTree, bool is_data) {
+        processTree(baseTree, keyPT, activeSystematics, runInternalSystsOnNominal, "", false);
+        if(!is_data){
+            for (const auto &treeSyst : activeSystematics.tree) {
+                processTree(baseTree+"_"+treeSyst+"Up",   keyPT, activeSystematics, false, treeSyst, true);
+                processTree(baseTree+"_"+treeSyst+"Down", keyPT, activeSystematics, false, treeSyst, false);
+            }
+        }
+    };
+    if (!isSignal) {
+        doTrees("KUAnalysis", IsData);
+    }
+    else if (sigType == "cascades") {
+        keyPT = BFTool::GetSignalTokensCascades(rootFilePath);
+        doTrees("KUAnalysis", false);
+    }
+    else if (sigType == "sms") {
+        keyPT = processName;
+        for (const auto &tree_name : BFTool::GetSignalTokensSMS(rootFilePath)) {
+            doTrees(tree_name, false);
+        }
+    }
+    else {
+        std::cerr << "[BFI_condor] Unknown sig-type: " << sigType << "\n";
+        delete BFI;
+        return 4;
+    }
 
     // finalize totals: convert accumulated err^2 -> sqrt(err^2)
     for (auto &bin_kv : totalsByBin) {

@@ -185,12 +185,13 @@ void BuildFit::WriteJsonAsFlatHists(JSONFactory* j, const std::string &outFile, 
                         //   bin__proc__systNameUp
                         //   bin__proc__systNameDown
                         std::string hsyst =
-                            bin + "__" + proc + "__" + systName + std::string(udKey);
+                            bin + "__" + proc;
             
                         // Signal naming: append dummy mass value
                         if (BFTool::ContainsAnySubstring(procOrig, sigkeys)) {
                             hsyst += "120";
                         }
+                        hsyst += "__" + systName + std::string(udKey);
             
                         TH1F *hs = new TH1F(hsyst.c_str(), hsyst.c_str(), 1, 0, 1);
                         hs->Sumw2();
@@ -426,6 +427,25 @@ void BuildFit::AddPTISRSys(const stringlist& binset, const stringlist& procs){
     cb.SetFlag("filters-use-regex", false);
 }
 
+void BuildFit::AddBtagSys(const stringlist& binset, const stringlist& procs){
+    cb.SetFlag("filters-use-regex", true);
+    cb.cp().process(procs).bin({".*2L.*0J.*P250.*.*Btag.*"})
+        .AddSyst(cb, "Btag_2L_0J_lPTISR", "lnN", SystMap<>::init(1.20));
+    cb.cp().process(procs).bin({".*2L.*0J.*P350.*.*Btag.*"})
+        .AddSyst(cb, "Btag_2L_0J_hPTISR", "lnN", SystMap<>::init(1.20));
+    cb.cp().process(procs).bin({".*2L.*1J.*P250.*.*Btag.*"})
+        .AddSyst(cb, "Btag_2L_1J_lPTISR", "lnN", SystMap<>::init(1.20));
+    cb.cp().process(procs).bin({".*2L.*1J.*P350.*.*Btag.*"})
+        .AddSyst(cb, "Btag_2L_1J_hPTISR", "lnN", SystMap<>::init(1.20));
+    cb.cp().process(procs).bin({".*3L.*0J.*Btag.*"})
+        .AddSyst(cb, "Btag_3L_0J", "lnN", SystMap<>::init(1.20));
+    cb.cp().process(procs).bin({".*3L.*1J.*Btag.*"})
+        .AddSyst(cb, "Btag_3L_1J", "lnN", SystMap<>::init(1.20));
+    cb.cp().process(procs).bin({".*4L.*Btag.*"})
+        .AddSyst(cb, "Btag_4L", "lnN", SystMap<>::init(1.20));
+    cb.SetFlag("filters-use-regex", false);
+}
+
 void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, const std::string& datacard_dir){
     ch::Categories cats = BuildCats(j);
     std::map<std::string, float> obs_rates;
@@ -476,6 +496,7 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
     AddFloatingNorms(bkgprocs);
     AddPTISRSys(binset, bkgprocs);
     AddRaSys(binset, bkgprocs);
+    AddBtagSys(binset, bkgprocs);
     //AddZSys(binset, bkgprocs);
     //std::cout << "Printing systematics..." << std::endl; cb.PrintSysts();
     //cb.PrintAll();

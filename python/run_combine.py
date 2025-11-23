@@ -266,6 +266,7 @@ def prepare_run_and_stage_assets_copy(
     if not existing_run_dir:
         include_items.extend([
             "DefineUserHists.h",
+             "BFICondorTools.h", # for systematics
         ])
         src_items.extend([
             "BFI_condor.cpp",

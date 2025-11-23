@@ -398,24 +398,6 @@ void loadFormatMaps(){
 
 }
 
-//struct GroupDef {
-//    std::string groupName;
-//    std::vector<std::string> patterns;
-//};
-//
-//using GroupedHists = std::map<std::string, std::map<std::string, TH1F*>>;
-
-//GroupedHists MergeBinsForTree(TDirectory* shapesDir,
-//                              const std::vector<GroupDef>& groups){}
-//
-//void MakeStackPlot(const std::string& outname,
-//                   const std::map<std::string, TH1F*>& bkgHists,
-//                   TH1F* dataHist,
-//                   TH1F* sigHist = nullptr,
-//                   const std::string& title = ""){}
-
-// FitDiagnostic Helpers
-
 TH1D* TGraphToTH1(TGraphAsymmErrors* g, const std::string& name) {
     if (!g) return nullptr;
     int nbins = g->GetN();
@@ -433,6 +415,11 @@ TH1D* TGraphToTH1(TGraphAsymmErrors* g, const std::string& name) {
 struct MergedBinGroup {
     std::string group_name;
     std::vector<std::string> bin_names;
+};
+
+struct ParsedPattern {
+    std::string include;               // the include wildcard pattern (may be "*")
+    std::vector<std::string> excludes; // list of literal substrings to exclude
 };
 
 static std::vector<std::string> LoadPatternsFromFile(const std::string& file)
@@ -463,18 +450,97 @@ static std::vector<std::string> LoadPatternsFromFile(const std::string& file)
 
 static std::string WildcardToRegex(const std::string& pat)
 {
-    std::string r = "^";
+    std::string r;
+    r.reserve(pat.size() * 2 + 4);
     for (char c : pat) {
-        if (c == '*') r += ".*";
+        if (c == '*')      r += ".*";
         else if (c == '?') r += ".";
-        else if (std::isalnum(c)) r += c;
+        else if (std::isalnum(static_cast<unsigned char>(c))) r.push_back(c);
         else {
-            r += '\\';
-            r += c;
+            // escape any other character for regex safety
+            r.push_back('\\');
+            r.push_back(c);
         }
     }
-    r += "$";
     return r;
+}
+
+static std::string EscapeForRegex(const std::string& s)
+{
+    std::string out;
+    out.reserve(s.size() * 2);
+    const std::string meta = R"(\.^$|()[]{}*+?!)"; // meta characters to escape
+    for (unsigned char c : s) {
+        if (meta.find(c) != std::string::npos) {
+            out.push_back('\\');
+            out.push_back(c);
+        } else {
+            out.push_back(c);
+        }
+    }
+    return out;
+}
+
+static ParsedPattern ParsePattern(const std::string& p)
+{
+    ParsedPattern pp;
+    if (p.empty()) {
+        pp.include = "*";
+        return pp;
+    }
+
+    size_t firstEx = p.find('!');
+    if (firstEx == std::string::npos) {
+        pp.include = p;
+        return pp;
+    }
+
+    // include is text before first '!'
+    pp.include = p.substr(0, firstEx);
+    if (pp.include.empty()) pp.include = "*";
+
+    // parse excludes: tokens between '!' delimiters
+    size_t pos = firstEx;
+    while (pos != std::string::npos && pos + 1 < p.size()) {
+        size_t next = p.find('!', pos + 1);
+        std::string token;
+        if (next == std::string::npos) token = p.substr(pos + 1);
+        else token = p.substr(pos + 1, next - pos - 1);
+
+        // trim possible whitespace around token (defensive)
+        auto l = token.find_first_not_of(" \t\r\n");
+        auto r = token.find_last_not_of(" \t\r\n");
+        if (l != std::string::npos && r != std::string::npos)
+            token = token.substr(l, r - l + 1);
+        else
+            token.clear();
+
+        if (!token.empty()) pp.excludes.push_back(token);
+        pos = next;
+    }
+
+    return pp;
+}
+
+static std::regex BuildRegexFromPattern(const ParsedPattern& pp)
+{
+    // include -> convert wildcard to regex (no anchors here)
+    std::string include_pat = pp.include;
+    if (include_pat.empty()) include_pat = "*";
+    std::string include_regex = WildcardToRegex(include_pat);
+
+    // build negative lookaheads for each exclude
+    std::string negative;
+    for (const auto& ex : pp.excludes) {
+        std::string esc = EscapeForRegex(ex);
+        negative += "(?!.*";
+        negative += esc;
+        negative += ")";
+    }
+
+    // final regex: anchor start, negative lookaheads, include, anchor end
+    std::string full = "^" + negative + include_regex + "$";
+    return std::regex(full);
 }
 
 std::vector<MergedBinGroup>
@@ -501,29 +567,38 @@ BuildMergedBinGroups(const std::vector<std::string>& all_bins,
         return groups;
     }
 
-    // compile regex patterns
-    std::vector<std::regex> regex_patterns;
+    // parse patterns and compile regex patterns
+    struct Compiled {
+        std::string original;
+        ParsedPattern parsed;
+        std::regex rx;
+    };
+    std::vector<Compiled> compiled;
+    compiled.reserve(patterns.size());
+
     for (const auto& p : patterns) {
-        regex_patterns.push_back(std::regex(WildcardToRegex(p)));
+        ParsedPattern pp = ParsePattern(p);
+        std::regex r = BuildRegexFromPattern(pp);
+        compiled.push_back({p, std::move(pp), std::move(r)});
     }
 
     // build groups
-    for (size_t i = 0; i < patterns.size(); ++i) {
+    for (const auto& c : compiled) {
         MergedBinGroup g;
-        g.group_name = patterns[i];
+        g.group_name = c.original;
         for (const auto& bin : all_bins) {
-            if (std::regex_search(bin, regex_patterns[i])) {
+            if (std::regex_search(bin, c.rx)) {
                 g.bin_names.push_back(bin);
             }
         }
         if (g.bin_names.empty()) {
-            std::cerr << "[warning] Pattern '" << patterns[i]
+            std::cerr << "[warning] Pattern '" << c.original
                       << "' matched 0 bins\n";
         }
-        groups.push_back(g);
+        groups.push_back(std::move(g));
     }
 
-    // warn about leftover bins (not in any pattern)
+    // warn about leftover bins
     for (const auto& bin : all_bins) {
         bool matched = false;
         for (const auto& g : groups) {
@@ -532,7 +607,7 @@ BuildMergedBinGroups(const std::vector<std::string>& all_bins,
             }
             if (matched) break;
         }
-        //if (!matched) std::cerr << "[warning] Bin '" << bin << "' did not match any pattern, skipping\n";
+        // if (!matched) std::cerr << "[warning] Bin '" << bin << "' did not match any pattern, skipping\n";
     }
 
     return groups;
@@ -660,8 +735,6 @@ StackPlotInput ConvertToStackInput(const CombinedBinHists& mergedHists) {
     }
     return out;
 }
-
-// End FD Helpers
 
 struct HistId {
     string bin; string proc; string var; 

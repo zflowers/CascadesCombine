@@ -362,7 +362,7 @@ void Plot_Stack(const string& hname,
         }
     }
     if (h_DATA) leg->AddEntry(h_DATA,"Data","EP");
-    if (h_BKG_ERR) leg->AddEntry(h_BKG_ERR, "Bkg unc.", "F");
+    if (h_DATA && h_BKG_ERR) leg->AddEntry(h_BKG_ERR, "Bkg unc.", "F");
     leg->Draw();
 
     TLatex l;

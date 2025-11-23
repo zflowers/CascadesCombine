@@ -170,11 +170,14 @@ def run_applescript(script_text):
         script_path = f.name
     subprocess.run(["osascript", script_path])
 
-def format_var_title(var: str):
+def format_var_title(u_var: str):
+    var = u_var
     if var is None:
         return ""
     if "_vs_" in var:
-        return var.replace("_vs_", " vs ")
+        var = var.replace("_vs_", " vs ")
+    if "_" in var:
+        var = var.replace("_", " ")
     return var
 
 def parse_pdf_stem(stem: str):
