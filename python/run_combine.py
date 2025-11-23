@@ -35,6 +35,8 @@ def parse_args():
                    help="Optional pass in existing run dir and make new run dir that takes the existing BFI output as input to do BF and later steps")
     p.add_argument("--skip-compile", action="store_true",
                    help="Skip running the compile step")
+    p.add_argument("--skip-plot-yields", action="store_true",
+                   help="Skip running the plot yields from json step")
     p.add_argument("--only-yields", action="store_true",
                    help="Stop after getting yields")
     p.add_argument("--bins-per-job", type=int, default=10,
@@ -839,7 +841,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
 
     if make_json:
         flattened_json = get_flattened_json_path(run_dir=run_dir)
-        if not args.existing_run_dir:
+        if not args.existing_run_dir and not args.skip_plot_yields:
             # Plot Yields
             plot_cmd = [
                 "./"+exe_dir+"/PlotYields.x",
