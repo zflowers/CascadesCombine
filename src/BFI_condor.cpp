@@ -672,7 +672,7 @@ int main(int argc, char** argv) {
         // get the configured SMS filters (may be empty)
         const auto filters = BFTool::GetFilterSignalsSMS();
 
-        if (filters.empty()) {
+        if (filters.empty()) { // might need to debug this later
             // no filters configured -> fall back to base behaviour (single entry)
             processName = baseProcName;
             keyPT = processName;
@@ -684,9 +684,11 @@ int main(int argc, char** argv) {
             for (const auto &filter : filters) {
                 processName = baseProcName + "_" + filter; // used inside processTree (hist names, etc.)
                 keyPT = processName;                       // passed as 'key' to processTree (JSON keys / totals)
-                for (const auto &tree_name : BFTool::GetSignalTokensSMS(rootFilePath)) {
-                    doTrees(tree_name, false);
-                }
+                std::string tree_name = keyPT;
+                std::size_t pos = keyPT.find("_SMS");
+                if (pos != std::string::npos)
+                    tree_name = keyPT.substr(pos + 1);
+                doTrees(tree_name, false);
             }
         }
     }

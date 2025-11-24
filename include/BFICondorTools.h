@@ -302,8 +302,8 @@ struct SystInfo {
 };
 
 static const std::vector<SystInfo> kDefaultSFSystematics = {
-    {"METtrig", "MetTrigSFweight", "MetTrigSFweight_up", "MetTrigSFweight_down"},
-    {"PU",      "PUweight",        "PUweight_up",        "PUweight_down"}
+    //{"METtrig", "MetTrigSFweight", "MetTrigSFweight_up", "MetTrigSFweight_down"},
+    //{"PU",      "PUweight",        "PUweight_up",        "PUweight_down"}
 };
 
 static const std::vector<std::string> kDefaultTreeSystematics = {

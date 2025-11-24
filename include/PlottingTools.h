@@ -40,7 +40,7 @@ void Plot_Hist2D(TH2* h) {
     TCanvas* can = new TCanvas(("can_"+title).c_str(), ("can_"+title).c_str(), 700, 600);
     can->SetLeftMargin(0.15); can->SetRightMargin(0.18); can->SetBottomMargin(0.15);
     can->SetGridx(); can->SetGridy();
-    //DrawLogSmart(h, "COLZ");
+    DrawLogSmart(h, "COLZ");
     h->SetMinimum(0.);
     h->Draw("COLZ");
     h->GetXaxis()->CenterTitle(); h->GetYaxis()->CenterTitle();
