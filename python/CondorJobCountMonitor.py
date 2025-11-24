@@ -1,6 +1,8 @@
 import time
 import subprocess
 import os
+import re
+import shlex
 from pathlib import Path
 from typing import Iterable, Tuple, Optional, List
 
@@ -111,6 +113,19 @@ class CondorJobCountMonitor:
     # ---------------------------
     # Internal condor_q builders / parsers
     # ---------------------------
+    def _run_cmd(self, cmd: str, check: bool = False, text: bool = True) -> Optional[str]:
+        """Run a shell command, return stdout or None on failure."""
+        try:
+            out = subprocess.check_output(cmd, shell=True, text=text, stderr=subprocess.STDOUT)
+            return out
+        except subprocess.CalledProcessError as e:
+            if self.verbose:
+                print(f"[CondorJobCountMonitor] Command failed: {cmd}")
+                print("  Output:", (e.output or "").replace("\n", " | "))
+            if check:
+                raise
+            return None
+
     def _condor_q_cmd(self, cluster_id: str, schedd: Optional[str] = None, total: bool = False) -> str:
         if schedd:
             base = f"condor_q -name {schedd} {cluster_id}"
@@ -164,7 +179,7 @@ class CondorJobCountMonitor:
                     # not transient, re-raise
                     raise
     
-        # if we exit the loop, all retries failed
+        # if exit the loop, all retries failed
         print(f"[error] condor_q failed after {max_retries} retries "
               f"(cluster={cluster_id}, schedd={schedd})")
         return None
@@ -278,18 +293,176 @@ class CondorJobCountMonitor:
             check_count += 1
             time.sleep(15)
     
-    def wait_until_jobs_below(self, clusters: Optional[Iterable[Tuple[str, Optional[str]]]] = None):
+    def _parse_request_memory(self, raw: str) -> int:
+        """
+        Parse RequestMemory from a condor -long output fragment.
+        Returns memory in MB (int). If not found, default to 2048 MB.
+        Accepts values like: 4096, "4096", "4GB", 4G, 4096MB, etc.
+        """
+        # raw is the full condor -long output; search for RequestMemory line.
+        m = re.search(r"RequestMemory\s*=\s*\"?([\d\.]+)\s*([KkMmGgTt]B?|[KkMmGgTt])?\"?", raw)
+        if not m:
+            # fallback default
+            return 2048
+        val = float(m.group(1))
+        unit = (m.group(2) or "").upper()
+        # normalize to MB
+        if unit.startswith("T"):
+            return int(val * 1024 * 1024)
+        if unit.startswith("G"):
+            return int(val * 1024)
+        if unit.startswith("K"):
+            return int(val / 1024)
+        # no unit or 'M' assumed
+        return int(val)
+
+    def _parse_request_cpus(self, raw: str) -> int:
+        """Parse RequestCpus from condor -long output. Default to 1 if absent."""
+        m = re.search(r"RequestCpus\s*=\s*\"?(\d+)\"?", raw)
+        if not m:
+            return 1
+        return int(m.group(1))
+
+    def _check_and_fix_held_jobs(self,
+                                 scale_cpu: int = 1,
+                                 scale_mem_gb: int = 2,
+                                 max_cpus: int = 16,
+                                 max_mem_gb: int = 32) -> int:
+        """
+        Find held jobs for this user whose hold reason includes the memory-limit string,
+        read their current RequestCpus and RequestMemory (from the job's schedd),
+        increment them by (scale_cpu, scale_mem_gb) but not beyond (max_cpus, max_mem_gb),
+        and release the job.
+    
+        Returns the number of jobs processed (edits or releases attempted).
+        """
+        key_phrase = "Docker job has gone over memory limit of "
+    
+        # Format: "<cluster>.<proc> <schedd> <hold reason...>\n"
+        fmt_cmd = (
+            r'condor_q $USER -held '
+            r'-format "%d.%d " ClusterId ProcId '
+            r'-format "%s " ScheddName '
+            r'-format "%s\n" HoldReason'
+        )
+    
+        held_out = self._run_cmd(fmt_cmd)
+        if not held_out:
+            return 0
+    
+        processed = 0
+        for ln in held_out.splitlines():
+            ln = ln.strip()
+            if not ln:
+                continue
+    
+            parts = ln.split(" ", 2)
+            if len(parts) < 3:
+                if self.verbose:
+                    print(f"[CondorJobCountMonitor] Unexpected held line format (skipping): {ln}")
+                continue
+    
+            jobid = parts[0].strip()        # e.g. "123456.0"
+            schedd = parts[1].strip()       # e.g. "lpcschedd4.fnal.gov"
+            hold_reason = parts[2].strip()
+    
+            if key_phrase not in hold_reason:
+                continue
+    
+            if self.verbose:
+                print(f"[CondorJobCountMonitor] Found held job {jobid} on schedd {schedd}: {hold_reason}")
+    
+            # Query full attributes from the correct schedd
+            long_cmd = f"condor_q -long -name {shlex.quote(schedd)} {shlex.quote(jobid)}"
+            long_out = self._run_cmd(long_cmd)
+            if long_out is None:
+                if self.verbose:
+                    print(f"[CondorJobCountMonitor] Failed to fetch job attributes for {jobid} on {schedd}; skipping.")
+                continue
+    
+            try:
+                cur_cpus = self._parse_request_cpus(long_out)
+                cur_mem_mb = self._parse_request_memory(long_out)
+            except Exception as e:
+                if self.verbose:
+                    print(f"[CondorJobCountMonitor] Error parsing attributes for {jobid} on {schedd}: {e}")
+                cur_cpus = 1
+                cur_mem_mb = 2048
+    
+            # Compute new values, enforcing caps
+            cap_cpus = int(max_cpus)
+            cap_mem_mb = int(max_mem_gb * 1024)
+    
+            target_cpus = min(cur_cpus + int(scale_cpu), cap_cpus)
+            target_mem_mb = min(cur_mem_mb + int(scale_mem_gb) * 1024, cap_mem_mb)
+    
+            if target_cpus == cur_cpus and target_mem_mb == cur_mem_mb:
+                # Already at/above caps or no change; attempt a release
+                if self.verbose:
+                    print(f"[CondorJobCountMonitor] Job {jobid} already at caps or no increase needed "
+                          f"(CPUs {cur_cpus}, Mem {cur_mem_mb}MB). Attempting release without edits.")
+                release_cmd = f"condor_release -name {shlex.quote(schedd)} {shlex.quote(jobid)}"
+                rel_out = self._run_cmd(release_cmd)
+                if self.verbose:
+                    print(f"[CondorJobCountMonitor] condor_release output: {rel_out or '<no output>'}")
+                processed += 1
+                continue
+    
+            if self.verbose:
+                print(
+                    f"[CondorJobCountMonitor] Updating {jobid} on {schedd}: "
+                    f"RequestCpus {cur_cpus} -> {target_cpus}, "
+                    f"RequestMemory {cur_mem_mb}MB -> {target_mem_mb}MB (caps: {cap_cpus} CPUS, {cap_mem_mb}MB)"
+                )
+    
+            # Apply edits on the specific schedd
+            edit_cpu_cmd = f"condor_qedit -name {shlex.quote(schedd)} {shlex.quote(jobid)} RequestCpus={target_cpus}"
+            edit_mem_cmd = f"condor_qedit -name {shlex.quote(schedd)} {shlex.quote(jobid)} RequestMemory={target_mem_mb}"
+            cpu_out = self._run_cmd(edit_cpu_cmd)
+            mem_out = self._run_cmd(edit_mem_cmd)
+    
+            # Release the job on that schedd
+            release_cmd = f"condor_release -name {shlex.quote(schedd)} {shlex.quote(jobid)}"
+            rel_out = self._run_cmd(release_cmd)
+    
+            if self.verbose:
+                print(f"[CondorJobCountMonitor] condor_qedit CPU output: {cpu_out or '<no output>'}")
+                print(f"[CondorJobCountMonitor] condor_qedit MEM output: {mem_out or '<no output>'}")
+                print(f"[CondorJobCountMonitor] condor_release output: {rel_out or '<no output>'}")
+    
+            processed += 1
+        return processed
+
+    def wait_until_jobs_below(self, clusters: Optional[Iterable[Tuple[str, Optional[str]]]] = None,
+                              held_check_interval: int = 10,
+                              scale_cpu: int = 1,
+                              scale_mem_gb: int = 2):
+        """
+        Wait until total jobs are below the threshold.
+        args:
+          held_check_interval: run the held-job check every N loops (default 10).
+          scale_cpu: how many CPUs to add when recovering a held job (default 1).
+          scale_mem_gb: how many GB to add when recovering a held job (default 2).
+        """
         check_count = 0
         active_clusters = list(clusters) if clusters is not None else None
-    
+
         while True:
             try:
+                # Run held-job check every held_check_interval loops
+                if check_count % held_check_interval == 0:
+                    try:
+                        self._check_and_fix_held_jobs(scale_cpu=scale_cpu, scale_mem_gb=scale_mem_gb)
+                    except Exception as e:
+                        if self.verbose:
+                            print(f"[CondorJobCountMonitor] Error during held-job handling: {e}")
+
                 if active_clusters is None:
                     # check all schedds; proceed if any one of them drops below threshold
                     cmd = self._condor_q_user_cmd(total=True)
                     output = subprocess.check_output(cmd, shell=True, text=True)
                     total_jobs_per_schedd = []
-                    
+
                     for line in output.splitlines():
                         line = line.strip()
                         if line.startswith("Total for") and not line.startswith("Total for all users"):
@@ -298,13 +471,13 @@ class CondorJobCountMonitor:
                                 if p.isdigit():
                                     total_jobs_per_schedd.append(int(p))
                                     break
- 
+
                     if not total_jobs_per_schedd:
                         print("[CondorJobCountMonitor] Could not parse any schedd totals, retrying...", flush=True)
                         total_jobs = -1
                     else:
                         total_jobs = min(total_jobs_per_schedd)  # proceed if *any* schedd drops below threshold
-    
+
                 else:
                     total_jobs = 0
                     new_active = []
@@ -316,22 +489,22 @@ class CondorJobCountMonitor:
                             if self.verbose:
                                 print(f"[CondorJobCountMonitor] condor_q failed for {cluster_id} on {schedd}; assuming finished.")
                             continue
-    
+
                         job_count = self._count_jobs_from_output(output)
                         if job_count == 0:
                             if self.verbose:
                                 print(f"[CondorJobCountMonitor] cluster {cluster_id} on {schedd} has no jobs; assuming finished.")
                             continue
-    
+
                         new_active.append((cluster_id, schedd))
                         total_jobs += job_count
-    
+
                     active_clusters = new_active
                     if not active_clusters:
                         if self.verbose:
                             print("[CondorJobCountMonitor] No active clusters remaining; exiting job count wait.")
                         break
-    
+
                 if total_jobs == -1:
                     print("[CondorJobCountMonitor] Error retrieving job count, retrying...", flush=True)
                 elif total_jobs < self.threshold:
@@ -341,7 +514,7 @@ class CondorJobCountMonitor:
                 else:
                     if check_count % 10 == 0 and self.verbose:
                         print(f"[CondorJobCountMonitor] Current jobs: {total_jobs}. Waiting for jobs to drop below {self.threshold}...")
-    
+
             except Exception as e:
                 print(f"[CondorJobCountMonitor] Error while waiting for jobs: {e}", flush=True)
             check_count += 1
