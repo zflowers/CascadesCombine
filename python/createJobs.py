@@ -147,6 +147,8 @@ when_to_transfer_output = ON_EXIT
 request_cpus            = {cpus}
 request_memory          = {memory}
 
+max_materialize         = 100
+
 # Release jobs automatically from hold for common conditions
 periodic_release = (HoldReasonCode == 12 && HoldReasonSubCode == 256) || \
                    (HoldReasonCode == 13 && HoldReasonSubCode == 2)   || \
@@ -440,7 +442,8 @@ def write_submit_file(
         if sig_type:
             args_list.append(f"--sig-type {sig_type}")
         if sms_filters:
-            args_list.extend(["--sms-filters"] + sms_filters)
+            joined = ",".join(sms_filters)
+            args_list.extend(["--sms-filters", joined])
 
         args_str = " ".join(a for a in args_list if a and not a.isspace())
         job["args_str"] = args_str

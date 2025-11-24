@@ -23,7 +23,7 @@ run_all() {
 }
 BINS_PER_JOB=50
 SLEEP=70
-VERSION="v295"
+VERSION="v296"
 make clean
 make all -j 8
 echo "Submitting Regions..."

@@ -96,7 +96,7 @@ while [[ $# -gt 0 ]]; do
         --sig-type) SIG_TYPE=$(clean_arg "$2"); shift 2;;
         --lumi) LUMI=$(clean_arg "$2"); shift 2;;
 
-        # Multi-value argument handling for sms filters kept as before
+        # Multi-value argument handling for sms filters
         --sms-filters)
             shift
             SMS_FILTERS=""

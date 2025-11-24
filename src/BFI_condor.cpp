@@ -666,9 +666,28 @@ int main(int argc, char** argv) {
         doTrees("KUAnalysis", false);
     }
     else if (sigType == "sms") {
-        keyPT = processName;
-        for (const auto &tree_name : BFTool::GetSignalTokensSMS(rootFilePath)) {
-            doTrees(tree_name, false);
+        // base process name (without filter suffix)
+        const std::string baseProcName = GetProcessNameFromKey(rootFilePath, preferredGroups);
+
+        // get the configured SMS filters (may be empty)
+        const auto filters = BFTool::GetFilterSignalsSMS();
+
+        if (filters.empty()) {
+            // no filters configured -> fall back to base behaviour (single entry)
+            processName = baseProcName;
+            keyPT = processName;
+            for (const auto &tree_name : BFTool::GetSignalTokensSMS(rootFilePath)) {
+                doTrees(tree_name, false);
+            }
+        } else {
+            // iterate filters: set processName and keyPT per-filter, then run trees
+            for (const auto &filter : filters) {
+                processName = baseProcName + "_" + filter; // used inside processTree (hist names, etc.)
+                keyPT = processName;                       // passed as 'key' to processTree (JSON keys / totals)
+                for (const auto &tree_name : BFTool::GetSignalTokensSMS(rootFilePath)) {
+                    doTrees(tree_name, false);
+                }
+            }
         }
     }
     else {
