@@ -1118,7 +1118,13 @@ stringlist SampleTool::loadPreferredGroupsFromYaml(const std::string &yamlPath) 
             YAML::Node procs = root["processes"];
             if (procs["bkg"] && procs["bkg"].IsSequence()) {
                 for (const auto &n : procs["bkg"]) {
-                    if (n.IsScalar()) out.push_back(n.as<std::string>());
+                    if (n.IsScalar()) {
+                        std::string name = n.as<std::string>();
+                        std::size_t pos_FAKE = name.find("_FAKE");
+                        if (pos_FAKE != std::string::npos)
+                            name = name.substr(pos_FAKE);
+                        out.push_back(name);
+                    }
                 }
             }
             if (procs["sig"] && procs["sig"].IsSequence()) {

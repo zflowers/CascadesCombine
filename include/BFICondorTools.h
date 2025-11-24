@@ -122,6 +122,39 @@ inline std::string GetProcessNameFromKey(const std::string &keyOrPath,
     return resolveGroup(keyOrPath);
 }
 
+bool isProcFAKES(const std::string &yamlPath, const std::string &procName) {
+    try {
+        YAML::Node root = YAML::LoadFile(yamlPath);
+        if (!root || !root["processes"]) return false;
+
+        YAML::Node procs = root["processes"];
+
+        auto checkList = [&](const YAML::Node &seq) -> bool {
+            if (!seq || !seq.IsSequence()) return false;
+            for (const auto &n : seq) {
+                if (!n.IsScalar()) continue;
+                std::string name = n.as<std::string>();
+
+                if (name.rfind(procName, 0) == 0) {
+                    if (name.find("_FAKES") != std::string::npos)
+                        return true;
+                }
+            }
+            return false;
+        };
+
+        // Check both bkg and sig groups
+        if (checkList(procs["bkg"])) return true;
+        if (checkList(procs["sig"])) return true;
+    }
+    catch (const std::exception &e) {
+        std::cerr << "[isProcFAKES] Error reading YAML '" << yamlPath
+                  << "': " << e.what() << "\n";
+    }
+
+    return false;
+}
+
 inline bool SampleIsData(const std::string& keyOrPath){
     std::string sample = GetSampleNameFromKey(keyOrPath);
     std::transform(sample.begin(), sample.end(), sample.begin(),
@@ -492,6 +525,36 @@ static BaseNodeHandle MakeBaseNode(const std::string &tree_name,
                       << dv.name << "' Expression: " << dv.expr
                       << " Exception: " << e.what() << "\n";
         }
+    }
+    
+    // --- Define fake lepton columns ---
+    if(!is_data){
+        node = node
+            // Count how many fake e/mu
+            .Define("nFakeElectron", [](const std::vector<int>& sid, const std::vector<int>& pdg) {
+                int n = 0;
+                for (size_t i = 0; i < sid.size(); ++i)
+                    if (sid[i] > 1 && std::abs(pdg[i]) == 11)
+                        ++n;
+                return n;
+            }, {"SourceID_lep", "PDGID_lep"})
+        
+            .Define("nFakeMuon", [](const std::vector<int>& sid, const std::vector<int>& pdg) {
+                int n = 0;
+                for (size_t i = 0; i < sid.size(); ++i)
+                    if (sid[i] > 1 && std::abs(pdg[i]) == 13)
+                        ++n;
+                return n;
+            }, {"SourceID_lep", "PDGID_lep"})
+        
+            // Mutually exclusive flags
+            .Define("hasFakeElectron", "nFakeElectron > 0 && nFakeMuon == 0")
+            .Define("hasFakeMuon",     "nFakeMuon > 0 && nFakeElectron == 0")
+        
+            // Event has both
+            .Define("hasFakeBoth",     "nFakeElectron > 0 && nFakeMuon > 0")
+            // Event has neither
+            .Define("hasNoFake",     "nFakeElectron == 0 && nFakeMuon == 0");
     }
 
     return {df, node};

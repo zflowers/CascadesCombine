@@ -243,6 +243,7 @@ int main(int argc, char** argv) {
         processName = GetProcessNameFromKey(rootFilePath, preferredGroups) + "_" + BFTool::GetFilterSignalsSMS()[0];
     else
         processName = GetProcessNameFromKey(rootFilePath, preferredGroups);
+    bool doFAKES = isProcFAKES(procYamlPath, processName);
 
     // --- Build active systematics config ---
     SystematicsConfig activeSystematics;
@@ -262,12 +263,19 @@ int main(int argc, char** argv) {
     bool runInternalSystsOnNominal = true;
 
     // processTree compute per-bin results
+// check whether processName has FAKES in it
+// if processName has FAKES do gen matching and send events with FAKES to the FAKES process
+// else send events without FAKES to the nominal process
+// if FAKES flag is false ignore the gen matching
     auto processTree=[&](const std::string &tree_name,
                          const std::string &key,
                          const SystematicsConfig &sysCfg,
                          bool runInternalSysts, // SF systs
                          const std::string &treeSystTag,
-                         bool treeSystIsUp) {
+                         bool treeSystIsUp,
+                         bool runFAKES // whether or not to use genmatching for adding FAKES procs
+                        ) {
+
         if(doHist) histFile->cd();
 
         // --- Define any other derived variables from YAML (these are independent of bin) ---
@@ -431,7 +439,7 @@ int main(int argc, char** argv) {
                 const int Ncuts = static_cast<int>(cutsOrdered.size());
 
                 // Book CutFlow specific to (bin, process)
-                std::string cfName = bin + "__" + processName + "__CutFlow";
+                std::string cfName = bin + "__" + key + "__CutFlow";
                 auto hist_CutFlow = std::make_shared<TH1D>(cfName.c_str(), cfName.c_str(), Ncuts+1, 0.0, double(Ncuts+1));
                 hist_CutFlow->Sumw2();
 
@@ -448,7 +456,7 @@ int main(int argc, char** argv) {
                 hist_CutFlow->GetXaxis()->SetBinLabel(1, "NTUPLES");
 
                 if (Ncuts > 1) {
-                    auto make_pass_name = [&](int i){ return processName + std::string("_pass_") + std::to_string(i+1); };
+                    auto make_pass_name = [&](int i){ return key + std::string("_pass_") + std::to_string(i+1); };
 
                     ROOT::RDF::RNode defNode = node;
                     for (int i = 0; i < Ncuts; ++i) {
@@ -463,11 +471,11 @@ int main(int argc, char** argv) {
                         if (i) npassedExpr += " + ";
                         npassedExpr += "(" + make_pass_name(i) + " ? 1 : 0)";
                     }
-                    std::string npassed_col = processName + std::string("_npassed");
+                    std::string npassed_col = key + std::string("_npassed");
                     defNode = defNode.Define(npassed_col, npassedExpr);
 
                     // Fill Histo1D once (use .c_str())
-                    std::string histNameTmp = processName + std::string("_npassed_tmp");
+                    std::string histNameTmp = key + std::string("_npassed_tmp");
                     auto r_h_npassed = defNode.Histo1D(
                         { histNameTmp.c_str(), histNameTmp.c_str(), Ncuts, 0.0, double(Ncuts) },
                         npassed_col.c_str(),
@@ -529,7 +537,7 @@ int main(int argc, char** argv) {
                 for (size_t i = 0; i < N; ++i) {
                     if (!keep[i]) continue;
                     const auto &h = histDefs[i];
-                    std::string hname = bin + "__" + processName + "__" + h.name;
+                    std::string hname = bin + "__" + key + "__" + h.name;
 
                     // Use the recorded plan; appliedUserCuts were stored in validation
                     FillHistFromPlan(base_node_fill, plans[i], h, hname);
@@ -649,21 +657,23 @@ int main(int argc, char** argv) {
     // Dispatch tree(s)
     std::string keyPT = sampleName; // key for processTree
 
-    auto doTrees = [&](const std::string &baseTree, bool is_data) {
-        processTree(baseTree, keyPT, activeSystematics, runInternalSystsOnNominal, "", false);
+    auto doTrees = [&](const std::string &baseTree, bool is_data, bool runFAKES) {
+        if(is_data) runFAKES = false;
+        processTree(baseTree, keyPT, activeSystematics, runInternalSystsOnNominal, "", false, runFAKES);
         if(!is_data){
             for (const auto &treeSyst : activeSystematics.tree) {
-                processTree(baseTree+"_"+treeSyst+"Up",   keyPT, activeSystematics, false, treeSyst, true);
-                processTree(baseTree+"_"+treeSyst+"Down", keyPT, activeSystematics, false, treeSyst, false);
+                processTree(baseTree+"_"+treeSyst+"Up",   keyPT, activeSystematics, false, treeSyst, true, runFAKES);
+                processTree(baseTree+"_"+treeSyst+"Down", keyPT, activeSystematics, false, treeSyst, false, runFAKES);
             }
         }
     };
+
     if (!isSignal) {
-        doTrees("KUAnalysis", IsData);
+        doTrees("KUAnalysis", IsData, doFAKES);
     }
     else if (sigType == "cascades") {
-        keyPT = BFTool::GetSignalTokensCascades(rootFilePath);
-        doTrees("KUAnalysis", false);
+        keyPT = processName;
+        doTrees("KUAnalysis", false, doFAKES);
     }
     else if (sigType == "sms") {
         // base process name (without filter suffix)
@@ -677,7 +687,7 @@ int main(int argc, char** argv) {
             processName = baseProcName;
             keyPT = processName;
             for (const auto &tree_name : BFTool::GetSignalTokensSMS(rootFilePath)) {
-                doTrees(tree_name, false);
+                doTrees(tree_name, false, doFAKES);
             }
         } else {
             // iterate filters: set processName and keyPT per-filter, then run trees
@@ -688,7 +698,7 @@ int main(int argc, char** argv) {
                 std::size_t pos = keyPT.find("_SMS");
                 if (pos != std::string::npos)
                     tree_name = keyPT.substr(pos + 1);
-                doTrees(tree_name, false);
+                doTrees(tree_name, false, doFAKES);
             }
         }
     }
