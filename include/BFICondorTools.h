@@ -134,7 +134,6 @@ bool isProcFAKES(const std::string &yamlPath, const std::string &procName) {
             for (const auto &n : seq) {
                 if (!n.IsScalar()) continue;
                 std::string name = n.as<std::string>();
-
                 if (name.rfind(procName, 0) == 0) {
                     if (name.find("_FAKES") != std::string::npos)
                         return true;
@@ -277,8 +276,8 @@ static void writeSamplesJSON(
         firstSample = false;
 
         const std::string& sname = kv.first;
-        std::string sampleId     = GetSampleNameFromKey(sname);
-
+        std::string sampleId = GetSampleNameFromKey(sname);
+        
         os << indent << "  \"" << sampleId << "\": {\n";
 
         // --- Files ---
@@ -336,7 +335,7 @@ struct SystInfo {
 
 static const std::vector<SystInfo> kDefaultSFSystematics = {
     //{"METtrig", "MetTrigSFweight", "MetTrigSFweight_up", "MetTrigSFweight_down"},
-    //{"PU",      "PUweight",        "PUweight_up",        "PUweight_down"}
+    {"PU",      "PUweight",        "PUweight_up",        "PUweight_down"}
 };
 
 static const std::vector<std::string> kDefaultTreeSystematics = {
@@ -370,13 +369,18 @@ ROOT::RDF::RNode MultiSystWeights(ROOT::RDF::RNode node,
 
     // --- Nominal product ---
     node = node.Define(
+        //"syst_nomin_product",
+        //[year](double met, double pu) {
+        //    double metEff = (year > 2018 ? 1.0 : met); // hack since trigSF in Run3 samples set to 0
+        //    return metEff * pu;
+        //    //return 1.; // turn off while debugging
+        //},
+        //{"MetTrigSFweight", "PUweight"}
         "syst_nomin_product",
-        [year](double met, double pu) {
-            double metEff = (year > 2018 ? 1.0 : met); // hack since trigSF in Run3 samples set to 0
-            return metEff * pu;
-            //return 1.; // turn off while debugging
+        [year](double pu) {
+            return pu;
         },
-        {"MetTrigSFweight", "PUweight"}
+        {"PUweight"}
     );
 
     // --- Multiply base weight by nominal product ---

@@ -55,6 +55,7 @@ ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<st
     }
     
     // require lep min DeltaR > 0.02
+    // need to debug this cut
     CutDef cut_minDR_ll;
     cut_minDR_ll.name = "minDR_ll_gt_0p02";
     cut_minDR_ll.columns = {"minDeltaR_leps"};

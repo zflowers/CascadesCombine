@@ -34,6 +34,7 @@ class BuildFit{
     void WriteJsonAsFlatHists(JSONFactory* j, const std::string &outFile, std::map<std::string,float>* out_obs_rates = nullptr);
     std::vector<std::string> GetBkgProcs(JSONFactory* j);
     bool HasDataObs(JSONFactory* j);
+    bool HasProcFAKES(JSONFactory* j, const std::string& check_proc);
     std::vector<std::string> ExtractSignalDetails( std::string signalPoint);
     std::vector<std::string> GetBinSet( JSONFactory* j);
     void AddFloatingNorms(stringlist bkgprocs);

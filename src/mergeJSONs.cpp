@@ -140,7 +140,26 @@ bool mergeJSONsFlattenedWithFileBreakdown(
             for (auto &sampleItem : binContent.items()) {
                 const std::string origKey = sampleItem.key();
                 const json &sampleObj = sampleItem.value();
-                const std::string group = resolveGroup(origKey);
+                
+                std::size_t pos_FAKE = origKey.find("_FAKES_");
+                std::string group;
+                
+                if (pos_FAKE == std::string::npos) {
+                    // normal (no fake suffix) -> resolve as before
+                    group = resolveGroup(origKey);
+                } else {
+                    // base name = everything before _FAKES_
+                    std::string baseName = origKey.substr(0, pos_FAKE);
+                
+                    // resolve where baseName should go (e.g. boson)
+                    std::string baseGroup = resolveGroup(baseName);
+                
+                    // fake type = everything after "_FAKES_"
+                    std::string fakeType = origKey.substr(pos_FAKE + 7); // 7 = length of "_FAKES_"
+                
+                    // final group becomes: <baseGroup>_FAKES_<type>
+                    group = baseGroup + "_FAKES_" + fakeType;
+                }
 
                 // If the sample lists files, use them. Otherwise fall back to totals and
                 // attribute to a synthetic key so totals are still captured.

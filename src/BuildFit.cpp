@@ -67,6 +67,22 @@ bool BuildFit::HasDataObs(JSONFactory* j) {
     return false;
 }
 
+bool BuildFit::HasProcFAKES(JSONFactory* j, const std::string& check_proc) {
+    for (auto &bin : j->j.items()) {
+        for (auto &proc : bin.value().items()) {
+            std::string key = proc.key();
+            // Skip actual data keys
+            if (strcasecmp(key.c_str(), "data_obs") == 0 || 
+                key.find("data") != std::string::npos || 
+                key.find("Data") != std::string::npos) 
+                continue;
+            if (key.find(check_proc + "_FAKES") != std::string::npos)
+                return true;
+        }
+    }
+    return false;
+}
+
 stringlist BuildFit::ExtractSignalDetails(std::string signalPoint){
 
     stringlist splitPoint = BFTool::SplitString( signalPoint, "_");
@@ -127,6 +143,11 @@ void BuildFit::WriteJsonAsFlatHists(JSONFactory* j, const std::string &outFile, 
         for (auto itProc = binJson.begin(); itProc != binJson.end(); ++itProc) {
             bool isData = false;
             const std::string procOrig = itProc.key();
+            stringlist fakes_skip_list = {"ZInv", "QCD", "Vfakeleps", "Wjets"};
+            bool is_base = BFTool::ContainsAnySubstring(procOrig, fakes_skip_list);
+            bool has_fakes = BuildFit::HasProcFAKES(j, procOrig);
+            if (is_base && has_fakes)
+                continue; // assume that any of the fakes_skip_lists that reported to not have a fake lepton is just a failure of the gen matching and we want to ignore those events
             const std::string proc = SanitizeName(procOrig);
             if (proc.find("data") != std::string::npos || proc.find("Data") != std::string::npos) isData = true;
             const json &valsObj = itProc.value();

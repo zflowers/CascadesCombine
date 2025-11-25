@@ -977,13 +977,18 @@ SampleTool::SampleTool(){
 void SampleTool::LoadBkgs( const stringlist& bkglist ){
     for( long unsigned int i=0; i<bkglist.size(); i++){
         //check if background exists
-        if( MasterDict.count(bkglist[i]) == 0 ){
-            std::cout<<"Bkg: "<<bkglist[i]<<" not found ... skipping ...\n";
+        std::string bkg = bkglist[i];
+        std::size_t pos_FAKE = bkg.find("_FAKE");
+        if(pos_FAKE != std::string::npos)
+            bkg = bkg.substr(0, pos_FAKE);
+        if( MasterDict.count(bkg) == 0 ){
+            std::cout<<"Bkg: "<<bkg<<" not found ... skipping ...\n";
             continue;
         } 
-        BkgDict[bkglist[i]] = MasterDict[bkglist[i]];        
+        BkgDict[bkg] = MasterDict[bkg];        
     }
 }
+
 void SampleTool::LoadSigs( const stringlist& siglist ){
     for( long unsigned int i=0; i<siglist.size(); i++){
         if( MasterDict.count(siglist[i]) == 0 ){
@@ -1122,7 +1127,7 @@ stringlist SampleTool::loadPreferredGroupsFromYaml(const std::string &yamlPath) 
                         std::string name = n.as<std::string>();
                         std::size_t pos_FAKE = name.find("_FAKE");
                         if (pos_FAKE != std::string::npos)
-                            name = name.substr(pos_FAKE);
+                            name = name.substr(0, pos_FAKE);
                         out.push_back(name);
                     }
                 }

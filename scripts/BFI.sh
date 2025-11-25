@@ -172,8 +172,8 @@ fi
 [[ -n "$SMS_FILTERS" ]] && CMD="$CMD --sms-filters \"$SMS_FILTERS\""
 
 # --- Echo and run ---
-echo "Running BFI_condor.x with command:"
-echo "$CMD"
+#echo "Running BFI_condor.x with command:"
+#echo "$CMD"
 eval "$CMD"
 
 echo "[$(date)] Job finished."

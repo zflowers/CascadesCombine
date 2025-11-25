@@ -263,10 +263,6 @@ int main(int argc, char** argv) {
     bool runInternalSystsOnNominal = true;
 
     // processTree compute per-bin results
-// check whether processName has FAKES in it
-// if processName has FAKES do gen matching and send events with FAKES to the FAKES process
-// else send events without FAKES to the nominal process
-// if FAKES flag is false ignore the gen matching
     auto processTree=[&](const std::string &tree_name,
                          const std::string &key,
                          const SystematicsConfig &sysCfg,
@@ -275,46 +271,59 @@ int main(int argc, char** argv) {
                          bool treeSystIsUp,
                          bool runFAKES // whether or not to use genmatching for adding FAKES procs
                         ) {
-
+    
         if(doHist) histFile->cd();
-
+    
         // --- Define any other derived variables from YAML (these are independent of bin) ---
         std::vector<DerivedVar> derivedVars;
         if(doHist && !histYamlPath.empty()){
             derivedVars = loadDerivedVariablesYAML(histYamlPath);
         }
-
+    
         std::vector<DerivedVar> validatedDerivedVars;
         // --- Base node to be copied per-bin ---
         if(ROOT::IsImplicitMTEnabled()) ROOT::DisableImplicitMT(); // disable MT for validation
         BaseNodeHandle valHandle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi, IsData, year, validatedDerivedVars);
         ROOT::RDF::RNode base_node_val = valHandle.node; // RNode constructed under IMT OFF
-
+    
         // --- Validate derived variables (on base node) ---
         for (const auto &dv : derivedVars) {
             if(ValidateDerivedVarNode(base_node_val, dv))
                 validatedDerivedVars.push_back(dv);
         }
-
+    
         // --- Load all user cuts with base_node_val ---
         std::map<std::string, CutDef> allUserCuts;
         base_node_val = BuildFitInput::loadCutsUser(base_node_val, allUserCuts, true);
-
+    
+        // precompute fake-key variants
+        std::string key_elec = key + "_FAKES_Elec";
+        std::string key_muon = key + "_FAKES_Muon";
+        std::string key_both = key + "_FAKES_Both";
+        std::string processName_elec = processName + "_FAKES_Elec";
+        std::string processName_muon = processName + "_FAKES_Muon";
+        std::string processName_both = processName + "_FAKES_Both";
+        std::map<std::string,std::string> map_key_to_process;
+        map_key_to_process.insert({key, processName});
+        map_key_to_process.insert({key_elec, processName_elec});
+        map_key_to_process.insert({key_muon, processName_muon});
+        map_key_to_process.insert({key_both, processName_both});
+    
         for (const auto &bin : binNames) {
             if(ROOT::IsImplicitMTEnabled()) ROOT::DisableImplicitMT(); // disable MT for validation
             BaseNodeHandle bin_valHandle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi, IsData, year, validatedDerivedVars);
             ROOT::RDF::RNode bin_base_node_val = bin_valHandle.node; // RNode constructed under IMT OFF
-
+    
             bin_base_node_val = BuildFitInput::loadCutsUser(bin_base_node_val, allUserCuts, false);
-
+    
             // Retrieve the already-expanded bin-specific cuts
             const auto &finalCutsExpanded = finalCutsExpandedMap.at(bin);
-        
+    
             // Build validUserCuts for this bin (use per-bin userCutsPerBin mapping)
             std::vector<DerivedVar> validUserCuts;
             auto itUserList = userCutsPerBin.find(bin);
             const std::vector<std::string> &userListForThisBin = (itUserList != userCutsPerBin.end()) ? itUserList->second : userCutsVec;
-            
+    
             for (const auto &cutName : userListForThisBin) {
                 if (cutName.empty()) continue;
                 auto it = allUserCuts.find(cutName);
@@ -327,39 +336,35 @@ int main(int argc, char** argv) {
                 if (!expanded.empty())
                     validUserCuts.push_back({cutName, expanded});
             }
- 
+    
+            // 'node' for validation context (MT OFF)
             ROOT::RDF::RNode node = bin_base_node_val;
-       
+    
             // --- Histograms / CutFlow per-bin ---
             if(doHist){
                 if(histFile) histFile->cd();
-
+    
                 // --- Build ordered cuts list (bin-specific final cuts + user cuts)
                 // Ensure every cutsOrdered entry has a corresponding human-readable label
                 std::vector<std::string> cutsOrdered;
                 std::vector<std::string> cutLabels;
-                
+    
                 // helper to create a readable, length-limited label from an expression
                 auto make_readable_label = [&](const std::string &expr) -> std::string {
-                    // basic sanitization: remove excessive whitespace and enclosing parentheses
                     std::string s = expr;
-                    // trim
                     auto l = s.find_first_not_of(" \t\n\r");
                     auto r = s.find_last_not_of(" \t\n\r");
                     if (l == std::string::npos) s = "";
                     else s = s.substr(l, r - l + 1);
-                
-                    // remove outer parentheses if present
+    
                     if (s.size() > 2 && s.front() == '(' && s.back() == ')') {
                         s = s.substr(1, s.size() - 2);
-                        // trim again
                         l = s.find_first_not_of(" \t\n\r");
                         r = s.find_last_not_of(" \t\n\r");
                         if (l == std::string::npos) s = "";
                         else s = s.substr(l, r - l + 1);
                     }
-                
-                    // collapse multiple spaces
+    
                     std::string out;
                     bool lastSpace = false;
                     for (char ch : s) {
@@ -371,47 +376,42 @@ int main(int argc, char** argv) {
                         }
                     }
                     s = out;
-                
-                    // truncate to reasonable length for axis label
+    
                     const size_t maxLen = 52;
                     if (s.size() > maxLen) {
-                        // smart truncation: keep beginning and end
                         std::string head = s.substr(0, 28);
                         std::string tail = s.substr(s.size() - 16);
                         s = head + "..." + tail;
                     }
-                
+    
                     if (s.empty()) s = std::string("Cut_") + std::to_string(cutLabels.size() + 1);
                     return s;
                 };
-                
+    
                 // --- Determine which CLI cut lists correspond to this bin ---
-                // Default to global single-bin values
                 size_t binIndex = std::distance(binNames.begin(), std::find(binNames.begin(), binNames.end(), bin));
                 std::vector<std::string> cutsCLI = cutsVec;
                 std::vector<std::string> lepCLI = lepCutsVec;
                 std::vector<std::string> predefCLI = predefCutsVec;
-                
+    
                 if (!cutsMultiStr.empty() || !lepCutsMultiStr.empty() || !predefCutsMultiStr.empty()) {
-                    // Recompute per-bin CLI args using same logic as above
                     std::vector<std::string> cutsParts = split_on_delim(cutsMultiStr, "|||");
                     std::vector<std::string> lepParts = split_on_delim(lepCutsMultiStr, "|||");
                     std::vector<std::string> predefParts = split_on_delim(predefCutsMultiStr, "|||");
-                
+    
                     if (binIndex < cutsParts.size()) cutsCLI = splitTopLevel(cutsParts[binIndex]);
                     if (binIndex < lepParts.size())  lepCLI  = splitTopLevel(lepParts[binIndex]);
                     if (binIndex < predefParts.size()) predefCLI = splitTopLevel(predefParts[binIndex]);
                 }
-                
+    
                 // Add finalCutsExpanded with best-effort labels (prefer CLI names if supplied)
                 for (size_t idx = 0; idx < finalCutsExpanded.size(); ++idx) {
                     const auto &c = finalCutsExpanded[idx];
                     if (c.empty()) continue;
-                
+    
                     cutsOrdered.push_back(c);
-                
+    
                     std::string label;
-                    // try to use CLI-provided names in order
                     if (idx < cutsCLI.size() && !cutsCLI[idx].empty()) {
                         label = cutsCLI[idx];
                     }
@@ -424,233 +424,305 @@ int main(int argc, char** argv) {
                     else {
                         label = make_readable_label(c);
                     }
-                
+    
                     cutLabels.push_back(label);
                 }
-                
+    
                 // Append user cuts with their explicit names (they should be human-readable)
                 for (const auto &uc : validUserCuts) {
                     cutsOrdered.push_back(uc.expr);
-                    // use uc.name if non-empty, else fall back to trimmed expression
                     if (!uc.name.empty()) cutLabels.push_back(uc.name);
                     else cutLabels.push_back(make_readable_label(uc.expr));
                 }
-                
+    
                 const int Ncuts = static_cast<int>(cutsOrdered.size());
-
-                // Book CutFlow specific to (bin, process)
-                std::string cfName = bin + "__" + key + "__CutFlow";
-                auto hist_CutFlow = std::make_shared<TH1D>(cfName.c_str(), cfName.c_str(), Ncuts+1, 0.0, double(Ncuts+1));
-                hist_CutFlow->Sumw2();
-
-                // Total events from NTUPLES (no cuts)
-                auto sumW_NoCuts = node.Sum<double>("weight_scaled");
-                auto sumW2_NoCuts = node.Sum<double>("weight_sq_scaled");
-                double sW_NoCuts = sumW_NoCuts.GetValue();
-                double sW2_NoCuts = sumW2_NoCuts.GetValue();
-                double err_NoCuts = (sW2_NoCuts>=0)?std::sqrt(sW2_NoCuts):0.0;
-                hist_CutFlow->SetBinContent(0, sW_NoCuts);
-                hist_CutFlow->SetBinError(0, err_NoCuts);
-                hist_CutFlow->SetBinContent(1, sW_NoCuts);
-                hist_CutFlow->SetBinError(1, err_NoCuts);
-                hist_CutFlow->GetXaxis()->SetBinLabel(1, "NTUPLES");
-
-                if (Ncuts > 1) {
-                    auto make_pass_name = [&](int i){ return key + std::string("_pass_") + std::to_string(i+1); };
-
-                    ROOT::RDF::RNode defNode = node;
-                    for (int i = 0; i < Ncuts; ++i) {
-                        std::string expr = (i == 0) ? ("(" + cutsOrdered[0] + ")")
-                                                    : (make_pass_name(i-1) + " && (" + cutsOrdered[i] + ")");
-                        defNode = defNode.Define(make_pass_name(i), expr);
-                    }
-
-                    // npassed = sum(pass_i ? 1 : 0)
-                    std::string npassedExpr;
-                    for (int i = 0; i < Ncuts; ++i) {
-                        if (i) npassedExpr += " + ";
-                        npassedExpr += "(" + make_pass_name(i) + " ? 1 : 0)";
-                    }
-                    std::string npassed_col = key + std::string("_npassed");
-                    defNode = defNode.Define(npassed_col, npassedExpr);
-
-                    // Fill Histo1D once (use .c_str())
-                    std::string histNameTmp = key + std::string("_npassed_tmp");
-                    auto r_h_npassed = defNode.Histo1D(
-                        { histNameTmp.c_str(), histNameTmp.c_str(), Ncuts, 0.0, double(Ncuts) },
-                        npassed_col.c_str(),
-                        "weight_scaled"
-                    );
-
-                    // Execute once and get the TH1D by value (copy)
-                    auto h_npassed = r_h_npassed.GetValue();
-
-                    // Fill classical CutFlow: bins 1..Ncuts = events surviving cut1..cutN
-                    for (int i = 2; i <= Ncuts+1; ++i) {
-                        double surv = 0.0;
-                        double surv_err2 = 0.0;
-                        for (int k = i-1; k <= Ncuts; ++k) {
-                            // mapping: npassed == k is stored in histogram bin index (k + 1)
-                            int rootBin = k + 1;
-                            double c = h_npassed.GetBinContent(rootBin);
-                            double e = h_npassed.GetBinError(rootBin);
-                            surv += c;
-                            surv_err2 += e * e;
-                        }
-                        hist_CutFlow->SetBinContent(i, surv);
-                        hist_CutFlow->SetBinError(i, std::sqrt(surv_err2));
-
-                        std::string lbl = (i - 2 < (int)cutLabels.size()) ? cutLabels[i - 2] : ("Cut_" + std::to_string(i-1));
-                        hist_CutFlow->GetXaxis()->SetBinLabel(i, lbl.c_str());
-                    }
-                }
-                // --- Write CutFlow for this bin ---
-                hist_CutFlow->Write();
-
-                // --- Prepare histogram definitions (reload per-bin to respect any bin-dependent expansions) ---
+    
+                //
+                // --- VALIDATE & PREP hist plans ---
+                //
+                // Prepare histogram definitions (reload per-bin to respect any bin-dependent expansions)
                 auto userHists = loadHistogramsUser(node);
                 auto histDefs = loadHistogramsYAML(histYamlPath, BFI);
                 histDefs.insert(histDefs.end(), userHists.begin(), userHists.end());
-
+    
                 size_t N = histDefs.size();
                 std::vector<HistFilterPlan> plans(N);
                 std::vector<char> keep(N, 0);
-
+    
                 for (size_t i = 0; i < N; ++i) {
                     const auto &h = histDefs[i];
                     plans[i] = BuildHistFilterPlan(h, BFI, allUserCuts);
-
+    
                     // create a hnode copy for validation context (node must have been created with MT OFF)
                     ROOT::RDF::RNode hnode = node;
-
+    
                     bool ok = ValidateAndRecordAppliedUserCuts(hnode, plans[i], h, BFI);
                     keep[i] = ok ? 1 : 0;
                 }
+    
+                //
+                // --- FILL CUTFLOW per-process (MT OFF definitions, evaluate now) ---
+                //
+                // We'll create separate cutflows per FAKE-split process. Use node (MT OFF) as base.
+                std::vector<std::pair<std::string, ROOT::RDF::RNode>> proc_nodes_val;
+                if (!runFAKES) {
+                    proc_nodes_val.emplace_back(key, node);
+                } else {
+                    // Create mutually exclusive filters
+                    auto node_elec = node.Filter("hasFakeElectron");
+                    auto node_muon = node.Filter("hasFakeMuon");
+                    auto node_both = node.Filter("hasFakeBoth");
+                    auto node_clean = node.Filter("hasNoFake");
+    
+                    proc_nodes_val.emplace_back(key_elec, node_elec);
+                    proc_nodes_val.emplace_back(key_muon, node_muon);
+                    proc_nodes_val.emplace_back(key_both, node_both);
+                    proc_nodes_val.emplace_back(key, node_clean); // keep original key for clean events
+                }
+    
+                for (auto &pkv : proc_nodes_val) {
+                    const std::string &proc_key = pkv.first;
+                    ROOT::RDF::RNode  proc_node = pkv.second;
+    
+                    // Book CutFlow specific to (bin, proc_key)
+                    std::string cfName = bin + "__" + map_key_to_process[proc_key] + "__CutFlow";
+                    auto hist_CutFlow = std::make_shared<TH1D>(cfName.c_str(), cfName.c_str(), Ncuts+1, 0.0, double(Ncuts+1));
+                    hist_CutFlow->Sumw2();
+    
+                    // Total events from proc_node (no cuts)
+                    auto sumW_NoCuts = proc_node.Sum<double>("weight_scaled");
+                    auto sumW2_NoCuts = proc_node.Sum<double>("weight_sq_scaled");
+                    double sW_NoCuts = sumW_NoCuts.GetValue();
+                    double sW2_NoCuts = sumW2_NoCuts.GetValue();
+                    double err_NoCuts = (sW2_NoCuts>=0)?std::sqrt(sW2_NoCuts):0.0;
+                    hist_CutFlow->SetBinContent(0, sW_NoCuts);
+                    hist_CutFlow->SetBinError(0, err_NoCuts);
+                    hist_CutFlow->SetBinContent(1, sW_NoCuts);
+                    hist_CutFlow->SetBinError(1, err_NoCuts);
+                    hist_CutFlow->GetXaxis()->SetBinLabel(1, "NTUPLES");
+    
+                    if (Ncuts > 1) {
+                        // local make_pass_name uses proc_key to avoid column name collisions across procs
+                        auto make_pass_name = [&](int i){ return map_key_to_process[proc_key] + std::string("_pass_") + std::to_string(i+1); };
+    
+                        ROOT::RDF::RNode defNode = proc_node;
+                        for (int i = 0; i < Ncuts; ++i) {
+                            std::string expr = (i == 0) ? ("(" + cutsOrdered[0] + ")")
+                                                        : (make_pass_name(i-1) + " && (" + cutsOrdered[i] + ")");
+                            defNode = defNode.Define(make_pass_name(i), expr);
+                        }
 
+                        // npassed = sum(pass_i ? 1 : 0)
+                        std::string npassedExpr;
+                        for (int i = 0; i < Ncuts; ++i) {
+                            if (i) npassedExpr += " + ";
+                            npassedExpr += "(" + make_pass_name(i) + " ? 1 : 0)";
+                        }
+                        std::string npassed_col = map_key_to_process[proc_key] + std::string("_npassed");
+                        defNode = defNode.Define(npassed_col, npassedExpr);
+    
+                        // Fill Histo1D once (use .c_str())
+                        std::string histNameTmp = map_key_to_process[proc_key] + std::string("_npassed_tmp");
+                        auto r_h_npassed = defNode.Histo1D(
+                            { histNameTmp.c_str(), histNameTmp.c_str(), Ncuts, 0.0, double(Ncuts) },
+                            npassed_col.c_str(),
+                            "weight_scaled"
+                        );
+    
+                        // Execute once and get the TH1D by value (copy)
+                        auto h_npassed = r_h_npassed.GetValue();
+    
+                        // Fill classical CutFlow: bins 1..Ncuts = events surviving cut1..cutN
+                        for (int i = 2; i <= Ncuts+1; ++i) {
+                            double surv = 0.0;
+                            double surv_err2 = 0.0;
+                            for (int k = i-1; k <= Ncuts; ++k) {
+                                int rootBin = k + 1;
+                                double c = h_npassed.GetBinContent(rootBin);
+                                double e = h_npassed.GetBinError(rootBin);
+                                surv += c;
+                                surv_err2 += e * e;
+                            }
+                            hist_CutFlow->SetBinContent(i, surv);
+                            hist_CutFlow->SetBinError(i, std::sqrt(surv_err2));
+    
+                            std::string lbl = (i - 2 < (int)cutLabels.size()) ? cutLabels[i - 2] : ("Cut_" + std::to_string(i-1));
+                            hist_CutFlow->GetXaxis()->SetBinLabel(i, lbl.c_str());
+                        }
+                    }
+                    // --- Write CutFlow for this proc (bin) ---
+                    hist_CutFlow->Write();
+                } // end proc_nodes_val loop
+    
                 // --- FILL PASS (MT ON) per-bin ---
                 if(!ROOT::IsImplicitMTEnabled()) ROOT::EnableImplicitMT(); // turn on multi-threading for filling
                 BaseNodeHandle fillHandle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi, IsData, year, validatedDerivedVars);
                 ROOT::RDF::RNode base_node_fill = fillHandle.node; // RNode constructed under IMT ON
                 base_node_fill = BuildFitInput::loadCutsUser(base_node_fill, allUserCuts, false);
-
+    
                 std::cout << "[BFI_condor] Filling histograms (bin=" << bin << ")\n";
+    
+                // For each histogram plan, fill once per (possibly split) process
                 for (size_t i = 0; i < N; ++i) {
                     if (!keep[i]) continue;
                     const auto &h = histDefs[i];
-                    std::string hname = bin + "__" + key + "__" + h.name;
-
-                    // Use the recorded plan; appliedUserCuts were stored in validation
-                    FillHistFromPlan(base_node_fill, plans[i], h, hname);
+    
+                    // Build list of proc-specific nodes for MT ON fill stage
+                    std::vector<std::pair<std::string, ROOT::RDF::RNode>> proc_nodes_fill;
+                    if (!runFAKES) {
+                        proc_nodes_fill.emplace_back(key, base_node_fill);
+                    } else {
+                        auto node_elec = base_node_fill.Filter("hasFakeElectron");
+                        auto node_muon = base_node_fill.Filter("hasFakeMuon");
+                        auto node_both = base_node_fill.Filter("hasFakeBoth");
+                        auto node_clean = base_node_fill.Filter("hasNoFake");
+    
+                        proc_nodes_fill.emplace_back(key_elec, node_elec);
+                        proc_nodes_fill.emplace_back(key_muon, node_muon);
+                        proc_nodes_fill.emplace_back(key_both, node_both);
+                        proc_nodes_fill.emplace_back(key, node_clean);
+                    }
+    
+                    for (auto &pkv : proc_nodes_fill) {
+                        const std::string &proc_key = pkv.first;
+                        ROOT::RDF::RNode proc_node_to_fill = pkv.second;
+    
+                        std::string hname = bin + "__" + map_key_to_process[proc_key] + "__" + h.name;
+    
+                        // Use the recorded plan; appliedUserCuts were stored in validation
+                        // FillHistFromPlan should accept an RNode as first arg (base node context)
+                        FillHistFromPlan(proc_node_to_fill, plans[i], h, hname);
+                    }
                 }
+    
             } // end doHist
-
+    
             // --- JSON output per-bin ---
             if(doJSON){
                 std::cout << "[BFI_condor] Filling json (bin=" << bin << ")\n";
-                if(!ROOT::IsImplicitMTEnabled()) ROOT::EnableImplicitMT(); 
+                if(!ROOT::IsImplicitMTEnabled()) ROOT::EnableImplicitMT();
                 BaseNodeHandle jsonHandle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi, IsData, year, validatedDerivedVars);
-                ROOT::RDF::RNode json_node = jsonHandle.node; // RNode constructed under IMT ON
-                // --- Apply filters to node for JSON 
-                json_node = BuildFitInput::loadCutsUser(json_node, allUserCuts, false);
-                for (const auto &c : finalCutsExpanded) if (!c.empty()) json_node = json_node.Filter(c);
-                for (const auto &vc : validUserCuts) json_node = json_node.Filter(vc.expr);
-
-                // --- basic nominal ---
-                auto cnt = json_node.Count();
-                auto sumW = json_node.Sum<double>("weight_scaled");
-                auto sumW2 = json_node.Sum<double>("weight_sq_scaled");
-                
-                unsigned long long n_entries = cnt.GetValue();
-                double sW = sumW.GetValue();
-                double sW2Val = sumW2.GetValue();
-                double err = (sW2Val >= 0.0) ? std::sqrt(sW2Val) : 0.0;
-                
-                // Prepare container for this file
-                FileYields fy;
-                fy.nominal = { (double)n_entries, sW, err };
-                
-                // --- For each systematic compute Up/Down sums ---
-                if(!IsData && runInternalSysts) {
-                    for (const auto &s : sysCfg.sf) {
-                        std::string colUp   = "weight_scaled_" + s.tag + "Up";
-                        std::string colDown = "weight_scaled_" + s.tag + "Down";
-                    
-                        // Sum for Up
-                        double sum_up = 0.0, sum2_up = 0.0;
-                        try {
-                            sum_up  = json_node.Sum<double>(colUp).GetValue();
-                            std::string colUp2 = colUp;
-                            colUp2.replace(0, strlen("weight_scaled_"), "weight_sq_");
-                            sum2_up = json_node.Sum<double>(colUp2).GetValue();
-                            // Note: if weight_sq_<syst> is not defined, instead use Sum of squared variation column if available.
-                        } catch (...) {
-                            // fallback: if weight_sq variant isn't present, estimate err from nominal relative uncertainty or leave 0.
-                            sum2_up = 0.0;
-                        }
-                        double err_up = (sum2_up >= 0.0) ? std::sqrt(sum2_up) : 0.0;
-                    
-                        // Sum for Down
-                        double sum_down = 0.0, sum2_down = 0.0;
-                        try {
-                            // recompute names since we mutated colUp above
-                            std::string colUpName = "weight_scaled_" + s.tag + "Up";
-                            std::string colDownName = "weight_scaled_" + s.tag + "Down";
-                            sum_down  = json_node.Sum<double>(colDownName).GetValue();
-                            // as above for sum2_down - might not have a weight_sq for each syst
-                            std::string colDown2 = colDown;
-                            colDown2.replace(0, strlen("weight_scaled_"), "weight_sq_");
-                            sum2_down = json_node.Sum<double>(colDown2).GetValue();
-                        } catch (...) {
-                            sum2_down = 0.0;
-                        }
-                        double err_down = (sum2_down >= 0.0) ? std::sqrt(sum2_down) : 0.0;
-                    
-                        // Record into file yields
-                        SystYields sy;
-                        sy.up   = { (double)n_entries, sum_up, err_up };
-                        sy.down = { (double)n_entries, sum_down, err_down };
-                        fy.systs[s.tag] = sy;
-                    }
+                ROOT::RDF::RNode json_node_base = jsonHandle.node; // RNode constructed under IMT ON
+    
+                // Apply user-level cuts (same as earlier for fill)
+                json_node_base = BuildFitInput::loadCutsUser(json_node_base, allUserCuts, false);
+    
+                // Build per-proc json nodes (MT ON)
+                std::vector<std::pair<std::string, ROOT::RDF::RNode>> proc_json_nodes;
+                if (!runFAKES) {
+                    proc_json_nodes.emplace_back(key, json_node_base);
+                } else {
+                    auto node_elec = json_node_base.Filter("hasFakeElectron");
+                    auto node_muon = json_node_base.Filter("hasFakeMuon");
+                    auto node_both = json_node_base.Filter("hasFakeBoth");
+                    auto node_clean = json_node_base.Filter("hasNoFake");
+    
+                    proc_json_nodes.emplace_back(key_elec, node_elec);
+                    proc_json_nodes.emplace_back(key_muon, node_muon);
+                    proc_json_nodes.emplace_back(key_both, node_both);
+                    proc_json_nodes.emplace_back(key, node_clean);
                 }
-                
-                // --- store per-file result and accumulate into totals (only once per-file) ---
-                if (fileResultsByBin[bin].find(key) == fileResultsByBin[bin].end() ||
-                    fileResultsByBin[bin][key].find(rootFilePath) == fileResultsByBin[bin][key].end())
-                {
-                    // Record per-bin, per-process, per-rootfile
-                    fileResultsByBin[bin][key][rootFilePath] = fy;
-                
-                    // Accumulate totals
-                    auto &tot = totalsByBin[bin][key];
-                
-                    // nominal
-                    tot.nominal[0] += (double)n_entries;
-                    tot.nominal[1] += sW;
-                    // accumulate variance (we will sqrt at the end) -> store as sum(sigma^2)
-                    // We will convert to final error by sqrt at finalization step; store as sum2 in tmp slot
-                    // To remain compatible with earlier flow, store accumulated squared error in nominal[2] temporarily
-                    tot.nominal[2] += (err * err);
-                
-                    // systematics accumulation
-                    if(!IsData){
-                        for (const auto &s_kv : fy.systs) {
-                            const std::string &stag = s_kv.first;
-                            const SystYields &sy = s_kv.second;
-                
-                            // Ensure entry exists
-                            auto &dest_syst = tot.systs[stag];
-                            // accumulate up
-                            dest_syst.up[0]  += sy.up[0];   // entries (will be the same)
-                            dest_syst.up[1]  += sy.up[1];   // sum
-                            dest_syst.up[2]  += (sy.up[2] * sy.up[2]); // accumulate variance (err^2)
-                            // accumulate down
-                            dest_syst.down[0]+= sy.down[0];
-                            dest_syst.down[1]+= sy.down[1];
-                            dest_syst.down[2]+= (sy.down[2] * sy.down[2]);
+    
+                // For each proc, apply finalCutsExpanded and validUserCuts filters, then sum
+                for (auto &pkv : proc_json_nodes) {
+                    const std::string &proc_key = pkv.first;
+                    ROOT::RDF::RNode proc_json_node = pkv.second;
+    
+                    // Apply bin final cuts
+                    for (const auto &c : finalCutsExpanded) if (!c.empty()) proc_json_node = proc_json_node.Filter(c);
+                    for (const auto &vc : validUserCuts) proc_json_node = proc_json_node.Filter(vc.expr);
+    
+                    // --- basic nominal ---
+                    auto cnt = proc_json_node.Count();
+                    auto sumW = proc_json_node.Sum<double>("weight_scaled");
+                    auto sumW2 = proc_json_node.Sum<double>("weight_sq_scaled");
+    
+                    unsigned long long n_entries = cnt.GetValue();
+                    double sW = sumW.GetValue();
+                    double sW2Val = sumW2.GetValue();
+                    double err = (sW2Val >= 0.0) ? std::sqrt(sW2Val) : 0.0;
+    
+                    // Prepare container for this file
+                    FileYields fy;
+                    fy.nominal = { (double)n_entries, sW, err };
+    
+                    // --- For each systematic compute Up/Down sums ---
+                    if(!IsData && runInternalSysts) {
+                        for (const auto &s : sysCfg.sf) {
+                            std::string colUp   = "weight_scaled_" + s.tag + "Up";
+                            std::string colDown = "weight_scaled_" + s.tag + "Down";
+    
+                            // Sum for Up
+                            double sum_up = 0.0, sum2_up = 0.0;
+                            try {
+                                sum_up  = proc_json_node.Sum<double>(colUp).GetValue();
+                                std::string colUp2 = colUp;
+                                colUp2.replace(0, strlen("weight_scaled_"), "weight_sq_");
+                                sum2_up = proc_json_node.Sum<double>(colUp2).GetValue();
+                            } catch (...) {
+                                sum2_up = 0.0;
+                            }
+                            double err_up = (sum2_up >= 0.0) ? std::sqrt(sum2_up) : 0.0;
+    
+                            // Sum for Down
+                            double sum_down = 0.0, sum2_down = 0.0;
+                            try {
+                                std::string colDownName = "weight_scaled_" + s.tag + "Down";
+                                sum_down  = proc_json_node.Sum<double>(colDownName).GetValue();
+                                std::string colDown2 = colDown;
+                                colDown2.replace(0, strlen("weight_scaled_"), "weight_sq_");
+                                sum2_down = proc_json_node.Sum<double>(colDown2).GetValue();
+                            } catch (...) {
+                                sum2_down = 0.0;
+                            }
+                            double err_down = (sum2_down >= 0.0) ? std::sqrt(sum2_down) : 0.0;
+    
+                            // Record into file yields
+                            SystYields sy;
+                            sy.up   = { (double)n_entries, sum_up, err_up };
+                            sy.down = { (double)n_entries, sum_down, err_down };
+                            fy.systs[s.tag] = sy;
                         }
                     }
-                }
-            }
+    
+                    // --- store per-file result and accumulate into totals (only once per-file) ---
+                    if (fileResultsByBin[bin].find(proc_key) == fileResultsByBin[bin].end() ||
+                        fileResultsByBin[bin][proc_key].find(rootFilePath) == fileResultsByBin[bin][proc_key].end())
+                    {
+                        // Record per-bin, per-process, per-rootfile
+                        fileResultsByBin[bin][proc_key][rootFilePath] = fy;
+    
+                        // Accumulate totals
+                        auto &tot = totalsByBin[bin][proc_key];
+    
+                        // nominal
+                        tot.nominal[0] += (double)n_entries;
+                        tot.nominal[1] += sW;
+                        // accumulate variance (we will sqrt at the end) -> store as sum(sigma^2)
+                        tot.nominal[2] += (err * err);
+    
+                        // systematics accumulation
+                        if(!IsData){
+                            for (const auto &s_kv : fy.systs) {
+                                const std::string &stag = s_kv.first;
+                                const SystYields &sy = s_kv.second;
+    
+                                // Ensure entry exists
+                                auto &dest_syst = tot.systs[stag];
+                                // accumulate up
+                                dest_syst.up[0]  += sy.up[0];   // entries (will be the same)
+                                dest_syst.up[1]  += sy.up[1];   // sum
+                                dest_syst.up[2]  += (sy.up[2] * sy.up[2]); // accumulate variance (err^2)
+                                // accumulate down
+                                dest_syst.down[0]+= sy.down[0];
+                                dest_syst.down[1]+= sy.down[1];
+                                dest_syst.down[2]+= (sy.down[2] * sy.down[2]);
+                            }
+                        }
+                    }
+                } // end proc_json_nodes loop
+            } // end doJSON
+    
         } // end loop over bins
     }; // end processTree
 
