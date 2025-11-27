@@ -125,6 +125,7 @@ void Plot_Stack(const string& hname,
                )
 {
     if (bkgHists.empty() && (sigHists.empty() || !dataHist)) return;
+    if (!bkgHists.empty()) SortHistsByYield(bkgHists);
     vector<TH1*> allHists = bkgHists; allHists.insert(allHists.end(), sigHists.begin(), sigHists.end());
     if (dataHist) allHists.push_back(dataHist);
     double hmin, hmax; GetMinMaxIntegral(allHists, hmin, hmax);

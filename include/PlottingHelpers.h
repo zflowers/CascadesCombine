@@ -117,6 +117,16 @@ double CalculateZbi(double Nsig, double Nbkg, double deltaNbkg){
   return (isnan(sigma))?0:sigma;
 }
 
+void SortHistsByYield(std::vector<TH1*> &hists) {
+    std::sort(hists.begin(), hists.end(),
+              [](TH1* a, TH1* b) {
+                  // Handle nulls (treat them as zero yield)
+                  double ya = (a ? a->Integral() : 0.0);
+                  double yb = (b ? b->Integral() : 0.0);
+                  return ya > yb;   // descending
+              });
+}
+
 const TColor rf_blue0(7000,0.749,0.78,0.933);
 const TColor rf_blue1(7001,0.424,0.467,0.651);
 const TColor rf_blue2(7002,0.255,0.302,0.522);
