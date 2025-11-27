@@ -139,7 +139,7 @@ int main(int argc, char** argv) {
 
     // Build map bin -> finalCutsExpanded (vector<string>), honoring cuts-multi if provided
     std::map<std::string, std::vector<std::string>> finalCutsExpandedMap;
-    // Also keep per-bin user-cuts (names referring to allUserCuts map) so we can expand them later
+    // Also keep per-bin user-cuts (names referring to allUserCuts map) to expand them later
     std::map<std::string, std::vector<std::string>> userCutsPerBin;
     
     auto split_on_delim = [](const std::string &s, const std::string &delim) {
@@ -702,7 +702,7 @@ int main(int argc, char** argv) {
                         // nominal
                         tot.nominal[0] += (double)n_entries;
                         tot.nominal[1] += sW;
-                        // accumulate variance (we will sqrt at the end) -> store as sum(sigma^2)
+                        // accumulate variance (sqrt at the end) -> store as sum(sigma^2)
                         tot.nominal[2] += (err * err);
     
                         // systematics accumulation
