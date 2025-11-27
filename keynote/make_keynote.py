@@ -21,10 +21,10 @@ SKIP_CUTFLOW = False
 # Edit this list to the run ids (directory names under runs/) you want processed.
 # If this list is empty, the script will auto-discover all run directories and process them.
 RUN_IDS = [
-"",
-"",
-"",
-"",
+"run_LepEtaStudy_v10_November26_2025_2122",
+"run_NSFProposal_v0_November26_2025_2123",
+#"run_Cascades_Regions_234L_v300_November26_2025_2124",
+"run_Cascades_CRs_Impacts_FD_234L_Bronze_v300_November26_2025_2126",
 
 
 #"run_Cascades_2L_0J_lPTISR_Regions_Gold_v263_November13_2025_2125",
@@ -628,6 +628,7 @@ def main():
                 if proc:
                     found_procs.add(proc)
 
+        global prefix_order
         missing_procs = [proc for proc in prefix_order if proc not in found_procs]
         #if missing_procs:
         #    print("WARNING: The following requested procs were not found in any bins:")
@@ -685,7 +686,7 @@ def main():
         add_summary_slides(summary_pdfs)
 
         if "LepEta" in run_id: 
-            global prefix_order = [
+            prefix_order = [
                 "Cascades_220_220_209_200_190_180",
                 "SMS_TChiWZ_SMS_300_290",
                 "SMS_TChiWZ_SMS_300_270",
@@ -693,11 +694,18 @@ def main():
             ]
 
         if "Gluinos" in run_id:
-            global prefix_order = [
+            prefix_order = [
                 "SMS_Gluinos_SMS_1200_1100", "SMS_Gluinos_SMS_1200_1176",
                 "Wjets", "ZInv", "ttbar", "QCD",
             ]
 
+        if "NSFProposal" in run_id:
+            prefix_order = [
+                "Cascades_220_220_209_200_190_180",
+                "SMS_TChiWZ_SMS_300_290",
+                "SMS_TChiWZ_SMS_300_270",
+                "top", "boson", "Vfakeleps",
+            ]
 
         if [d.name for d in bin_dirs] != ['pdfs']:
             print("Will make slides for bins:", [d.name for d in bin_dirs])
