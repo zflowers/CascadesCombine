@@ -134,7 +134,7 @@ void Plot_Stack(const string& hname,
     TH1D* h_BKG = nullptr;
     for (auto* h : bkgHists) {
         if (!h) continue;
-        SetMinimumBinContent(h, 1.e-6); 
+        SetMinimumBinContent(h, hmin); 
         if (!h_BKG) { 
             h_BKG = (TH1D*) h->Clone("TOT_BKG"); 
         } else {
@@ -186,7 +186,7 @@ void Plot_Stack(const string& hname,
     TH1* axisHist = !allHists.empty() ? allHists.front() : nullptr;
     if (!axisHist) return;
     DrawLogSmart(axisHist, "HIST");
-    axisHist->GetYaxis()->SetRangeUser(max(0.9*hmin, 1e-6), 1.1*hmax);
+    axisHist->GetYaxis()->SetRangeUser(max(0.9*hmin, 5.e-1), 1.1*hmax);
     axisHist->GetYaxis()->CenterTitle();
     axisHist->GetYaxis()->SetTitle(("N_{events}"));// / "+std::to_string(int(lumi))+" fb^{-1}").c_str());
     if(h_DATA){
@@ -215,7 +215,7 @@ void Plot_Stack(const string& hname,
     if (h_BKG) { h_BKG->SetLineWidth(3); h_BKG->SetLineColor(kRed); DrawLogSmart(h_BKG, "SAME HIST"); }
 
     for (size_t i = 0; i < sigHists.size(); ++i) { TH1* h = sigHists[i]; if (!h || h->GetEntries()==0) continue;
-        SetMinimumBinContent(h, 1.e-6);
+        SetMinimumBinContent(h, hmin);
         h->SetLineWidth(3); h->SetLineStyle(7);
         int color = kBlack;
         auto it = m_Color.find(ExtractProcName(sigHists[i]->GetName()));
@@ -460,7 +460,7 @@ void Plot_CutFlow(const std::string &hname,
     TH1* axisHist = !allHists.empty() ? allHists.front() : nullptr;
     if (!axisHist) return;
     axisHist->Draw("");
-    axisHist->GetYaxis()->SetRangeUser(max(0.8*hmin, 1e-6), 1.2*hmax);
+    axisHist->GetYaxis()->SetRangeUser(max(0.8*hmin, 1.e-6), 1.2*hmax);
     axisHist->GetXaxis()->CenterTitle();
     axisHist->GetXaxis()->SetTitleFont(42);
     axisHist->GetXaxis()->SetTitleSize(0.05);

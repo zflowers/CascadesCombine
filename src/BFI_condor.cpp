@@ -184,7 +184,7 @@ int main(int argc, char** argv) {
             std::vector<std::string> lepCuts = splitSemicolon(lepForBin);
             std::vector<std::string> predefCuts = splitSemicolon(predefForBin);
     
-            // call your existing helper which will call BFI->BuildLeptonCut(...) for each lepCut
+            // call helper which will call BFI->BuildLeptonCut(...) for each lepCut
             std::vector<std::string> outCuts;
             if (!buildCutsForBin(BFI, normalCuts, lepCuts, predefCuts, outCuts)) {
                 std::cerr << "[BFI_condor] Failed to build final cuts for bin (multi): " << bin << "\n";
@@ -441,7 +441,8 @@ int main(int argc, char** argv) {
                 // --- VALIDATE & PREP hist plans ---
                 //
                 // Prepare histogram definitions (reload per-bin to respect any bin-dependent expansions)
-                auto userHists = loadHistogramsUser(node);
+                auto userHists = loadHistogramsUser();
+                node = loadHistogramsUserCols(node);
                 auto histDefs = loadHistogramsYAML(histYamlPath, BFI);
                 histDefs.insert(histDefs.end(), userHists.begin(), userHists.end());
     
@@ -463,7 +464,7 @@ int main(int argc, char** argv) {
                 //
                 // --- FILL CUTFLOW per-process (MT OFF definitions, evaluate now) ---
                 //
-                // We'll create separate cutflows per FAKE-split process. Use node (MT OFF) as base.
+                // create separate cutflows per FAKE-split process. Use node (MT OFF) as base.
                 std::vector<std::pair<std::string, ROOT::RDF::RNode>> proc_nodes_val;
                 if (!runFAKES) {
                     proc_nodes_val.emplace_back(key, node);
@@ -559,6 +560,7 @@ int main(int argc, char** argv) {
                 BaseNodeHandle fillHandle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi, IsData, year, validatedDerivedVars);
                 ROOT::RDF::RNode base_node_fill = fillHandle.node; // RNode constructed under IMT ON
                 base_node_fill = BuildFitInput::loadCutsUser(base_node_fill, allUserCuts, false);
+                base_node_fill = loadHistogramsUserCols(base_node_fill);
     
                 std::cout << "[BFI_condor] Filling histograms (bin=" << bin << ")\n";
     
@@ -586,6 +588,8 @@ int main(int argc, char** argv) {
                     for (auto &pkv : proc_nodes_fill) {
                         const std::string &proc_key = pkv.first;
                         ROOT::RDF::RNode proc_node_to_fill = pkv.second;
+                        for (const auto &c : finalCutsExpanded) if (!c.empty()) proc_node_to_fill = proc_node_to_fill.Filter(c);
+                        for (const auto &vc : validUserCuts) proc_node_to_fill = proc_node_to_fill.Filter(vc.expr);
     
                         std::string hname = bin + "__" + map_key_to_process[proc_key] + "__" + h.name;
     

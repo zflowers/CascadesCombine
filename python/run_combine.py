@@ -15,7 +15,7 @@ def parse_args():
                    help="YAML config file containing process definitions")
     p.add_argument("--hist-cfg", dest="hist_cfg", type=str, default="config/hist_cfgs/hist_examples.yaml",
                    help="YAML config file containing histogram definitions")
-    p.add_argument("--FDpattern-cfg", dest="FDpattern_cfg", type=str, default="config/FDpattern_cfgs/FDpattern_examples.txt",
+    p.add_argument("--FDpattern-cfg", dest="FDpattern_cfg", type=str, default="config/FDpattern_cfgs/FDpattern_examples.yaml",
                    help="YAML config file containing FD bin pattern definitions")
     p.add_argument("--stress-test", dest="stress_test", action="store_true",
                    help="Run stress test")
@@ -245,7 +245,6 @@ def prepare_run_and_stage_assets_copy(
         dst = exe_dir / exe_file.name
         _copy_file(exe_file, dst)
         staged_exes[exe_file.name] = str(dst)
-    print(f"[run_combine] Copied executables to {str(exe_dir)}", flush=True)
 
     # -------------------------
     # 3) Copy include_items into run_dir/include/
@@ -284,7 +283,6 @@ def prepare_run_and_stage_assets_copy(
             continue
         dst = include_dir / p.name
         _copy_file(p, dst)
-        print(f"[run_combine] Copied include file {p} -> {dst}", flush=True)
 
     for item in src_items:
         p = Path(Path("src") / item)
@@ -293,7 +291,6 @@ def prepare_run_and_stage_assets_copy(
             continue
         dst = src_dir / p.name
         _copy_file(p, dst)
-        print(f"[run_combine] Copied src file {p} -> {dst}", flush=True)
 
     for item in macro_items:
         p = Path(Path("macro") / item)
@@ -302,7 +299,6 @@ def prepare_run_and_stage_assets_copy(
             continue
         dst = macro_dir / p.name
         _copy_file(p, dst)
-        print(f"[run_combine] Copied macro file {p} -> {dst}", flush=True)
 
     # -------------------------
     # 5) Return mapping for use by the workflow
@@ -921,6 +917,39 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                 print("[run_combine] Running T2W with command:", " ".join(T2W_cmd), flush=True)
                 subprocess.run(T2W_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
+            if make_FD:
+                # FitDiagnostics
+                FD_cmd = [
+                    "bash",
+                    macro_dir+"/launchFitDiagnostics.sh",
+                    output_dir,
+                    run_dir
+                ]
+                print("[run_combine] Running FitDiagnostics with command:", " ".join(FD_cmd), flush=True)
+                subprocess.run(FD_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
+                # Plot FD
+                FD_output_name = 'fitDiagnostics.Test.root'
+                FD_files = [os.path.abspath(f) for f in glob.glob(os.path.join(output_dir, '**', FD_output_name), recursive=True)]
+                for FD_file in FD_files:
+                    FD_plot_cmd_prefit = [
+                        "./"+exe_dir+"/PlotFitDiagnostics.x",
+                        "-i", FD_file,
+                        "-o", plots_dir,
+                        "-t", "shapes_prefit",
+                        "--config", FDpattern_cfg
+                    ]
+                    print("[run_combine] Running FitDiagnostics plotter with command:", " ".join(FD_plot_cmd_prefit), flush=True)
+                    subprocess.run(FD_plot_cmd_prefit, check=True, stdout=sys.stdout, stderr=sys.stderr)
+                    FD_plot_cmd_postfit = [
+                        "./"+exe_dir+"/PlotFitDiagnostics.x",
+                        "-i", FD_file,
+                        "-o", plots_dir,
+                        "-t", "shapes_fit_b",
+                        "--config", FDpattern_cfg
+                    ]
+                    print("[run_combine] Running FitDiagnostics plotter with command:", " ".join(FD_plot_cmd_postfit), flush=True)
+                subprocess.run(FD_plot_cmd_postfit, check=True, stdout=sys.stdout, stderr=sys.stderr)
+
             if make_impacts:
                 # Impacts
                 impacts_cmd = [
@@ -947,39 +976,6 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                             _copy_file(impacts_pdf, dst_file)
                         except Exception as e:
                             print(f"[run_combine] Warning: failed to copy {impacts_pdf}: {e}", flush=True)
-
-            if make_FD:
-                # FitDiagnostics
-                FD_cmd = [
-                    "bash",
-                    macro_dir+"/launchFitDiagnostics.sh",
-                    output_dir,
-                    run_dir
-                ]
-                print("[run_combine] Running FitDiagnostics with command:", " ".join(FD_cmd), flush=True)
-                subprocess.run(FD_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
-                # Plot FD
-                FD_output_name = 'fitDiagnostics.Test.root'
-                FD_files = [os.path.abspath(f) for f in glob.glob(os.path.join(output_dir, '**', FD_output_name), recursive=True)]
-                for FD_file in FD_files:
-                    FD_plot_cmd_prefit = [
-                        "./"+exe_dir+"/PlotFitDiagnostics.x",
-                        "-i", FD_file,
-                        "-o", plots_dir,
-                        "-t", "shapes_prefit",
-                        "--patternFile", FDpattern_cfg
-                    ]
-                    print("[run_combine] Running FitDiagnostics plotter with command:", " ".join(FD_plot_cmd_prefit), flush=True)
-                    subprocess.run(FD_plot_cmd_prefit, check=True, stdout=sys.stdout, stderr=sys.stderr)
-                    FD_plot_cmd_postfit = [
-                        "./"+exe_dir+"/PlotFitDiagnostics.x",
-                        "-i", FD_file,
-                        "-o", plots_dir,
-                        "-t", "shapes_fit_b",
-                        "--patternFile", FDpattern_cfg
-                    ]
-                    print("[run_combine] Running FitDiagnostics plotter with command:", " ".join(FD_plot_cmd_postfit), flush=True)
-                subprocess.run(FD_plot_cmd_postfit, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
     print("[run_combine] All steps completed.", flush=True)
     end_time = time.time()

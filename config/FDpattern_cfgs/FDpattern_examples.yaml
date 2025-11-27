@@ -1,0 +1,58 @@
+bins:
+  - name: "2L_Bronze_0J_P250_NoBtag"
+    include:
+        "*2L_Bronze_0J_P250*"
+    exclude:
+        "*Btag"
+  - name: "2L_Bronze_0J_P350_NoBtag"
+    include:
+        "*2L_Bronze_0J_P350*"
+    exclude:
+        "*Btag"
+  - name: "2L_Bronze_1J_P250_NoBtag"
+    include:
+        "*2L_Bronze_1J_P250*"
+    exclude:
+        "*Btag"
+  - name: "2L_Bronze_1J_P350_NoBtag"
+    include:
+        "*2L_Bronze_1J_P350*"
+    exclude:
+        "*Btag"
+  - name: "3L_Bronze_NoBtag"
+    include:
+        "*3L_Bronze_*"
+    exclude:
+        "*Btag"
+  - name: "4L_Bronze_NoBtag"
+    include:
+        "*4L_Bronze_*"
+    exclude:
+        "*Btag"
+  - name: "Bronze_Btag"
+    include:
+        "*Bronze_*Btag"
+
+processes:
+  merge:
+    - name: "V_FAKES"
+      include:
+        - "Vfakeleps_2018_FAKES*"
+      #exclude:
+      #  - "ST"
+
+    #- name: "top"
+    #  include:
+    #    - "top_2018*"
+
+    #- name: "boson"
+    #  include:
+    #    - "boson_2018*"
+
+    - name: "top_FAKES"
+      include:
+        - "top_2018_FAKES*"
+
+    - name: "boson_FAKES"
+      include:
+        - "boson_2018_FAKES*"

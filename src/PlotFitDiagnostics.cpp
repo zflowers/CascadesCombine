@@ -8,7 +8,6 @@ int main(int argc, char* argv[]) {
 
     string inputFile;
     string treeName = "shapes_prefit";
-    vector<string> userBinPatterns; 
     string patternFile;
     loadFormatMaps();
 
@@ -30,11 +29,7 @@ int main(int argc, char* argv[]) {
             if(i+1 < argc) treeName = argv[++i]; // shapes_prefit or shapes_fit_b
             else { cerr<<"[ERROR PlotFitDiagnostics] Missing value for "<<arg<<endl; return 1; }
         }
-        else if(arg=="-b"||arg=="--bin") {
-            if(i+1 < argc) userBinPatterns.push_back(argv[++i]);
-            else { cerr<<"[ERROR PlotFitDiagnostics] Missing value for "<<arg<<endl; return 1; }
-        }
-        else if(arg=="--patternFile") {
+        else if(arg=="--config") {
             if(i+1<argc) patternFile = argv[++i];
             else { cerr<<"[ERROR PlotFitDiagnostics] Missing value for "<<arg<<endl; return 1; }
         }
@@ -104,19 +99,12 @@ int main(int argc, char* argv[]) {
     // STEP 2 Determine which bins the user wants to merge
     // ----------------------
     map<string, vector<string>> mergedBinGroups;
-    if(!userBinPatterns.empty() || !patternFile.empty()){
-        vector<MergedBinGroup> groups = BuildMergedBinGroups(allBinNames, userBinPatterns, patternFile);
-        for (const auto& g : groups){
-            mergedBinGroups[g.group_name] = g.bin_names;
-            gSystem->mkdir((outputDir+"pdfs/"+SanitizeString(g.group_name)).c_str(), kTRUE);
-        }
-    }
-    else {
-        // Default: one group per bin
-        for(const auto& b : allBinNames){
-            mergedBinGroups[b] = {b};
-            gSystem->mkdir((outputDir+"pdfs/"+SanitizeString(b)).c_str(), kTRUE);
-        }
+    if(patternFile.empty()) {std::cout << "[PlotFitDiagnostics] NEED TO SUPPLY CONFIG FILE FOR RULES\n"; return 1;}
+    YamlConfig cfg = LoadYamlConfig(patternFile);
+    vector<MergedBinGroup> groups = BuildMergedBinGroupsFromYaml(allBinNames, cfg);
+    for (const auto& g : groups){
+        mergedBinGroups[g.group_name] = g.bin_names;
+        gSystem->mkdir((outputDir+"pdfs/"+SanitizeString(g.group_name)).c_str(), kTRUE);
     }
 
     // ----------------------
@@ -130,7 +118,7 @@ int main(int argc, char* argv[]) {
         // ----------------------
         // STEP 4 Retrieve per-process hist for each bin
         // ----------------------
-        CombinedBinHists mergedHists = LoadAndCombineBinHists(fitDir, mergedName, binsToCombine);
+        CombinedBinHists mergedHists = LoadAndCombineBinHists(fitDir, mergedName, binsToCombine, cfg.process_merges);
 
         // ----------------------
         // STEP 5 Produce stack plot for this merged group

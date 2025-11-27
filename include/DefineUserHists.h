@@ -1,9 +1,73 @@
 #include "HistTools.h"
 #include "TLorentzVector.h"
 
-// User existing HistDef type
-static std::vector<HistDef> loadHistogramsUser(ROOT::RDF::RNode &node) {
-    std::vector<HistDef> hdefs;
+static ROOT::RDF::RNode loadHistogramsUserCols(ROOT::RDF::RNode &node){
+
+    if (node.HasColumn("minM_ll_all") == false) {
+        node = node.Define("minM_ll_all",
+            [](const std::vector<double> &pt,
+               const std::vector<double> &eta,
+               const std::vector<double> &phi,
+               const std::vector<double> &mass) -> double
+            {
+                // Safety: require consistent vector sizes and at least 2 leptons
+                if (pt.size() < 2 || eta.size() != pt.size() || phi.size() != pt.size() || mass.size() != pt.size())
+                    return -1.0;
+        
+                double minM = std::numeric_limits<double>::infinity();
+                for (size_t i = 0; i < pt.size(); ++i) {
+                    TLorentzVector v1; v1.SetPtEtaPhiM(pt[i], eta[i], phi[i], mass[i]);
+                    for (size_t j = i + 1; j < pt.size(); ++j) {
+                        TLorentzVector v2; v2.SetPtEtaPhiM(pt[j], eta[j], phi[j], mass[j]);
+                        double m = (v1 + v2).M();
+                        if (m < minM) minM = m;
+                    }
+                }
+                return (std::isfinite(minM) ? minM : -1.0);
+            }, {"PT_lep","Eta_lep","Phi_lep","M_lep"});
+    }
+    
+    // Convenience boolean: true if a valid min mass exists
+    if (node.HasColumn("HasMinPair_all") == false) 
+        node = node.Define("HasMinPair_all", [](double minM){ return minM >= 0.0; }, {"minM_ll_all"});
+    
+    // --- min M_ll but only over OSSF pairs ---------------------------------
+    if (node.HasColumn("minM_ll_OSSF") == false) {
+        node = node.Define("minM_ll_OSSF",
+            [](const std::vector<double> &pt,
+               const std::vector<double> &eta,
+               const std::vector<double> &phi,
+               const std::vector<double> &mass,
+               const std::vector<int> &pdgid,
+               const std::vector<int> &charge) -> double
+            {
+                // Safety checks
+                if (pt.size() < 2 || eta.size() != pt.size() || phi.size() != pt.size() || mass.size() != pt.size())
+                    return -1.0;
+                if (pdgid.size() != pt.size() || charge.size() != pt.size())
+                    return -1.0;
+        
+                double minM = std::numeric_limits<double>::infinity();
+                for (size_t i = 0; i < pt.size(); ++i) {
+                    for (size_t j = i + 1; j < pt.size(); ++j) {
+                        // same flavor (abs PDG equal 11 or 13) and opposite sign
+                        int id0 = std::abs(pdgid[i]), id1 = std::abs(pdgid[j]);
+                        if (!((id0 == 11 && id1 == 11) || (id0 == 13 && id1 == 13))) continue;
+                        if (charge[i] * charge[j] >= 0) continue;
+        
+                        TLorentzVector v1; v1.SetPtEtaPhiM(pt[i], eta[i], phi[i], mass[i]);
+                        TLorentzVector v2; v2.SetPtEtaPhiM(pt[j], eta[j], phi[j], mass[j]);
+                        double m = (v1 + v2).M();
+                        if (m < minM) minM = m;
+                    }
+                }
+                return (std::isfinite(minM) ? minM : -1.0);
+            }, {"PT_lep","Eta_lep","Phi_lep","M_lep","PDGID_lep","Charge_lep"});
+    }
+    
+    if (node.HasColumn("HasMinPair_OSSF") == false) 
+        node = node.Define("HasMinPair_OSSF", [](double minM){ return minM >= 0.0; }, {"minM_ll_OSSF"});
+
     //node = node
     //    .Define("My_p4_lep0_a", [](const std::vector<double> &pt,
     //                          const std::vector<double> &eta,
@@ -122,44 +186,6 @@ static std::vector<HistDef> loadHistogramsUser(ROOT::RDF::RNode &node) {
     //        },
     //        {"TLV_Cand", "My_p4_lep0_a", "My_p4_lep1_a", "Q_lep0_a", "Q_lep1_a"})
     //;
-    //HistDef h_CandCosDecayAngleLab_CandBetaZLab;
-    //h_CandCosDecayAngleLab_CandBetaZLab.name = "CandCosDecayAngleLab_vs_CandBetaZLab";
-    //h_CandCosDecayAngleLab_CandBetaZLab.type = "2D";
-    //h_CandCosDecayAngleLab_CandBetaZLab.expr = "CandCosDecayAngleLab";
-    //h_CandCosDecayAngleLab_CandBetaZLab.yexpr = "CandBetaZLab";
-    //h_CandCosDecayAngleLab_CandBetaZLab.nbins = 64;
-    //h_CandCosDecayAngleLab_CandBetaZLab.xmin = 0;
-    //h_CandCosDecayAngleLab_CandBetaZLab.xmax = 1;
-    //h_CandCosDecayAngleLab_CandBetaZLab.x_title = "cos#theta Z^{*}";
-    //h_CandCosDecayAngleLab_CandBetaZLab.nybins = 64;
-    //h_CandCosDecayAngleLab_CandBetaZLab.ymin = 0;
-    //h_CandCosDecayAngleLab_CandBetaZLab.ymax = 1;
-    //h_CandCosDecayAngleLab_CandBetaZLab.y_title = "#beta Z^{*}";
-    //h_CandCosDecayAngleLab_CandBetaZLab.cuts = {"HasCand"};
-    //h_CandCosDecayAngleLab_CandBetaZLab.lepCuts = {};
-    //h_CandCosDecayAngleLab_CandBetaZLab.predefCuts = {};
-    //h_CandCosDecayAngleLab_CandBetaZLab.userCuts = {};
-    //hdefs.push_back(h_CandCosDecayAngleLab_CandBetaZLab);
-
-    //HistDef h_CandCosDecayAngleLab_CandRapidityLab;
-    //h_CandCosDecayAngleLab_CandRapidityLab.name = "CandCosDecayAngleLab_vs_CandRapidityLab";
-    //h_CandCosDecayAngleLab_CandRapidityLab.type = "2D";
-    //h_CandCosDecayAngleLab_CandRapidityLab.expr = "CandCosDecayAngleLab";
-    //h_CandCosDecayAngleLab_CandRapidityLab.yexpr = "CandRapidityLab";
-    //h_CandCosDecayAngleLab_CandRapidityLab.nbins = 64;
-    //h_CandCosDecayAngleLab_CandRapidityLab.xmin = 0;
-    //h_CandCosDecayAngleLab_CandRapidityLab.xmax = 1;
-    //h_CandCosDecayAngleLab_CandRapidityLab.x_title = "cos#theta Z^{*}";
-    //h_CandCosDecayAngleLab_CandRapidityLab.nybins = 64;
-    //h_CandCosDecayAngleLab_CandRapidityLab.ymin = -2.5;
-    //h_CandCosDecayAngleLab_CandRapidityLab.ymax = 2.5;
-    //h_CandCosDecayAngleLab_CandRapidityLab.y_title = "Rapidity Z^{*}";
-    //h_CandCosDecayAngleLab_CandRapidityLab.cuts = {"HasCand"};
-    //h_CandCosDecayAngleLab_CandRapidityLab.lepCuts = {};
-    //h_CandCosDecayAngleLab_CandRapidityLab.predefCuts = {};
-    //h_CandCosDecayAngleLab_CandRapidityLab.userCuts = {};
-    //hdefs.push_back(h_CandCosDecayAngleLab_CandRapidityLab);
-
     // Examples below \/
     //// ---------------------------------------------------------------------
     //// Step 1: Build TLorentzVectors for the leading leptons from vector branches
@@ -264,6 +290,79 @@ static std::vector<HistDef> loadHistogramsUser(ROOT::RDF::RNode &node) {
     //            if (MET == 0.0) return 0.0; // avoid divide-by-zero; choose safe default
     //            return HT_eta24 / MET;
     //        }, {"HT_eta24","MET"});
+    return node;
+}
+
+static std::vector<HistDef> loadHistogramsUser() {
+    std::vector<HistDef> hdefs;
+
+    // 1D histogram for min M_ll (all pairs)
+    //HistDef h_min_all;
+    //h_min_all.name    = "minM_ll_all";
+    //h_min_all.type    = "1D";
+    //h_min_all.expr    = "minM_ll_all";
+    //h_min_all.nbins   = 50;
+    //h_min_all.xmin    = 0;
+    //h_min_all.xmax    = 5;
+    //h_min_all.x_title = "min M_{ll} (GeV)";
+    //h_min_all.cuts    = {"HasMinPair_all"}; // require a valid pair
+    //h_min_all.lepCuts = {};
+    //h_min_all.predefCuts = {};
+    //h_min_all.userCuts = {};
+    //hdefs.push_back(h_min_all);
+    
+    // 1D histogram for min M_ll (OSSF pairs only)
+    //HistDef h_min_ossf;
+    //h_min_ossf.name    = "minM_ll_OSSF";
+    //h_min_ossf.type    = "1D";
+    //h_min_ossf.expr    = "minM_ll_OSSF";
+    //h_min_ossf.nbins   = 60;
+    //h_min_ossf.xmin    = 0;
+    //h_min_ossf.xmax    = 200;
+    //h_min_ossf.x_title = "min M_{ll} (OSSF pairs) [GeV]";
+    //h_min_ossf.cuts    = {"HasMinPair_OSSF"};
+    //h_min_ossf.lepCuts = {};
+    //h_min_ossf.predefCuts = {};
+    //h_min_ossf.userCuts = {};
+    //hdefs.push_back(h_min_ossf);
+
+    //HistDef h_CandCosDecayAngleLab_CandBetaZLab;
+    //h_CandCosDecayAngleLab_CandBetaZLab.name = "CandCosDecayAngleLab_vs_CandBetaZLab";
+    //h_CandCosDecayAngleLab_CandBetaZLab.type = "2D";
+    //h_CandCosDecayAngleLab_CandBetaZLab.expr = "CandCosDecayAngleLab";
+    //h_CandCosDecayAngleLab_CandBetaZLab.yexpr = "CandBetaZLab";
+    //h_CandCosDecayAngleLab_CandBetaZLab.nbins = 64;
+    //h_CandCosDecayAngleLab_CandBetaZLab.xmin = 0;
+    //h_CandCosDecayAngleLab_CandBetaZLab.xmax = 1;
+    //h_CandCosDecayAngleLab_CandBetaZLab.x_title = "cos#theta Z^{*}";
+    //h_CandCosDecayAngleLab_CandBetaZLab.nybins = 64;
+    //h_CandCosDecayAngleLab_CandBetaZLab.ymin = 0;
+    //h_CandCosDecayAngleLab_CandBetaZLab.ymax = 1;
+    //h_CandCosDecayAngleLab_CandBetaZLab.y_title = "#beta Z^{*}";
+    //h_CandCosDecayAngleLab_CandBetaZLab.cuts = {"HasCand"};
+    //h_CandCosDecayAngleLab_CandBetaZLab.lepCuts = {};
+    //h_CandCosDecayAngleLab_CandBetaZLab.predefCuts = {};
+    //h_CandCosDecayAngleLab_CandBetaZLab.userCuts = {};
+    //hdefs.push_back(h_CandCosDecayAngleLab_CandBetaZLab);
+
+    //HistDef h_CandCosDecayAngleLab_CandRapidityLab;
+    //h_CandCosDecayAngleLab_CandRapidityLab.name = "CandCosDecayAngleLab_vs_CandRapidityLab";
+    //h_CandCosDecayAngleLab_CandRapidityLab.type = "2D";
+    //h_CandCosDecayAngleLab_CandRapidityLab.expr = "CandCosDecayAngleLab";
+    //h_CandCosDecayAngleLab_CandRapidityLab.yexpr = "CandRapidityLab";
+    //h_CandCosDecayAngleLab_CandRapidityLab.nbins = 64;
+    //h_CandCosDecayAngleLab_CandRapidityLab.xmin = 0;
+    //h_CandCosDecayAngleLab_CandRapidityLab.xmax = 1;
+    //h_CandCosDecayAngleLab_CandRapidityLab.x_title = "cos#theta Z^{*}";
+    //h_CandCosDecayAngleLab_CandRapidityLab.nybins = 64;
+    //h_CandCosDecayAngleLab_CandRapidityLab.ymin = -2.5;
+    //h_CandCosDecayAngleLab_CandRapidityLab.ymax = 2.5;
+    //h_CandCosDecayAngleLab_CandRapidityLab.y_title = "Rapidity Z^{*}";
+    //h_CandCosDecayAngleLab_CandRapidityLab.cuts = {"HasCand"};
+    //h_CandCosDecayAngleLab_CandRapidityLab.lepCuts = {};
+    //h_CandCosDecayAngleLab_CandRapidityLab.predefCuts = {};
+    //h_CandCosDecayAngleLab_CandRapidityLab.userCuts = {};
+    //hdefs.push_back(h_CandCosDecayAngleLab_CandRapidityLab);
 
     //// ---------------------------------------------------------------------
     //// Step 6: Build HistDefs to return (do NOT fill/write here)

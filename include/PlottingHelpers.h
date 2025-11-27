@@ -12,6 +12,8 @@
 #include <cmath>
 #include <fstream>
 #include <regex>
+#include <fnmatch.h>
+#include <unordered_set>
 
 #include <TFile.h>
 #include <TH1.h>
@@ -290,6 +292,74 @@ void loadFormatMaps(){
   m_Color["DY"] = 7021;
   //m_Color["DY"] = 8006;
 
+  m_Title["HF_FAKES"] = "HF leptons";
+  m_Color["HF_FAKES"] = 7022;
+  //m_Color["HF_FAKES"] = 8008;
+
+  m_Title["LF_FAKES"] = "LF/fake leptons";
+  m_Color["LF_FAKES"] = 7021;
+  //m_Color["LF_FAKES"] = 8009;
+  
+  m_Title["FAKES"] = "fake leptons";
+  m_Color["FAKES"] = 7021;
+  //m_Color["FAKES"] = 8010;
+
+  m_Title["HF"] = "heavy flavor";
+  m_Color["HF"] = 7022;
+
+  m_Title["LF"] = "light flavor";
+  m_Color["LF"] = 7021;
+
+  m_Title["ttbar_FAKES"] = "t #bar{t} fakes";
+  m_Color["ttbar_FAKES"] = 7020;
+
+  m_Title["top_FAKES"] = "t + X fakes";
+  m_Color["top_FAKES"] = 7020;
+
+  m_Title["V_FAKES"] = "Nonprompt";
+  m_Color["V_FAKES"] = 7001;
+
+  m_Title["boson_FAKES"] = "boson fakes";
+  m_Color["boson_FAKES"] = 7012;
+
+  m_Title["Wjets_FAKES"] = "W+jets fakes";
+  m_Color["Wjets_FAKES"] = 7023;
+
+  m_Title["ST_FAKES"] = "single top fakes";
+  m_Color["ST_FAKES"] = 7024;
+
+  m_Title["DB_FAKES"] = "di-boson fakes";
+  m_Color["DB_FAKES"] = 7012;
+
+  m_Title["TB_FAKES"] = "tri-boson fakes";
+  m_Color["TB_FAKES"] = 7013;
+
+  m_Title["ZDY_FAKES"] = "Z / #gamma* + jets fakes";
+  m_Color["ZDY_FAKES"] = 7014;
+
+  m_Title["ttbar_all"] = "t #bar{t} + jets";
+  m_Color["ttbar_all"] = 7011;
+
+  m_Title["ST_all"] = "single top";
+  m_Color["ST_all"] = 7010;
+
+  m_Title["DB_all"] = "di-bosons";
+  m_Color["DB_all"] = 7051;
+
+  m_Title["TB_all"] = "tri-bosons";
+  m_Color["TB_all"] = 7050;
+
+  m_Title["ZDY_all"] = "Z / #gamma* + jets";
+  m_Color["ZDY_all"] = 7000;
+
+  m_Title["Wjets_all"] = "W + jets";
+  m_Color["Wjets_all"] = 7001;
+
+  m_Title["Total"] = "Total Bkg";
+  m_Color["Total"] = 7000;
+  m_Title["Total Bkg"] = "Total Bkg";
+  m_Color["Total Bkg"] = 7000;
+
   m_Title["Cascades_300_300_289_260_240_220_220_209_200_190_180"] = "Cascades 180";
   m_Color["Cascades_300_300_289_260_240_220_220_209_200_190_180"] = 7040; // 7072 might look better...?
   m_Title["Cascades_209_220_209_200_190_180"] = "Cascades 180";
@@ -321,9 +391,6 @@ void loadFormatMaps(){
   m_Color["Cascades_300_300_289_280_275_270_SMS"] = 7061;
   //m_Color["Cascades_300_300_289_280_275_270"] = 8009;
 
-  m_Title["SMS_TChiWZ_Sandwich_SMS_300_290"] = makeSMSChiTitle("SMS_TChiWZ_Sandwich_SMS_300_290");
-  m_Title["SMS_TChiWZ_SMS_300_290"] = makeSMSChiTitle("SMS_TChiWZ_SMS_300_290");
-
   m_Title["SMS_Gluinos_SMS_1000_900"] = "T1qqqq 1000 900";
   m_Color["SMS_Gluinos_SMS_1000_900"] = 7071;
   m_Title["SMS_Gluinos_SMS_1100_1000"] = "T1qqqq 1100 1000";
@@ -336,65 +403,6 @@ void loadFormatMaps(){
   m_Color["SMS_Gluinos_SMS_2000_1900"] = 7041;
   m_Title["SMS_Gluinos_SMS_1500_1400"] = "T1qqqq 1500 1400";
   m_Color["SMS_Gluinos_SMS_1500_1400"] = 7041;
-
-  m_Title["HF_Fakes"] = "HF leptons";
-  m_Color["HF_Fakes"] = 7022;
-  //m_Color["HF_Fakes"] = 8008;
-
-  m_Title["LF_Fakes"] = "LF/fake leptons";
-  m_Color["LF_Fakes"] = 7021;
-  //m_Color["LF_Fakes"] = 8009;
-  
-  m_Title["Fakes"] = "fake leptons";
-  m_Color["Fakes"] = 7021;
-  //m_Color["Fakes"] = 8010;
-
-  m_Title["HF"] = "heavy flavor";
-  m_Color["HF"] = 7022;
-
-  m_Title["LF"] = "light flavor";
-  m_Color["LF"] = 7021;
-
-  m_Title["ttbar_Fakes"] = "t #bar{t} fakes";
-  m_Color["ttbar_Fakes"] = 7020;
-
-  m_Title["Wjets_Fakes"] = "W+jets fakes";
-  m_Color["Wjets_Fakes"] = 7023;
-
-  m_Title["ST_Fakes"] = "single top fakes";
-  m_Color["ST_Fakes"] = 7024;
-
-  m_Title["DB_Fakes"] = "di-boson fakes";
-  m_Color["DB_Fakes"] = 7012;
-
-  m_Title["TB_Fakes"] = "tri-boson fakes";
-  m_Color["TB_Fakes"] = 7013;
-
-  m_Title["ZDY_Fakes"] = "Z / #gamma* + jets fakes";
-  m_Color["ZDY_Fakes"] = 7014;
-
-  m_Title["ttbar_all"] = "t #bar{t} + jets";
-  m_Color["ttbar_all"] = 7011;
-
-  m_Title["ST_all"] = "single top";
-  m_Color["ST_all"] = 7010;
-
-  m_Title["DB_all"] = "di-bosons";
-  m_Color["DB_all"] = 7051;
-
-  m_Title["TB_all"] = "tri-bosons";
-  m_Color["TB_all"] = 7050;
-
-  m_Title["ZDY_all"] = "Z / #gamma* + jets";
-  m_Color["ZDY_all"] = 7000;
-
-  m_Title["Wjets_all"] = "W + jets";
-  m_Color["Wjets_all"] = 7001;
-
-  m_Title["Total"] = "Total Bkg";
-  m_Color["Total"] = 7000;
-  m_Title["Total Bkg"] = "Total Bkg";
-  m_Color["Total Bkg"] = 7000;
 
 }
 
@@ -417,6 +425,24 @@ struct MergedBinGroup {
     std::vector<std::string> bin_names;
 };
 
+struct YamlBinPattern {
+    std::string name;
+    std::string include;
+    std::vector<std::string> exclude;
+};
+
+struct YamlProcessPattern {
+    std::string name;
+    std::vector<std::string> include;
+    std::vector<std::string> exclude;
+};
+
+struct YamlConfig {
+    std::vector<YamlBinPattern> bins;
+    std::vector<YamlProcessPattern> process_merges;
+};
+
+/*
 struct ParsedPattern {
     std::string include;               // the include wildcard pattern (may be "*")
     std::vector<std::string> excludes; // list of literal substrings to exclude
@@ -447,6 +473,65 @@ static std::vector<std::string> LoadPatternsFromFile(const std::string& file)
     }
     return out;
 }
+*/
+
+YamlConfig LoadYamlConfig(const std::string& yamlFile) {
+
+    YamlConfig cfg;
+
+    if (yamlFile.empty()) return cfg;
+
+    YAML::Node root;
+    try {
+        root = YAML::LoadFile(yamlFile);
+    }
+    catch(const std::exception& e) {
+        std::cerr << "[ERROR] Failed to parse YAML file: " << yamlFile << "\n"
+                  << "Exception: " << e.what() << "\n";
+        return cfg;
+    }
+
+    // -------------------------
+    // Parse bins:
+    // -------------------------
+    if (root["bins"]) {
+        for (const auto& n : root["bins"]) {
+            YamlBinPattern b;
+            b.name    = n["name"]    ? n["name"].as<std::string>()    : "";
+            b.include = n["include"] ? n["include"].as<std::string>() : "*";
+
+            if (n["exclude"]) {
+                for (const auto& ex : n["exclude"])
+                    b.exclude.push_back(ex.as<std::string>());
+            }
+
+            cfg.bins.push_back(b);
+        }
+    }
+
+    // -------------------------
+    // Parse process merges:
+    // -------------------------
+    if (root["processes"] && root["processes"]["merge"]) {
+        for (const auto& n : root["processes"]["merge"]) {
+            YamlProcessPattern p;
+            p.name = n["name"].as<std::string>();
+
+            if (n["include"]) {
+                for (const auto& inc : n["include"])
+                    p.include.push_back(inc.as<std::string>());
+            }
+            if (n["exclude"]) {
+                for (const auto& ex : n["exclude"])
+                    p.exclude.push_back(ex.as<std::string>());
+            }
+
+            cfg.process_merges.push_back(p);
+        }
+    }
+
+    return cfg;
+}
 
 static std::string WildcardToRegex(const std::string& pat)
 {
@@ -465,22 +550,41 @@ static std::string WildcardToRegex(const std::string& pat)
     return r;
 }
 
-static std::string EscapeForRegex(const std::string& s)
+
+std::vector<MergedBinGroup>
+BuildMergedBinGroupsFromYaml(const std::vector<std::string>& allBins,
+                             const YamlConfig& cfg)
 {
-    std::string out;
-    out.reserve(s.size() * 2);
-    const std::string meta = R"(\.^$|()[]{}*+?!)"; // meta characters to escape
-    for (unsigned char c : s) {
-        if (meta.find(c) != std::string::npos) {
-            out.push_back('\\');
-            out.push_back(c);
-        } else {
-            out.push_back(c);
+    std::vector<MergedBinGroup> out;
+
+    for (const auto& b : cfg.bins) {
+
+        MergedBinGroup g;
+        g.group_name = b.name;
+
+        std::regex includeRegex(WildcardToRegex(b.include));
+
+        for (const auto& bin : allBins) {
+            if (!std::regex_match(bin, includeRegex))
+                continue;
+
+            bool excluded = false;
+            for (const auto& ex : b.exclude)
+                if (bin.find(ex) != std::string::npos)
+                    excluded = true;
+
+            if (!excluded)
+                g.bin_names.push_back(bin);
         }
+
+        if (!g.bin_names.empty())
+            out.push_back(g);
     }
+
     return out;
 }
 
+/*
 static ParsedPattern ParsePattern(const std::string& p)
 {
     ParsedPattern pp;
@@ -521,6 +625,23 @@ static ParsedPattern ParsePattern(const std::string& p)
 
     return pp;
 }
+
+static std::string EscapeForRegex(const std::string& s)
+{
+    std::string out;
+    out.reserve(s.size() * 2);
+    const std::string meta = R"(\.^$|()[]{}*+?!)"; // meta characters to escape
+    for (unsigned char c : s) {
+        if (meta.find(c) != std::string::npos) {
+            out.push_back('\\');
+            out.push_back(c);
+        } else {
+            out.push_back(c);
+        }
+    }
+    return out;
+}
+
 
 static std::regex BuildRegexFromPattern(const ParsedPattern& pp)
 {
@@ -612,6 +733,7 @@ BuildMergedBinGroups(const std::vector<std::string>& all_bins,
 
     return groups;
 }
+*/
 
 struct CombinedBinHists {
     map<string, unique_ptr<TH1>> bkg;      // backgrounds
@@ -619,10 +741,186 @@ struct CombinedBinHists {
     map<string, unique_ptr<TH1>> data;     // data
 };
 
+struct BinContent { double content; double error; };
+/*
+static const std::vector<std::pair<std::string, std::vector<std::string>>> MERGE_RULES = {
+    //{"FAKES_Elec", {"*_FAKES_Elec"}},
+    //{"FAKES_Muon", {"*_FAKES_Muon"}},
+    //{"top_FAKES",  {"top_2018_FAKES_*"}},
+    //{"boson_FAKES",{"boson_2018_FAKES_*"}}
+    {"Vfakeleps", {"Vfakeleps_2018_FAKES*"}},
+    {"top",   {"top_2018*"}},
+    {"boson", {"boson_2018*"}}
+};
+
+template <typename T>
+void ApplyMergingRules(std::map<std::string, std::vector<T>>& contents)
+{
+    if (contents.empty()) return;
+    std::map<std::string, std::vector<T>> result;
+
+    // keep track of keys that have been merged/consumed
+    std::unordered_set<std::string> consumed;
+
+    // First, attempt to apply each merge rule
+    for (const auto& rule : MERGE_RULES) {
+        const std::string& target = rule.first;
+        const auto& patterns = rule.second;
+
+        // collect matching keys for this rule (only those not already consumed)
+        std::vector<std::string> matches;
+        for (const auto& kv : contents) {
+            if (consumed.count(kv.first)) continue;
+            for (const auto& pat : patterns) {
+                if (fnmatch(pat.c_str(), kv.first.c_str(), 0) == 0) {
+                    matches.push_back(kv.first);
+                    break;
+                }
+            }
+        }
+
+        if (matches.empty()) continue;
+
+        // ensure all matched vectors have same size
+        size_t n = contents.at(matches.front()).size();
+        for (const auto& m : matches) {
+            if (contents.at(m).size() != n) {
+                std::cerr << "[ApplyMergingRules] Inconsistent bin vector sizes for merged group '"
+                          << target << "'. Skipping this group.\n";
+                matches.clear();
+                break;
+            }
+        }
+        if (matches.empty()) continue;
+
+        // initialize merged vector to zeros
+        std::vector<T> mergedVals(n);
+        for (size_t i = 0; i < n; ++i) {
+            mergedVals[i].content = 0.0;
+            mergedVals[i].error   = 0.0;
+        }
+
+        // sum content and add errors in quadrature
+        for (const auto& m : matches) {
+            const auto& vec = contents.at(m);
+            for (size_t i = 0; i < n; ++i) {
+                mergedVals[i].content += vec[i].content;
+                mergedVals[i].error = std::hypot(mergedVals[i].error, vec[i].error);
+            }
+        }
+
+        // store merged result and mark consumed
+        result[target] = std::move(mergedVals);
+        for (const auto& m : matches) consumed.insert(m);
+    }
+
+    // Copy any unconsumed original entries into result
+    for (const auto& kv : contents) {
+        if (consumed.count(kv.first)) continue;
+        result[kv.first] = kv.second; // copy
+    }
+
+    // Finally swap result into contents
+    contents.swap(result);
+}
+*/
+
+template <typename T>
+void ApplyMergingRules(
+    std::map<std::string, std::vector<T>>& contents,
+    const std::vector<YamlProcessPattern>& rules)
+{
+    if (contents.empty()) return;
+
+    std::map<std::string, std::vector<T>> result;
+    std::unordered_set<std::string> consumed;
+
+    // Loop over YAML-defined merge rules
+    for (const auto& rule : rules) {
+
+        const std::string& target = rule.name;
+        const auto& includes       = rule.include;
+        const auto& excludes       = rule.exclude;
+
+        std::vector<std::string> matches;
+
+        // Find matching process keys
+        for (const auto& kv : contents) {
+            const std::string& key = kv.first;
+            if (consumed.count(key)) continue;
+
+            bool match = false;
+
+            // include patterns
+            for (const auto& inc : includes) {
+                if (fnmatch(inc.c_str(), key.c_str(), 0) == 0) {
+                    match = true;
+                    break;
+                }
+            }
+            if (!match) continue;
+
+            // exclude patterns
+            for (const auto& ex : excludes) {
+                if (fnmatch(ex.c_str(), key.c_str(), 0) == 0) {
+                    match = false;
+                    break;
+                }
+            }
+
+            if (match)
+                matches.push_back(key);
+        }
+
+        if (matches.empty()) continue;
+
+        // Consistency check
+        size_t n = contents.at(matches.front()).size();
+        for (const auto& m : matches) {
+            if (contents.at(m).size() != n) {
+                std::cerr << "[ApplyMergingRules] Inconsistent bin sizes for '"
+                          << target << "'\n";
+                matches.clear();
+                break;
+            }
+        }
+        if (matches.empty()) continue;
+
+        // Build merged vector
+        std::vector<T> mergedVals(n);
+        for (size_t i = 0; i < n; ++i) {
+            mergedVals[i].content = 0.0;
+            mergedVals[i].error   = 0.0;
+        }
+
+        // Combine content + errors
+        for (const auto& m : matches) {
+            const auto& vec = contents.at(m);
+            for (size_t i = 0; i < n; ++i) {
+                mergedVals[i].content += vec[i].content;
+                mergedVals[i].error    = std::hypot(mergedVals[i].error, vec[i].error);
+            }
+        }
+
+        // Save and mark consumed
+        result[target] = std::move(mergedVals);
+        for (const auto& m : matches) consumed.insert(m);
+    }
+
+    // Copy unmerged keys
+    for (const auto& kv : contents) {
+        if (!consumed.count(kv.first))
+            result[kv.first] = kv.second;
+    }
+
+    contents.swap(result);
+}
+
 CombinedBinHists LoadAndCombineBinHists(TDirectory* treeDir,
                                         const std::string& binTag,
-                                        const std::vector<std::string>& binsToCombine)
-{
+                                        const std::vector<std::string>& binsToCombine,
+                                        const std::vector<YamlProcessPattern>& processMerges
+){
     CombinedBinHists out;
 
     if (!treeDir) {
@@ -633,55 +931,74 @@ CombinedBinHists LoadAndCombineBinHists(TDirectory* treeDir,
     auto MakeHistName = [](const std::string& bin, const std::string& proc) { return SanitizeString(bin)+"__"+proc+"__FD"; };
 
     // Map from process name to vector of bin contents/errors
-    struct BinContent { double content; double error; };
     std::map<std::string, std::vector<BinContent>> bkgContents;
     std::map<std::string, std::vector<BinContent>> sigContents;
     std::map<std::string, std::vector<BinContent>> dataContents;
     std::vector<std::string> finalBinLabels;
 
-    for (const auto& bin : binsToCombine) {
+    for (size_t binIndex = 0; binIndex < binsToCombine.size(); ++binIndex) {
+        const auto& bin = binsToCombine[binIndex];
         TDirectory* binDir = dynamic_cast<TDirectory*>(treeDir->Get(bin.c_str()));
         if (!binDir) {
             std::cerr << "[warning] Bin directory '" << bin << "' not found, skipping.\n";
             continue;
         }
         finalBinLabels.push_back(bin);
-
+    
         TIter next(binDir->GetListOfKeys());
         TKey* key;
         while ((key = (TKey*)next())) {
             TObject* obj = key->ReadObj();
             if (!obj) continue;
-
+    
             std::string procName = obj->GetName();
-
+    
             // Handle data_obs TGraphAsymmErrors
             if (obj->InheritsFrom(TGraphAsymmErrors::Class())) {
                 auto g = dynamic_cast<TGraphAsymmErrors*>(obj);
                 if (!g) continue;
-
+    
                 double y = g->GetY()[0];
                 double e = 0.5*(g->GetEYlow()[0] + g->GetEYhigh()[0]);
-                dataContents[procName].push_back({y, e});
+    
+                auto& vec = dataContents[procName];
+                if (vec.size() < binIndex + 1) vec.resize(binIndex + 1, {0.0,0.0});
+                vec[binIndex] = {y, e};
                 continue;
             }
-
+    
             // Only process TH1 objects
             if (!obj->InheritsFrom(TH1::Class())) continue;
             TH1* h = dynamic_cast<TH1*>(obj);
             if (!h) continue;
-
+    
             // Skip totals/covariance
             if (procName.find("total") != std::string::npos) continue;
-
+    
             bool isSignal = (procName.find("SMS") != std::string::npos || procName.find("Cascade") != std::string::npos);
-
+    
             auto& targetContents = isSignal ? sigContents : bkgContents;
             double content = h->GetBinContent(1);
             double error = h->GetBinError(1);
-            targetContents[procName].push_back({content, error});
+    
+            auto& vec = targetContents[procName];
+            if (vec.size() < binIndex + 1) vec.resize(binIndex + 1, {0.0,0.0});
+            vec[binIndex] = {content, error};
         }
+        // for any procs that did not appear, pad with hist with 0 entries
+        auto PadToBin = [](auto& contentsMap, size_t binIndex) {
+            for (auto& kv : contentsMap) {
+                auto& vec = kv.second;
+                if (vec.size() < binIndex + 1)
+                    vec.resize(binIndex + 1, {0.0, 0.0});
+            }
+        };
+        PadToBin(bkgContents, binIndex);
+        PadToBin(sigContents, binIndex);
+        PadToBin(dataContents, binIndex);
     }
+
+    ApplyMergingRules(bkgContents, processMerges);
 
     // Now build concatenated histograms with bin labels
     auto BuildConcatHist = [&](const std::string& name,

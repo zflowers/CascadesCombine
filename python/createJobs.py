@@ -652,8 +652,6 @@ def main():
     # Parse job list via pySampleTool
     tool = pySampleTool.SampleTool()
 
-    # Combine background + data processes into the background load so that data
-    # processes become available in tool.BkgDict and are turned into jobs the same way.
     bkg_list = list(args.bkg_processes or [])
     data_list = list(args.data_processes or [])
     tool.LoadBkgs(bkg_list)

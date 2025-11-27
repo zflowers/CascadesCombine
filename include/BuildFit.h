@@ -32,12 +32,13 @@ class BuildFit{
     ch::Categories BuildCats(JSONFactory* j);
     std::string SanitizeName(const std::string &s);
     void WriteJsonAsFlatHists(JSONFactory* j, const std::string &outFile, std::map<std::string,float>* out_obs_rates = nullptr);
-    std::vector<std::string> GetBkgProcs(JSONFactory* j);
+    stringlist GetBkgProcs(JSONFactory* j);
+    stringlist GetFakesProcs(JSONFactory* j);
     bool HasDataObs(JSONFactory* j);
     bool HasProcFAKES(JSONFactory* j, const std::string& check_proc);
     std::vector<std::string> ExtractSignalDetails( std::string signalPoint);
     std::vector<std::string> GetBinSet( JSONFactory* j);
-    void AddFloatingNorms(stringlist bkgprocs);
+    void AddFloatingNorms(stringlist bkgprocs, const std::string& type = "lnN", double val = 1.2);
     void BuildAsimovData(std::map<std::string, float>& obs_rates, JSONFactory* j);
     void BuildFitSkeleton(JSONFactory* j, const std::string &signalPoint, const std::string &datacard_dir);
     void AddMCStatBinByBin(JSONFactory* j);
@@ -49,6 +50,9 @@ class BuildFit{
     void AddShapeSystsFromJSON(JSONFactory* j);
     std::string GetMatchingBin(const std::string& bin, const std::string& token, const std::string& match_token);
     std::vector<std::string> sigkeys = { "Cascades", "SMS" };
+
+    private:
+    const stringlist fakes_skip_list = {"ZInv", "QCD", "Vfakeleps", "Wjets"};
 
 };
 #endif

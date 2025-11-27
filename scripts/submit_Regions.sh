@@ -23,16 +23,16 @@ run_all() {
 }
 BINS_PER_JOB=50
 SLEEP=70
-VERSION="v299" # v299 is to check that everything is fine without _FAKES included
+VERSION="v300"
 make clean
 make all -j 8
 echo "Submitting Regions..."
 
 #run_all --make-root --processes-cfg config/process_cfgs/LepEtaStudy_processes.yaml --hist-cfg config/hist_cfgs/LepEtaStudy.yaml --bins-cfg config/bin_cfgs/LepEtaStudy.yaml --run-name LepEtaStudy_v9
-sleep ${SLEEP}
+#sleep ${SLEEP}
 
 #run_all --make-root --processes-cfg config/process_cfgs/processes_NSFProposal.yaml --hist-cfg config/hist_cfgs/hist_NSFProposal.yaml --bins-cfg config/bin_cfgs/NSFProposal.yaml --run-name NSFProposal_v0
-sleep ${SLEEP}
+#sleep ${SLEEP}
 
 #run_all --make-json --only-yields --skip-compile --bins-cfg config/bin_cfgs/Regions_2L_0J_lPTISR_Gold.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_2L_0J_lPTISR_Regions_Gold_${VERSION}
 #sleep ${SLEEP}
@@ -100,8 +100,8 @@ cat config/bin_cfgs/Regions_4L_Bronze.yaml >> config/bin_cfgs/Regions.yaml
 cat config/bin_cfgs/Regions_top_sideband_Gold.yaml >> config/bin_cfgs/Regions.yaml
 cat config/bin_cfgs/Regions_top_sideband_Silver.yaml >> config/bin_cfgs/Regions.yaml
 cat config/bin_cfgs/Regions_top_sideband_Bronze.yaml >> config/bin_cfgs/Regions.yaml
-run_all --skip-plot-yields --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_Regions_234L_${VERSION}
-sleep ${SLEEP}
+#run_all --skip-plot-yields --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_Regions_234L_${VERSION}
+#sleep ${SLEEP}
 #run_all --make-impacts --make-FD --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_Impacts_FD_Regions_234L_${VERSION}
 #sleep ${SLEEP}
 
@@ -116,7 +116,7 @@ cat config/bin_cfgs/Regions_4L_Bronze.yaml >> config/bin_cfgs/Regions_Bronze_CR.
 cat config/bin_cfgs/Regions_top_sideband_Bronze.yaml >> config/bin_cfgs/Regions_Bronze_CR.yaml
 #run_all --make-FD --processes-cfg config/process_cfgs/data_processes.yaml --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_Bronze_CR.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_CRs_FD_234L_Bronze_${VERSION}
 #sleep ${SLEEP}
-#run_all --skip-plot-yields --make-impacts --make-FD --processes-cfg config/process_cfgs/data_processes.yaml --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_Bronze_CR.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_CRs_Impacts_FD_234L_Bronze_${VERSION}
+run_all --skip-plot-yields --make-impacts --make-FD --processes-cfg config/process_cfgs/data_processes.yaml --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_Bronze_CR.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_CRs_Impacts_FD_234L_Bronze_${VERSION}
 sleep ${SLEEP}
 
 # For CR Yields
