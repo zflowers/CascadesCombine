@@ -3,70 +3,70 @@
 
 static ROOT::RDF::RNode loadHistogramsUserCols(ROOT::RDF::RNode &node){
 
-    if (node.HasColumn("minM_ll_all") == false) {
-        node = node.Define("minM_ll_all",
-            [](const std::vector<double> &pt,
-               const std::vector<double> &eta,
-               const std::vector<double> &phi,
-               const std::vector<double> &mass) -> double
-            {
-                // Safety: require consistent vector sizes and at least 2 leptons
-                if (pt.size() < 2 || eta.size() != pt.size() || phi.size() != pt.size() || mass.size() != pt.size())
-                    return -1.0;
-        
-                double minM = std::numeric_limits<double>::infinity();
-                for (size_t i = 0; i < pt.size(); ++i) {
-                    TLorentzVector v1; v1.SetPtEtaPhiM(pt[i], eta[i], phi[i], mass[i]);
-                    for (size_t j = i + 1; j < pt.size(); ++j) {
-                        TLorentzVector v2; v2.SetPtEtaPhiM(pt[j], eta[j], phi[j], mass[j]);
-                        double m = (v1 + v2).M();
-                        if (m < minM) minM = m;
-                    }
-                }
-                return (std::isfinite(minM) ? minM : -1.0);
-            }, {"PT_lep","Eta_lep","Phi_lep","M_lep"});
-    }
-    
-    // Convenience boolean: true if a valid min mass exists
-    if (node.HasColumn("HasMinPair_all") == false) 
-        node = node.Define("HasMinPair_all", [](double minM){ return minM >= 0.0; }, {"minM_ll_all"});
-    
-    // --- min M_ll but only over OSSF pairs ---------------------------------
-    if (node.HasColumn("minM_ll_OSSF") == false) {
-        node = node.Define("minM_ll_OSSF",
-            [](const std::vector<double> &pt,
-               const std::vector<double> &eta,
-               const std::vector<double> &phi,
-               const std::vector<double> &mass,
-               const std::vector<int> &pdgid,
-               const std::vector<int> &charge) -> double
-            {
-                // Safety checks
-                if (pt.size() < 2 || eta.size() != pt.size() || phi.size() != pt.size() || mass.size() != pt.size())
-                    return -1.0;
-                if (pdgid.size() != pt.size() || charge.size() != pt.size())
-                    return -1.0;
-        
-                double minM = std::numeric_limits<double>::infinity();
-                for (size_t i = 0; i < pt.size(); ++i) {
-                    for (size_t j = i + 1; j < pt.size(); ++j) {
-                        // same flavor (abs PDG equal 11 or 13) and opposite sign
-                        int id0 = std::abs(pdgid[i]), id1 = std::abs(pdgid[j]);
-                        if (!((id0 == 11 && id1 == 11) || (id0 == 13 && id1 == 13))) continue;
-                        if (charge[i] * charge[j] >= 0) continue;
-        
-                        TLorentzVector v1; v1.SetPtEtaPhiM(pt[i], eta[i], phi[i], mass[i]);
-                        TLorentzVector v2; v2.SetPtEtaPhiM(pt[j], eta[j], phi[j], mass[j]);
-                        double m = (v1 + v2).M();
-                        if (m < minM) minM = m;
-                    }
-                }
-                return (std::isfinite(minM) ? minM : -1.0);
-            }, {"PT_lep","Eta_lep","Phi_lep","M_lep","PDGID_lep","Charge_lep"});
-    }
-    
-    if (node.HasColumn("HasMinPair_OSSF") == false) 
-        node = node.Define("HasMinPair_OSSF", [](double minM){ return minM >= 0.0; }, {"minM_ll_OSSF"});
+    //if (node.HasColumn("minM_ll_all") == false) {
+    //    node = node.Define("minM_ll_all",
+    //        [](const std::vector<double> &pt,
+    //           const std::vector<double> &eta,
+    //           const std::vector<double> &phi,
+    //           const std::vector<double> &mass) -> double
+    //        {
+    //            // Safety: require consistent vector sizes and at least 2 leptons
+    //            if (pt.size() < 2 || eta.size() != pt.size() || phi.size() != pt.size() || mass.size() != pt.size())
+    //                return -1.0;
+    //    
+    //            double minM = std::numeric_limits<double>::infinity();
+    //            for (size_t i = 0; i < pt.size(); ++i) {
+    //                TLorentzVector v1; v1.SetPtEtaPhiM(pt[i], eta[i], phi[i], mass[i]);
+    //                for (size_t j = i + 1; j < pt.size(); ++j) {
+    //                    TLorentzVector v2; v2.SetPtEtaPhiM(pt[j], eta[j], phi[j], mass[j]);
+    //                    double m = (v1 + v2).M();
+    //                    if (m < minM) minM = m;
+    //                }
+    //            }
+    //            return (std::isfinite(minM) ? minM : -1.0);
+    //        }, {"PT_lep","Eta_lep","Phi_lep","M_lep"});
+    //}
+    //
+    //// Convenience boolean: true if a valid min mass exists
+    //if (node.HasColumn("HasMinPair_all") == false) 
+    //    node = node.Define("HasMinPair_all", [](double minM){ return minM >= 0.0; }, {"minM_ll_all"});
+    //
+    //// --- min M_ll but only over OSSF pairs ---------------------------------
+    //if (node.HasColumn("minM_ll_OSSF") == false) {
+    //    node = node.Define("minM_ll_OSSF",
+    //        [](const std::vector<double> &pt,
+    //           const std::vector<double> &eta,
+    //           const std::vector<double> &phi,
+    //           const std::vector<double> &mass,
+    //           const std::vector<int> &pdgid,
+    //           const std::vector<int> &charge) -> double
+    //        {
+    //            // Safety checks
+    //            if (pt.size() < 2 || eta.size() != pt.size() || phi.size() != pt.size() || mass.size() != pt.size())
+    //                return -1.0;
+    //            if (pdgid.size() != pt.size() || charge.size() != pt.size())
+    //                return -1.0;
+    //    
+    //            double minM = std::numeric_limits<double>::infinity();
+    //            for (size_t i = 0; i < pt.size(); ++i) {
+    //                for (size_t j = i + 1; j < pt.size(); ++j) {
+    //                    // same flavor (abs PDG equal 11 or 13) and opposite sign
+    //                    int id0 = std::abs(pdgid[i]), id1 = std::abs(pdgid[j]);
+    //                    if (!((id0 == 11 && id1 == 11) || (id0 == 13 && id1 == 13))) continue;
+    //                    if (charge[i] * charge[j] >= 0) continue;
+    //    
+    //                    TLorentzVector v1; v1.SetPtEtaPhiM(pt[i], eta[i], phi[i], mass[i]);
+    //                    TLorentzVector v2; v2.SetPtEtaPhiM(pt[j], eta[j], phi[j], mass[j]);
+    //                    double m = (v1 + v2).M();
+    //                    if (m < minM) minM = m;
+    //                }
+    //            }
+    //            return (std::isfinite(minM) ? minM : -1.0);
+    //        }, {"PT_lep","Eta_lep","Phi_lep","M_lep","PDGID_lep","Charge_lep"});
+    //}
+    //
+    //if (node.HasColumn("HasMinPair_OSSF") == false) 
+    //    node = node.Define("HasMinPair_OSSF", [](double minM){ return minM >= 0.0; }, {"minM_ll_OSSF"});
 
     //node = node
     //    .Define("My_p4_lep0_a", [](const std::vector<double> &pt,
@@ -297,119 +297,113 @@ static std::vector<HistDef> loadHistogramsUser() {
     std::vector<HistDef> hdefs;
 
     // 1D histogram for min M_ll (all pairs)
-    //HistDef h_min_all;
-    //h_min_all.name    = "minM_ll_all";
-    //h_min_all.type    = "1D";
-    //h_min_all.expr    = "minM_ll_all";
-    //h_min_all.nbins   = 50;
-    //h_min_all.xmin    = 0;
-    //h_min_all.xmax    = 5;
-    //h_min_all.x_title = "min M_{ll} (GeV)";
-    //h_min_all.cuts    = {"HasMinPair_all"}; // require a valid pair
-    //h_min_all.lepCuts = {};
-    //h_min_all.predefCuts = {};
-    //h_min_all.userCuts = {};
+    HistDef h_min_all;
+    h_min_all.name    = "minM_ll_all";
+    h_min_all.type    = "1D";
+    h_min_all.expr    = "minM_ll_all";
+    h_min_all.nbins   = 50;
+    h_min_all.xmin    = 0;
+    h_min_all.xmax    = 5;
+    h_min_all.x_title = "min M_{ll} (GeV)";
+    h_min_all.cuts    = {"HasMinPair_all"}; // require a valid pair
+    h_min_all.lepCuts = {};
+    h_min_all.predefCuts = {};
+    h_min_all.userCuts = {};
     //hdefs.push_back(h_min_all);
     
     // 1D histogram for min M_ll (OSSF pairs only)
-    //HistDef h_min_ossf;
-    //h_min_ossf.name    = "minM_ll_OSSF";
-    //h_min_ossf.type    = "1D";
-    //h_min_ossf.expr    = "minM_ll_OSSF";
-    //h_min_ossf.nbins   = 60;
-    //h_min_ossf.xmin    = 0;
-    //h_min_ossf.xmax    = 200;
-    //h_min_ossf.x_title = "min M_{ll} (OSSF pairs) [GeV]";
-    //h_min_ossf.cuts    = {"HasMinPair_OSSF"};
-    //h_min_ossf.lepCuts = {};
-    //h_min_ossf.predefCuts = {};
-    //h_min_ossf.userCuts = {};
+    HistDef h_min_ossf;
+    h_min_ossf.name    = "minM_ll_OSSF";
+    h_min_ossf.type    = "1D";
+    h_min_ossf.expr    = "minM_ll_OSSF";
+    h_min_ossf.nbins   = 60;
+    h_min_ossf.xmin    = 0;
+    h_min_ossf.xmax    = 200;
+    h_min_ossf.x_title = "min M_{ll} (OSSF pairs) [GeV]";
+    h_min_ossf.cuts    = {"HasMinPair_OSSF"};
+    h_min_ossf.lepCuts = {};
+    h_min_ossf.predefCuts = {};
+    h_min_ossf.userCuts = {};
     //hdefs.push_back(h_min_ossf);
 
-    //HistDef h_CandCosDecayAngleLab_CandBetaZLab;
-    //h_CandCosDecayAngleLab_CandBetaZLab.name = "CandCosDecayAngleLab_vs_CandBetaZLab";
-    //h_CandCosDecayAngleLab_CandBetaZLab.type = "2D";
-    //h_CandCosDecayAngleLab_CandBetaZLab.expr = "CandCosDecayAngleLab";
-    //h_CandCosDecayAngleLab_CandBetaZLab.yexpr = "CandBetaZLab";
-    //h_CandCosDecayAngleLab_CandBetaZLab.nbins = 64;
-    //h_CandCosDecayAngleLab_CandBetaZLab.xmin = 0;
-    //h_CandCosDecayAngleLab_CandBetaZLab.xmax = 1;
-    //h_CandCosDecayAngleLab_CandBetaZLab.x_title = "cos#theta Z^{*}";
-    //h_CandCosDecayAngleLab_CandBetaZLab.nybins = 64;
-    //h_CandCosDecayAngleLab_CandBetaZLab.ymin = 0;
-    //h_CandCosDecayAngleLab_CandBetaZLab.ymax = 1;
-    //h_CandCosDecayAngleLab_CandBetaZLab.y_title = "#beta Z^{*}";
-    //h_CandCosDecayAngleLab_CandBetaZLab.cuts = {"HasCand"};
-    //h_CandCosDecayAngleLab_CandBetaZLab.lepCuts = {};
-    //h_CandCosDecayAngleLab_CandBetaZLab.predefCuts = {};
-    //h_CandCosDecayAngleLab_CandBetaZLab.userCuts = {};
+    HistDef h_CandCosDecayAngleLab_CandBetaZLab;
+    h_CandCosDecayAngleLab_CandBetaZLab.name = "CandCosDecayAngleLab_vs_CandBetaZLab";
+    h_CandCosDecayAngleLab_CandBetaZLab.type = "2D";
+    h_CandCosDecayAngleLab_CandBetaZLab.expr = "CandCosDecayAngleLab";
+    h_CandCosDecayAngleLab_CandBetaZLab.yexpr = "CandBetaZLab";
+    h_CandCosDecayAngleLab_CandBetaZLab.nbins = 64;
+    h_CandCosDecayAngleLab_CandBetaZLab.xmin = 0;
+    h_CandCosDecayAngleLab_CandBetaZLab.xmax = 1;
+    h_CandCosDecayAngleLab_CandBetaZLab.x_title = "cos#theta Z^{*}";
+    h_CandCosDecayAngleLab_CandBetaZLab.nybins = 64;
+    h_CandCosDecayAngleLab_CandBetaZLab.ymin = 0;
+    h_CandCosDecayAngleLab_CandBetaZLab.ymax = 1;
+    h_CandCosDecayAngleLab_CandBetaZLab.y_title = "#beta Z^{*}";
+    h_CandCosDecayAngleLab_CandBetaZLab.cuts = {"HasCand"};
+    h_CandCosDecayAngleLab_CandBetaZLab.lepCuts = {};
+    h_CandCosDecayAngleLab_CandBetaZLab.predefCuts = {};
+    h_CandCosDecayAngleLab_CandBetaZLab.userCuts = {};
     //hdefs.push_back(h_CandCosDecayAngleLab_CandBetaZLab);
 
-    //HistDef h_CandCosDecayAngleLab_CandRapidityLab;
-    //h_CandCosDecayAngleLab_CandRapidityLab.name = "CandCosDecayAngleLab_vs_CandRapidityLab";
-    //h_CandCosDecayAngleLab_CandRapidityLab.type = "2D";
-    //h_CandCosDecayAngleLab_CandRapidityLab.expr = "CandCosDecayAngleLab";
-    //h_CandCosDecayAngleLab_CandRapidityLab.yexpr = "CandRapidityLab";
-    //h_CandCosDecayAngleLab_CandRapidityLab.nbins = 64;
-    //h_CandCosDecayAngleLab_CandRapidityLab.xmin = 0;
-    //h_CandCosDecayAngleLab_CandRapidityLab.xmax = 1;
-    //h_CandCosDecayAngleLab_CandRapidityLab.x_title = "cos#theta Z^{*}";
-    //h_CandCosDecayAngleLab_CandRapidityLab.nybins = 64;
-    //h_CandCosDecayAngleLab_CandRapidityLab.ymin = -2.5;
-    //h_CandCosDecayAngleLab_CandRapidityLab.ymax = 2.5;
-    //h_CandCosDecayAngleLab_CandRapidityLab.y_title = "Rapidity Z^{*}";
-    //h_CandCosDecayAngleLab_CandRapidityLab.cuts = {"HasCand"};
-    //h_CandCosDecayAngleLab_CandRapidityLab.lepCuts = {};
-    //h_CandCosDecayAngleLab_CandRapidityLab.predefCuts = {};
-    //h_CandCosDecayAngleLab_CandRapidityLab.userCuts = {};
+    HistDef h_CandCosDecayAngleLab_CandRapidityLab;
+    h_CandCosDecayAngleLab_CandRapidityLab.name = "CandCosDecayAngleLab_vs_CandRapidityLab";
+    h_CandCosDecayAngleLab_CandRapidityLab.type = "2D";
+    h_CandCosDecayAngleLab_CandRapidityLab.expr = "CandCosDecayAngleLab";
+    h_CandCosDecayAngleLab_CandRapidityLab.yexpr = "CandRapidityLab";
+    h_CandCosDecayAngleLab_CandRapidityLab.nbins = 64;
+    h_CandCosDecayAngleLab_CandRapidityLab.xmin = 0;
+    h_CandCosDecayAngleLab_CandRapidityLab.xmax = 1;
+    h_CandCosDecayAngleLab_CandRapidityLab.x_title = "cos#theta Z^{*}";
+    h_CandCosDecayAngleLab_CandRapidityLab.nybins = 64;
+    h_CandCosDecayAngleLab_CandRapidityLab.ymin = -2.5;
+    h_CandCosDecayAngleLab_CandRapidityLab.ymax = 2.5;
+    h_CandCosDecayAngleLab_CandRapidityLab.y_title = "Rapidity Z^{*}";
+    h_CandCosDecayAngleLab_CandRapidityLab.cuts = {"HasCand"};
+    h_CandCosDecayAngleLab_CandRapidityLab.lepCuts = {};
+    h_CandCosDecayAngleLab_CandRapidityLab.predefCuts = {};
+    h_CandCosDecayAngleLab_CandRapidityLab.userCuts = {};
     //hdefs.push_back(h_CandCosDecayAngleLab_CandRapidityLab);
 
-    //// ---------------------------------------------------------------------
-    //// Step 6: Build HistDefs to return (do NOT fill/write here)
-    //// ---------------------------------------------------------------------
-    //// 1) 1D histogram for M_ll but restricted to OSSF pairs. We express that
-    ////    restriction by adding "OSSF_pair" to the histogram-specific cuts;
-    ////    the main histogram loop will apply the cut to the node.
-    //HistDef h1;
-    //h1.name = "M_ll_lead2_OSSF";
-    //h1.type = "1D";
-    //h1.expr = "M_ll";          // histogram the M_ll column (computed above)
-    //h1.nbins = 50;
-    //h1.xmin = 0;
-    //h1.xmax = 200;
-    //h1.x_title = "M_{ll} for OSSF pair of lead leps";
-    //// The main loop will interpret these strings as filters, so use the column name:
-    //// it will call node = node.Filter(BFI->ExpandMacros("OSSF_pair"));
-    //h1.cuts = {"OSSF_pair"};
-    //h1.lepCuts = {};
-    //h1.predefCuts = {};
-    //h1.userCuts = {};
-    //// hdefs.push_back(h1); // uncomment to load hist
+    // ---------------------------------------------------------------------
+    // Step 6: Build HistDefs to return (do NOT fill/write here)
+    // ---------------------------------------------------------------------
+    // 1) 1D histogram for M_ll but restricted to OSSF pairs. We express that
+    //    restriction by adding "OSSF_pair" to the histogram-specific cuts;
+    //    the main histogram loop will apply the cut to the node.
+    HistDef h1;
+    h1.name = "M_ll_lead2_OSSF";
+    h1.type = "1D";
+    h1.expr = "M_ll";          // histogram the M_ll column (computed above)
+    h1.nbins = 50;
+    h1.xmin = 0;
+    h1.xmax = 200;
+    h1.x_title = "M_{ll} for OSSF pair of lead leps";
+    h1.cuts = {"OSSF_pair"};
+    h1.lepCuts = {};
+    h1.predefCuts = {};
+    h1.userCuts = {};
+    // hdefs.push_back(h1); // uncomment to load hist
 
-    //// 2) 2D histogram: M_ll (x) vs HTeta24_over_MET (y)
-    ////    This uses the derived ratio defined above
-    //HistDef h2;
-    //h2.name = "M_ll_lead2_vs_HTeta24overMET";
-    //h2.type = "2D";
-    //h2.expr = "M_ll";               // X-axis: invariant mass of leading two leptons
-    //h2.yexpr = "HTeta24_over_MET";   // Y-axis: derived HT/MET ratio
-    //h2.nbins = 50;
-    //h2.xmin = 0;
-    //h2.xmax = 100;
-    //h2.nybins = 50;
-    //h2.ymin = 0;
-    //h2.ymax = 3;
-    //h2.x_title = "M_{ll} for OSSF pair of lead leps";
-    //h2.y_title = "HT/MET";
-    //h2.cuts = {};       // no extra event-level cuts here (hist loop may also apply global cuts)
-    //h2.lepCuts = {};
-    //h2.predefCuts = {};
-    //h2.userCuts = {};
-    //// hdefs.push_back(h2); // uncomment to load hist
+    // 2) 2D histogram: M_ll (x) vs HTeta24_over_MET (y)
+    //    This uses the derived ratio defined above
+    HistDef h2;
+    h2.name = "M_ll_lead2_vs_HTeta24overMET";
+    h2.type = "2D";
+    h2.expr = "M_ll";               // X-axis: invariant mass of leading two leptons
+    h2.yexpr = "HTeta24_over_MET";   // Y-axis: derived HT/MET ratio
+    h2.nbins = 50;
+    h2.xmin = 0;
+    h2.xmax = 100;
+    h2.nybins = 50;
+    h2.ymin = 0;
+    h2.ymax = 3;
+    h2.x_title = "M_{ll} for OSSF pair of lead leps";
+    h2.y_title = "HT/MET";
+    h2.cuts = {};       // no extra event-level cuts here (hist loop may also apply global cuts)
+    h2.lepCuts = {};
+    h2.predefCuts = {};
+    h2.userCuts = {};
+    // hdefs.push_back(h2); // uncomment to load hist
 
-    //// Return the user-provided histogram definitions. The main loop will:
-    ////   - apply h.cuts / h.lepCuts / h.predefCuts (via BFI->ExpandMacros) / h.userCuts
-    ////   - perform derived-variable validation for 2D axes
-    ////   - call Histo1D/Histo2D to fill and write histograms
     return hdefs;
 }
