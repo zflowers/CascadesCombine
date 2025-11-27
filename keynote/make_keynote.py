@@ -7,8 +7,7 @@ from collections import defaultdict
 # CLI args
 # -------------------------
 parser = argparse.ArgumentParser(description="Create Keynote slides from plot PDFs (with optional rsync).")
-parser.add_argument("--rsync-source", default=None,
-                    help="Optional rsync source (e.g. user@host:/path/to/runs/*/plots/*). If not provided, env KEYNOTE_RSYNC is checked.")
+parser.add_argument("--rsync-source", default=None, help="Optional rsync source (e.g. user@host:/path/to/runs/*/plots/*). If not provided, env KEYNOTE_RSYNC is checked.")
 parser.add_argument("--no-rsync", action="store_true", help="Skip rsync even if rsync source is provided.")
 parser.add_argument("--dry-run", action="store_true", help="Don't run AppleScript; print previews instead.")
 args = parser.parse_args()
@@ -22,7 +21,30 @@ SKIP_CUTFLOW = False
 # Edit this list to the run ids (directory names under runs/) you want processed.
 # If this list is empty, the script will auto-discover all run directories and process them.
 RUN_IDS = [
-    # example: "run_August31_2025_0917",
+"",
+"",
+"",
+"",
+
+
+#"run_Cascades_2L_0J_lPTISR_Regions_Gold_v263_November13_2025_2125",
+#"run_Cascades_2L_0J_hPTISR_Regions_Gold_v263_November13_2025_2125",
+#"run_Cascades_2L_1J_lPTISR_Regions_Gold_v263_November13_2025_2126",
+#"run_Cascades_2L_1J_hPTISR_Regions_Gold_v263_November13_2025_2127",
+#"run_Cascades_3L_Regions_Gold_v263_November13_2025_2129",
+#"run_Cascades_4L_Regions_Gold_v263_November13_2025_2130",
+#"run_Cascades_2L_0J_lPTISR_Regions_Silver_v263_November13_2025_2131",
+#"run_Cascades_2L_0J_hPTISR_Regions_Silver_v263_November13_2025_2132",
+#"run_Cascades_2L_1J_lPTISR_Regions_Silver_v263_November13_2025_2133",
+#"run_Cascades_2L_1J_hPTISR_Regions_Silver_v263_November13_2025_2134",
+#"run_Cascades_3L_Regions_Silver_v263_November13_2025_2136",
+#"run_Cascades_4L_Regions_Silver_v263_November13_2025_2137",
+#"run_Cascades_2L_0J_lPTISR_Regions_Bronze_v263_November13_2025_2138",
+#"run_Cascades_2L_0J_hPTISR_Regions_Bronze_v263_November13_2025_2139",
+#"run_Cascades_2L_1J_lPTISR_Regions_Bronze_v263_November13_2025_2140",
+#"run_Cascades_2L_1J_hPTISR_Regions_Bronze_v263_November13_2025_2142",
+#"run_Cascades_3L_Regions_Bronze_v263_November13_2025_2143",
+#"run_Cascades_4L_Regions_Bronze_v263_November13_2025_2144",
 ]
 
 # -------------------------
@@ -34,29 +56,30 @@ runs_root = base_dir / top_level / "runs"
 bin_names = []
 
 prefix_order = [
-    "Cascades_300_300_289_280_275_270",
+    #"Cascades_300_300_289_280_275_270",
     #"Cascades_289_300_289_280_270_260",
-    "Cascades_300_300_289_260_240_220",
-    "Cascades_209_220_209_200_190_180",
-    "Wjets", "ttbar", "DBTB",
-]
-
-if "Gluinos" in RUN_IDS[0]: prefix_order = [
-    "SMS_Gluinos_SMS_1200_1100", "SMS_Gluinos_SMS_1200_1176",
-    "Wjets", "ZInv", "ttbar", "QCD",
+    #"Cascades_300_300_289_260_240_220",
+    "Cascades_220_220_209_200_190_180",
+    #"Wjets", "ttbar", "DBTB",
+    "SMS_TChiWZ_SMS_300_290",
+    "SMS_TChiWZ_SMS_300_270",
+    "top", "boson", "Vfakeleps",
+    #"Wjets", "QCD", "ZInv",
+    "impacts",
 ]
 
 ignore_bins = [
     # signals:
-    "Cascades_209_220_209_200_190_180",
-    "Cascades_289_300_289_280_270_260",
-    "Cascades_300_300_289_260_240_220",
-    "Cascades_300_300_289_280_275_270",
-    "SMS_TChiWZ_SMS_300_290",
-    "SMS_TChiWZ_Sandwich_SMS_300_290",
-    # backgrounds:
-    "DBTB", "DY", "QCD",
-    "ST", "ZInv", "ttbar", "Wjets",
+    #"Cascades_209_220_209_200_190_180",
+    #"Cascades_220_220_209_200_190_180",
+    #"Cascades_289_300_289_280_270_260",
+    #"Cascades_300_300_289_260_240_220",
+    #"Cascades_300_300_289_280_275_270",
+    #"SMS_TChiWZ_SMS_300_290",
+    #"SMS_TChiWZ_Sandwich_SMS_300_290",
+    ## backgrounds:
+    #"DBTB", "DY", "QCD",
+    #"ST", "ZInv", "ttbar", "Wjets",
 ]
 
 # -------------------------
@@ -233,7 +256,7 @@ tell application "Keynote"
     end if
     tell thisDoc
         set thisSlide to make new slide with properties {{base slide:master slide "Plots"}}
-        delay 0.1
+        delay 0.2
         repeat with ti in text items of thisSlide
             try
                 set tiPosition to position of ti
@@ -250,7 +273,7 @@ tell application "Keynote"
                 set position of newImg to {{29, 143}}
                 set width of newImg to 840
                 set height of newImg to 543
-                delay 0.1
+                delay 0.2
             end tell
         end if
     end tell
@@ -283,7 +306,7 @@ tell application "Keynote"
     end if
     tell thisDoc
         set thisSlide to make new slide with properties {{base slide:master slide "Plots"}}
-        delay 0.1
+        delay 0.2
         repeat with ti in text items of thisSlide
             try
                 set tiPosition to position of ti
@@ -308,7 +331,7 @@ tell application "Keynote"
                 set position of newImg to {{xpos, ypos}}
                 set width of newImg to imageWidth
                 set height of newImg to imageHeight
-                delay 0.1
+                delay 0.2
             end tell
         end repeat
     end tell
@@ -331,7 +354,7 @@ tell application "Keynote"
     end if
     tell thisDoc
         set thisSlide to make new slide with properties {{base slide:master slide "Plots"}}
-        delay 0.1
+        delay 0.2
         repeat with ti in text items of thisSlide
             try
                 set tiPosition to position of ti
@@ -348,7 +371,7 @@ tell application "Keynote"
             set position of newImg to {{29, 143}}
             set width of newImg to 840
             set height of newImg to 543
-            delay 0.1
+            delay 0.2
         end tell
     end tell
 end tell
@@ -370,7 +393,7 @@ tell application "Keynote"
     end if
     tell thisDoc
         set thisSlide to make new slide with properties {{base slide:master slide "Plots"}}
-        delay 0.1
+        delay 0.2
         repeat with ti in text items of thisSlide
             try
                 set tiPosition to position of ti
@@ -387,7 +410,7 @@ tell application "Keynote"
             set position of newImg to {{16, 135}}
             set width of newImg to 862
             set height of newImg to 558
-            delay 0.1
+            delay 0.2
         end tell
     end tell
 end tell
@@ -408,7 +431,7 @@ tell application "Keynote"
     end if
     tell thisDoc
         set thisSlide to make new slide with properties {{base slide:master slide "Plots"}}
-        delay 0.1
+        delay 0.2
         -- Add the PDF
         set thisPDF to item 1 of pdfPaths
         set pdfAlias to POSIX file thisPDF as alias
@@ -417,7 +440,7 @@ tell application "Keynote"
             set position of newImg to {{100, 267}}
             set width of newImg to 825
             set height of newImg to 464
-            delay 0.1
+            delay 0.2
         end tell
         -- Add a text box with bin names
         repeat with ti in text items of thisSlide
@@ -451,7 +474,7 @@ tell application "Keynote"
     set thisDoc to front document
     tell thisDoc
         set newSlide to make new slide with properties {{base slide:master slide "Plots"}}
-        delay 0.1
+        delay 0.2
         repeat with ti in text items of newSlide
             try
                 set tiPosition to position of ti
@@ -656,15 +679,30 @@ def main():
         summary_pdfs = [
             (plots_dir / "CutFlow2D_yield.pdf", "Yield"),
             (plots_dir / "CutFlow2D_SoB.pdf", "S / B"),
-            (plots_dir / "CutFlow2D_SoverSqrtB.pdf", "S / √B"),
+            #(plots_dir / "CutFlow2D_SoverSqrtB.pdf", "S / √B"),
             (plots_dir / "CutFlow2D_Zbi.pdf", "Zbi"),
         ]
         add_summary_slides(summary_pdfs)
 
+        if "LepEta" in run_id: 
+            global prefix_order = [
+                "Cascades_220_220_209_200_190_180",
+                "SMS_TChiWZ_SMS_300_290",
+                "SMS_TChiWZ_SMS_300_270",
+                "Wjets", "QCD", "ZInv",
+            ]
+
+        if "Gluinos" in run_id:
+            global prefix_order = [
+                "SMS_Gluinos_SMS_1200_1100", "SMS_Gluinos_SMS_1200_1176",
+                "Wjets", "ZInv", "ttbar", "QCD",
+            ]
+
+
         if [d.name for d in bin_dirs] != ['pdfs']:
             print("Will make slides for bins:", [d.name for d in bin_dirs])
             for bin_dir in bin_dirs:
-                if(bin_dir.name == "pdfs"): continue
+                if(bin_dir.name == "pdfs" or bin_dir.name == "impacts"): continue
                 print("  Making slides for bin:", bin_dir.name)
                 process_bin_dir(bin_dir)
 
