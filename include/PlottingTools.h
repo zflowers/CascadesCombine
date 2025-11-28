@@ -187,7 +187,7 @@ void Plot_Stack(const string& hname,
     TH1* axisHist = !allHists.empty() ? allHists.front() : nullptr;
     if (!axisHist) return;
     DrawLogSmart(axisHist, "HIST");
-    axisHist->GetYaxis()->SetRangeUser(max(0.9*hmin, 5.e-1), 1.1*hmax);
+    axisHist->GetYaxis()->SetRangeUser(max(0.9*hmin, 5.e-1), 1.5*hmax);
     axisHist->GetYaxis()->CenterTitle();
     axisHist->GetYaxis()->SetTitle(("N_{events}"));// / "+std::to_string(int(lumi))+" fb^{-1}").c_str());
     if(h_DATA){
@@ -412,6 +412,172 @@ void PlotMergedStack(const std::string& mergedName,
 
     // Call the existing Plot_Stack helper
     Plot_Stack(mergedName, stackInput.bkgHists, stackInput.sigHists, stackInput.dataHist, signalBoost);
+}
+
+void Plot_Overlay(const std::string& hname,
+                  std::vector<TH1*>& bkgHists,
+                  std::vector<TH1*>& sigHists,
+                  TH1* dataHist = nullptr)
+{
+    if (bkgHists.empty() && sigHists.empty() && !dataHist) return;
+
+    // ------------------------
+    // Normalize all histograms
+    // ------------------------
+    auto normalize = [](TH1* h) {
+        if (!h) return;
+        double integral = h->Integral();
+        if (integral > 0) h->Scale(1.0 / integral);
+    };
+
+    for (auto* h : bkgHists) normalize(h);
+    for (auto* h : sigHists) normalize(h);
+    if (dataHist) normalize(dataHist);
+
+    // Axis reference
+    TH1* axisHist = nullptr;
+    if (!bkgHists.empty()) axisHist = bkgHists.front();
+    else if (!sigHists.empty()) axisHist = sigHists.front();
+    else axisHist = dataHist;
+    if (!axisHist) return;
+
+    // ------------------------
+    // Prepare canvas
+    // ------------------------
+    std::string canvas_name = "can_overlay_" + hname;
+    TCanvas* can = new TCanvas(canvas_name.c_str(), canvas_name.c_str(), 1200, 700);
+    can->SetGridx(); 
+    can->SetGridy();
+    can->SetLeftMargin(hlo);
+    can->SetRightMargin(hhi);
+    can->SetBottomMargin(hbo);
+    can->SetTopMargin(hto);
+
+    can->cd();
+
+    // Draw empty axis
+    DrawLogSmart(axisHist, "HIST");
+    axisHist->SetLineWidth(2);
+    axisHist->SetLineColor(kBlack);
+    axisHist->GetYaxis()->SetTitle("Normalized events");
+    axisHist->GetYaxis()->CenterTitle();
+
+    // Compute Y max
+    double ymax = axisHist->GetMaximum();
+    for (auto* h : bkgHists) if (h) ymax = std::max(ymax, h->GetMaximum());
+    for (auto* h : sigHists) if (h) ymax = std::max(ymax, h->GetMaximum());
+    if (dataHist) ymax = std::max(ymax, dataHist->GetMaximum());
+    axisHist->GetYaxis()->SetRangeUser(1e-4, 1.8 * ymax);
+
+    // ------------------------
+    // Draw backgrounds
+    // ------------------------
+    for (auto* h : bkgHists) {
+        if (!h) continue;
+        std::string proc = ExtractProcName(h->GetName());
+
+        int color = kBlack;
+        auto it = m_Color.find(proc);
+        if (it != m_Color.end()) color = it->second;
+        else {
+            color = fallbackColors[fallbackIndex % fallbackColors.size()];
+            m_Color[proc] = color;
+            fallbackIndex++;
+        }
+
+        h->SetLineColor(color);
+        h->SetLineWidth(3);
+        h->SetFillStyle(0);
+        DrawLogSmart(h, "SAME HIST");
+    }
+
+    // ------------------------
+    // Draw signals
+    // ------------------------
+    for (auto* h : sigHists) {
+        if (!h) continue;
+        std::string proc = ExtractProcName(h->GetName());
+
+        int color = kBlack;
+        auto it = m_Color.find(proc);
+        if (it != m_Color.end()) color = it->second;
+        else {
+            color = fallbackColors[fallbackIndex % fallbackColors.size()];
+            m_Color[proc] = color;
+            fallbackIndex++;
+        }
+
+        h->SetLineColor(color);
+        h->SetLineStyle(7);
+        h->SetLineWidth(4);
+        DrawLogSmart(h, "SAME HIST");
+    }
+
+    // ------------------------
+    // Draw data points
+    // ------------------------
+    if (dataHist) {
+        dataHist->SetMarkerStyle(20);
+        dataHist->SetMarkerSize(0.8);
+        dataHist->SetLineColor(kBlack);
+        DrawLogSmart(dataHist, "SAME E");
+    }
+
+    // ------------------------
+    // Legend
+    // ------------------------
+    double textsize = 0.045;
+    TLegend* leg = new TLegend(1.-hhi+0.01, 1.- (bkgHists.size()+sigHists.size()+2)*(1.-0.49)/9., 0.98, 1.-hto-0.005);
+    leg->SetTextFont(132);
+    leg->SetTextSize(textsize);
+    leg->SetFillColor(kWhite);
+    leg->SetLineColor(kWhite);
+
+    for (auto* h : bkgHists)
+        if (h)
+            leg->AddEntry(h, m_Title[ExtractProcName(h->GetName())].c_str(), "L");
+
+    for (auto* h : sigHists)
+        if (h) {
+            std::string proc = ExtractProcName(h->GetName());
+            if (proc.find("TChiWZ") != std::string::npos)
+                proc = makeSMSChiTitle(proc);
+            else
+                proc = m_Title[proc];
+            leg->AddEntry(h, proc.c_str(), "L");
+        }
+
+    if (dataHist) leg->AddEntry(dataHist, "Data", "EP");
+    leg->Draw();
+
+    // CMS latex
+    TLatex l;
+    l.SetNDC();
+    l.SetTextFont(42);
+    l.SetTextSize(textsize);
+    l.SetTextAlign(11);
+    l.DrawLatex(can->GetLeftMargin(), 0.943,
+                "#bf{#it{CMS}} Internal 13 TeV work-in-progress");
+
+    l.SetTextAlign(31);
+    l.DrawLatex(1.0 - can->GetRightMargin(), 0.943,
+                ExtractBinName(axisHist->GetName()).c_str());
+
+    // ------------------------
+    // Save PDF
+    // ------------------------
+    if (outFile) { outFile->cd(); can->Write(0, TObject::kWriteDelete); }
+    std::string BinName = SanitizeString(ExtractBinName(axisHist->GetName()));
+    TString pdf = Form("%spdfs/%s/%s.pdf",
+                       outputDir.c_str(),
+                       BinName.c_str(),
+                       SanitizeString(canvas_name).c_str());
+
+    gErrorIgnoreLevel = 1001;
+    can->SaveAs(pdf);
+    gErrorIgnoreLevel = 0;
+
+    delete can;
 }
 
 // ----------------------

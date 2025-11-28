@@ -614,7 +614,7 @@ def write_submit_file(
 # ----------------------------------------
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--bkg_processes", nargs="+", default=[], help="List of background process names")
+    parser.add_argument("--bkg_processes", nargs="*", default=[], help="List of background process names")
     parser.add_argument("--sig_processes", nargs="*", default=[], help="List of signal process names")
     parser.add_argument("--sms-filters", nargs="*", default=[], help="Optional list of SMS trees to filter")
     parser.add_argument("--data_processes", nargs="*", default=[], help="List of data process names")

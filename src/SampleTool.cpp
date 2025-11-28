@@ -757,10 +757,19 @@ SampleTool::SampleTool(){
     pathPrefix + "Summer23BPix_130X/GJ-4Jets_HT-600_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root"
   };
 
-  MasterDict["Cascades"] = {
+  MasterDict["Cascades_220"] = {
     pathPrefix + "Summer23BPix_130X_Cascades/SlepSnuCascade_MN1-220_MN2-260_MC1-240_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+  };
+
+  MasterDict["Cascades_260"] = {
     pathPrefix + "Summer23BPix_130X_Cascades/SlepSnuCascade_MN1-260_MN2-280_MC1-270_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+  };
+
+  MasterDict["Cascades_270"] = {
     pathPrefix + "Summer23BPix_130X_Cascades/SlepSnuCascade_MN1-270_MN2-280_MC1-275_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
+  };
+
+  MasterDict["Cascades_180"] = {
     pathPrefix + "Summer22_130X_Cascades/SlepSnuCascade_220-209_200-190-180_2022_NANO_JustinPrivateMC_Summer22_130X_Cascades_Summer22_130X.root"
   };
 
@@ -786,6 +795,15 @@ SampleTool::SampleTool(){
     pathPrefix + "Summer20UL18_106X_Data/MET_Run2018D-UL2018_MiniAODv2_NanoAODv9-v1_Summer20UL18_106X_Data_Summer20UL18_106X.root",
   };
 
+  MasterDict["Cascades"] = mergeEntriesList(
+    MasterDict,
+    {
+      "Cascades_180",
+      "Cascades_270",
+      "Cascades_260",
+      "Cascades_220",
+    }
+  );
 
   MasterDict["top_2023BPix"] = mergeEntriesList(
     MasterDict,

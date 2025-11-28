@@ -155,8 +155,10 @@ int main(int argc, char* argv[]) {
             // Plot stack
             if(!bkgHists.empty() || !sigHists.empty() || dataHist){
                 if(groupKey.find("num__")!=string::npos || groupKey.find("den__")!=string::npos) continue; // don't stack efficiency inputs
-                if(bkgHists[0]->InheritsFrom(TH2::Class())) continue; // don't stack TH2s
+                if(bkgHists.size() > 0) { if(bkgHists[0]->InheritsFrom(TH2::Class())) continue; } // don't stack TH2s
+                if(sigHists.size() > 0) { if(sigHists[0]->InheritsFrom(TH2::Class())) continue; } // don't stack TH2s
                 Plot_Stack(groupKey, bkgHists, sigHists, dataHist, 1.0);
+                Plot_Overlay(groupKey, bkgHists, sigHists, dataHist);
             }
         
         } else {

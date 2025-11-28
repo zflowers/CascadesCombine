@@ -21,10 +21,9 @@ SKIP_CUTFLOW = False
 # Edit this list to the run ids (directory names under runs/) you want processed.
 # If this list is empty, the script will auto-discover all run directories and process them.
 RUN_IDS = [
-"run_LepEtaStudy_v10_November26_2025_2122",
-"run_NSFProposal_v0_November26_2025_2123",
-#"run_Cascades_Regions_234L_v300_November26_2025_2124",
-"run_Cascades_CRs_Impacts_FD_234L_Bronze_v300_November26_2025_2126",
+"run_NSFProposal_v4_November28_2025_1121",
+"run_NSFProposal_v4_bkg_November28_2025_1122",
+"run_NSFProposal_v4_sig_November28_2025_1124",
 
 
 #"run_Cascades_2L_0J_lPTISR_Regions_Gold_v263_November13_2025_2125",
@@ -206,18 +205,20 @@ def format_var_title(u_var: str):
 def parse_pdf_stem(stem: str):
     parts = stem.split("__")
     is_stack = "stack" in stem.lower()
+    is_overlay = "overlay" in stem.lower()
     is_cutflow = "cutflow" in stem.lower()
-    parsed = {"bin": None, "proc": None, "var": None, "is_stack": is_stack, "is_cutflow": is_cutflow, "is_2d": False}
+    parsed = {"bin": None, "proc": None, "var": None, "is_stack": is_stack, "is_overlay": is_overlay, "is_cutflow": is_cutflow, "is_2d": False}
     if len(parts) >= 3:
         parsed["bin"] = parts[0]
         parsed["proc"] = parts[1]
         parsed["var"] = "__".join(parts[2:])
     elif len(parts) == 2:
         left, right = parts
-        if "stack" in left.lower():
+        if "stack" in left.lower() or "overlay" in left.lower():
             tokens = left.split("_")
             parsed["bin"] = tokens[-1] if tokens else left
-            parsed["proc"] = "stack"
+            if "stack" in left.lower(): parsed["proc"] = "stack"
+            if "overlay" in left.lower(): parsed["proc"] = "overlay"
             parsed["var"] = right
         else:
             parsed["bin"] = left
@@ -511,7 +512,8 @@ def process_bin_dir(bin_dir: Path):
         parsed_list.append(parsed)
 
     stack_pdfs = [d for d in parsed_list if d["is_stack"]]
-    two_d = [d for d in parsed_list if d["is_2d"] and not d["is_stack"] and not d["is_cutflow"] and (d.get("proc") in prefix_order)]
+    overlay_pdfs = [d for d in parsed_list if d["is_overlay"]]
+    two_d = [d for d in parsed_list if d["is_2d"] and not d["is_stack"] and not d["is_overlay"] and not d["is_cutflow"] and (d.get("proc") in prefix_order)]
 
     var_to_entries = defaultdict(list)
     for ent in two_d:
@@ -525,6 +527,10 @@ def process_bin_dir(bin_dir: Path):
     for sp in stack_pdfs:
         var_title = sp.get("var") or "stack"
         make_applescript_call_add_single_large(str(sp["path"]), format_var_title(var_title))
+
+    for op in overlay_pdfs:
+        var_title = op.get("var") or "overlay"
+        make_applescript_call_add_single_large(str(op["path"]), format_var_title(var_title))
 
     for var in sorted(var_to_entries.keys()):
         entries = var_to_entries[var]
@@ -700,12 +706,27 @@ def main():
             ]
 
         if "NSFProposal" in run_id:
-            prefix_order = [
-                "Cascades_220_220_209_200_190_180",
-                "SMS_TChiWZ_SMS_300_290",
-                "SMS_TChiWZ_SMS_300_270",
-                "top", "boson", "Vfakeleps",
-            ]
+            if "bkg" in run_id:
+                prefix_order = [
+                    "Wjets", "ttbar", "DBTB",
+                    "ZInv", "DY", "QCD",
+                ]
+            elif "sig" in run_id:
+                prefix_order = [
+                    "SMS_TChiWZ_SMS_300_297",
+                    "SMS_TChiWZ_SMS_300_290",
+                    "SMS_TChiWZ_SMS_300_270",
+                    "SMS_TChiWZ_SMS_300_250",
+                    "Cascades_220_220_209_200_190_180",
+                    "Cascades_300_300_289_280_275_270",
+                ]
+            else:
+                prefix_order = [
+                    "Wjets", "ttbar", "DBTB",
+                    "SMS_TChiWZ_SMS_300_290",
+                    "SMS_TChiWZ_SMS_300_270",
+                    "Cascades_220_220_209_200_190_180",
+                ]
 
         if [d.name for d in bin_dirs] != ['pdfs']:
             print("Will make slides for bins:", [d.name for d in bin_dirs])
