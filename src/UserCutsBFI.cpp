@@ -53,14 +53,104 @@ ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<st
             {"PT_lep","Eta_lep","Phi_lep","M_lep"}
         );
     }
-    
+
     // require lep min DeltaR > 0.02
-    // need to debug this cut
     CutDef cut_minDR_ll;
-    cut_minDR_ll.name = "minDR_ll_gt_0p02";
+    cut_minDR_ll.name = "minDR_ll";
     cut_minDR_ll.columns = {"minDeltaR_leps"};
     cut_minDR_ll.expression = "minDeltaR_leps > 0.02";
     cuts[cut_minDR_ll.name] = cut_minDR_ll;
+
+    // --- min mass between any two leptons ---
+    if (!node.HasColumn("minMll")) {
+        node = node.Define("minMll",
+            [](const std::vector<double> &pt,
+               const std::vector<double> &eta,
+               const std::vector<double> &phi,
+               const std::vector<double> &mass) -> double {
+    
+                size_t n = std::min({pt.size(), eta.size(), phi.size(), mass.size()});
+                if (n < 2) return 999.0;
+    
+                double minM = std::numeric_limits<double>::infinity();
+                for (size_t i = 0; i + 1 < n; ++i) {
+                    TLorentzVector li;
+                    li.SetPtEtaPhiM(pt[i], eta[i], phi[i], mass[i]);
+                    for (size_t j = i+1; j < n; ++j) {
+                        TLorentzVector lj;
+                        lj.SetPtEtaPhiM(pt[j], eta[j], phi[j], mass[j]);
+                        double m = (li + lj).M();
+                        if (m < minM) minM = m;
+                    }
+                }
+                return (minM == std::numeric_limits<double>::infinity()) ? 999.0 : minM;
+            },
+            {"PT_lep","Eta_lep","Phi_lep","M_lep"}
+        );
+    }
+    
+    CutDef cut_minMll_gt1;
+    cut_minMll_gt1.name = "minM_ll";
+    cut_minMll_gt1.columns = {"minMll"};
+    cut_minMll_gt1.expression = "minMll > 1.0";
+    cuts[cut_minMll_gt1.name] = cut_minMll_gt1;
+
+    if (!node.HasColumn("pass2DLeptonCut")) {
+        node = node.Define("pass2DLeptonCut",
+            [](double mll, double dr) -> bool {
+    
+                // Equation of the boundary line:
+                //              \/DR                \/Mass
+                double dr_max = 0.15 * (1.0 - mll / 1.25);
+    
+                // If mll >= 1.5, dr_max becomes <= 0; reject only if dr <= 0
+                if (dr_max < 0) dr_max = 0;
+    
+                return dr > dr_max;
+            },
+            {"minMll", "minDeltaR_leps"}
+        );
+    }
+
+    CutDef cut_2D_ll;
+    cut_2D_ll.name = "minMll_minDR_2D";
+    cut_2D_ll.columns = {"pass2DLeptonCut"};
+    cut_2D_ll.expression = "pass2DLeptonCut == true";
+    cuts[cut_2D_ll.name] = cut_2D_ll;
+
+    // --- remove low pt forward muons ---
+    // also need to try only removing events where all muons are low pt and forward
+    if (!node.HasColumn("lowptmuon_endcap")) {
+        node = node.Define(
+            "lowptmuon_endcap",
+            [](const std::vector<double> &pt,
+               const std::vector<double> &eta,
+               const std::vector<int> &pdgid,
+               int nlep,
+               int nmu
+              ) -> bool {
+                if(nmu == 0) return true; // keep events without muons no matter what
+
+                // get number of low pt end-cap muons
+                int nmu_lowpt_endcap = 0;
+                for (int i = 0; i < nlep; i++) {
+                    if (std::abs(pdgid[i]) == 13 && pt[i] < 5.0 && std::abs(eta[i]) > 1.566) {
+                        nmu_lowpt_endcap++;
+                    }
+                }
+                //if(nmu_lowpt_endcap != 0) return false; // remove events where any muon is low pt and end-cap
+                if(nmu_lowpt_endcap == nmu) return false; // remove events where all muons are low pt and end-cap
+                return true; // keep event
+            },
+            {"PT_lep", "Eta_lep", "PDGID_lep", "Nlep", "Nmu"}
+        );
+    }
+
+    CutDef cut_lowptmuon_endcap;
+    cut_lowptmuon_endcap.name = "lowptmuon_endcap";
+    cut_lowptmuon_endcap.columns = {"lowptmuon_endcap"};
+    cut_lowptmuon_endcap.expression = "lowptmuon_endcap==1";
+    cuts[cut_lowptmuon_endcap.name] = cut_lowptmuon_endcap;
 
     //node = node
     //    .Define("My_p4_lep0_a", [](const std::vector<double> &pt,

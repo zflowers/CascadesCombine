@@ -217,7 +217,7 @@ void Plot_Stack(const string& hname,
 
     for (size_t i = 0; i < sigHists.size(); ++i) { TH1* h = sigHists[i]; if (!h || h->GetEntries()==0) continue;
         SetMinimumBinContent(h, hmin);
-        h->SetLineWidth(3); h->SetLineStyle(7);
+        h->SetLineWidth(3); //h->SetLineStyle(7);
         int color = kBlack;
         auto it = m_Color.find(ExtractProcName(sigHists[i]->GetName()));
         if (it != m_Color.end()) {
@@ -452,22 +452,29 @@ void Plot_Overlay(const std::string& hname,
     can->SetRightMargin(hhi);
     can->SetBottomMargin(hbo);
     can->SetTopMargin(hto);
-
     can->cd();
 
     // Draw empty axis
-    DrawLogSmart(axisHist, "HIST");
+    //DrawLogSmart(axisHist, "HIST");
+    axisHist->Draw("HIST");
     axisHist->SetLineWidth(2);
     axisHist->SetLineColor(kBlack);
     axisHist->GetYaxis()->SetTitle("Normalized events");
     axisHist->GetYaxis()->CenterTitle();
+    axisHist->GetXaxis()->SetLabelSize(0.04);
+    axisHist->GetYaxis()->SetLabelSize(0.04);
+    axisHist->GetXaxis()->SetTitleSize(0.05);
+    axisHist->GetYaxis()->SetTitleSize(0.05);
+    axisHist->GetXaxis()->SetTitleOffset(1.1);
+    axisHist->GetYaxis()->SetTitleOffset(0.94);
 
     // Compute Y max
     double ymax = axisHist->GetMaximum();
     for (auto* h : bkgHists) if (h) ymax = std::max(ymax, h->GetMaximum());
     for (auto* h : sigHists) if (h) ymax = std::max(ymax, h->GetMaximum());
     if (dataHist) ymax = std::max(ymax, dataHist->GetMaximum());
-    axisHist->GetYaxis()->SetRangeUser(1e-4, 1.8 * ymax);
+    //axisHist->GetYaxis()->SetRangeUser(1e-4, 1.8 * ymax);
+    axisHist->GetYaxis()->SetRangeUser(1e-4, 1.2 * ymax);
 
     // ------------------------
     // Draw backgrounds
@@ -487,8 +494,10 @@ void Plot_Overlay(const std::string& hname,
 
         h->SetLineColor(color);
         h->SetLineWidth(3);
+        h->SetLineStyle(7);
         h->SetFillStyle(0);
-        DrawLogSmart(h, "SAME HIST");
+        //DrawLogSmart(h, "SAME HIST");
+        h->Draw("SAME HIST");
     }
 
     // ------------------------
@@ -508,9 +517,12 @@ void Plot_Overlay(const std::string& hname,
         }
 
         h->SetLineColor(color);
-        h->SetLineStyle(7);
-        h->SetLineWidth(4);
-        DrawLogSmart(h, "SAME HIST");
+        //if(bkgHists.size() != 0) h->SetLineStyle(7);
+        //if(bkgHists.size() != 0) h->SetLineWidth(4);
+        //else h->SetLineWidth(3);
+        h->SetLineWidth(3);
+        //DrawLogSmart(h, "SAME HIST");
+        h->Draw("SAME HIST");
     }
 
     // ------------------------
@@ -520,13 +532,14 @@ void Plot_Overlay(const std::string& hname,
         dataHist->SetMarkerStyle(20);
         dataHist->SetMarkerSize(0.8);
         dataHist->SetLineColor(kBlack);
-        DrawLogSmart(dataHist, "SAME E");
+        //DrawLogSmart(dataHist, "SAME E");
+        dataHist->Draw("SAME HIST");
     }
 
     // ------------------------
     // Legend
     // ------------------------
-    double textsize = 0.045;
+    double textsize = 0.037;
     TLegend* leg = new TLegend(1.-hhi+0.01, 1.- (bkgHists.size()+sigHists.size()+2)*(1.-0.49)/9., 0.98, 1.-hto-0.005);
     leg->SetTextFont(132);
     leg->SetTextSize(textsize);
