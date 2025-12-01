@@ -25,8 +25,14 @@ ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<st
     cut_HEMVETO.expression = "pass_HEM";
     cuts[cut_HEMVETO.name] = cut_HEMVETO;
 
+    // flags to turn on/off different cut defs (minor computation save)
+    bool do_minDR = true;
+    bool do_minMll = true;
+    bool do_2Dll = true;
+    bool do_lowptmuon_endcap = false;
+
     // --- min DeltaR between any two leptons ---
-    if (node.HasColumn("minDeltaR_leps") == false) {
+    if (do_minDR && node.HasColumn("minDeltaR_leps") == false) {
         node = node.Define("minDeltaR_leps",
             [](const std::vector<double> &pt,
                const std::vector<double> &eta,
@@ -62,7 +68,7 @@ ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<st
     cuts[cut_minDR_ll.name] = cut_minDR_ll;
 
     // --- min mass between any two leptons ---
-    if (!node.HasColumn("minMll")) {
+    if (do_minMll && !node.HasColumn("minMll")) {
         node = node.Define("minMll",
             [](const std::vector<double> &pt,
                const std::vector<double> &eta,
@@ -95,7 +101,7 @@ ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<st
     cut_minMll_gt1.expression = "minMll > 1.0";
     cuts[cut_minMll_gt1.name] = cut_minMll_gt1;
 
-    if (!node.HasColumn("pass2DLeptonCut")) {
+    if (do_2Dll && !node.HasColumn("pass2DLeptonCut")) {
         node = node.Define("pass2DLeptonCut",
             [](double mll, double dr) -> bool {
     
@@ -120,7 +126,7 @@ ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<st
 
     // --- remove low pt forward muons ---
     // also need to try only removing events where all muons are low pt and forward
-    if (!node.HasColumn("lowptmuon_endcap")) {
+    if (do_lowptmuon_endcap && !node.HasColumn("lowptmuon_endcap")) {
         node = node.Define(
             "lowptmuon_endcap",
             [](const std::vector<double> &pt,
