@@ -603,7 +603,6 @@ def write_submit_file(
                     else:
                         f.write(f"{cluster_id}\n")
     
-            print(f"[createJobs] Submitted bin {bin_name} ({len(jobs)} jobs) via schedd {schedd or '(unknown)'}")
             if make_json:
                 write_merge_script(bin_name, bin_dir, json_dirname="json", proc_yaml_file=proc_yaml_file)
             if make_root:
@@ -659,21 +658,25 @@ def main():
 
     # Signal handling: optional (sig may be empty or missing in config)
     # Set SMS filters if provided, this should be done before loading signals if the BFTool expects that.
+    sms_filters = []
+    
     if args.sms_filters:
-        sms_filters = args.sms_filters
+        # use exactly what user gave
+        sms_filters = list(args.sms_filters)
         try:
+            # set them in C++
             pySampleTool.BFTool.SetFilterSignalsSMS(sms_filters)
         except Exception:
-            # be tolerant if the binding doesn't provide this method
             pass
-    else:
+    
+    # Always load signals
+    tool.LoadSigs(args.sig_processes or [])
+    
+    if not args.sms_filters:
         try:
             sms_filters = pySampleTool.BFTool.GetFilterSignalsSMS()
         except Exception:
             sms_filters = []
-
-    # Always attempt to load signals (safe for empty list)
-    tool.LoadSigs(args.sig_processes or [])
 
     # Build jobs
     jobs = build_jobs(

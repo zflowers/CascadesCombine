@@ -139,7 +139,6 @@ def main():
 
     # Build commands (group bins into chunks of size bins_per_job)
     jobs = []
-    print("\n===== BEGIN BIN DEFINITIONS =====\n")
 
     # preserve YAML order
     bin_items = list(bins.items())
@@ -156,12 +155,6 @@ def main():
             chunk = bin_items[i:i + bins_per_job]
             if chunk:
                 groups.append(chunk)
-
-    # Debug: show groups before creating group JSONs
-    print(f"[submitJobs] bins_per_job={bins_per_job}; total_bins={len(bin_items)}; created {len(groups)} groups")
-    for gi, g in enumerate(groups):
-        names = [bn for (bn, _) in g]
-        print(f"[submitJobs]  group {gi:03d}: {names}")
 
     # For each group write a JSON file that contains only that group's bins
     # then call createJobs with --bin "A;B;C" and --bins-cfg pointing to that per-group JSON
@@ -197,10 +190,6 @@ def main():
                             make_json, make_root, args.hist_yaml, lumi, run_dir, group_json_path)
         jobs.append(cmd)
 
-        # print a helpful line about what we created
-        print(f"[BIN-GROUP] group_index={gi} bins={combined_bin_arg} -> group-file={group_json_path}")
-
-    print("===== END BIN DEFINITIONS =====\n")
     # Write a bins_list file so downstream tools know the exact condor work dirs created.
     # The list contains the actual condor directory names (what createJobs will create).
     bins_list_path = Path(run_dir) / f"bins_list_{int(time.time())}.txt"

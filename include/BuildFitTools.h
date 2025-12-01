@@ -63,10 +63,10 @@ class Bin{
 class BFTool{
 
     public:
-    static stringlist SplitString(const std::string& str,const std::string& delimiter);
-    static std::string GetSignalTokensCascades(const std::string& input);
-    static stringlist GetSignalTokensSMS(const std::string& input);
-    static bool  ContainsAnySubstring(const std::string& mainString, const stringlist& substrings);
+        static stringlist SplitString(const std::string& str,const std::string& delimiter);
+        static std::string GetSignalTokensCascades(const std::string& input);
+        static stringlist GetSignalTokensSMS(const std::string& input);
+        static bool  ContainsAnySubstring(const std::string& mainString, const stringlist& substrings);
         static stringlist filterSignalsSMS;
         static void SetFilterSignalsSMS(const stringlist& filters);
         static stringlist GetFilterSignalsSMS();
