@@ -104,20 +104,65 @@ bool BuildFit::HasProcFAKES(JSONFactory* j, const std::string& check_proc) {
     return false;
 }
 
-stringlist BuildFit::ExtractSignalDetails(std::string signalPoint){
+std::string BuildFit::GetSignalMass(const std::string &proc) {
+    if (proc.find("SMS") != std::string::npos) {
+        size_t pos = proc.rfind("SMS");
+        std::string mass = proc.substr(pos + 3);
+        if (!mass.empty() && mass[0] == '_') mass.erase(0,1);
+        size_t uscore = mass.rfind('_');
+        if (uscore != std::string::npos) mass[uscore] = '0';
+        return mass;
+    }
+    if (proc.find("Cascades_") == 0) {
+        // Extract first and last mass only
+        std::string massStr = proc.substr(strlen("Cascades_"));  
+        std::vector<std::string> tokens = BFTool::SplitString(massStr, "_");
+        if (tokens.size() >= 2) {
+            std::string mass = tokens.front() + tokens.back(); // first + last
+            // replace any remaining underscores with zero just in case
+            std::replace(mass.begin(), mass.end(), '_', '0');
+            return mass;
+        } else {
+            // fallback: use whatever is present
+            std::replace(massStr.begin(), massStr.end(), '_', '0');
+            return massStr;
+        }
+    }
+    // fallback for other signals
+    std::vector<std::string> tokens = BFTool::SplitString(proc, "_");
+    std::string mass;
+    for (size_t i=1; i<tokens.size(); i++) mass += tokens[i];
+    return mass;
+}
 
-    stringlist splitPoint = BFTool::SplitString( signalPoint, "_");
-    std::string analysis = splitPoint[0];
-    std::string channel = "dummy";    
-    //pad for mass?
-    std::string mass = "";
-    for( long unsigned int i=1; i< splitPoint.size(); i++){
-        mass += splitPoint[i];
+std::string BuildFit::GetSignalProcName(const std::string &proc) {
+    // SMS: keep the usual prefix
+    if (proc.find("SMS") != std::string::npos) {
+        size_t pos = proc.rfind("SMS");
+        return proc.substr(0, pos + 3); // e.g. "SMS_TChiWZ_SMS"
     }
 
-    stringlist signalDetails = {analysis, channel, mass};
-    return signalDetails;
+    // Cascades: keep full original mass info for datacard name
+    if (proc.rfind("Cascades_", 0) == 0) {
+        return proc; // e.g. "Cascades_220_220_209_200_190_180"
+    }
 
+    // fallback: use everything up to first '_' (or whole proc)
+    size_t p = proc.find('_');
+    if (p != std::string::npos) return proc.substr(0, p);
+    return proc;
+}
+
+stringlist BuildFit::ExtractSignalDetails(std::string signalPoint)
+{
+    stringlist splitPoint = BFTool::SplitString(signalPoint, "_");
+
+    std::string analysis = splitPoint[0];
+    std::string channel = "dummy";
+
+    std::string mass = GetSignalMass(signalPoint);
+
+    return {analysis, channel, mass};
 }
 
 stringlist BuildFit::GetBinSet(JSONFactory* j){
@@ -139,10 +184,10 @@ std::string BuildFit::SanitizeName(const std::string &s) {
     return out;
 }
 
-void BuildFit::WriteJsonAsFlatHists(JSONFactory* j, const std::string &outFile, std::map<std::string,float>* out_obs_rates) {
-    constexpr int IDX_RAW  = 0; // raw events
-    constexpr int IDX_SUMW = 1; // weighted yield
-    constexpr int IDX_ERR  = 2; // stat error on weighted yield
+void BuildFit::WriteJsonAsFlatHists(JSONFactory* j, const std::string &outFile, std::map<std::string,float>* out_obs_rates, const std::string& sig) {
+    constexpr int IDX_RAW  = 0;
+    constexpr int IDX_SUMW = 1;
+    constexpr int IDX_ERR  = 2;
 
     TFile *f = TFile::Open(outFile.c_str(), "RECREATE");
     if (!f || f->IsZombie()) {
@@ -151,95 +196,95 @@ void BuildFit::WriteJsonAsFlatHists(JSONFactory* j, const std::string &outFile, 
 
     int nWritten = 0;
     bool hasData = HasDataObs(j);
-
     for (auto itBin = j->j.begin(); itBin != j->j.end(); ++itBin) {
-        const std::string origBin = itBin.key();       // original (map) key
-        const std::string bin = SanitizeName(origBin); // sanitized for ROOT names
+
+        const std::string origBin = itBin.key();
+        const std::string bin = SanitizeName(origBin);
         json &binJson = itBin.value();
 
-        double binTotal = 0.0; // sum of background yields (used for data_obs if no data)
+        double binTotal = 0.0;
         int binRaw = 0;
         int binData = 0;
 
         for (auto itProc = binJson.begin(); itProc != binJson.end(); ++itProc) {
-            bool isData = false;
+        
             const std::string procOrig = itProc.key();
-            bool is_base = BFTool::ContainsAnySubstring(procOrig, fakes_skip_list);
-            bool has_fakes = BuildFit::HasProcFAKES(j, procOrig);
-            if (is_base && has_fakes)
-                continue; // assume that any of the fakes_skip_lists that reported to not have a fake lepton is just a failure of the gen matching and we want to ignore those events
             const std::string proc = SanitizeName(procOrig);
-            if (proc.find("data") != std::string::npos || proc.find("Data") != std::string::npos) isData = true;
+            bool isData = (proc.find("data") != std::string::npos ||
+                           proc.find("Data") != std::string::npos);
+        
             const json &valsObj = itProc.value();
-            
             if (!valsObj.contains("nominal")) continue;
+        
             const json &vals = valsObj["nominal"];
-            
             if (!vals.is_array() || vals.size() <= IDX_ERR) continue;
+        
+            double nRaw = vals[IDX_RAW];
+            double sumW = vals[IDX_SUMW];
+            double err  = vals[IDX_ERR];
+        
+            // -----------------------------
+            // Build histogram name
+            // -----------------------------
+            std::string procName = procOrig;
             
-            double nRaw = vals[IDX_RAW].get<double>();
-            double sumW = vals[IDX_SUMW].get<double>();
-            double err  = vals[IDX_ERR].get<double>();
-
-            std::string hname = bin + "__" + proc;
-
-            // accumulate totals for data_obs only for bkg processes
-            if (!BFTool::ContainsAnySubstring(procOrig, sigkeys) && !isData) {
+            if (BFTool::ContainsAnySubstring(procOrig, sigkeys)) {
+                if (procOrig != sig) continue; // only write the requested signal
+            
+                // derive prefix and mass deterministically
+                std::string prefix = GetSignalProcName(procOrig);   // e.g. "SMS_TChiWZ_SMS" or "Cascades"
+                std::string mass   = GetSignalMass(procOrig);       // e.g. "3000270" or "30003000..."
+            
+                procName = prefix + "_" + mass; // yields "SMS_TChiWZ_SMS_3000270" or "Cascades_30003000..."
+            }
+        
+            std::string hname = origBin + "__" + procName;
+        
+            if (!isData) {
                 binTotal += sumW;
-                binRaw   += static_cast<int>(nRaw + 0.5);
-            }
-            if(BFTool::ContainsAnySubstring(procOrig, sigkeys)) {
-                hname += "120"; // add dummy mass value for sig
-            }
-            if(isData){
+                binRaw   += (int)(nRaw + 0.5);
+            } else {
                 binData = nRaw;
             }
-            else { // data hist is written out below
+        
+            if (!isData) {
                 TH1F *h = new TH1F(hname.c_str(), hname.c_str(), 1, 0, 1);
                 h->Sumw2();
                 h->SetBinContent(1, sumW);
                 h->SetBinError(1, err);
                 h->SetEntries(nRaw);
-
                 h->Write();
                 delete h;
                 ++nWritten;
-
-                // --- Write systematics (if present) ---
-                if (valsObj.contains("systematics") && !isData) {
+        
+                // -----------------------------
+                // Systematic variations
+                // -----------------------------
+                if (valsObj.contains("systematics")) {
                     const json &systs = valsObj["systematics"];
                     for (auto itS = systs.begin(); itS != systs.end(); ++itS) {
+        
                         const std::string systNameOrig = itS.key();
                         const std::string systName = SanitizeName(systNameOrig);
                         const json &ud = itS.value();
-                
-                        // Expecting ud["Up"] and ud["Down"]
+        
                         for (std::string_view udKey : {"Up", "Down"}) {
                             if (!ud.contains(std::string(udKey))) continue;
+        
                             const json &arr = ud[std::string(udKey)];
-                            if (!arr.is_array() || arr.size() <= IDX_ERR) continue; 
-                            double nRaw_ud = arr[IDX_RAW].get<double>();
-                            double sumW_ud = arr[IDX_SUMW].get<double>();
-                            double err_ud  = arr[IDX_ERR].get<double>();
-                
-                            // Combine expected name:
-                            //   bin__proc__systNameUp
-                            //   bin__proc__systNameDown
-                            std::string hsyst =
-                                bin + "__" + proc;
-                
-                            // Signal naming: append dummy mass value
-                            if (BFTool::ContainsAnySubstring(procOrig, sigkeys)) {
-                                hsyst += "120";
-                            }
-                            hsyst += "__" + systName + std::string(udKey);
-                
+                            if (!arr.is_array() || arr.size() <= IDX_ERR) continue;
+        
+                            double nRaw_ud = arr[IDX_RAW];
+                            double sumW_ud = arr[IDX_SUMW];
+                            double err_ud  = arr[IDX_ERR];
+        
+                            std::string hsyst = origBin + "__" + procName + "__" + systName + std::string(udKey);
+        
                             TH1F *hs = new TH1F(hsyst.c_str(), hsyst.c_str(), 1, 0, 1);
                             hs->Sumw2();
                             hs->SetBinContent(1, sumW_ud);
                             hs->SetBinError(1, err_ud);
                             hs->SetEntries(nRaw_ud);
-                
                             hs->Write();
                             delete hs;
                             ++nWritten;
@@ -250,26 +295,18 @@ void BuildFit::WriteJsonAsFlatHists(JSONFactory* j, const std::string &outFile, 
         }
 
         if (out_obs_rates) {
-            if(hasData) (*out_obs_rates)[origBin] = static_cast<float>(binData);
-            else (*out_obs_rates)[origBin] = static_cast<float>(binTotal);
+            if (hasData) (*out_obs_rates)[origBin] = binData;
+            else         (*out_obs_rates)[origBin] = binTotal;
         }
 
-        // Write data_obs using either the external map (if caller already computed/filled it),
-        // or the binTotal computed here.
-        double asimov_val = binTotal;
-        if (out_obs_rates == nullptr) {
-            // no external map provided; use binTotal already computed
-        } else {
-            // prefer the value the caller might have passed in already
-            asimov_val = static_cast<double>((*out_obs_rates)[origBin]);
-        }
+        double asimov_val = out_obs_rates ? (*out_obs_rates)[origBin] : binTotal;
 
-        std::string dataName = bin + "__data_obs";
+        std::string dataName = origBin + "__data_obs";
+
         TH1F *hdata = new TH1F(dataName.c_str(), dataName.c_str(), 1, 0, 1);
         hdata->Sumw2();
         hdata->SetBinContent(1, asimov_val);
-        if(hasData) hdata->SetEntries(binData);
-        else hdata->SetEntries(static_cast<int>(asimov_val + 0.5));
+        hdata->SetEntries(hasData ? binData : (int)(asimov_val + 0.5));
         hdata->Write();
         delete hdata;
     }
@@ -288,6 +325,29 @@ void BuildFit::AddFloatingNorms(stringlist procs, const std::string& type, doubl
             .AddSyst(cb, "scale_"+proc, type, SystMap<>::init(val));
     }
     cb.SetFlag("filters-use-regex", false);
+}
+
+void BuildFit::AddShapeSystsFromJSON(JSONFactory* j) {
+    for (const auto& itBin : j->j.items()) {
+        const std::string& bin = itBin.key();
+        const json& binJson = itBin.value();
+
+        for (const auto& itProc : binJson.items()) {
+            const std::string proc = itProc.key();
+            const json& valsObj = itProc.value();
+
+            if (!valsObj.contains("systematics")) continue;
+            const json& systs = valsObj["systematics"];
+
+            for (const auto& itS : systs.items()) {
+                const std::string systName = SanitizeName(itS.key());
+                
+                // REGISTER this systematic with CombineHarvester
+                cb.cp().bin({bin}).process({proc})
+                    .AddSyst(cb, systName, "shape", SystMap<>::init(1.0));
+            }
+        }
+    }
 }
 
 void BuildFit::AddMCStatProcByProc(const std::string& bin, JSONFactory* j) {
@@ -334,29 +394,6 @@ void BuildFit::AddMCStatProcByProc(const std::string& bin, JSONFactory* j) {
         else {
             cb.cp().bin({bin}).process({proc})
               .AddSyst(cb, syst_name+"__gmN__"+std::to_string(N_eff), "lnN", ch::syst::SystMap<>::init(alpha));
-        }
-    }
-}
-
-void BuildFit::AddShapeSystsFromJSON(JSONFactory* j) {
-    for (const auto& itBin : j->j.items()) {
-        const std::string& bin = itBin.key();
-        const json& binJson = itBin.value();
-
-        for (const auto& itProc : binJson.items()) {
-            const std::string proc = itProc.key();
-            const json& valsObj = itProc.value();
-
-            if (!valsObj.contains("systematics")) continue;
-            const json& systs = valsObj["systematics"];
-
-            for (const auto& itS : systs.items()) {
-                const std::string systName = SanitizeName(itS.key());
-                
-                // REGISTER this systematic with CombineHarvester
-                cb.cp().bin({bin}).process({proc})
-                    .AddSyst(cb, systName, "shape", SystMap<>::init(1.0));
-            }
         }
     }
 }
@@ -460,6 +497,13 @@ void BuildFit::AddPTISRSys(const stringlist& binset, const stringlist& procs){
     cb.SetFlag("filters-use-regex", false);
 }
 
+void BuildFit::AddSameSignSys(const stringlist& binset, const stringlist& procs){
+    cb.SetFlag("filters-use-regex", true);
+    cb.cp().process(procs).bin({".*_SS.*"})
+        .AddSyst(cb, "SameSign", "lnN", SystMap<>::init(1.10));
+    cb.SetFlag("filters-use-regex", false);
+}
+
 void BuildFit::AddBtagSys(const stringlist& binset, const stringlist& procs){
     cb.SetFlag("filters-use-regex", true);
     cb.cp().process(procs).bin({".*2L.*0J.*P250.*.*Btag.*"})
@@ -489,17 +533,19 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
     bkgprocs.insert(bkgprocs.end(), truebkgprocs.begin(), truebkgprocs.end());
     bkgprocs.insert(bkgprocs.end(), fakesprocs.begin(), fakesprocs.end());
 
-    stringlist signalDetails = ExtractSignalDetails(signalPoint);
     //cb.SetVerbosity(3);
+    stringlist signalDetails = ExtractSignalDetails(signalPoint);
     cb.AddObservations({"*"}, {signalDetails[0]}, {"13.6TeV"}, {signalDetails[1]}, cats);
     cb.AddProcesses({"*"}, {signalDetails[0]}, {"13.6TeV"}, {signalDetails[1]}, bkgprocs, cats, false);
-    cb.AddProcesses({"120"}, {signalDetails[0]}, {"13.6TeV"}, {signalDetails[1]}, {signalPoint}, cats, true);
+    std::string sigProcPrefix = GetSignalProcName(signalPoint);
+    std::string sigMass = GetSignalMass(signalPoint);
+    cb.AddProcesses({sigMass}, {signalDetails[0]}, {"13.6TeV"}, {signalDetails[1]}, {sigProcPrefix}, cats, true);
 
     std::string fullPathString = j->json_file_name;
     std::filesystem::path p(fullPathString);
     std::filesystem::path parentPath = p.parent_path();
     std::string json_to_root_file = std::string(parentPath)+"/datacards/"+signalPoint+"/json_shapes_flat.root";
-    WriteJsonAsFlatHists(j, json_to_root_file, &obs_rates);
+    WriteJsonAsFlatHists(j, json_to_root_file, &obs_rates, signalPoint);
     TFile* json_root_file = TFile::Open(json_to_root_file.c_str(), "UPDATE");
     if (!json_root_file || json_root_file->IsZombie()) {
         throw std::runtime_error("Cannot open " + json_to_root_file);
@@ -518,7 +564,7 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
     
     // Only extract signal shapes for bins where we actually have signal histograms
     if (!bins_with_signal.empty()) {
-        cb.cp().signals().ExtractShapes(json_to_root_file, "$BIN__$PROCESS$MASS", "$BIN__$PROCESS$MASS__$SYSTEMATIC");
+        cb.cp().signals().ExtractShapes(json_to_root_file, "$BIN__$PROCESS_$MASS", "$BIN__$PROCESS_$MASS__$SYSTEMATIC");
         std::cout << "[BuildFit] extracted signals for " << bins_with_signal.size() << " bins\n";
     } else {
         std::cerr << "[BuildFit WARN] No bins contain signal '" << signalPoint << "' in JSON - skipping signal ExtractShapes.\n";
@@ -535,6 +581,7 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
     AddFloatingNorms(truebkgprocs, "rateParam", 1.0);
     AddFloatingNorms(fakesprocs, "lnN", 1.2);
     AddPTISRSys(binset, bkgprocs);
+    AddSameSignSys(binset, bkgprocs);
     AddRaSys(binset, bkgprocs);
     AddBtagSys(binset, bkgprocs);
     //std::cout << "Printing systematics..." << std::endl; cb.PrintSysts();

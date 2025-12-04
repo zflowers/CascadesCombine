@@ -645,7 +645,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
         bins_files = glob.glob(os.path.join(config_dir, "*bins.yaml"))
         hists_files = glob.glob(os.path.join(config_dir, "*hists.yaml"))
         processes_files = glob.glob(os.path.join(config_dir, "*processes.yaml"))
-        FDpatterns_files = glob.glob(os.path.join(config_dir, "*FDpattern.txt"))
+        FDpatterns_files = glob.glob(os.path.join(config_dir, "*FDpattern.yaml"))
 
         if not bins_files:
             raise FileNotFoundError(f"No '*bins.yaml' file found in {config_dir}")
@@ -655,10 +655,10 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             raise FileNotFoundError(f"No '*hists.yaml' file found in {config_dir}")
         elif len(hists_files) > 1:
             print(f"[run_combine] Warning: Multiple '*hists.yaml' files found. Using the first one.")
-        if not FDpatterns_files:
-            raise FileNotFoundError(f"No '*FDpattern.txt' file found in {config_dir}")
+        if not FDpatterns_files and args.make_FD:
+            raise FileNotFoundError(f"No '*FDpattern.yaml' file found in {config_dir}")
         elif len(FDpatterns_files) > 1:
-            print(f"[run_combine] Warning: Multiple '*FDpattern.txt' files found. Using the first one.")
+            print(f"[run_combine] Warning: Multiple '*FDpattern.yaml' files found. Using the first one.")
         if not processes_files:
             raise FileNotFoundError(f"No '*processes.yaml' file found in {config_dir}")
         elif len(processes_files) > 1:
@@ -667,7 +667,9 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
         bins_cfg = bins_files[0]
         hist_cfg = hists_files[0]
         processes_cfg = processes_files[0]
-        FDpattern_cfg = FDpatterns_files[0]
+        FDpattern_cfg = ""
+        if len(FDpatterns_files) > 0:
+            FDpattern_cfg = FDpatterns_files[0]
         make_json = os.path.isfile(os.path.join(existing_run_dir, "flattened.json"))
         make_root = False
         

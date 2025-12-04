@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # macro/launchFitDiagnostics.sh
+source "macro/utils.sh"
 
 # First argument = datacard directory (default datacards_cascades)
 dcdir="${1:-datacards_cascades}"
@@ -12,12 +13,13 @@ echo "[launchFitDiagnostics] Using datacard directory: $dcdir"
 for WS in "${dcdir}"/*/*_workspace.root; do
     WSDIR="$(dirname "$WS")"
     WSFILE="$(basename "$WS")"
+    MASS=$(extract_mass "$(basename "$WSDIR")")
     echo "[launchFitDiagnostics] Running FitDiagnostics in $WSDIR for $WSFILE"
     pushd "$WSDIR" > /dev/null || exit 1
     combineTool.py \
       -M FitDiagnostics \
       -d "$WSFILE" \
-      -m 120 \
+      -m "120" \
       --robustFit 1 \
       --robustHesse 1 \
       --saveShapes \
@@ -28,3 +30,4 @@ for WS in "${dcdir}"/*/*_workspace.root; do
 done
 
 #-v 10 \
+#-m "$MASS" \

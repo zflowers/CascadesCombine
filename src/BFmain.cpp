@@ -39,6 +39,7 @@ int main(int argc, char** argv) {
     // --- Loop over each signal (or control tag) ---
     for (size_t i = 0; i < targets.size(); ++i) {
         const std::string &tag = targets[i];
+        std::cout << "Running BF for: " << tag << std::endl;
         BuildFit* BF = new BuildFit();
         fs::create_directories(datacard_dir + "/" + tag);
 

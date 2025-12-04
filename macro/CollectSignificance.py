@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import sys
+import glob
 import ROOT as rt
 
 def get_directories(path):
@@ -31,7 +32,12 @@ output_file = os.path.join(output_dir, f"Significance_{os.path.basename(datacard
 with open(output_file, "w") as file:
     sig = -1
     for subdir in datacard_subdir_list:
-        fpath = os.path.join(datacard_dir, subdir, "higgsCombine.Test.Significance.mH120.root")
+        pattern = os.path.join(datacard_dir, subdir, "higgsCombine.Test.Significance.mH*.root")
+        matches = glob.glob(pattern)
+        if not matches:
+            print(f"[WARN] No significance file found for {subdir}")
+            continue
+        fpath = matches[0]
         f = rt.TFile.Open(fpath)
         tree = f.Get("limit")
         for entry in tree:

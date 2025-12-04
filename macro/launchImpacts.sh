@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # macro/launchImpacts.sh
+source "macro/utils.sh"
 
 # First argument = datacard directory (default datacards_cascades)
 dcdir="${1:-datacards_cascades}"
@@ -12,12 +13,13 @@ echo "[launchImpacts] Using datacard directory: $dcdir"
 for WS in "${dcdir}"/*/*_workspace.root; do
     WSDIR="$(dirname "$WS")"
     WSFILE="$(basename "$WS")"
+    MASS=$(extract_mass "$(basename "$WSDIR")")
     echo "[launchImpacts] Running Impacts doInitialFit in $WSDIR for $WSFILE"
     pushd "$WSDIR" > /dev/null || exit 1
     combineTool.py \
       -M Impacts \
       -d "$WSFILE" \
-      -m 120 \
+      -m "120" \
       --doInitialFit
       #--robustFit 1 \
     popd > /dev/null || exit 1
@@ -28,12 +30,13 @@ done
 for WS in "${dcdir}"/*/*_workspace.root; do
     WSDIR="$(dirname "$WS")"
     WSFILE="$(basename "$WS")"
+    MASS=$(extract_mass "$(basename "$WSDIR")")
     echo "[launchImpacts] Running Impacts fits in $WSDIR for $WSFILE"
     pushd "$WSDIR" > /dev/null || exit 1
     combineTool.py \
       -M Impacts \
       -d "$WSFILE" \
-      -m 120 \
+      -m "120" \
       --doFits
       #--robustFit 1 \
     popd > /dev/null || exit 1
@@ -44,12 +47,13 @@ done
 for WS in "${dcdir}"/*/*_workspace.root; do
     WSDIR="$(dirname "$WS")"
     WSFILE="$(basename "$WS")"
+    MASS=$(extract_mass "$(basename "$WSDIR")")
     echo "[launchImpacts] Making Impacts json in $WSDIR for $WSFILE"
     pushd "$WSDIR" > /dev/null || exit 1
     combineTool.py \
       -M Impacts \
       -d "$WSFILE" \
-      -m 120 \
+      -m "120" \
       -o impacts.json
       #--robustFit 1 \
     popd > /dev/null || exit 1

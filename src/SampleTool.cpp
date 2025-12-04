@@ -2,13 +2,9 @@
 
 SampleTool::SampleTool(){
 
-  // Make sure data lumi is set to 1.:
-  //LumiDict["Summer20UL18_106X_Data"] = 1.;
-
   LumiDict["Summer20UL16APV_106X"] = 16.8;
   LumiDict["Summer20UL16_106X"] = 19.5;
   LumiDict["Summer20UL17_106X"] = 41.479680529;
-  //LumiDict["Summer20UL18_106X"] = 21.077794578 + 0.95*38.662770624;
   LumiDict["Summer20UL18_106X"] = 59.832475339;
   LumiDict["HEM_LUMI"] = 21.077794578;
   LumiDict["Summer22_130X"] = 7.9804;
@@ -18,18 +14,26 @@ SampleTool::SampleTool(){
   LumiDict["Summer24_130X"] = 109.;
   LumiDict["Summer25_130X"] = 60.;
   LumiDict["Summer26_130X"] = 30.;
+  LumiDict["Summer20UL16APV_106X_SMS"] = 16.8;
+  LumiDict["Summer20UL16_106X_SMS"] = 19.5;
+  LumiDict["Summer20UL17_106X_SMS"] = 41.479680529;
+  LumiDict["Summer20UL18_106X_SMS"] = 59.832475339;
 
   // Override lumis since not all samples available yet
+  // use 2017 to get Run3 lumi added to avoid HEM complications
+  LumiDict["Summer20UL17_106X"] = 41.479680529 + 286.;
+  LumiDict["Summer20UL17_106X_SMS"] = 41.479680529 + 286.;
+
   LumiDict["Summer23BPix_130X"] = 143.;
   LumiDict["Summer22_130X"] = 143.;
   LumiDict["Summer22_130X_SMS"] = 286.;
   LumiDict["Summer22_130X_Cascades"] = 286. + 138.;
   LumiDict["Summer23BPix_130X_Cascades"] = 286. + 138.;
-  LumiDict["Summer20UL18_106X_SMS"] = 286. + 138.;
+  //LumiDict["Summer20UL18_106X_SMS"] = 286. + 138.; // remove when swap to v7
 
   string pathPrefix = "root://cmseos.fnal.gov//store/user/lpcsusylep/";
-  pathPrefix += "NTUPLES_Cascades_v6/";
-  //pathPrefix += "NTUPLES_Cascades_v7/";
+  //pathPrefix += "NTUPLES_Cascades_v6/";
+  pathPrefix += "NTUPLES_Cascades_v7/";
 
   MasterDict["ttbar_2023BPix"] = {
     pathPrefix + "Summer23BPix_130X/TTto2L2Nu-2Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer23BPix_130X.root",
@@ -779,13 +783,45 @@ SampleTool::SampleTool(){
     pathPrefix + "Fall17_102X_SMS/SMS-T1qqqq_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root"
   };
 
-  MasterDict["SMS_TChiWZ"] = {
     //pathPrefix + "Summer22_130X_SMS/SMS-TChiWZ_mC1-300_mN2-300_mN1-290_NanoAODv12_JustinPrivateMC_Summer22_130X_SMS_Summer22_130X.root",
+  MasterDict["SMS_TChiWZ_2016APV"] = {
+    pathPrefix + "Summer20UL16APV_106X_SMS/SMS-TChiWZ_ZToLL_mZMin-0p1_TuneCP5_13TeV-madgraphMLM-pythia8_Summer20UL16APV_106X.root"
+  };
+  MasterDict["SMS_TChiWZ_2016"] = {
+    pathPrefix + "Summer20UL16_106X_SMS/SMS-TChiWZ_ZToLL_mZMin-0p1_TuneCP5_13TeV-madgraphMLM-pythia8_Summer20UL16_106X.root"
+  };
+  MasterDict["SMS_TChiWZ_2017"] = {
+    pathPrefix + "Summer20UL17_106X_SMS/SMS-TChiWZ_ZToLL_mZMin-0p1_TuneCP5_13TeV-madgraphMLM-pythia8_Summer20UL17_106X.root"
+  };
+  MasterDict["SMS_TChiWZ_2018"] = {
     pathPrefix + "Summer20UL18_106X_SMS/SMS-TChiWZ_ZToLL_mZMin-0p1_TuneCP5_13TeV-madgraphMLM-pythia8_Summer20UL18_106X.root"
   };
 
   MasterDict["SMS_TChiWZ_Sandwich"] = {
     pathPrefix + "Summer22_130X_SMS/SMS-TChiWZ_mC1-295_mN2-300_mN1-290_NanoAODv12_JustinPrivateMC_Summer22_130X_SMS_Summer22_130X.root"
+  };
+
+// 2016 not ready
+  MasterDict["Data_2016APV"] = {
+//MET_Run2016B-ver1_HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16_106X_Data_Summer20UL16APV_106X.root
+//MET_Run2016B-ver2_HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16_106X_Data_Summer20UL16APV_106X.root
+//MET_Run2016C-HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16_106X_Data_Summer20UL16APV_106X.root
+//MET_Run2016D-HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16_106X_Data_Summer20UL16APV_106X.root
+//MET_Run2016E-HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16_106X_Data_Summer20UL16APV_106X.root
+//MET_Run2016F-HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16_106X_Data_Summer20UL16APV_106X.root
+  };
+
+// 2016 not ready
+  MasterDict["Data_2016"] = {
+  };
+
+
+  MasterDict["Data_2017"] = {
+    pathPrefix + "Summer20UL17_106X_Data/MET_Run2017B-UL2017_MiniAODv2_NanoAODv9-v1_Summer20UL17_106X_Data_Summer20UL17_106X.root",
+    pathPrefix + "Summer20UL17_106X_Data/MET_Run2017C-UL2017_MiniAODv2_NanoAODv9-v1_Summer20UL17_106X_Data_Summer20UL17_106X.root",
+    pathPrefix + "Summer20UL17_106X_Data/MET_Run2017D-UL2017_MiniAODv2_NanoAODv9-v1_Summer20UL17_106X_Data_Summer20UL17_106X.root",
+    pathPrefix + "Summer20UL17_106X_Data/MET_Run2017E-UL2017_MiniAODv2_NanoAODv9-v1_Summer20UL17_106X_Data_Summer20UL17_106X.root",
+    pathPrefix + "Summer20UL17_106X_Data/MET_Run2017F-UL2017_MiniAODv2_NanoAODv9-v1_Summer20UL17_106X_Data_Summer20UL17_106X.root",
   };
 
   MasterDict["Data_2018"] = {
@@ -802,6 +838,16 @@ SampleTool::SampleTool(){
       "Cascades_270",
       "Cascades_260",
       "Cascades_220",
+    }
+  );
+
+  MasterDict["SMS_TChiWZ"] = mergeEntriesList(
+    MasterDict,
+    {
+      "SMS_TChiWZ_2016APV",
+      "SMS_TChiWZ_2016",
+      "SMS_TChiWZ_2017",
+      "SMS_TChiWZ_2018",
     }
   );
 
@@ -847,19 +893,6 @@ SampleTool::SampleTool(){
       "ST_2016APV",
     }
   );
-
-  MasterDict["top"] = mergeEntriesList(
-    MasterDict,
-    {
-      "top_2023BPix",
-      "top_2022",
-      "top_2018",
-      "top_2017",
-      "top_2016",
-      "top_2016APV",
-    }
-  );
-
 
   MasterDict["Vfakeleps_2023BPix"] = mergeEntriesList(
     MasterDict,
@@ -915,18 +948,6 @@ SampleTool::SampleTool(){
     }
   );
 
-  MasterDict["Vfakeleps"] = mergeEntriesList(
-    MasterDict,
-    {
-      "Vfakeleps_2023BPix",
-      "Vfakeleps_2022",
-      "Vfakeleps_2018",
-      "Vfakeleps_2017",
-      "Vfakeleps_2016",
-      "Vfakeleps_2016APV",
-    }
-  );
-
   MasterDict["boson_2023BPix"] = mergeEntriesList(
     MasterDict,
     {
@@ -971,11 +992,41 @@ SampleTool::SampleTool(){
     }
   );
 
+  MasterDict["top"] = mergeEntriesList(
+    MasterDict,
+    {
+      //"top_2023BPix",
+      //"top_2023",
+      //"top_2022EE",
+      //"top_2022",
+      "top_2018",
+      "top_2017",
+      "top_2016",
+      "top_2016APV",
+    }
+  );
+
+  MasterDict["Vfakeleps"] = mergeEntriesList(
+    MasterDict,
+    {
+      //"Vfakeleps_2023BPix",
+      //"Vfakeleps_2023",
+      //"Vfakeleps_2022EE",
+      //"Vfakeleps_2022",
+      "Vfakeleps_2018",
+      "Vfakeleps_2017",
+      "Vfakeleps_2016",
+      "Vfakeleps_2016APV",
+    }
+  );
+
   MasterDict["boson"] = mergeEntriesList(
     MasterDict,
     {
-      "boson_2023BPix",
-      "boson_2022",
+      //"boson_2023BPix",
+      //"boson_2023",
+      //"boson_2022EE",
+      //"boson_2022",
       "boson_2018",
       "boson_2017",
       "boson_2016",
@@ -986,6 +1037,10 @@ SampleTool::SampleTool(){
   MasterDict["data_obs"] = mergeEntriesList(
     MasterDict,
     {
+// 2016 not yet ready
+      //"Data_2016APV",
+      //"Data_2016",
+      //"Data_2017",
       "Data_2018",
     }
   );

@@ -100,7 +100,7 @@ int main(int argc, char** argv) {
             label = makeSMSChiTitle(label);
         hFrame->GetXaxis()->SetBinLabel(i + 1, label.c_str());
     }
-    hFrame->GetXaxis()->SetTitle("Signal Process");
+    //hFrame->GetXaxis()->SetTitle("Signal Process");
     hFrame->GetXaxis()->SetTitleOffset(1.12);
     hFrame->GetXaxis()->CenterTitle();
     hFrame->GetYaxis()->SetTitle("Exp. Significance");

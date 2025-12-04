@@ -166,7 +166,7 @@ getenv                  = True
 def build_jobs(tool, bin_name, cuts, lep_cuts, predef_cuts, user_cuts, sms_filters, hist_yaml_file=None):
     jobs = []
     # desired number of filters per job
-    sms_per_job = 10
+    sms_per_job = 5
 
     def make_base_job(ds, fpath):
         return {

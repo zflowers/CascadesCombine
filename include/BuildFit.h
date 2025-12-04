@@ -31,11 +31,13 @@ class BuildFit{
     
     ch::Categories BuildCats(JSONFactory* j);
     std::string SanitizeName(const std::string &s);
-    void WriteJsonAsFlatHists(JSONFactory* j, const std::string &outFile, std::map<std::string,float>* out_obs_rates = nullptr);
+    void WriteJsonAsFlatHists(JSONFactory* j, const std::string &outFile, std::map<std::string,float>* out_obs_rates = nullptr, const std::string& sig = "");
     stringlist GetBkgProcs(JSONFactory* j);
     stringlist GetFakesProcs(JSONFactory* j);
     bool HasDataObs(JSONFactory* j);
     bool HasProcFAKES(JSONFactory* j, const std::string& check_proc);
+    std::string GetSignalMass(const std::string& sig);
+    std::string GetSignalProcName(const std::string &proc);
     std::vector<std::string> ExtractSignalDetails( std::string signalPoint);
     std::vector<std::string> GetBinSet( JSONFactory* j);
     void AddFloatingNorms(stringlist bkgprocs, const std::string& type = "lnN", double val = 1.2);
@@ -44,6 +46,7 @@ class BuildFit{
     void AddMCStatBinByBin(JSONFactory* j);
     void AddMCStatProcByProc(const std::string& bin, JSONFactory* j);
     void AddPTISRSys(const stringlist& binset, const stringlist& procs);
+    void AddSameSignSys(const stringlist& binset, const stringlist& procs);
     void AddRaSys(const stringlist& binset, const stringlist& procs);
     void AddZSys(const stringlist& binset, const stringlist& procs);
     void AddBtagSys(const stringlist& binset, const stringlist& procs);
