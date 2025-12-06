@@ -24,3 +24,6 @@ eosmkdir /store/user/lpcsusylep/NTUPLES_Cascades_v8/Summer23BPix_130X_Cascades
 eosmkdir /store/user/lpcsusylep/NTUPLES_Cascades_v8/Summer23BPix_130X_Data
 eosmkdir /store/user/lpcsusylep/NTUPLES_Cascades_v8/Summer23_130X
 eosmkdir /store/user/lpcsusylep/NTUPLES_Cascades_v8/Summer23_130X_Data
+
+# Print to verify
+eosls /store/user/lpcsusylep/NTUPLES_Cascades_v8/
