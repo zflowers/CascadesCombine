@@ -1,5 +1,6 @@
 # Helper to quickly make new eos directories
 
+eosmkdir /store/user/lpcsusylep/NTUPLES_Cascades_v8/
 eosmkdir /store/user/lpcsusylep/NTUPLES_Cascades_v8/Summer20UL16APV_106X
 eosmkdir /store/user/lpcsusylep/NTUPLES_Cascades_v8/Summer20UL16APV_106X_Data
 eosmkdir /store/user/lpcsusylep/NTUPLES_Cascades_v8/Summer20UL16APV_106X_SMS
