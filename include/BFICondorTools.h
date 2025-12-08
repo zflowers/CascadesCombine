@@ -268,8 +268,7 @@ static void writeSamplesJSON(
     const std::map<std::string, std::map<std::string, FileYields>>& files_for_write,
     const std::map<std::string, ProcTotals>& totals_for_write,
     const std::string& indent = "  "
-)
-{
+){
     bool firstSample = true;
     for (const auto& kv : totals_for_write) {
         if (!firstSample) os << ",\n";
@@ -335,7 +334,7 @@ struct SystInfo {
 
 static const std::vector<SystInfo> kDefaultSFSystematics = {
     //{"METtrig", "MetTrigSFweight", "MetTrigSFweight_up", "MetTrigSFweight_down"},
-    {"PU",      "PUweight",        "PUweight_up",        "PUweight_down"}
+    //{"PU",      "PUweight",        "PUweight_up",        "PUweight_down"}
 };
 
 static const std::vector<std::string> kDefaultTreeSystematics = {
@@ -369,18 +368,21 @@ ROOT::RDF::RNode MultiSystWeights(ROOT::RDF::RNode node,
 
     // --- Nominal product ---
     node = node.Define(
-        //"syst_nomin_product",
+        "syst_nomin_product",
         //[year](double met, double pu) {
         //    double metEff = (year > 2018 ? 1.0 : met); // hack since trigSF in Run3 samples set to 0
         //    return metEff * pu;
         //    //return 1.; // turn off while debugging
         //},
         //{"MetTrigSFweight", "PUweight"}
-        "syst_nomin_product",
-        [year](double pu) {
-            return pu;
+        //[year](double pu) {
+        //    return pu;
+        //},
+        //{"PUweight"}
+        []() {
+            return 1.;
         },
-        {"PUweight"}
+        {}
     );
 
     // --- Multiply base weight by nominal product ---

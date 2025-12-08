@@ -41,6 +41,9 @@ class BuildFit{
     std::vector<std::string> ExtractSignalDetails( std::string signalPoint);
     std::vector<std::string> GetBinSet( JSONFactory* j);
     void AddFloatingNorms(stringlist bkgprocs, const std::string& type = "lnN", double val = 1.2);
+    void AddSharedFloatingNorm(const stringlist& procs, const std::string& nuis_name, const std::string& type, double val);
+    void AddFloatingNormsGroupedByFakeType(const stringlist& fakesprocs, const std::string& type, double val);
+    void AddFakeFamiliesAsSharedNorms(const std::vector<std::string>& truebkgprocs, const std::vector<std::string>& fakesprocs, const std::string& type, double val);
     void BuildAsimovData(std::map<std::string, float>& obs_rates, JSONFactory* j);
     void BuildFitSkeleton(JSONFactory* j, const std::string &signalPoint, const std::string &datacard_dir);
     void AddMCStatBinByBin(JSONFactory* j);

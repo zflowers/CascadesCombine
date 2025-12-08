@@ -13,9 +13,12 @@ ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<st
     // --- lead S jet pt < threshold (45 GeV) ---
     CutDef cut_leadSjetPt;
     cut_leadSjetPt.name = "leadSjet_pt";
-    cut_leadSjetPt.columns = {"PT_jet", "index_jet_S", "Njet_S"};
+    cut_leadSjetPt.columns =
+        {"leadSjet_Pt45"}; // use what's saved in tree
+        //{"PT_jet", "index_jet_S", "Njet_S"};
     cut_leadSjetPt.expression =
-        "(Njet_S == 0) || (Njet_S > 0 && SafeIndex(PT_jet, SafeIndex(index_jet_S, 0, -1), -1.0) < 45)";
+        //"(Njet_S == 0) || (Njet_S > 0 && SafeIndex(PT_jet, SafeIndex(index_jet_S, 0, -1), -1.0) < 45)";
+        "leadSjet_Pt45==1"; // use what's saved in tree
     cuts[cut_leadSjetPt.name] = cut_leadSjetPt;
 
     // --- HEM Veto ---
@@ -28,7 +31,8 @@ ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<st
     // flags to turn on/off different cut defs (minor computation save)
     bool do_minDR = true;
     bool do_minMll = true;
-    bool do_2Dll = true;
+    bool do_2Dll_low = true;
+    bool do_2Dll_high = true;
     bool do_lowptmuon_endcap = false;
 
     // --- min DeltaR between any two leptons ---
@@ -101,15 +105,15 @@ ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<st
     cut_minMll_gt1.expression = "minMll > 1.0";
     cuts[cut_minMll_gt1.name] = cut_minMll_gt1;
 
-    if (do_2Dll && !node.HasColumn("pass2DLeptonCut")) {
-        node = node.Define("pass2DLeptonCut",
+    if (do_2Dll_low && !node.HasColumn("pass2DLeptonCut_low")) {
+        node = node.Define("pass2DLeptonCut_low",
             [](double mll, double dr) -> bool {
     
                 // Equation of the boundary line:
                 //              \/DR                \/Mass
                 double dr_max = 0.15 * (1.0 - mll / 1.25);
     
-                // If mll >= 1.5, dr_max becomes <= 0; reject only if dr <= 0
+                // If mll >= 1.25, dr_max becomes <= 0; reject only if dr <= 0
                 if (dr_max < 0) dr_max = 0;
     
                 return dr > dr_max;
@@ -118,11 +122,33 @@ ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<st
         );
     }
 
-    CutDef cut_2D_ll;
-    cut_2D_ll.name = "minMll_minDR_2D";
-    cut_2D_ll.columns = {"pass2DLeptonCut"};
-    cut_2D_ll.expression = "pass2DLeptonCut == true";
-    cuts[cut_2D_ll.name] = cut_2D_ll;
+    CutDef cut_2D_ll_low;
+    cut_2D_ll_low.name = "minMll_minDR_2D_low";
+    cut_2D_ll_low.columns = {"pass2DLeptonCut_low"};
+    cut_2D_ll_low.expression = "pass2DLeptonCut_low == true";
+    cuts[cut_2D_ll_low.name] = cut_2D_ll_low;
+
+    if (do_2Dll_high && !node.HasColumn("pass2DLeptonCut_high")) {
+        node = node.Define("pass2DLeptonCut_high",
+            [](double mll, double dr) -> bool {
+    
+                // Equation of the boundary line:
+                //              \/DR          \/Mass
+                double dr_min = 0.05 * (mll - 1.0);
+    
+                if (dr_min < 0) dr_min = 0;
+    
+                return dr > dr_min;
+            },
+            {"minMll", "minDeltaR_leps"}
+        );
+    }
+
+    CutDef cut_2D_ll_high;
+    cut_2D_ll_high.name = "minMll_minDR_2D_high";
+    cut_2D_ll_high.columns = {"pass2DLeptonCut_high"};
+    cut_2D_ll_high.expression = "pass2DLeptonCut_high == true";
+    cuts[cut_2D_ll_high.name] = cut_2D_ll_high;
 
     // --- remove low pt forward muons ---
     // also need to try only removing events where all muons are low pt and forward

@@ -688,29 +688,42 @@ int main(int argc, char** argv) {
                             fy.systs[s.tag] = sy;
                         }
                     }
-    
                     // --- store per-file result and accumulate into totals (only once per-file) ---
+                    // First handle tree-systematic passes: ALWAYS store the variation under .systs[tag]
+                    // (create the file entry if needed)
+                    if (!treeSystTag.empty()) {
+                        auto &fyr = fileResultsByBin[bin][proc_key][rootFilePath]; // creates entry if absent
+                        if (treeSystIsUp) {
+                            fyr.systs[treeSystTag].up = { (double)n_entries, sW, err };
+                        } else {
+                            fyr.systs[treeSystTag].down = { (double)n_entries, sW, err };
+                        }
+                        // Do NOT touch nominal or totals for tree-systematic pass
+                        continue;
+                    }
+                    
+                    // Nominal pass: only write nominal + accumulate totals only once
                     if (fileResultsByBin[bin].find(proc_key) == fileResultsByBin[bin].end() ||
                         fileResultsByBin[bin][proc_key].find(rootFilePath) == fileResultsByBin[bin][proc_key].end())
                     {
-                        // Record per-bin, per-process, per-rootfile
+                        // Record nominal per-bin, per-process, per-rootfile
                         fileResultsByBin[bin][proc_key][rootFilePath] = fy;
-    
+                    
                         // Accumulate totals
                         auto &tot = totalsByBin[bin][proc_key];
-    
+                    
                         // nominal
                         tot.nominal[0] += (double)n_entries;
                         tot.nominal[1] += sW;
                         // accumulate variance (sqrt at the end) -> store as sum(sigma^2)
                         tot.nominal[2] += (err * err);
-    
-                        // systematics accumulation
+                    
+                        // systematics accumulation (internal SF systs that we computed into fy.systs)
                         if(!IsData){
                             for (const auto &s_kv : fy.systs) {
                                 const std::string &stag = s_kv.first;
                                 const SystYields &sy = s_kv.second;
-    
+                    
                                 // Ensure entry exists
                                 auto &dest_syst = tot.systs[stag];
                                 // accumulate up
@@ -735,11 +748,20 @@ int main(int argc, char** argv) {
 
     auto doTrees = [&](const std::string &baseTree, bool is_data, bool runFAKES) {
         if(is_data) runFAKES = false;
-        processTree(baseTree, keyPT, activeSystematics, runInternalSystsOnNominal, "", false, runFAKES);
-        if(!is_data){
-            for (const auto &treeSyst : activeSystematics.tree) {
-                processTree(baseTree+"_"+treeSyst+"Up",   keyPT, activeSystematics, false, treeSyst, true, runFAKES);
-                processTree(baseTree+"_"+treeSyst+"Down", keyPT, activeSystematics, false, treeSyst, false, runFAKES);
+        if(doHist) { // ignore systematics for histogram filling
+            SystematicsConfig histSystConfig;
+            std::vector<SystInfo> histSystSFConfig;
+            std::vector<string> histSystTreeConfig;
+            histSystConfig.sf = histSystSFConfig;
+            histSystConfig.tree = histSystTreeConfig;
+            processTree(baseTree, keyPT, histSystConfig, false, "", false, runFAKES);
+        } else {
+            processTree(baseTree, keyPT, activeSystematics, runInternalSystsOnNominal, "", false, runFAKES);
+            if(!is_data){
+                for (const auto &treeSyst : activeSystematics.tree) {
+                    processTree(baseTree+"_"+treeSyst+"Up",   keyPT, activeSystematics, false, treeSyst, true, runFAKES);
+                    processTree(baseTree+"_"+treeSyst+"Down", keyPT, activeSystematics, false, treeSyst, false, runFAKES);
+                }
             }
         }
     };

@@ -382,22 +382,10 @@ SampleTool::SampleTool(){
     pathPrefix + "Summer20UL16APV_106X/ZJetsToNuNu_HT-1200To2500_TuneCP5_13TeV-madgraphMLM-pythia8_Summer20UL16APV_106X.root",
     pathPrefix + "Summer20UL16APV_106X/ZJetsToNuNu_HT-200To400_TuneCP5_13TeV-madgraphMLM-pythia8_Summer20UL16APV_106X.root",
     pathPrefix + "Summer20UL16APV_106X/ZJetsToNuNu_HT-2500ToInf_TuneCP5_13TeV-madgraphMLM-pythia8_Summer20UL16APV_106X.root",
-    pathPrefix + "Summer20UL16APV_106X/ZJetsToNuNu_HT-400To600_TuneCP5_13TeV-madgraphMLM-pythia8_Summer20UL16APV_106X.root",
+    //pathPrefix + "Summer20UL16APV_106X/ZJetsToNuNu_HT-400To600_TuneCP5_13TeV-madgraphMLM-pythia8_Summer20UL16APV_106X.root",
     pathPrefix + "Summer20UL16APV_106X/ZJetsToNuNu_HT-600To800_TuneCP5_13TeV-madgraphMLM-pythia8_Summer20UL16APV_106X.root",
     pathPrefix + "Summer20UL16APV_106X/ZJetsToNuNu_HT-800To1200_TuneCP5_13TeV-madgraphMLM-pythia8_Summer20UL16APV_106X.root",
   };
-
-  MasterDict["ZInv"] = mergeEntriesList(
-    MasterDict,
-    {
-      "ZInv_2023BPix",
-      "ZInv_2022",
-      "ZInv_2018",
-      "ZInv_2017",
-      "ZInv_2016",
-      "ZInv_2016APV",
-    }
-  );
 
   MasterDict["DBTB_2023BPix"] = {
     pathPrefix + "Summer23BPix_130X/WWto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",
@@ -659,18 +647,6 @@ SampleTool::SampleTool(){
     pathPrefix + "Summer20UL16APV_106X/QCD_HT700to1000_TuneCP5_PSWeights_13TeV-madgraphMLM-pythia8_Summer20UL16APV_106X.root",
   };
 
-  MasterDict["QCD"] = mergeEntriesList(
-    MasterDict,
-    {
-      "QCD_2023BPix",
-      "QCD_2022",
-      "QCD_2018",
-      "QCD_2017",
-      "QCD_2016",
-      "QCD_2016APV",
-    }
-  );
-
   MasterDict["Wjets_2023BPix"] = {
     pathPrefix + "Summer23BPix_130X/WtoLNu-4Jets_MLNu-0to120_HT-100to400_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
     pathPrefix + "Summer23BPix_130X/WtoLNu-4Jets_MLNu-0to120_HT-1500to2500_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
@@ -739,18 +715,6 @@ SampleTool::SampleTool(){
     pathPrefix + "Summer20UL16APV_106X/WJetsToLNu_HT-70To100_TuneCP5_13TeV-madgraphMLM-pythia8_Summer20UL16APV_106X.root",
     pathPrefix + "Summer20UL16APV_106X/WJetsToLNu_HT-800To1200_TuneCP5_13TeV-madgraphMLM-pythia8_Summer20UL16APV_106X.root",
   };
-
-  MasterDict["Wjets"] = mergeEntriesList(
-    MasterDict,
-    {
-      "Wjets_2023BPix",
-      "Wjets_2022",
-      "Wjets_2018",
-      "Wjets_2017",
-      "Wjets_2016",
-      "Wjets_2016APV",
-    }
-  );
 
   MasterDict["Gjets"] = {
     pathPrefix + "Summer23BPix_130X/GJ-4Jets_HT-40to70_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23BPix_130X.root",
@@ -848,6 +812,48 @@ SampleTool::SampleTool(){
       "SMS_TChiWZ_2016",
       "SMS_TChiWZ_2017",
       "SMS_TChiWZ_2018",
+    }
+  );
+
+  MasterDict["QCD"] = mergeEntriesList(
+    MasterDict,
+    {
+      //"QCD_2023BPix",
+      //"QCD_2023",
+      //"QCD_2022EE",
+      //"QCD_2022",
+      "QCD_2018",
+      "QCD_2017",
+      "QCD_2016",
+      "QCD_2016APV",
+    }
+  );
+
+  MasterDict["ZInv"] = mergeEntriesList(
+    MasterDict,
+    {
+      //"ZInv_2023BPix",
+      //"ZInv_2023",
+      //"ZInv_2022EE",
+      //"ZInv_2022",
+      "ZInv_2018",
+      "ZInv_2017",
+      "ZInv_2016",
+      "ZInv_2016APV",
+    }
+  );
+
+  MasterDict["Wjets"] = mergeEntriesList(
+    MasterDict,
+    {
+      //"Wjets_2023BPix",
+      //"Wjets_2023",
+      //"Wjets_2022EE",
+      //"Wjets_2022",
+      "Wjets_2018",
+      "Wjets_2017",
+      "Wjets_2016",
+      "Wjets_2016APV",
     }
   );
 

@@ -327,6 +327,57 @@ void BuildFit::AddFloatingNorms(stringlist procs, const std::string& type, doubl
     cb.SetFlag("filters-use-regex", false);
 }
 
+void BuildFit::AddSharedFloatingNorm(const stringlist& procs, const std::string& nuis_name, const std::string& type, double val){
+    cb.SetFlag("filters-use-regex", true);
+    cb.cp()
+      .process(procs)   // all processes get the SAME nuisance
+      .AddSyst(cb, nuis_name, type, SystMap<>::init(val));
+    cb.SetFlag("filters-use-regex", false);
+}
+
+void BuildFit::AddFloatingNormsGroupedByFakeType(const stringlist& fakesprocs, const std::string& type, double val){
+    // Map suffix -> list of procs
+    std::map<std::string, stringlist> groups;
+
+    const std::string marker = "_FAKES_";
+    for (const auto &fp : fakesprocs) {
+        auto pos = fp.find(marker);
+        if (pos == std::string::npos) continue; // not a fake-style name, skip
+        std::string suffix = fp.substr(pos + marker.size()); // e.g. "Elec" or "Muon"
+        groups[suffix].push_back(fp);
+    }
+
+    for (const auto &kv : groups) {
+        const std::string &suffix = kv.first;
+        const stringlist &procs = kv.second;
+        if (procs.empty()) continue;
+
+        // nuisance name e.g. "scale_FAKES_Elec"
+        std::string nuis_name = "scale_FAKES_" + suffix;
+
+        AddSharedFloatingNorm(procs, nuis_name, type, val);
+    }
+}
+
+void BuildFit::AddFakeFamiliesAsSharedNorms(const std::vector<std::string>& truebkgprocs, const std::vector<std::string>& fakesprocs, const std::string& type, double val){
+    for (const auto& base : truebkgprocs) {
+        // Build the family starting with the base process
+        std::vector<std::string> family{ base };
+        // Attach all matching fake processes
+        for (const auto& fp : fakesprocs) {
+            // Prefix match: base + "_FAKES"
+            if (fp.rfind(base + "_FAKES", 0) == 0) {
+                family.push_back(fp);
+            }
+        }
+        // Only add a shared nuisance if base has >=1 fake processes
+        if (family.size() > 1) {
+            const std::string nuis_name = "scale_" + base;
+            AddSharedFloatingNorm(family, nuis_name, type, val);
+        }
+    }
+}
+
 void BuildFit::AddShapeSystsFromJSON(JSONFactory* j) {
     for (const auto& itBin : j->j.items()) {
         const std::string& bin = itBin.key();
@@ -499,8 +550,10 @@ void BuildFit::AddPTISRSys(const stringlist& binset, const stringlist& procs){
 
 void BuildFit::AddSameSignSys(const stringlist& binset, const stringlist& procs){
     cb.SetFlag("filters-use-regex", true);
-    cb.cp().process(procs).bin({".*_SS.*"})
-        .AddSyst(cb, "SameSign", "lnN", SystMap<>::init(1.10));
+    cb.cp().process(procs).bin({".*2L.*_SS.*"})
+        .AddSyst(cb, "SameSign_2L", "lnN", SystMap<>::init(1.10));
+    cb.cp().process(procs).bin({".*3L.*_SS.*"})
+        .AddSyst(cb, "SameSign_3L", "lnN", SystMap<>::init(1.10));
     cb.SetFlag("filters-use-regex", false);
 }
 
@@ -573,13 +626,11 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
     cb.FilterProcs([](ch::Process const *p){ return p->rate() <= 0; });
 
     stringlist binset = GetBinSet(j);
-    //for (const auto& bin: binset){
-    //    cb.cp().bin({bin}).AddSyst(cb, bin+"_DummySys", "lnN", SystMap<>::init(1.03)); // 3% over each bin
-    //}
     //AddMCStatBinByBin(j);
     cb.cp().SetAutoMCStats(cb, 0.); // 0.1 // Turns on autoMCstats
-    AddFloatingNorms(truebkgprocs, "rateParam", 1.0);
-    AddFloatingNorms(fakesprocs, "lnN", 1.2);
+    AddFakeFamiliesAsSharedNorms(truebkgprocs, fakesprocs, "rateParam", 1.0);
+    //AddFloatingNorms(fakesprocs, "lnN", 1.2);
+    AddFloatingNormsGroupedByFakeType(fakesprocs, "lnN", 1.2);
     AddPTISRSys(binset, bkgprocs);
     AddSameSignSys(binset, bkgprocs);
     AddRaSys(binset, bkgprocs);
