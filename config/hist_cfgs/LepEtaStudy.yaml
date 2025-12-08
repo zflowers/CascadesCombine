@@ -1,0 +1,967 @@
+derived_variables:
+  - name: MaxEta
+    expr: "ROOT::VecOps::Max(abs(Eta_lep))"
+  - name: MinEta
+    expr: "ROOT::VecOps::Min(abs(Eta_lep))"
+  - name: AbsEta
+    expr: "abs(Eta_lep)"
+
+histograms:
+  - name: MaxEta_Elec_2L
+    type: "1D"
+    expr: "MaxEta"
+    nbins: 50
+    xmin: 0
+    xmax: 2.5
+    x_title: "Max(|#eta_{e}|)"
+    cuts: "Nlep==2"
+    lep-cuts: "=2Elec"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: MinEta_Elec_2L
+    type: "1D"
+    expr: "MinEta"
+    nbins: 50
+    xmin: 0
+    xmax: 2.5
+    x_title: "Min(|#eta_{e}|)"
+    cuts: "Nlep==2"
+    lep-cuts: "=2Elec"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: MinEta_Muon
+    type: "1D"
+    expr: "MinEta"
+    nbins: 50
+    xmin: 0
+    xmax: 2.5
+    x_title: "Min(|#eta_{e}|)"
+    cuts: ""
+    lep-cuts: ">0Muon"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: MinEta_Elec_2L_Cut
+    type: "1D"
+    expr: "MinEta"
+    nbins: 50
+    xmin: 0
+    xmax: 2.5
+    x_title: "Min(|#eta_{e}|)"
+    cuts: "Nlep==2;MIN(abs(Eta_lep))<1.566"
+    lep-cuts: "=2Elec"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: MaxEta_Muon_2L
+    type: "1D"
+    expr: "MaxEta"
+    nbins: 50
+    xmin: 0
+    xmax: 2.5
+    x_title: "Max(|#eta_{#mu}|)"
+    cuts: "Nlep==2"
+    lep-cuts: "=2Muon"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: MinEta_Muon_2L
+    type: "1D"
+    expr: "MinEta"
+    nbins: 50
+    xmin: 0
+    xmax: 2.5
+    x_title: "Min(|#eta_{#mu}|)"
+    cuts: "Nlep==2"
+    lep-cuts: "=2Muon"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: MaxEta_Elec_3L
+    type: "1D"
+    expr: "MaxEta"
+    nbins: 50
+    xmin: 0
+    xmax: 2.5
+    x_title: "Max(|#eta_{e}|)"
+    cuts: "Nlep==3"
+    lep-cuts: "=3Elec"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: MinEta_Elec_3L
+    type: "1D"
+    expr: "MinEta"
+    nbins: 50
+    xmin: 0
+    xmax: 2.5
+    x_title: "Min(|#eta_{e}|)"
+    cuts: "Nlep==3"
+    lep-cuts: "=3Elec"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: MaxEta_Muon_3L
+    type: "1D"
+    expr: "MaxEta"
+    nbins: 50
+    xmin: 0
+    xmax: 2.5
+    x_title: "Max(|#eta_{#mu}|)"
+    cuts: "Nlep==3"
+    lep-cuts: "=3Muon"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: MinEta_Muon_3L
+    type: "1D"
+    expr: "MinEta"
+    nbins: 50
+    xmin: 0
+    xmax: 2.5
+    x_title: "Min(|#eta_{#mu}|)"
+    cuts: "Nlep==3"
+    lep-cuts: "=3Muon"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: MaxEta_Elec_2L_Gold
+    type: "1D"
+    expr: "MaxEta"
+    nbins: 50
+    xmin: 0
+    xmax: 2.5
+    x_title: "Max(|#eta_{e}|)"
+    cuts: "Nlep==2"
+    lep-cuts: "=2Elec;=2Gold;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: MinEta_Elec_2L_Gold
+    type: "1D"
+    expr: "MinEta"
+    nbins: 50
+    xmin: 0
+    xmax: 2.5
+    x_title: "Min(|#eta_{e}|)"
+    cuts: "Nlep==2"
+    lep-cuts: "=2Elec;=2Gold;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: MaxEta_Muon_2L_Gold
+    type: "1D"
+    expr: "MaxEta"
+    nbins: 50
+    xmin: 0
+    xmax: 2.5
+    x_title: "Max(|#eta_{#mu}|)"
+    cuts: "Nlep==2"
+    lep-cuts: "=2Muon;=2Gold;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: MinEta_Muon_2L_Gold
+    type: "1D"
+    expr: "MinEta"
+    nbins: 50
+    xmin: 0
+    xmax: 2.5
+    x_title: "Min(|#eta_{#mu}|)"
+    cuts: "Nlep==2"
+    lep-cuts: "=2Muon;=2Gold;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: MaxEta_Elec_3L_Gold
+    type: "1D"
+    expr: "MaxEta"
+    nbins: 50
+    xmin: 0
+    xmax: 2.5
+    x_title: "Max(|#eta_{e}|)"
+    cuts: "Nlep==3"
+    lep-cuts: "=3Elec;=3Gold;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: MinEta_Elec_3L_Gold
+    type: "1D"
+    expr: "MinEta"
+    nbins: 50
+    xmin: 0
+    xmax: 2.5
+    x_title: "Min(|#eta_{e}|)"
+    cuts: "Nlep==3"
+    lep-cuts: "=3Elec;=3Gold;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: MaxEta_Muon_3L_Gold
+    type: "1D"
+    expr: "MaxEta"
+    nbins: 50
+    xmin: 0
+    xmax: 2.5
+    x_title: "Max(|#eta_{#mu}|)"
+    cuts: "Nlep==3"
+    lep-cuts: "=3Muon;=3Gold;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: MinEta_Muon_3L_Gold
+    type: "1D"
+    expr: "MinEta"
+    nbins: 50
+    xmin: 0
+    xmax: 2.5
+    x_title: "Min(|#eta_{#mu}|)"
+    cuts: "Nlep==3"
+    lep-cuts: "=3Muon;=3Gold;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: MinEta_vs_MaxEta_Elec_2L
+    type: "2D"
+    expr: "MinEta"
+    yexpr: "MaxEta"
+    nbins: 50
+    xmin: 0
+    xmax: 2.5
+    nybins: 50
+    ymin: 0
+    ymax: 2.5
+    x_title: "Min(|#eta_{e}|)"
+    y_title: "Max(|#eta_{e}|)"
+    cuts: "Nlep==2"
+    lep-cuts: "=2Elec"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: MinEta_vs_MaxEta_Muon_2L
+    type: "2D"
+    expr: "MinEta"
+    yexpr: "MaxEta"
+    nbins: 50
+    xmin: 0
+    xmax: 2.5
+    nybins: 50
+    ymin: 0
+    ymax: 2.5
+    x_title: "Min(|#eta_{#mu}|)"
+    y_title: "Max(|#eta_{#mu}|)"
+    cuts: "Nlep==2"
+    lep-cuts: "=2Muon"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: MinEta_vs_MaxEta_Elec_3L
+    type: "2D"
+    expr: "MinEta"
+    yexpr: "MaxEta"
+    nbins: 50
+    xmin: 0
+    xmax: 2.5
+    nybins: 50
+    ymin: 0
+    ymax: 2.5
+    x_title: "Min(|#eta_{e}|)"
+    y_title: "Max(|#eta_{e}|)"
+    cuts: "Nlep==3"
+    lep-cuts: "=3Elec"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: MinEta_vs_MaxEta_Muon_3L
+    type: "2D"
+    expr: "MinEta"
+    yexpr: "MaxEta"
+    nbins: 50
+    xmin: 0
+    xmax: 2.5
+    nybins: 50
+    ymin: 0
+    ymax: 2.5
+    x_title: "Min(|#eta_{#mu}|)"
+    y_title: "Max(|#eta_{#mu}|)"
+    cuts: "Nlep==3"
+    lep-cuts: "=3Muon"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: MinEta_vs_MaxEta_Elec_2L_Gold
+    type: "2D"
+    expr: "MinEta"
+    yexpr: "MaxEta"
+    nbins: 50
+    xmin: 0
+    xmax: 2.5
+    nybins: 50
+    ymin: 0
+    ymax: 2.5
+    x_title: "Min(|#eta_{e}|)"
+    y_title: "Max(|#eta_{e}|)"
+    cuts: "Nlep==2"
+    lep-cuts: "=2Elec;=2Gold;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: MinEta_vs_MaxEta_Muon_2L_Gold
+    type: "2D"
+    expr: "MinEta"
+    yexpr: "MaxEta"
+    nbins: 50
+    xmin: 0
+    xmax: 2.5
+    nybins: 50
+    ymin: 0
+    ymax: 2.5
+    x_title: "Min(|#eta_{#mu}|)"
+    y_title: "Max(|#eta_{#mu}|)"
+    cuts: "Nlep==2"
+    lep-cuts: "=2Muon;=2Gold;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: MinEta_vs_MaxEta_Elec_3L_Gold
+    type: "2D"
+    expr: "MinEta"
+    yexpr: "MaxEta"
+    nbins: 50
+    xmin: 0
+    xmax: 2.5
+    nybins: 50
+    ymin: 0
+    ymax: 2.5
+    x_title: "Min(|#eta_{e}|)"
+    y_title: "Max(|#eta_{e}|)"
+    cuts: "Nlep==3"
+    lep-cuts: "=3Elec;=3Gold;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: MinEta_vs_MaxEta_Muon_3L_Gold
+    type: "2D"
+    expr: "MinEta"
+    yexpr: "MaxEta"
+    nbins: 50
+    xmin: 0
+    xmax: 2.5
+    nybins: 50
+    ymin: 0
+    ymax: 2.5
+    x_title: "Min(|#eta_{#mu}|)"
+    y_title: "Max(|#eta_{#mu}|)"
+    cuts: "Nlep==3"
+    lep-cuts: "=3Muon;=3Gold;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: RISR_LEP_vs_MaxEta_Elec_2L
+    type: "2D"
+    expr: "RISR_LEP"
+    yexpr: "MaxEta"
+    nbins: 50
+    xmin: 0.7
+    xmax: 1.0
+    nybins: 50
+    ymin: 0
+    ymax: 2.5
+    x_title: "R_{ISR}^{LEP}"
+    y_title: "Max(|#eta_{e}|)"
+    cuts: "Nlep==2"
+    lep-cuts: "=2Elec"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: RISR_LEP_vs_MaxEta_Muon_2L
+    type: "2D"
+    expr: "RISR_LEP"
+    yexpr: "MaxEta"
+    nbins: 50
+    xmin: 0.7
+    xmax: 1.0
+    nybins: 50
+    ymin: 0
+    ymax: 2.5
+    x_title: "R_{ISR}^{LEP}"
+    y_title: "Max(|#eta_{#mu}|)"
+    cuts: "Nlep==2"
+    lep-cuts: "=2Muon"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: RISR_LEP_vs_MaxEta_Elec_3L
+    type: "2D"
+    expr: "RISR_LEP"
+    yexpr: "MaxEta"
+    nbins: 50
+    xmin: 0.7
+    xmax: 1.0
+    nybins: 50
+    ymin: 0
+    ymax: 2.5
+    x_title: "R_{ISR}^{LEP}"
+    y_title: "Max(|#eta_{e}|)"
+    cuts: "Nlep==3"
+    lep-cuts: "=3Elec"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: RISR_LEP_vs_MaxEta_Muon_3L
+    type: "2D"
+    expr: "RISR_LEP"
+    yexpr: "MaxEta"
+    nbins: 50
+    xmin: 0.7
+    xmax: 1.0
+    nybins: 50
+    ymin: 0
+    ymax: 2.5
+    x_title: "R_{ISR}^{LEP}"
+    y_title: "Max(|#eta_{#mu}|)"
+    cuts: "Nlep==3"
+    lep-cuts: "=3Muon"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: RISR_LEP_vs_MaxEta_Elec_2L_Gold
+    type: "2D"
+    expr: "RISR_LEP"
+    yexpr: "MaxEta"
+    nbins: 50
+    xmin: 0.7
+    xmax: 1.0
+    nybins: 50
+    ymin: 0
+    ymax: 2.5
+    x_title: "R_{ISR}^{LEP}"
+    y_title: "Max(|#eta_{e}|)"
+    cuts: "Nlep==2"
+    lep-cuts: "=2Elec;=2Gold;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: RISR_LEP_vs_MaxEta_Muon_2L_Gold
+    type: "2D"
+    expr: "RISR_LEP"
+    yexpr: "MaxEta"
+    nbins: 50
+    xmin: 0.7
+    xmax: 1.0
+    nybins: 50
+    ymin: 0
+    ymax: 2.5
+    x_title: "R_{ISR}^{LEP}"
+    y_title: "Max(|#eta_{#mu}|)"
+    cuts: "Nlep==2"
+    lep-cuts: "=2Muon;=2Gold;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: RISR_LEP_vs_MaxEta_Muon_2L_1Bronze
+    type: "2D"
+    expr: "RISR_LEP"
+    yexpr: "MaxEta"
+    nbins: 50
+    xmin: 0.7
+    xmax: 1.0
+    nybins: 50
+    ymin: 0
+    ymax: 2.5
+    x_title: "R_{ISR}^{LEP}"
+    y_title: "Max(|#eta_{#mu}|)"
+    cuts: "Nlep==2"
+    lep-cuts: "=2Muon;>=1Bronze;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: RISR_LEP_vs_MaxEta_Elec_3L_Gold
+    type: "2D"
+    expr: "RISR_LEP"
+    yexpr: "MaxEta"
+    nbins: 50
+    xmin: 0.7
+    xmax: 1.0
+    nybins: 50
+    ymin: 0
+    ymax: 2.5
+    x_title: "R_{ISR}^{LEP}"
+    y_title: "Max(|#eta_{e}|)"
+    cuts: "Nlep==3"
+    lep-cuts: "=3Elec;=3Gold;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: RISR_LEP_vs_MaxEta_Muon_3L_Gold
+    type: "2D"
+    expr: "RISR_LEP"
+    yexpr: "MaxEta"
+    nbins: 50
+    xmin: 0.7
+    xmax: 1.0
+    nybins: 50
+    ymin: 0
+    ymax: 2.5
+    x_title: "R_{ISR}^{LEP}"
+    y_title: "Max(|#eta_{#mu}|)"
+    cuts: "Nlep==3"
+    lep-cuts: "=3Muon;=3Gold;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: RISR_LEP_vs_MaxEta_Muon_3L_1Bronze
+    type: "2D"
+    expr: "RISR_LEP"
+    yexpr: "MaxEta"
+    nbins: 50
+    xmin: 0.7
+    xmax: 1.0
+    nybins: 50
+    ymin: 0
+    ymax: 2.5
+    x_title: "R_{ISR}^{LEP}"
+    y_title: "Max(|#eta_{#mu}|)"
+    cuts: "Nlep==3"
+    lep-cuts: "=3Muon;>=1Bronze;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: RISR_LEP_vs_MinEta_Elec_2L
+    type: "2D"
+    expr: "RISR_LEP"
+    yexpr: "MinEta"
+    nbins: 50
+    xmin: 0.7
+    xmax: 1.0
+    nybins: 50
+    ymin: 0
+    ymax: 2.5
+    x_title: "R_{ISR}^{LEP}"
+    y_title: "Min(|#eta_{e}|)"
+    cuts: "Nlep==2"
+    lep-cuts: "=2Elec"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: RISR_LEP_vs_MinEta_Muon_2L
+    type: "2D"
+    expr: "RISR_LEP"
+    yexpr: "MinEta"
+    nbins: 50
+    xmin: 0.7
+    xmax: 1.0
+    nybins: 50
+    ymin: 0
+    ymax: 2.5
+    x_title: "R_{ISR}^{LEP}"
+    y_title: "Min(|#eta_{#mu}|)"
+    cuts: "Nlep==2"
+    lep-cuts: "=2Muon"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: RISR_LEP_vs_MinEta_Elec_3L
+    type: "2D"
+    expr: "RISR_LEP"
+    yexpr: "MinEta"
+    nbins: 50
+    xmin: 0.7
+    xmax: 1.0
+    nybins: 50
+    ymin: 0
+    ymax: 2.5
+    x_title: "R_{ISR}^{LEP}"
+    y_title: "Min(|#eta_{e}|)"
+    cuts: "Nlep==3"
+    lep-cuts: "=3Elec"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: RISR_LEP_vs_MinEta_Muon_3L
+    type: "2D"
+    expr: "RISR_LEP"
+    yexpr: "MinEta"
+    nbins: 50
+    xmin: 0.7
+    xmax: 1.0
+    nybins: 50
+    ymin: 0
+    ymax: 2.5
+    x_title: "R_{ISR}^{LEP}"
+    y_title: "Min(|#eta_{#mu}|)"
+    cuts: "Nlep==3"
+    lep-cuts: "=3Muon"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: RISR_LEP_vs_MinEta_Elec_2L_Gold
+    type: "2D"
+    expr: "RISR_LEP"
+    yexpr: "MinEta"
+    nbins: 50
+    xmin: 0.7
+    xmax: 1.0
+    nybins: 50
+    ymin: 0
+    ymax: 2.5
+    x_title: "R_{ISR}^{LEP}"
+    y_title: "Min(|#eta_{e}|)"
+    cuts: "Nlep==2"
+    lep-cuts: "=2Elec;=2Gold;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: RISR_LEP_vs_MinEta_Muon_2L_Gold
+    type: "2D"
+    expr: "RISR_LEP"
+    yexpr: "MinEta"
+    nbins: 50
+    xmin: 0.7
+    xmax: 1.0
+    nybins: 50
+    ymin: 0
+    ymax: 2.5
+    x_title: "R_{ISR}^{LEP}"
+    y_title: "Min(|#eta_{#mu}|)"
+    cuts: "Nlep==2"
+    lep-cuts: "=2Muon;=2Gold;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: RISR_LEP_vs_MinEta_Elec_3L_Gold
+    type: "2D"
+    expr: "RISR_LEP"
+    yexpr: "MinEta"
+    nbins: 50
+    xmin: 0.7
+    xmax: 1.0
+    nybins: 50
+    ymin: 0
+    ymax: 2.5
+    x_title: "R_{ISR}^{LEP}"
+    y_title: "Min(|#eta_{e}|)"
+    cuts: "Nlep==3"
+    lep-cuts: "=3Elec;=3Gold;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: RISR_LEP_vs_MinEta_Muon_3L_Gold
+    type: "2D"
+    expr: "RISR_LEP"
+    yexpr: "MinEta"
+    nbins: 50
+    xmin: 0.7
+    xmax: 1.0
+    nybins: 50
+    ymin: 0
+    ymax: 2.5
+    x_title: "R_{ISR}^{LEP}"
+    y_title: "Min(|#eta_{#mu}|)"
+    cuts: "Nlep==3"
+    lep-cuts: "=3Muon;=3Gold;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: LepPT_vs_AbsLepEta_Elec_2L
+    type: "2D"
+    expr: "PT_lep"
+    yexpr: "AbsEta"
+    nbins: 50
+    xmin: 0.
+    xmax: 15.0
+    nybins: 50
+    ymin: 0.
+    ymax: 2.5
+    x_title: "p_{T}^{e}"
+    y_title: "|#eta_{e}|"
+    cuts: "Nlep==2"
+    lep-cuts: "=2Elec;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: LepPT_vs_AbsLepEta_Elec_3L
+    type: "2D"
+    expr: "PT_lep"
+    yexpr: "AbsEta"
+    nbins: 50
+    xmin: 0.
+    xmax: 15.0
+    nybins: 50
+    ymin: 0.
+    ymax: 2.5
+    x_title: "p_{T}^{e}"
+    y_title: "|#eta_{e}|"
+    cuts: "Nlep==3"
+    lep-cuts: "=3Elec;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: LepPT_vs_AbsLepEta_Elec_2L_Gold
+    type: "2D"
+    expr: "PT_lep"
+    yexpr: "AbsEta"
+    nbins: 50
+    xmin: 0.
+    xmax: 15.0
+    nybins: 50
+    ymin: 0.
+    ymax: 2.5
+    x_title: "p_{T}^{e}"
+    y_title: "|#eta_{e}|"
+    cuts: "Nlep==2"
+    lep-cuts: "=2Elec;=2Gold;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: LepPT_vs_AbsLepEta_Elec_3L_Gold
+    type: "2D"
+    expr: "PT_lep"
+    yexpr: "AbsEta"
+    nbins: 50
+    xmin: 0.
+    xmax: 15.0
+    nybins: 50
+    ymin: 0.
+    ymax: 2.5
+    x_title: "p_{T}^{e}"
+    y_title: "|#eta_{e}|"
+    cuts: "Nlep==3"
+    lep-cuts: "=3Elec;=3Gold;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: LepPT_vs_AbsLepEta_Muon_2L
+    type: "2D"
+    expr: "PT_lep"
+    yexpr: "AbsEta"
+    nbins: 50
+    xmin: 0.
+    xmax: 15.0
+    nybins: 50
+    ymin: 0.
+    ymax: 2.5
+    x_title: "p_{T}^{#mu}"
+    y_title: "|#eta_{#mu}|"
+    cuts: "Nlep==2"
+    lep-cuts: "=2Muon;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: LepPT_vs_AbsLepEta_Muon_3L
+    type: "2D"
+    expr: "PT_lep"
+    yexpr: "AbsEta"
+    nbins: 50
+    xmin: 0.
+    xmax: 15.0
+    nybins: 50
+    ymin: 0.
+    ymax: 2.5
+    x_title: "p_{T}^{#mu}"
+    y_title: "|#eta_{#mu}|"
+    cuts: "Nlep==3"
+    lep-cuts: "=3Muon;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: LepPT_vs_AbsLepEta_Muon_2L_Gold
+    type: "2D"
+    expr: "PT_lep"
+    yexpr: "AbsEta"
+    nbins: 50
+    xmin: 0.
+    xmax: 15.0
+    nybins: 50
+    ymin: 0.
+    ymax: 2.5
+    x_title: "p_{T}^{#mu}"
+    y_title: "|#eta_{#mu}|"
+    cuts: "Nlep==2"
+    lep-cuts: "=2Muon;=2Gold;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: LepPT_vs_AbsLepEta_Muon_2L_Gold_Zoomed
+    type: "2D"
+    expr: "PT_lep"
+    yexpr: "AbsEta"
+    nbins: 50
+    xmin: 2.
+    xmax: 8.0
+    nybins: 50
+    ymin: 1.
+    ymax: 2.5
+    x_title: "p_{T}^{#mu}"
+    y_title: "|#eta_{#mu}|"
+    cuts: "Nlep==2"
+    lep-cuts: "=2Muon;=2Gold;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: LepPT_vs_AbsLepEta_Muon_3L_Gold
+    type: "2D"
+    expr: "PT_lep"
+    yexpr: "AbsEta"
+    nbins: 50
+    xmin: 0.
+    xmax: 15.0
+    nybins: 50
+    ymin: 0.
+    ymax: 2.5
+    x_title: "p_{T}^{#mu}"
+    y_title: "|#eta_{#mu}|"
+    cuts: "Nlep==3"
+    lep-cuts: "=3Muon;=3Gold;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: LepPT_vs_LepEta_Elec_2L
+    type: "2D"
+    expr: "PT_lep"
+    yexpr: "Eta_lep"
+    nbins: 50
+    xmin: 0.
+    xmax: 15.0
+    nybins: 50
+    ymin: -2.5
+    ymax: 2.5
+    x_title: "p_{T}^{e}"
+    y_title: "#eta_{e}"
+    cuts: "Nlep==2"
+    lep-cuts: "=2Elec;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: LepPT_vs_LepEta_Elec_3L
+    type: "2D"
+    expr: "PT_lep"
+    yexpr: "Eta_lep"
+    nbins: 50
+    xmin: 0.
+    xmax: 15.0
+    nybins: 50
+    ymin: -2.5
+    ymax: 2.5
+    x_title: "p_{T}^{e}"
+    y_title: "#eta_{e}"
+    cuts: "Nlep==3"
+    lep-cuts: "=3Elec;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: LepPT_vs_LepEta_Elec_2L_Gold
+    type: "2D"
+    expr: "PT_lep"
+    yexpr: "Eta_lep"
+    nbins: 50
+    xmin: 0.
+    xmax: 15.0
+    nybins: 50
+    ymin: -2.5
+    ymax: 2.5
+    x_title: "p_{T}^{e}"
+    y_title: "#eta_{e}"
+    cuts: "Nlep==2"
+    lep-cuts: "=2Elec;=2Gold;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: LepPT_vs_LepEta_Elec_3L_Gold
+    type: "2D"
+    expr: "PT_lep"
+    yexpr: "Eta_lep"
+    nbins: 50
+    xmin: 0.
+    xmax: 15.0
+    nybins: 50
+    ymin: -2.5
+    ymax: 2.5
+    x_title: "p_{T}^{e}"
+    y_title: "#eta_{e}"
+    cuts: "Nlep==3"
+    lep-cuts: "=3Elec;=3Gold;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: LepPT_vs_LepEta_Muon_2L
+    type: "2D"
+    expr: "PT_lep"
+    yexpr: "Eta_lep"
+    nbins: 50
+    xmin: 0.
+    xmax: 15.0
+    nybins: 50
+    ymin: -2.5
+    ymax: 2.5
+    x_title: "p_{T}^{#mu}"
+    y_title: "#eta_{#mu}"
+    cuts: "Nlep==2"
+    lep-cuts: "=2Muon;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: LepPT_vs_LepEta_Muon_3L
+    type: "2D"
+    expr: "PT_lep"
+    yexpr: "Eta_lep"
+    nbins: 50
+    xmin: 0.
+    xmax: 15.0
+    nybins: 50
+    ymin: -2.5
+    ymax: 2.5
+    x_title: "p_{T}^{#mu}"
+    y_title: "#eta_{#mu}"
+    cuts: "Nlep==3"
+    lep-cuts: "=3Muon;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: LepPT_vs_LepEta_Muon_2L_Gold
+    type: "2D"
+    expr: "PT_lep"
+    yexpr: "Eta_lep"
+    nbins: 50
+    xmin: 0.
+    xmax: 15.0
+    nybins: 50
+    ymin: -2.5
+    ymax: 2.5
+    x_title: "p_{T}^{#mu}"
+    y_title: "#eta_{#mu}"
+    cuts: "Nlep==2"
+    lep-cuts: "=2Muon;=2Gold;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: LepPT_vs_LepEta_Muon_3L_Gold
+    type: "2D"
+    expr: "PT_lep"
+    yexpr: "Eta_lep"
+    nbins: 50
+    xmin: 0.
+    xmax: 15.0
+    nybins: 50
+    ymin: -2.5
+    ymax: 2.5
+    x_title: "p_{T}^{#mu}"
+    y_title: "#eta_{#mu}"
+    cuts: "Nlep==3"
+    lep-cuts: "=3Muon;=3Gold;"
+    predefined-cuts: ""
+    user-cuts: ""
+
+  - name: AbsLepEta_Muon_3L
+    type: "1D"
+    expr: "AbsEta"
+    nbins: 50
+    xmin: 0.
+    xmax: 2.5
+    x_title: "|#eta_{#mu}|"
+    cuts: "Nlep==3"
+    lep-cuts: "=3Muon;"
+    predefined-cuts: ""
+    user-cuts: ""

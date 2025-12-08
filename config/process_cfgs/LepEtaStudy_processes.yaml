@@ -1,0 +1,18 @@
+processes:
+  bkg:
+    - top
+    - boson
+    #- Vfakeleps
+    - Wjets
+    - QCD
+    - ZInv
+
+  sig:
+    - SMS_TChiWZ
+    - Cascades
+
+sms_filters:
+  - SMS_300_297
+  - SMS_300_290
+  - SMS_300_270
+  - SMS_300_250
