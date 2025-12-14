@@ -2,4 +2,4 @@ BinLepEtaStudy:
   cuts: "Nlep>=1;MET>=150;Njet>0;PTISR_LEP>=300;RISR_LEP>=0.7;RISR_LEP<1;METORtrigger==1;Nbjet==0;"
   lep-cuts: |
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
-  user-cuts: "leadSjet_pt;minM_ll;minDR_ll;"
+  user-cuts: "leadSjet_pt;HEM_Veto;"

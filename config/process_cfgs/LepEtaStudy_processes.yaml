@@ -1,11 +1,11 @@
 processes:
   bkg:
-    - top
-    - boson
+    - top_2018
+    - boson_2018
     #- Vfakeleps
-    - Wjets
-    - QCD
-    - ZInv
+    - Wjets_2018
+    #- QCD
+    #- ZInv
 
   sig:
     - SMS_TChiWZ

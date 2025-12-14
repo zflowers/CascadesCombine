@@ -32,6 +32,7 @@ class BuildFit{
     ch::Categories BuildCats(JSONFactory* j);
     std::string SanitizeName(const std::string &s);
     void WriteJsonAsFlatHists(JSONFactory* j, const std::string &outFile, std::map<std::string,float>* out_obs_rates = nullptr, const std::string& sig = "");
+    //void WriteJsonAsFlatHists(JSONFactory* j, const std::string &outFile, std::map<std::string,float>* out_obs_rates);
     stringlist GetBkgProcs(JSONFactory* j);
     stringlist GetFakesProcs(JSONFactory* j);
     bool HasDataObs(JSONFactory* j);

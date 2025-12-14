@@ -31,6 +31,75 @@ static ROOT::RDF::RNode loadHistogramsUserCols(ROOT::RDF::RNode &node){
     //if (node.HasColumn("HasMinPair_all") == false) 
     //    node = node.Define("HasMinPair_all", [](double minM){ return minM >= 0.0; }, {"minM_ll_all"});
     //
+    //if (!node.HasColumn("minDR_ll_all") || !node.HasColumn("DR_at_minM_ll_all")) {
+    //    node = node.Define(
+    //        "minDR_and_DRatMinM_ll_all",
+    //        [](const std::vector<double> &pt,
+    //           const std::vector<double> &eta,
+    //           const std::vector<double> &phi,
+    //           const std::vector<double> &mass)
+    //        {
+    //            // return pair: (minDR_all, DR_at_minM)
+    //            double minDR  = std::numeric_limits<double>::infinity();
+    //            double minM   = std::numeric_limits<double>::infinity();
+    //            double DRatMinM = -1.0;
+    //
+    //            if (pt.size() < 2 ||
+    //                eta.size() != pt.size() ||
+    //                phi.size() != pt.size() ||
+    //                mass.size() != pt.size())
+    //                return std::make_pair(-1.0, -1.0);
+    //
+    //            for (size_t i = 0; i < pt.size(); ++i) {
+    //                TLorentzVector v1;
+    //                v1.SetPtEtaPhiM(pt[i], eta[i], phi[i], mass[i]);
+    //
+    //                for (size_t j = i + 1; j < pt.size(); ++j) {
+    //                    TLorentzVector v2;
+    //                    v2.SetPtEtaPhiM(pt[j], eta[j], phi[j], mass[j]);
+    //
+    //                    const double dr = v1.DeltaR(v2);
+    //                    const double m  = (v1 + v2).M();
+    //
+    //                    // global min DR
+    //                    if (dr < minDR)
+    //                        minDR = dr;
+    //
+    //                    // track DR for the min-mass pair
+    //                    if (m < minM) {
+    //                        minM = m;
+    //                        DRatMinM = dr;
+    //                    }
+    //                }
+    //            }
+    //
+    //            if (!std::isfinite(minDR))   minDR   = -1.0;
+    //            if (!std::isfinite(minM))    DRatMinM = -1.0;
+    //
+    //            return std::make_pair(minDR, DRatMinM);
+    //        },
+    //        {"PT_lep","Eta_lep","Phi_lep","M_lep"}
+    //    )
+    //    .Define("minDR_ll_all",
+    //        [](const std::pair<double,double> &p){ return p.first; },
+    //        {"minDR_and_DRatMinM_ll_all"})
+    //    .Define("DR_at_minM_ll_all",
+    //        [](const std::pair<double,double> &p){ return p.second; },
+    //        {"minDR_and_DRatMinM_ll_all"});
+    //}
+    //
+    //// convenience validity flags
+    //if (!node.HasColumn("HasMinDR_all"))
+    //    node = node.Define("HasMinDR_all",
+    //        [](double dr){ return dr >= 0.0; },
+    //        {"minDR_ll_all"});
+    //
+    //if (!node.HasColumn("HasDRatMinM_all"))
+    //    node = node.Define("HasDRatMinM_all",
+    //        [](double dr){ return dr >= 0.0; },
+    //        {"DR_at_minM_ll_all"});
+
+    //
     //// --- min M_ll but only over OSSF pairs ---------------------------------
     //if (node.HasColumn("minM_ll_OSSF") == false) {
     //    node = node.Define("minM_ll_OSSF",
@@ -404,6 +473,44 @@ static std::vector<HistDef> loadHistogramsUser() {
     h2.predefCuts = {};
     h2.userCuts = {};
     // hdefs.push_back(h2); // uncomment to load hist
+
+    HistDef h_minM_vs_minDR;
+    h_minM_vs_minDR.name    = "minM_ll_vs_minDR_ll";
+    h_minM_vs_minDR.type    = "2D";
+    h_minM_vs_minDR.expr    = "minDR_ll_all";
+    h_minM_vs_minDR.yexpr   = "minM_ll_all";
+    h_minM_vs_minDR.nbins   = 50;
+    h_minM_vs_minDR.xmin    = 0.0;
+    h_minM_vs_minDR.xmax    = 2.0;
+    h_minM_vs_minDR.nybins  = 50;
+    h_minM_vs_minDR.ymin    = 0.0;
+    h_minM_vs_minDR.ymax    = 6.0;
+    h_minM_vs_minDR.x_title = "min #DeltaR(ll)";
+    h_minM_vs_minDR.y_title = "min M_{ll} [GeV]";
+    h_minM_vs_minDR.cuts    = {"HasMinPair_all", "HasMinDR_all"};
+    h_minM_vs_minDR.lepCuts = {};
+    h_minM_vs_minDR.predefCuts = {};
+    h_minM_vs_minDR.userCuts = {};
+    //hdefs.push_back(h_minM_vs_minDR);
+
+    HistDef h_minM_vs_DRatMinM;
+    h_minM_vs_DRatMinM.name    = "minM_ll_vs_DR_at_minM";
+    h_minM_vs_DRatMinM.type    = "2D";
+    h_minM_vs_DRatMinM.expr    = "DR_at_minM_ll_all";
+    h_minM_vs_DRatMinM.yexpr   = "minM_ll_all";
+    h_minM_vs_DRatMinM.nbins   = 50;
+    h_minM_vs_DRatMinM.xmin    = 0.0;
+    h_minM_vs_DRatMinM.xmax    = 2.0;
+    h_minM_vs_DRatMinM.nybins  = 50;
+    h_minM_vs_DRatMinM.ymin    = 0.0;
+    h_minM_vs_DRatMinM.ymax    = 6.0;
+    h_minM_vs_DRatMinM.x_title = "#DeltaR(ll) of min-M_{ll} pair";
+    h_minM_vs_DRatMinM.y_title = "min M_{ll} [GeV]";
+    h_minM_vs_DRatMinM.cuts    = {"HasMinPair_all", "HasDRatMinM_all"};
+    h_minM_vs_DRatMinM.lepCuts = {};
+    h_minM_vs_DRatMinM.predefCuts = {};
+    h_minM_vs_DRatMinM.userCuts = {};
+    //hdefs.push_back(h_minM_vs_DRatMinM);
 
     return hdefs;
 }

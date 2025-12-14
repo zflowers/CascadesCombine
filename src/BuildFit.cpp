@@ -199,7 +199,6 @@ void BuildFit::WriteJsonAsFlatHists(JSONFactory* j, const std::string &outFile, 
     for (auto itBin = j->j.begin(); itBin != j->j.end(); ++itBin) {
 
         const std::string origBin = itBin.key();
-        const std::string bin = SanitizeName(origBin);
         json &binJson = itBin.value();
 
         double binTotal = 0.0;
@@ -207,46 +206,49 @@ void BuildFit::WriteJsonAsFlatHists(JSONFactory* j, const std::string &outFile, 
         int binData = 0;
 
         for (auto itProc = binJson.begin(); itProc != binJson.end(); ++itProc) {
-        
+
             const std::string procOrig = itProc.key();
-            const std::string proc = SanitizeName(procOrig);
-            bool isData = (proc.find("data") != std::string::npos ||
-                           proc.find("Data") != std::string::npos);
-        
+
+            // make isData check case-insensitive on the original proc name
+            std::string procLower = procOrig;
+            std::transform(procLower.begin(), procLower.end(), procLower.begin(), ::tolower);
+            bool isData = (procLower.find("data") != std::string::npos);
+
             const json &valsObj = itProc.value();
             if (!valsObj.contains("nominal")) continue;
-        
+
             const json &vals = valsObj["nominal"];
             if (!vals.is_array() || vals.size() <= IDX_ERR) continue;
-        
+
             double nRaw = vals[IDX_RAW];
             double sumW = vals[IDX_SUMW];
             double err  = vals[IDX_ERR];
-        
+
             // -----------------------------
-            // Build histogram name
+            // Build histogram process name
             // -----------------------------
             std::string procName = procOrig;
-            
+
             if (BFTool::ContainsAnySubstring(procOrig, sigkeys)) {
                 if (procOrig != sig) continue; // only write the requested signal
-            
+
                 // derive prefix and mass deterministically
-                std::string prefix = GetSignalProcName(procOrig);   // e.g. "SMS_TChiWZ_SMS" or "Cascades"
-                std::string mass   = GetSignalMass(procOrig);       // e.g. "3000270" or "30003000..."
-            
-                procName = prefix + "_" + mass; // yields "SMS_TChiWZ_SMS_3000270" or "Cascades_30003000..."
+                std::string prefix = GetSignalProcName(procOrig);
+                std::string mass   = GetSignalMass(procOrig);
+
+                procName = prefix + "_" + mass;
             }
-        
+
+            // Use the original bin and process names so Combine finds exact matches
             std::string hname = origBin + "__" + procName;
-        
+
             if (!isData) {
                 binTotal += sumW;
                 binRaw   += (int)(nRaw + 0.5);
             } else {
-                binData = nRaw;
+                binData = (int)nRaw;
             }
-        
+
             if (!isData) {
                 TH1F *h = new TH1F(hname.c_str(), hname.c_str(), 1, 0, 1);
                 h->Sumw2();
@@ -256,30 +258,30 @@ void BuildFit::WriteJsonAsFlatHists(JSONFactory* j, const std::string &outFile, 
                 h->Write();
                 delete h;
                 ++nWritten;
-        
+
                 // -----------------------------
                 // Systematic variations
                 // -----------------------------
                 if (valsObj.contains("systematics")) {
                     const json &systs = valsObj["systematics"];
                     for (auto itS = systs.begin(); itS != systs.end(); ++itS) {
-        
+
                         const std::string systNameOrig = itS.key();
                         const std::string systName = SanitizeName(systNameOrig);
                         const json &ud = itS.value();
-        
+
                         for (std::string_view udKey : {"Up", "Down"}) {
                             if (!ud.contains(std::string(udKey))) continue;
-        
+
                             const json &arr = ud[std::string(udKey)];
                             if (!arr.is_array() || arr.size() <= IDX_ERR) continue;
-        
+
                             double nRaw_ud = arr[IDX_RAW];
                             double sumW_ud = arr[IDX_SUMW];
                             double err_ud  = arr[IDX_ERR];
-        
+
                             std::string hsyst = origBin + "__" + procName + "__" + systName + std::string(udKey);
-        
+
                             TH1F *hs = new TH1F(hsyst.c_str(), hsyst.c_str(), 1, 0, 1);
                             hs->Sumw2();
                             hs->SetBinContent(1, sumW_ud);
@@ -299,8 +301,21 @@ void BuildFit::WriteJsonAsFlatHists(JSONFactory* j, const std::string &outFile, 
             else         (*out_obs_rates)[origBin] = binTotal;
         }
 
+        //---------------------------------------------------------
+        // Skip bins that have ONLY signal (no data, no background)
+        //---------------------------------------------------------
+        bool hasBackground = (binTotal > 0.0);
+        bool hasDataEvents = (binData > 0);
+        
+        if (!hasBackground && !hasDataEvents) {
+            std::cerr << "[WARNING] Skipping bin '" << origBin
+                      << "' (signal present but no background or data)" << std::endl;
+            continue; 
+        }
+
         double asimov_val = out_obs_rates ? (*out_obs_rates)[origBin] : binTotal;
 
+        // Use the original bin name here as well so Combine finds the data_obs histogram
         std::string dataName = origBin + "__data_obs";
 
         TH1F *hdata = new TH1F(dataName.c_str(), dataName.c_str(), 1, 0, 1);
@@ -545,6 +560,10 @@ void BuildFit::AddPTISRSys(const stringlist& binset, const stringlist& procs){
         .AddSyst(cb, "PTISR_2L_0J", "lnN", SystMap<>::init(1.10));
     cb.cp().process(procs).bin({".*2L.*1J.*P350.*"})
         .AddSyst(cb, "PTISR_2L_1J", "lnN", SystMap<>::init(1.10));
+    cb.cp().process(procs).bin({".*3L.*0J.*P300.*"})
+        .AddSyst(cb, "PTISR_3L_0J", "lnN", SystMap<>::init(1.10));
+    cb.cp().process(procs).bin({".*3L.*1J.*P300.*"})
+        .AddSyst(cb, "PTISR_3L_1J", "lnN", SystMap<>::init(1.10));
     cb.SetFlag("filters-use-regex", false);
 }
 
@@ -567,10 +586,14 @@ void BuildFit::AddBtagSys(const stringlist& binset, const stringlist& procs){
         .AddSyst(cb, "Btag_2L_1J_lPTISR", "lnN", SystMap<>::init(1.20));
     cb.cp().process(procs).bin({".*2L.*1J.*P350.*.*Btag.*"})
         .AddSyst(cb, "Btag_2L_1J_hPTISR", "lnN", SystMap<>::init(1.20));
-    cb.cp().process(procs).bin({".*3L.*0J.*Btag.*"})
-        .AddSyst(cb, "Btag_3L_0J", "lnN", SystMap<>::init(1.20));
-    cb.cp().process(procs).bin({".*3L.*1J.*Btag.*"})
-        .AddSyst(cb, "Btag_3L_1J", "lnN", SystMap<>::init(1.20));
+    cb.cp().process(procs).bin({".*3L.*0J.*P200.*.*Btag.*"})
+        .AddSyst(cb, "Btag_3L_0J_lPTISR", "lnN", SystMap<>::init(1.20));
+    cb.cp().process(procs).bin({".*3L.*0J.*P300.*.*Btag.*"})
+        .AddSyst(cb, "Btag_3L_0J_hPTISR", "lnN", SystMap<>::init(1.20));
+    cb.cp().process(procs).bin({".*3L.*1J.*P200.*.*Btag.*"})
+        .AddSyst(cb, "Btag_3L_1J_lPTISR", "lnN", SystMap<>::init(1.20));
+    cb.cp().process(procs).bin({".*3L.*1J.*P300.*.*Btag.*"})
+        .AddSyst(cb, "Btag_3L_1J_hPTISR", "lnN", SystMap<>::init(1.20));
     cb.cp().process(procs).bin({".*4L.*Btag.*"})
         .AddSyst(cb, "Btag_4L", "lnN", SystMap<>::init(1.20));
     cb.SetFlag("filters-use-regex", false);
@@ -629,7 +652,6 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
     //AddMCStatBinByBin(j);
     cb.cp().SetAutoMCStats(cb, 0.); // 0.1 // Turns on autoMCstats
     AddFakeFamiliesAsSharedNorms(truebkgprocs, fakesprocs, "rateParam", 1.0);
-    //AddFloatingNorms(fakesprocs, "lnN", 1.2);
     AddFloatingNormsGroupedByFakeType(fakesprocs, "lnN", 1.2);
     AddPTISRSys(binset, bkgprocs);
     AddSameSignSys(binset, bkgprocs);
@@ -639,8 +661,6 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
     //cb.PrintAll();
     cb.FilterSysts([](ch::Systematic const *s){ return s->value_u() == 1.0 && s->value_d() == 1.0; });
     cb.WriteDatacard(datacard_dir+"/"+signalPoint+"/"+signalPoint+".txt", *json_root_file);
-    //cb.WriteDatacard(datacard_dir+"/"+signalPoint+"/"+signalPoint+".txt");//,datacard_dir+"/"+signalPoint+"/bbbshapes.root");
-    //cb.WriteDatacard(datacard_dir+"/"+signalPoint+"/"+signalPoint+".txt","");//,datacard_dir+"/"+signalPoint+"/bbbshapes.root");
     json_root_file->Close();
     delete json_root_file;
 }

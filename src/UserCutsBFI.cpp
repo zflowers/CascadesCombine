@@ -32,8 +32,8 @@ ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<st
     bool do_minDR = true;
     bool do_minMll = true;
     bool do_2Dll_low = true;
-    bool do_2Dll_high = true;
-    bool do_lowptmuon_endcap = false;
+    //bool do_2Dll_high = false;
+    //bool do_lowptmuon_endcap = false;
 
     // --- min DeltaR between any two leptons ---
     if (do_minDR && node.HasColumn("minDeltaR_leps") == false) {
@@ -110,13 +110,9 @@ ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<st
             [](double mll, double dr) -> bool {
     
                 // Equation of the boundary line:
-                //              \/DR                \/Mass
-                double dr_max = 0.15 * (1.0 - mll / 1.25);
-    
-                // If mll >= 1.25, dr_max becomes <= 0; reject only if dr <= 0
-                if (dr_max < 0) dr_max = 0;
-    
-                return dr > dr_max;
+                double mll_min = -1.0 * dr + 1.5; // line from Derek
+                if (mll_min < 0) mll_min = 0;
+                return mll > mll_min;
             },
             {"minMll", "minDeltaR_leps"}
         );
@@ -128,61 +124,60 @@ ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<st
     cut_2D_ll_low.expression = "pass2DLeptonCut_low == true";
     cuts[cut_2D_ll_low.name] = cut_2D_ll_low;
 
-    if (do_2Dll_high && !node.HasColumn("pass2DLeptonCut_high")) {
-        node = node.Define("pass2DLeptonCut_high",
-            [](double mll, double dr) -> bool {
-    
-                // Equation of the boundary line:
-                //              \/DR          \/Mass
-                double dr_min = 0.05 * (mll - 1.0);
-    
-                if (dr_min < 0) dr_min = 0;
-    
-                return dr > dr_min;
-            },
-            {"minMll", "minDeltaR_leps"}
-        );
-    }
+    //if (do_2Dll_high && !node.HasColumn("pass2DLeptonCut_high")) {
+    //    node = node.Define("pass2DLeptonCut_high",
+    //        [](double mll, double dr) -> bool {
+    //            // Equation of the boundary line:
+    //            //              \/DR          \/Mass
+    //            double dr_min = 0.05 * (mll - 1.0);
+    //
+    //            if (dr_min < 0) dr_min = 0;
+    //
+    //            return dr > dr_min;
+    //        },
+    //        {"minMll", "minDeltaR_leps"}
+    //    );
+    //}
 
-    CutDef cut_2D_ll_high;
-    cut_2D_ll_high.name = "minMll_minDR_2D_high";
-    cut_2D_ll_high.columns = {"pass2DLeptonCut_high"};
-    cut_2D_ll_high.expression = "pass2DLeptonCut_high == true";
-    cuts[cut_2D_ll_high.name] = cut_2D_ll_high;
+    //CutDef cut_2D_ll_high;
+    //cut_2D_ll_high.name = "minMll_minDR_2D_high";
+    //cut_2D_ll_high.columns = {"pass2DLeptonCut_high"};
+    //cut_2D_ll_high.expression = "pass2DLeptonCut_high == true";
+    //cuts[cut_2D_ll_high.name] = cut_2D_ll_high;
 
-    // --- remove low pt forward muons ---
-    // also need to try only removing events where all muons are low pt and forward
-    if (do_lowptmuon_endcap && !node.HasColumn("lowptmuon_endcap")) {
-        node = node.Define(
-            "lowptmuon_endcap",
-            [](const std::vector<double> &pt,
-               const std::vector<double> &eta,
-               const std::vector<int> &pdgid,
-               int nlep,
-               int nmu
-              ) -> bool {
-                if(nmu == 0) return true; // keep events without muons no matter what
+    //// --- remove low pt forward muons ---
+    //// also need to try only removing events where all muons are low pt and forward
+    //if (do_lowptmuon_endcap && !node.HasColumn("lowptmuon_endcap")) {
+    //    node = node.Define(
+    //        "lowptmuon_endcap",
+    //        [](const std::vector<double> &pt,
+    //           const std::vector<double> &eta,
+    //           const std::vector<int> &pdgid,
+    //           int nlep,
+    //           int nmu
+    //          ) -> bool {
+    //            if(nmu == 0) return true; // keep events without muons no matter what
 
-                // get number of low pt end-cap muons
-                int nmu_lowpt_endcap = 0;
-                for (int i = 0; i < nlep; i++) {
-                    if (std::abs(pdgid[i]) == 13 && pt[i] < 5.0 && std::abs(eta[i]) > 1.566) {
-                        nmu_lowpt_endcap++;
-                    }
-                }
-                //if(nmu_lowpt_endcap != 0) return false; // remove events where any muon is low pt and end-cap
-                if(nmu_lowpt_endcap == nmu) return false; // remove events where all muons are low pt and end-cap
-                return true; // keep event
-            },
-            {"PT_lep", "Eta_lep", "PDGID_lep", "Nlep", "Nmu"}
-        );
-    }
+    //            // get number of low pt end-cap muons
+    //            int nmu_lowpt_endcap = 0;
+    //            for (int i = 0; i < nlep; i++) {
+    //                if (std::abs(pdgid[i]) == 13 && pt[i] < 5.0 && std::abs(eta[i]) > 1.566) {
+    //                    nmu_lowpt_endcap++;
+    //                }
+    //            }
+    //            //if(nmu_lowpt_endcap != 0) return false; // remove events where any muon is low pt and end-cap
+    //            if(nmu_lowpt_endcap == nmu) return false; // remove events where all muons are low pt and end-cap
+    //            return true; // keep event
+    //        },
+    //        {"PT_lep", "Eta_lep", "PDGID_lep", "Nlep", "Nmu"}
+    //    );
+    //}
 
-    CutDef cut_lowptmuon_endcap;
-    cut_lowptmuon_endcap.name = "lowptmuon_endcap";
-    cut_lowptmuon_endcap.columns = {"lowptmuon_endcap"};
-    cut_lowptmuon_endcap.expression = "lowptmuon_endcap==1";
-    cuts[cut_lowptmuon_endcap.name] = cut_lowptmuon_endcap;
+    //CutDef cut_lowptmuon_endcap;
+    //cut_lowptmuon_endcap.name = "lowptmuon_endcap";
+    //cut_lowptmuon_endcap.columns = {"lowptmuon_endcap"};
+    //cut_lowptmuon_endcap.expression = "lowptmuon_endcap==1";
+    //cuts[cut_lowptmuon_endcap.name] = cut_lowptmuon_endcap;
 
     //node = node
     //    .Define("My_p4_lep0_a", [](const std::vector<double> &pt,

@@ -651,7 +651,8 @@ int main(int argc, char** argv) {
                     fy.nominal = { (double)n_entries, sW, err };
     
                     // --- For each systematic compute Up/Down sums ---
-                    if(!IsData && runInternalSysts) {
+                    // for now turn off sys for signal
+                    if(!IsData && !isSignal && runInternalSysts) {
                         for (const auto &s : sysCfg.sf) {
                             std::string colUp   = "weight_scaled_" + s.tag + "Up";
                             std::string colDown = "weight_scaled_" + s.tag + "Down";
@@ -757,7 +758,8 @@ int main(int argc, char** argv) {
             processTree(baseTree, keyPT, histSystConfig, false, "", false, runFAKES);
         } else {
             processTree(baseTree, keyPT, activeSystematics, runInternalSystsOnNominal, "", false, runFAKES);
-            if(!is_data){
+            // for now turn off sys for signal
+            if(!is_data && !isSignal){
                 for (const auto &treeSyst : activeSystematics.tree) {
                     processTree(baseTree+"_"+treeSyst+"Up",   keyPT, activeSystematics, false, treeSyst, true, runFAKES);
                     processTree(baseTree+"_"+treeSyst+"Down", keyPT, activeSystematics, false, treeSyst, false, runFAKES);

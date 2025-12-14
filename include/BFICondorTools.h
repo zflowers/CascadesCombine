@@ -326,10 +326,10 @@ static void writeSamplesJSON(
 }
 
 struct SystInfo {
-    std::string tag;       // "METtrig"
-    std::string nominal;   // "MetTrigSFweight"
-    std::string up;        // "MetTrigSFweight_up"
-    std::string down;      // "MetTrigSFweight_down"
+    std::string tag;       // Example: "METtrig"
+    std::string nominal;   // Example: "MetTrigSFweight"
+    std::string up;        // Example: "MetTrigSFweight_up"
+    std::string down;      // Example: "MetTrigSFweight_down"
 };
 
 static const std::vector<SystInfo> kDefaultSFSystematics = {
@@ -445,12 +445,12 @@ struct EventLumi {
 // https://cms-talk.web.cern.ch/t/question-about-hem15-16-issue-in-2018-ultra-legacy/38654/8?u=gagarwal
     double operator()(int runnum, bool hem_veto) const {
         if (is_data) return 1.0;
-        return fullLumi; // hack until we have v7 samples fully ready
+        //return fullLumi; // hack until we have v7 samples fully ready
 			 // in v7 we will apply the below code and setup
 			 // the LumiDict so that 2018 signal gets the
 			 // "nominal" for 18 (~59-ish) and we use other
 			 // Run2 years to scale up to Run3 years
-        //return (is2018 && hem_veto) ? hemLumi : fullLumi;
+        return (is2018 && hem_veto) ? hemLumi : fullLumi;
     }
 };
 

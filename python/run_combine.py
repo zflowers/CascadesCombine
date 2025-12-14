@@ -978,6 +978,13 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                             _copy_file(impacts_pdf, dst_file)
                         except Exception as e:
                             print(f"[run_combine] Warning: failed to copy {impacts_pdf}: {e}", flush=True)
+                    impacts_alpha_pdf = os.path.join(subdir_path, "impacts_alpha.pdf")
+                    if os.path.isdir(subdir_path) and os.path.isfile(impacts_alpha_pdf):
+                        dst_file = os.path.join(impacts_dst_root, f"impacts_alpha__{subdir}.pdf")
+                        try:
+                            _copy_file(impacts_alpha_pdf, dst_file)
+                        except Exception as e:
+                            print(f"[run_combine] Warning: failed to copy {impacts_alpha_pdf}: {e}", flush=True)
 
     print("[run_combine] All steps completed.", flush=True)
     end_time = time.time()

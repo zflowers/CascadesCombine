@@ -72,3 +72,18 @@ for WS in "${dcdir}"/*/*_workspace.root; do
     popd > /dev/null || exit 1
     break
 done
+
+if python3 $CMSSW_BASE/src/HiggsAnalysis/CombinedLimit/scripts/plotImpacts.py --help 2>/dev/null | grep -q "alpha"; then
+    for WS in "${dcdir}"/*/*_workspace.root; do
+        WSDIR="$(dirname "$WS")"
+        WSFILE="$(basename "$WS")"
+        echo "[launchImpacts] Making Impacts plot in $WSDIR for $WSFILE"
+        pushd "$WSDIR" > /dev/null || exit 1
+        python3 $CMSSW_BASE/src/HiggsAnalysis/CombinedLimit/scripts/plotImpacts.py \
+          --sort alpha \
+          -i impacts.json \
+          -o impacts_alpha
+        popd > /dev/null || exit 1
+        break
+    done
+fi
