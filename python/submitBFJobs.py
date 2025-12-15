@@ -1,28 +1,29 @@
 #!/usr/bin/env python3
 """
-make_condor_submit.py
+Generate a Condor submit file for BF.x and optionally submit it with
+transient-retry + schedd rotation logic. Designed to be called from
+another script or run from the command line.
 
-Generate a Condor submit file for LPC that:
- - uses BF.x as the executable
- - transfers in flattened.json
- - sets Arguments: flattened.json datacards/ <signal>
- - allows configuring transfer_output_files and transfer_output_remaps
-
-Usage (from another Python script):
-    from make_condor_submit import make_submit_file
-    make_submit_file(signal="TChiWZ_100_1", output_dir="/home/user/condor_out", ...)
-Or run as CLI:
-    python make_condor_submit.py --signal TChiWZ_100_1 --output-dir /home/user/condor_out
+Key behavior matching your requirements:
+ - No wrapper support (you requested to remove it).
+ - The job's transfer_output_files is a single file named "<signal>.txt".
+ - Automatically create the destination output directory: output_dir/<signal>/
+ - Attempts to import CondorJobCountMonitor and use monitor.get_auto_THRESHOLD()
+   if the module is available. You can also pass a condor_monitor instance to
+   submit_condor_with_retries().
 """
 
-import argparse, os, subprocess, re, random, time
-from textwrap import dedent
 from __future__ import annotations
+import argparse
+import os
+import subprocess
+import re
+import random
+import time
 from pathlib import Path
 from collections import defaultdict
 from textwrap import dedent
 from typing import List, Optional
-from CondorJobCountMonitor import CondorJobCountMonitor
 
 # Retry defaults
 DEFAULT_KNOWN_SCHEDDS = [
@@ -32,6 +33,7 @@ DEFAULT_KNOWN_SCHEDDS = [
 ]
 DEFAULT_MAX_RETRIES = 8
 DEFAULT_PER_SCHEDD_LIMIT = 3
+
 
 def make_submit_content(
     executable: str,
@@ -147,6 +149,7 @@ def submit_condor_with_retries(
     known_schedds: Optional[List[str]] = None,
     max_retries: int = DEFAULT_MAX_RETRIES,
     per_schedd_limit: int = DEFAULT_PER_SCHEDD_LIMIT,
+    condor_monitor: Optional[object] = None,
 ) -> bool:
     """
     Submit the condor submit file with transient-retry and schedd rotation.
@@ -162,9 +165,39 @@ def submit_condor_with_retries(
     if known_schedds is None:
         known_schedds = DEFAULT_KNOWN_SCHEDDS
 
-    # Hold condor submissions if over max threshold
-    condor_monitor = CondorJobCountMonitor(threshold=-1,verbose=False)
-    condor_monitor.wait_until_jobs_below()
+    # If a condor_monitor is not provided, try to import/instantiate one as you requested.
+    if condor_monitor is None:
+        try:
+            # Attempt to import the class you mentioned; this is optional.
+            from CondorJobCountMonitor import CondorJobCountMonitor  # type: ignore
+
+            # instantiate a monitor with a safe default if possible
+            try:
+                tmp = CondorJobCountMonitor()  # try default constructor
+                # If the instance has get_auto_THRESHOLD, compute an automatic threshold and re-create monitor
+                if hasattr(tmp, "get_auto_THRESHOLD"):
+                    auto = tmp.get_auto_THRESHOLD()
+                    # Recreate monitor with a threshold scaled like your previous code
+                    try:
+                        condor_monitor = CondorJobCountMonitor(threshold=auto * 0.95, verbose=False)
+                    except Exception:
+                        # If constructor doesn't accept threshold, just use tmp
+                        condor_monitor = tmp
+                else:
+                    condor_monitor = tmp
+            except Exception:
+                # As a last resort, try to instantiate without args ignoring failure
+                condor_monitor = None
+        except Exception:
+            condor_monitor = None
+
+    # If provided/created, wait for jobs below threshold (this matches your previous
+    # pattern: condor_monitor.wait_until_jobs_below())
+    if condor_monitor is not None:
+        try:
+            condor_monitor.wait_until_jobs_below()
+        except Exception as e:
+            print("[warn] condor_monitor.wait_until_jobs_below() raised:", e)
 
     if dryrun:
         print("[dryrun] would run:", f"condor_submit {submit_path}")

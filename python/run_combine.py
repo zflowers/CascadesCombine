@@ -857,6 +857,9 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             print(f"[run_combine] Running BF.x with input {flattened_json} & output {output_dir}", flush=True)
             BF_cmd = ["./"+exe_dir+"/BF.x", flattened_json, output_dir]
             subprocess.run(BF_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
+
+
+
             # condor BF
             #signals = extract_signals(flattened_json)
             #for sig in signals:
@@ -877,6 +880,8 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             #    sys.exit(1)
             #condor_time_end_BF = time.time()
             #condor_time_seconds_BF = condor_time_end_BF - condor_time_start_BF
+            #sys.exit(0) # stop here while debugging BF condor
+
 
 
             # Convert Gauss Params To Gammas only needed when autoMCstats is not used and instead custom MCStatBBB is used
