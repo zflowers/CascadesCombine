@@ -16,3 +16,4 @@ runs/
 scripts/submit_Regions.sh
 *.nfs
 config/FDpattern_cfgs/*
+latex_tables

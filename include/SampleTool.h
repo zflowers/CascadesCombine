@@ -7,6 +7,15 @@
 #include <string>
 #include "yaml-cpp/yaml.h"
 #include "BuildFitTools.h"
+#include <TFile.h>
+#include <TTree.h>
+#include <TSystem.h>
+#include <limits>
+#include <TTree.h>
+#include <fstream>
+#include <iomanip>
+#include <regex>
+#include <set>
 
 using namespace std;
 
@@ -42,6 +51,7 @@ class SampleTool{
             const std::map<std::string, stringlist>& dict,
             const stringlist& keys) const;
 	stringlist loadPreferredGroupsFromYaml(const std::string &yamlPath);
+        void WriteLatexTablesForGroups(const std::vector<std::string>& groups, const std::string& outdir) const;
 
 };
 

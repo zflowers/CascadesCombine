@@ -356,14 +356,14 @@ SampleTool::SampleTool(){
     pathPrefix + "Summer20UL16_106X/DYJetsToLL_M-4to50_HT-200to400_TuneCP5_13TeV-madgraphMLM-pythia8_Summer20UL16_106X.root",
     pathPrefix + "Summer20UL16_106X/DYJetsToLL_M-4to50_HT-400to600_TuneCP5_13TeV-madgraphMLM-pythia8_Summer20UL16_106X.root",
     pathPrefix + "Summer20UL16_106X/DYJetsToLL_M-4to50_HT-600toInf_TuneCP5_13TeV-madgraphMLM-pythia8_Summer20UL16_106X.root",
+    pathPrefix + "Summer20UL16_106X/DYJetsToLL_M-50_HT-70to100_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8_Summer20UL16_106X.root",
     pathPrefix + "Summer20UL16_106X/DYJetsToLL_M-50_HT-100to200_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8_Summer20UL16_106X.root",
-    pathPrefix + "Summer20UL16_106X/DYJetsToLL_M-50_HT-1200to2500_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8_Summer20UL16_106X.root",
     pathPrefix + "Summer20UL16_106X/DYJetsToLL_M-50_HT-200to400_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8_Summer20UL16_106X.root",
-    pathPrefix + "Summer20UL16_106X/DYJetsToLL_M-50_HT-2500toInf_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8_Summer20UL16_106X.root",
     pathPrefix + "Summer20UL16_106X/DYJetsToLL_M-50_HT-400to600_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8_Summer20UL16_106X.root",
     pathPrefix + "Summer20UL16_106X/DYJetsToLL_M-50_HT-600to800_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8_Summer20UL16_106X.root",
-    pathPrefix + "Summer20UL16_106X/DYJetsToLL_M-50_HT-70to100_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8_Summer20UL16_106X.root",
     pathPrefix + "Summer20UL16_106X/DYJetsToLL_M-50_HT-800to1200_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8_Summer20UL16_106X.root",
+    pathPrefix + "Summer20UL16_106X/DYJetsToLL_M-50_HT-1200to2500_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8_Summer20UL16_106X.root",
+    pathPrefix + "Summer20UL16_106X/DYJetsToLL_M-50_HT-2500toInf_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8_Summer20UL16_106X.root",
   };
   MasterDict["DY_2016APV"] = {
     pathPrefix + "Summer20UL16APV_106X/DYJetsToLL_M-4to50_HT-100to200_TuneCP5_13TeV-madgraphMLM-pythia8_Summer20UL16APV_106X.root",
@@ -1385,4 +1385,194 @@ stringlist SampleTool::loadPreferredGroupsFromYaml(const std::string &yamlPath) 
         std::cerr << "[loadPreferredGroupsFromYaml] Failed to read YAML '" << yamlPath << "': " << e.what() << "\n";
     }
     return out;
+}
+
+// Helper: get basename of a path
+static std::string basename_of(const std::string &p) {
+    size_t pos = p.find_last_of("/\\");
+    if (pos == std::string::npos) return p;
+    return p.substr(pos+1);
+}
+
+static double ReadXSecFromFile(const std::string &path) {
+    double nan = std::numeric_limits<double>::quiet_NaN();
+    TFile *f = TFile::Open(path.c_str(), "READ");
+    if (!f || f->IsZombie()) {
+        std::cerr << "[ReadXSec] ERROR opening file: " << path << "\n";
+        if (f) { f->Close(); delete f; }
+        return nan;
+    }
+
+    // KUAnalysis must be present
+    TTree *t = dynamic_cast<TTree*>(f->Get("KUAnalysis"));
+    if (!t) {
+        std::cerr << "[ReadXSec] No KUAnalysis tree in " << path << "\n";
+        f->Close();
+        delete f;
+        return nan;
+    }
+
+    // Look for branch named "XSec"
+    if (!t->GetBranch("XSec")) {
+        std::cerr << "[ReadXSec] No XSec branch in KUAnalysis in " << path << "\n";
+        f->Close();
+        delete f;
+        return nan;
+    }
+
+    double xsec = 0.0;
+    t->SetBranchAddress("XSec", &xsec);
+    // read first entry
+    if (t->GetEntries() > 0) {
+        t->GetEntry(0);
+        f->Close();
+        delete f;
+        return xsec;
+    } else {
+        std::cerr << "[ReadXSec] KUAnalysis has no entries in " << path << "\n";
+    }
+
+    f->Close();
+    delete f;
+    return nan;
+}
+
+void SampleTool::WriteLatexTablesForGroups(const std::vector<std::string>& groups, const std::string& outdir) const {
+    // Ensure output directory exists (best-effort)
+    gSystem->Exec(("mkdir -p " + outdir).c_str());
+
+    // Regex (kept for potential future use; not used for membership inference here)
+    std::regex r_proc_year(R"(^(.+)_((20\d{2}.*))$)");
+
+    // Iterate only over requested groups that are actually loaded in BkgDict
+    for (const auto &group : groups) {
+        if (BkgDict.count(group) == 0) {
+            std::cerr << "[WriteLatexTablesForGroups] Group '" << group << "' not found in BkgDict. Did you call LoadBkgs()? Skipping.\n";
+            continue;
+        }
+
+        // Discover year-specific group keys from MasterDict that start with "group_"
+        std::string prefix = group + "_";
+        std::vector<std::string> groupYearKeys;
+        for (const auto &kv : MasterDict) {
+            const std::string &masterKey = kv.first;
+            if (masterKey.rfind(prefix, 0) == 0) {
+                groupYearKeys.push_back(masterKey);
+            }
+        }
+
+        // If no year-specific keys were found, fall back to the merged group key itself (if present).
+        if (groupYearKeys.empty()) {
+            if (MasterDict.count(group)) {
+                groupYearKeys.push_back(group); // produce a single merged/allYears table
+            } else {
+                std::cerr << "[WriteLatexTablesForGroups] No year-specific keys and no merged key found for group '" << group << "'. Skipping.\n";
+                continue;
+            }
+        }
+
+        // For each discovered groupKey (e.g. "boson_2016", or "boson" if fallback), produce a table
+        for (const auto &groupKey : groupYearKeys) {
+            // yearSuffix is used in filenames/labels; if groupKey==group (merged), label as "allYears"
+            std::string yearSuffix = (groupKey == group) ? std::string("allYears") : groupKey.substr(prefix.size());
+            std::string outname = outdir + "/samples_" + group + "_" + yearSuffix + ".tex";
+
+            std::ofstream out(outname);
+            if (!out.is_open()) {
+                std::cerr << "[WriteLatexTablesForGroups] failed to open " << outname << "\n";
+                continue;
+            }
+
+            // LaTeX header
+            out << "\\begin{table}\n"
+                << "    \\centering\n"
+                << "    \\addtolength{\\leftskip}{-2cm}\n"
+                << "    \\addtolength{\\rightskip}{-2cm}\n"
+                << "    \\begin{tabular}{c|l|l} {\\textbf{process}}  & {\\textbf{" << group << " " << yearSuffix << "}} &  {\\textbf{$\\sigma$}} $pb^{-1}$ \\\\ \\hline\n";
+
+            // The authoritative file list for this groupKey (this defines membership)
+            const stringlist &groupFiles = MasterDict.at(groupKey);
+
+            // Stage 1: collect candidate procKeys that are strict subsets of groupFiles,
+            // excluding groupKey itself (may add it later if no candidates found).
+            std::vector<std::string> prockeys;
+            for (const auto &kv2 : MasterDict) {
+                const std::string &procKey = kv2.first;
+
+                // Skip the exact groupKey in this first pass to avoid listing the merged group itself.
+                if (procKey == groupKey) continue;
+
+                // Check subset: all files of procKey must be present in groupFiles
+                bool isSubset = true;
+                for (const auto &f : kv2.second) {
+                    if (std::find(groupFiles.begin(), groupFiles.end(), f) == groupFiles.end()) {
+                        isSubset = false;
+                        break;
+                    }
+                }
+                if (isSubset) prockeys.push_back(procKey);
+            }
+
+            // Stage 2: if no sub-processes found, fall back to the groupKey itself
+            if (prockeys.empty()) {
+                auto itg = MasterDict.find(groupKey);
+                if (itg != MasterDict.end() && !itg->second.empty()) {
+                    prockeys.push_back(groupKey);
+                } else {
+                    // Nothing found write a comment and continue.
+                    out << "    % NOTE: no matching subprocess keys found for " << groupKey << "\n";
+                }
+            }
+
+            // Sort prockeys by base name (strip trailing _suffix if present)
+            std::sort(prockeys.begin(), prockeys.end(), [](const std::string &a, const std::string &b){
+                auto ap = a.find_last_of('_');
+                auto bp = b.find_last_of('_');
+                std::string abase = (ap==std::string::npos)? a : a.substr(0, ap);
+                std::string bbase = (bp==std::string::npos)? b : b.substr(0, bp);
+                return abase < bbase;
+            });
+
+            // For each proc, emit rows for its files
+            for (const auto &procKey : prockeys) {
+                // get base proc name for the "process" column (strip final suffix)
+                size_t pos = procKey.rfind('_');
+                std::string procName = (pos == std::string::npos) ? procKey : procKey.substr(0, pos);
+
+                // retrieve file list from MasterDict (exists because procKey came from MasterDict)
+                const stringlist &files = MasterDict.at(procKey);
+                bool firstRowForProc = true;
+
+                for (const auto &fpath : files) {
+                    // Read KUAnalysis -> XSec
+                    double xsec = ReadXSecFromFile(fpath);
+                    if (!std::isnan(xsec)) xsec = xsec / 1000.0; // convert fb^{-1} to pb^{-1}
+
+                    // format sigma: print "N/A" if nan
+                    std::ostringstream sigoss;
+                    if (std::isnan(xsec)) sigoss << "N/A";
+                    else sigoss << std::fixed << std::setprecision(3) << xsec;
+
+                    // file basename for the second column
+                    std::string fname = basename_of(fpath);
+
+                    if (firstRowForProc) {
+                        out << "        " << procName << "&" << fname << " & " << sigoss.str() << " \\\\\n";
+                        firstRowForProc = false;
+                    } else {
+                        out << "        &" << fname << " & " << sigoss.str() << " \\\\\n";
+                    }
+                } // files
+                out << "        \\hline\n"; // separate processes
+            } // prockeys
+
+            out << "    \\end{tabular}\\\\\n"
+                << "    \\caption{" << yearSuffix << " " << group << " MC samples.}\n"
+                << "    \\label{tab:samples_" << group << "_" << yearSuffix << "}\n"
+                << "\\end{table}\n";
+
+            out.close();
+            std::cout << "[WriteLatexTablesForGroups] wrote " << outname << "\n";
+        } // each discovered groupKey
+    } // each requested base group
 }
