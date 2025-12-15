@@ -14,10 +14,10 @@ SampleTool::SampleTool(){
   LumiDict["Summer24_130X"] = 109.;
   LumiDict["Summer25_130X"] = 60.;
   LumiDict["Summer26_130X"] = 30.;
-  LumiDict["Summer20UL16APV_106X_SMS"] = 16.8;
-  LumiDict["Summer20UL16_106X_SMS"] = 19.5;
-  LumiDict["Summer20UL17_106X_SMS"] = 41.479680529;
-  LumiDict["Summer20UL18_106X_SMS"] = 59.832475339;
+  LumiDict["Summer20UL16APV_106X_SMS"] = LumiDict["Summer20UL16APV_106X"];
+  LumiDict["Summer20UL16_106X_SMS"] = LumiDict["Summer20UL16_106X"];
+  LumiDict["Summer20UL17_106X_SMS"] = LumiDict["Summer20UL17_106X"];
+  LumiDict["Summer20UL18_106X_SMS"] = LumiDict["Summer20UL18_106X"];
 
   // Override lumis since not all samples available yet
   LumiDict["Summer23BPix_130X"] = 143.;
@@ -32,8 +32,8 @@ SampleTool::SampleTool(){
 
   string pathPrefix = "root://cmseos.fnal.gov//store/user/lpcsusylep/";
   //pathPrefix += "NTUPLES_Cascades_v6/";
-  //pathPrefix += "NTUPLES_Cascades_v7/";
-  pathPrefix += "NTUPLES_Cascades_v8/";
+  pathPrefix += "NTUPLES_Cascades_v7/";
+  //pathPrefix += "NTUPLES_Cascades_v8/";
 
   MasterDict["ttbar_2023BPix"] = {
     pathPrefix + "Summer23BPix_130X/TTto2L2Nu-2Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer23BPix_130X.root",
@@ -159,6 +159,8 @@ SampleTool::SampleTool(){
     MasterDict,
     {
       "ttbar_2023BPix",
+      "ttbar_2023",
+      "ttbar_2022EE",
       "ttbar_2022",
       "ttbar_2018",
       "ttbar_2017",
@@ -981,6 +983,20 @@ SampleTool::SampleTool(){
       "ST_2023BPix",
     }
   );
+  MasterDict["top_2023"] = mergeEntriesList(
+    MasterDict,
+    {
+      "ttbar_2023",
+      "ST_2023",
+    }
+  );
+  MasterDict["top_2022EE"] = mergeEntriesList(
+    MasterDict,
+    {
+      "ttbar_2022EE",
+      "ST_2022EE",
+    }
+  );
   MasterDict["top_2022"] = mergeEntriesList(
     MasterDict,
     {
@@ -1023,6 +1039,24 @@ SampleTool::SampleTool(){
       "Wjets_2023BPix",
       "QCD_2023BPix",
       "ZInv_2023BPix",
+    }
+  );
+
+  MasterDict["Vfakeleps_2023"] = mergeEntriesList(
+    MasterDict,
+    {
+      "Wjets_2023",
+      "QCD_2023",
+      "ZInv_2023",
+    }
+  );
+
+  MasterDict["Vfakeleps_2022EE"] = mergeEntriesList(
+    MasterDict,
+    {
+      "Wjets_2022EE",
+      "QCD_2022EE",
+      "ZInv_2022EE",
     }
   );
 
@@ -1076,6 +1110,20 @@ SampleTool::SampleTool(){
     {
       "DY_2023BPix",
       "DBTB_2023BPix",
+    }
+  );
+  MasterDict["boson_2023"] = mergeEntriesList(
+    MasterDict,
+    {
+      "DY_2023",
+      "DBTB_2023",
+    }
+  );
+  MasterDict["boson_2022EE"] = mergeEntriesList(
+    MasterDict,
+    {
+      "DY_2022EE",
+      "DBTB_2022EE",
     }
   );
   MasterDict["boson_2022"] = mergeEntriesList(

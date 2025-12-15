@@ -253,6 +253,7 @@ def prepare_run_and_stage_assets_copy(
     #    (items may be files or directories; directories are copied recursively preserving basename)
     # -------------------------
     include_items = [
+        "BuildFit.h",
     ]
     src_items = [
         "BuildFit.cpp",
