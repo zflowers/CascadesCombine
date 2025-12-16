@@ -20,6 +20,8 @@ import subprocess
 import re
 import random
 import time
+import pathlib
+import shutil
 from pathlib import Path
 from collections import defaultdict
 from textwrap import dedent
@@ -34,6 +36,59 @@ DEFAULT_KNOWN_SCHEDDS = [
 DEFAULT_MAX_RETRIES = 8
 DEFAULT_PER_SCHEDD_LIMIT = 3
 
+def make_cmssw_runtime_tarball(logs_dir):
+    """
+    Create a fresh CMSSW runtime tarball in logs_dir.
+    Returns the path to the tarball.
+    """
+    cmssw_base = os.environ.get("CMSSW_BASE")
+    if not cmssw_base:
+        raise RuntimeError("CMSSW_BASE is not set. Did you cmsenv?")
+    tarball = pathlib.Path(logs_dir) / "../cmssw_runtime.tgz"
+    tarball.parent.mkdir(parents=True, exist_ok=True)
+    if tarball.exists():
+        return tarball
+    # Core items to include
+    items = [
+        "lib",
+        "biglib",
+        "cfipython",
+        "python",
+        "src/CombineHarvester",
+    ]
+    # Prepare extra_libs
+    scram_arch = os.environ.get("SCRAM_ARCH")
+    if not scram_arch:
+        raise RuntimeError("SCRAM_ARCH must be specified or set in the environment to locate CVMFS externals")
+
+    cms_ext_base = pathlib.Path(f"/cvmfs/cms.cern.ch/{scram_arch}/external")
+    extra_libs_dir = pathlib.Path(cmssw_base) / "extra_libs"
+    extra_libs_dir.mkdir(parents=True, exist_ok=True)
+    
+    externals = {
+        "vdt": "libvdt.so",
+        "tbb": "libtbb.so",
+        "boost": "libboost",
+        "openblas": "libopenblas",
+        "gsl": "libgsl",
+    }
+    
+    for name, soname in externals.items():
+        found = False
+        for so in cms_ext_base.rglob(soname + "*"):
+            if so.is_file():
+                dest = extra_libs_dir / name / "lib"
+                dest.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(so, dest)
+                found = True
+        if not found:
+            print(f"[warn] Could not find {name} ({soname}) in CVMFS externals")
+
+    items.append("extra_libs")
+    cmd = ["tar", "czf", str(tarball), "-C", cmssw_base, *items]
+    subprocess.check_call(cmd)
+    print(f"[condor] CMSSW runtime tarball created at {tarball}", flush=True)
+    return tarball
 
 def make_submit_content(
     executable: str,
@@ -47,6 +102,7 @@ def make_submit_content(
     request_memory: str = "2GB",
     request_disk: str = "2GB",
     universe: str = "vanilla",
+    cmssw_tarball="cmssw_runtime.tgz",
 ) -> str:
     """
     Build the text content for a Condor .sub file.
@@ -79,10 +135,10 @@ def make_submit_content(
     submit = dedent(
         f"""\
         universe                = {universe}
-        executable              = {executable}
+        executable              = scripts/BF.sh
         should_transfer_files   = YES
         when_to_transfer_output = ON_EXIT
-        transfer_input_files    = {input_json}
+        transfer_input_files    = {input_json}, {executable}, {cmssw_tarball}
         arguments               = {input_json} datacards/ {signal}
 
         request_cpus            = {request_cpus}
@@ -120,7 +176,7 @@ def make_submit_file(
     - auto-creates logs_dir and dest output_dir/<signal> (the latter inside make_submit_content).
     """
     os.makedirs(logs_dir, exist_ok=True)
-
+    cmssw_tarball = make_cmssw_runtime_tarball(logs_dir)
     submit_basename = submit_filename or f"job_{signal}.sub"
     submit_content = make_submit_content(
         executable=executable,
@@ -133,6 +189,7 @@ def make_submit_file(
         request_cpus=request_cpus,
         request_memory=request_memory,
         request_disk=request_disk,
+        cmssw_tarball = make_cmssw_runtime_tarball(logs_dir)
     )
 
     with open(submit_basename, "w") as f:
@@ -197,10 +254,10 @@ def submit_condor_with_retries(
         try:
             condor_monitor.wait_until_jobs_below()
         except Exception as e:
-            print("[warn] condor_monitor.wait_until_jobs_below() raised:", e)
+            print("[submitBFJobs WARN] condor_monitor.wait_until_jobs_below() raised:", e, flush=True)
 
     if dryrun:
-        print("[dryrun] would run:", f"condor_submit {submit_path}")
+        print("[submitBFJobs] would run:", f"condor_submit {submit_path}", flush=True)
         return True
 
     attempt = 0
@@ -226,7 +283,7 @@ def submit_condor_with_retries(
             cmd = f"source /cvmfs/cms.cern.ch/cmsset_default.sh && condor_submit {submit_path}"
             printed_name = "(auto)"
 
-        print(f"[info] Running attempt {attempt} submit (schedd={printed_name})...")
+        print(f"[submitBFJobs] Running attempt {attempt} submit (schedd={printed_name})...", flush=True)
         proc = subprocess.run(
             cmd, shell=True, executable="/bin/bash", capture_output=True, text=True
         )
@@ -244,14 +301,14 @@ def submit_condor_with_retries(
         match_schedd = re.search(r"Attempting to submit jobs to (\S+)", stdout)
         reported_schedd = match_schedd.group(1) if match_schedd else None
 
-        print(f"  condor_submit failed (rc={proc.returncode})")
+        print(f"  condor_submit failed (rc={proc.returncode})", flush=True)
         if stdout:
             print("  STDOUT:", stdout.replace("\n", " | "))
         if stderr:
             print("  STDERR:", stderr.replace("\n", " | "))
 
         if not is_transient:
-            print("[createJobs] Non-transient condor_submit failure; not retrying.")
+            print("[submitBFJobs] Non-transient condor_submit failure; not retrying.", flush=True)
             break
 
         candidate_schedds = [s for s in known_schedds if schedd_tries[s] < per_schedd_limit]
@@ -259,7 +316,7 @@ def submit_condor_with_retries(
             candidate_schedds = [s for s in candidate_schedds if s != reported_schedd]
 
         if not candidate_schedds:
-            print("[createJobs] All schedds have reached per-schedd attempt limit. Stopping retries.")
+            print("[submitBFJobs] All schedds have reached per-schedd attempt limit. Stopping retries.", flush=True)
             break
 
         min_tries = min(schedd_tries[s] for s in candidate_schedds)
@@ -270,7 +327,7 @@ def submit_condor_with_retries(
         force_schedd = next_schedd
 
         wait_time = min(2 * attempt, 10)
-        print(f"[warn] Transient schedd error; will retry using -name {next_schedd} (attempt count for this schedd: {schedd_tries[next_schedd]}). Sleeping {wait_time}s.")
+        print(f"[submitBFJobs WARN] Transient schedd error; will retry using -name {next_schedd} (attempt count for this schedd: {schedd_tries[next_schedd]}). Sleeping {wait_time}s.")
         time.sleep(wait_time)
 
     if not success:
@@ -307,9 +364,9 @@ def submit_condor_with_retries(
                 f.write(f"{cluster_id} {schedd}\n")
             else:
                 f.write(f"{cluster_id}\n")
-        print(f"[ok] Submitted cluster {cluster_id} (schedd={schedd}). Recorded to {record_path}")
+        print(f"[submitBFJobs] Submitted cluster {cluster_id} (schedd={schedd}). Recorded to {record_path}")
     else:
-        print("[warn] Submission succeeded but cluster id not parsed from condor output. Full stdout:")
+        print("[submitBFJobs WARN] Submission succeeded but cluster id not parsed from condor output. Full stdout:")
         print(final_stdout)
 
     return True

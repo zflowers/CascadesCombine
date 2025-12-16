@@ -200,11 +200,10 @@ def prepare_run_and_stage_assets_copy(
       dict mapping keys like 'bins_cfg','hist_cfg','processes_cfg','exe_dir','configs_dir',...
     """
     run_dir = run_info["run_dir"]
-    dirs_to_make = ["exe", "configs", "datacards", "include", "src", "macro"]
+    dirs_to_make = ["exe", "configs", "datacards", "include", "src", "macro", "condor_BF", "plots"]
     if not existing_run_dir:
         dirs_to_make.extend([
                              "condor",
-                             "plots",
                             ])
     for sub in dirs_to_make:
         os.makedirs(os.path.join(run_dir, sub), exist_ok=True)
@@ -414,17 +413,18 @@ def get_flattened_root_path(run_dir=None):
 
 def extract_signals(json_file):
     """
-    Takes in a flattened json and extracts the names of the signals inside using the first bin
+    Takes in a flattened json and extracts the names of the signals using the first bin
     """
     signals = []
     with open(json_file, "r") as f:
         data = json.load(f)
     for bin_name, processes in data.items():
         for proc_name, values in processes.items():
-            if len(values) > 1:
-                if "SMS" in proc_name or "Cascade" in proc_name:
+            nominal = values.get("nominal", [])
+            if len(nominal) > 1:
+                if "SMS" in proc_name or "Cascades" in proc_name:
                     signals.append(proc_name)
-        break # end after first bin
+        break # only use first bin
     return signals
 
 def print_events(json_file):
@@ -853,18 +853,27 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
         if not args.only_yields:
             output_dir = run_info["datacards_dir"]
             condor_BF = run_info["condor_BF"]
-            # local BF
-            print(f"[run_combine] Running BF.x with input {flattened_json} & output {output_dir}", flush=True)
-            BF_cmd = ["./"+exe_dir+"/BF.x", flattened_json, output_dir]
-            subprocess.run(BF_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
 
 
-            # condor BF
-            #signals = extract_signals(flattened_json)
-            #for sig in signals:
-            #    BF_condor_cmd = ["python3", "python/submitBFJobs.py", "--output-dir", output_dir, "--logs-dir", f'{condor_BF}/{sig}/', "--json", flattened_json, "--signal", sig, "--submit-file", f'{condor_BF}/{sig}/job_{sig}.sub']
-            #    BF_condor_proc = subprocess.run(BF_condor_cmd, capture_output=True, text=True)
+            signals = extract_signals(flattened_json)
+            for sig in signals:
+                # local BF
+                #BF_condor_cmd = ["./"+exe_dir+"/BF.x", flattened_json, output_dir, sig]
+                # condor BF
+                BF_condor_cmd = [
+                    "python3", "python/submitBFJobs.py",
+                    "--output-dir", output_dir,
+                    "--executable", "./"+exe_dir+"/BF.x",
+                    "--logs-dir", f'{condor_BF}/{sig}/',
+                    "--json", flattened_json, 
+                    "--signal", sig,
+                    "--submit-file", f'{condor_BF}/{sig}/job_{sig}.sub',
+                    "--record-dir", f'{condor_BF}/{sig}/',
+                ]
+                print('[run_combine] Running BF command'," ".join(BF_condor_cmd))
+                subprocess.run(BF_condor_cmd, check=True, capture_output=True, text=True)
+                break # run one signal while debugging
 
             #idle_time_seconds_BF = wait_for_jobs(work_dirs=signals, condor=condor_BF)
             ## Run checkJobs loop and resubmit if necessary
@@ -880,7 +889,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             #    sys.exit(1)
             #condor_time_end_BF = time.time()
             #condor_time_seconds_BF = condor_time_end_BF - condor_time_start_BF
-            #sys.exit(0) # stop here while debugging BF condor
+            sys.exit(0) # stop here while debugging BF condor
 
 
 

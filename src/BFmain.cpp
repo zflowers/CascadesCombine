@@ -11,7 +11,7 @@ namespace fs = std::filesystem;
 int main(int argc, char** argv) {
     // --- Default values ---
     std::string input_json = "./json/test_cascades.json";
-    std::string datacard_dir = "datacards_cascades";
+    std::string datacard_dir = "datacards";
     std::string signal = "";   // leave empty to parse all signals
 
     // --- Override defaults from CLI ---
@@ -32,9 +32,9 @@ int main(int argc, char** argv) {
     else
         targets.push_back(signal);
 
-    // --- Recreate datacard output directory ---
+    // --- Create datacard output directory ---
     fs::path dir_path = datacard_dir;
-    fs::remove_all(dir_path);
+    fs::create_directories(dir_path);
 
     // --- Loop over each signal (or control tag) ---
     for (size_t i = 0; i < targets.size(); ++i) {
