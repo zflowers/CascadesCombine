@@ -564,71 +564,49 @@ def run_checkjobs_loop_parallel(condor_dir=None, work_dirs=None, no_resubmit=Fal
     print(f"[run_combine] Reached max_resubmits ({max_resubmits}). Giving up.", file=sys.stderr, flush=True)
     return False
 
-def run_checkjobs_loop_parallel_BF(condor_dir=None, work_dirs=None, no_resubmit=False, max_resubmits=3):
+def run_checkjobs_loop_parallel_BF(condor_dir, work_dirs, no_resubmit=False, max_resubmits=3):
     """
-    Check all BF work directories with checkJobsBF.py, resubmit failing jobs across
-    all directories in one cycle, then wait once for all resubmitted jobs to finish.
-    Returns True if no failed jobs remain (proceed), False on error or if max resubmits reached.
+    Check all BF work directories, resubmit failing jobs across all dirs, then wait for them to finish.
+    Returns True if no failed jobs remain, False if max resubmits reached or unexpected errors.
     """
-    if not condor_dir:
-        print("[run_combine] run_checkjobs_loop_parallel_BF needs a condor_dir!", flush=True)
-        sys.exit(0)
-    if not work_dirs:
-        print("[run_combine] run_checkjobs_loop_parallel_BF needs work_dirs!", flush=True)
-        sys.exit(0)
-
     attempt = 0
-    check_marker_no_failed = "[checkJobsBF] No failed jobs to resubmit."
-    check_marker_resub_ok = "[checkJobsBF] Resubmit submitted successfully."
-
     while attempt < max_resubmits:
         attempt += 1
-        print(f"[run_combine] Running checkJobsBF for {work_dirs} (attempt {attempt}/{max_resubmits})...", flush=True)
-
+        print(f"[run_combine] Running checkJobsBF (attempt {attempt}/{max_resubmits})...", flush=True)
+        any_failed_this_round = False
         resubmitted_dirs = []
-        any_unexpected = False
-
         for work_dir in work_dirs:
             check_cmd = ["python3", "python/checkJobsBF.py", work_dir, "--root-dir", condor_dir]
+            if no_resubmit:
+                check_cmd.append("--no-submit")
             proc = subprocess.run(check_cmd, capture_output=True, text=True)
-
-            # Print outputs (labeled)
+            # Print outputs
+            if proc.stdout:
+                print(f"----- checkJobsBF stdout ({work_dir}) -----", flush=True)
+                print(proc.stdout, flush=True)
             if proc.stderr:
                 print(f"----- checkJobsBF stderr ({work_dir}) -----", file=sys.stderr, flush=True)
                 print(proc.stderr, file=sys.stderr, flush=True)
-
             if proc.returncode != 0:
-                print(f"[run_combine] checkJobsBF.py returned non-zero ({proc.returncode}) for {work_dir}. Aborting.", file=sys.stderr, flush=True)
+                print(f"[run_combine] checkJobsBF returned non-zero ({proc.returncode}) for {work_dir}. Aborting.", file=sys.stderr)
                 return False
-
-            stdout_lines = [line.strip() for line in (proc.stdout or "").splitlines()]
-            if any(check_marker_no_failed == line for line in stdout_lines):
-                continue
-            elif any(check_marker_resub_ok == line for line in stdout_lines):
+            # Check if any resubmit files were created
+            resub_files = [f for f in os.listdir(os.path.join(condor_dir, work_dir)) if f.startswith("resubmit_") and f.endswith(".sub")]
+            if resub_files:
+                any_failed_this_round = True
                 resubmitted_dirs.append(work_dir)
-            else:
-                print(f"[run_combine] Unexpected checkJobsBF output for {work_dir}. See printed stdout/stderr above.", file=sys.stderr, flush=True)
-                any_unexpected = True
-
-        if any_unexpected:
-            return False
-
-        if not resubmitted_dirs:
-            print("[run_combine] No failed jobs remaining in any BF work_dir. Proceeding.", flush=True)
+        if not any_failed_this_round:
+            print("[run_combine] No failed jobs remaining. Proceeding.", flush=True)
             return True
-
         if no_resubmit:
-            print(f"[run_combine] BF Resubmissions would be performed in {resubmitted_dirs}, but no_resubmit=True. Stopping.", flush=True)
+            print(f"[run_combine] Failed jobs exist in {resubmitted_dirs}, but no_resubmit=True. Stopping.", flush=True)
             return False
-
-        # wait once for all resubmitted jobs across all dirs
-        print(f"[run_combine] Resubmitted BF jobs in {resubmitted_dirs}. Waiting for all resubmitted jobs to finish...", flush=True)
+        # Wait for all resubmitted jobs to finish
+        print(f"[run_combine] Waiting for resubmitted jobs in {resubmitted_dirs} to finish...", flush=True)
         wait_for_jobs(work_dirs, condor_dir)
-        time.sleep(3) # buffer time for new outputs to transfer before recheck
-        # after wait, loop again to re-run checkJobs across all dirs
-
-    # reached max attempts
-    print(f"[run_combine] Reached max_resubmits ({max_resubmits}) for BF. Giving up.", file=sys.stderr, flush=True)
+        time.sleep(3)  # small buffer for output transfer
+    # Reached max resubmits
+    print(f"[run_combine] Reached max_resubmits ({max_resubmits}). Some jobs may still be failing.", file=sys.stderr, flush=True)
     return False
 
 # ----- main workflow -----
@@ -854,9 +832,8 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             output_dir = run_info["datacards_dir"]
             condor_BF = run_info["condor_BF"]
 
-
-
             signals = extract_signals(flattened_json)
+            condor_time_start_BF = time.time()
             for sig in signals:
                 # local BF
                 #BF_condor_cmd = ["./"+exe_dir+"/BF.x", flattened_json, output_dir, sig]
@@ -871,33 +848,25 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                     "--submit-file", f'{condor_BF}/{sig}/job_{sig}.sub',
                     "--record-dir", f'{condor_BF}/{sig}/',
                 ]
-                print('[run_combine] Running BF command'," ".join(BF_condor_cmd))
                 subprocess.run(BF_condor_cmd, check=True, capture_output=True, text=True)
-                break # run one signal while debugging
 
-            #idle_time_seconds_BF = wait_for_jobs(work_dirs=signals, condor=condor_BF)
-            ## Run checkJobs loop and resubmit if necessary
-            #print("[run_combine] Checking for failed jobs and resubmitting if necessary...", flush=True)
-            #ok = run_checkjobs_loop_parallel_BF(
-            #    condor_dir=condor_BF,
-            #    work_dirs=signals,
-            #    no_resubmit=False,
-            #    max_resubmits=args.max_resubmits,
-            #)
-            #if not ok:
-            #    print("[run_combine] BF checkJobs step did not complete successfully. Aborting further steps.", file=sys.stderr)
-            #    sys.exit(1)
-            #condor_time_end_BF = time.time()
-            #condor_time_seconds_BF = condor_time_end_BF - condor_time_start_BF
-            sys.exit(0) # stop here while debugging BF condor
-
-
-
-            # Convert Gauss Params To Gammas only needed when autoMCstats is not used and instead custom MCStatBBB is used
-            # print("[run_combine] Launching nuisance conversion jobs...", flush=True)
-            #for directory in os.listdir(output_dir):
-            #    for datacard in os.listdir(output_dir+'/'+directory):
-            #        subprocess.run(["./"+exe_dir+"/ConvertGaussToGamma.x", output_dir+'/'+directory+'/'+datacard], check=True, stdout=sys.stdout, stderr=sys.stderr)
+            # Run checkJobs loop and resubmit if necessary
+            idle_time_seconds_BF = wait_for_jobs(work_dirs=signals, condor=condor_BF)
+            print("[run_combine] Checking for failed jobs and resubmitting if necessary...", flush=True)
+            ok = run_checkjobs_loop_parallel_BF(
+                condor_dir=condor_BF,
+                work_dirs=signals,
+                no_resubmit=False,
+                max_resubmits=args.max_resubmits,
+            )
+            if not ok:
+                print("[run_combine] BF checkJobs step did not complete successfully. Aborting further steps.", file=sys.stderr)
+                sys.exit(1)
+            condor_time_end_BF = time.time()
+            condor_time_seconds_BF = condor_time_end_BF - condor_time_start_BF
+            cmssw_tarball = condor_BF + '/cmssw_runtime.tgz'
+            if os.path.exists(cmssw_tarball):
+                os.remove(cmssw_tarball)
 
             # combine
             print("[run_combine] Launching combine jobs...", flush=True)
@@ -1011,6 +980,10 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             idle_time_seconds, idle_time_seconds/60, idle_time_seconds/3600), flush=True)
         print("Time for condor processing: {:.2f} seconds = {:.2f} minutes = {:.2f} hours".format(
             condor_time_seconds, condor_time_seconds/60, condor_time_seconds/3600), flush=True)
+    print("Time for all BF condor jobs to start running: {0:.2f} seconds = {1:.2f} minutes = {2:.2f} hours".format(
+        idle_time_seconds_BF, idle_time_seconds_BF/60, idle_time_seconds_BF/3600), flush=True)
+    print("Total for BF condor processing: {0:.2f} seconds = {1:.2f} minutes = {2:.2f} hours".format(
+        condor_time_seconds_BF, condor_time_seconds_BF/60, condor_time_seconds_BF/3600), flush=True)
     print("Total time: {0:.2f} seconds = {1:.2f} minutes = {2:.2f} hours".format(
         total_time_seconds, total_time_seconds/60, total_time_seconds/3600), flush=True)
 

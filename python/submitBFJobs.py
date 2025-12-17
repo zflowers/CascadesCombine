@@ -3,14 +3,6 @@
 Generate a Condor submit file for BF.x and optionally submit it with
 transient-retry + schedd rotation logic. Designed to be called from
 another script or run from the command line.
-
-Key behavior matching your requirements:
- - No wrapper support (you requested to remove it).
- - The job's transfer_output_files is a single file named "<signal>.txt".
- - Automatically create the destination output directory: output_dir/<signal>/
- - Attempts to import CondorJobCountMonitor and use monitor.get_auto_THRESHOLD()
-   if the module is available. You can also pass a condor_monitor instance to
-   submit_condor_with_retries().
 """
 
 from __future__ import annotations
@@ -48,43 +40,11 @@ def make_cmssw_runtime_tarball(logs_dir):
     tarball.parent.mkdir(parents=True, exist_ok=True)
     if tarball.exists():
         return tarball
-    # Core items to include
     items = [
-        "lib",
-        "biglib",
-        "cfipython",
-        "python",
         "src/CombineHarvester",
+        "src/HiggsAnalysis",
+         f"lib/{os.environ['SCRAM_ARCH']}",
     ]
-    # Prepare extra_libs
-    scram_arch = os.environ.get("SCRAM_ARCH")
-    if not scram_arch:
-        raise RuntimeError("SCRAM_ARCH must be specified or set in the environment to locate CVMFS externals")
-
-    cms_ext_base = pathlib.Path(f"/cvmfs/cms.cern.ch/{scram_arch}/external")
-    extra_libs_dir = pathlib.Path(cmssw_base) / "extra_libs"
-    extra_libs_dir.mkdir(parents=True, exist_ok=True)
-    
-    externals = {
-        "vdt": "libvdt.so",
-        "tbb": "libtbb.so",
-        "boost": "libboost",
-        "openblas": "libopenblas",
-        "gsl": "libgsl",
-    }
-    
-    for name, soname in externals.items():
-        found = False
-        for so in cms_ext_base.rglob(soname + "*"):
-            if so.is_file():
-                dest = extra_libs_dir / name / "lib"
-                dest.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(so, dest)
-                found = True
-        if not found:
-            print(f"[warn] Could not find {name} ({soname}) in CVMFS externals")
-
-    items.append("extra_libs")
     cmd = ["tar", "czf", str(tarball), "-C", cmssw_base, *items]
     subprocess.check_call(cmd)
     print(f"[condor] CMSSW runtime tarball created at {tarball}", flush=True)
@@ -113,7 +73,7 @@ def make_submit_content(
     - transfer_output_files: list of filenames to transfer back; if None, defaults to [f"{signal}.txt"]
     """
     if transfer_output_files is None:
-        transfer_output_files = [f"{signal}.txt"]
+        transfer_output_files = [f"{signal}.txt","json_shapes_flat.root"]
 
     formatted_files = [f.format(signal=signal) for f in transfer_output_files]
 
@@ -124,13 +84,14 @@ def make_submit_content(
 
     # Destination directory on submit host: output_dir/<signal>/
     dest_dir = os.path.join(output_dir, signal)
-    # Ensure dest_dir exists on the submit host (we create it from the submission script).
-    # Condor will remap transferred files into the absolute paths we provide below.
+    # Ensure dest_dir exists on the submit host (create it from the submission script).
+    # Condor will remap transferred files into the absolute paths provided below.
     os.makedirs(dest_dir, exist_ok=True)
 
     # Build transfer_output_remaps entries like: "name = /abs/path/to/dest"
-    remaps = [f'"{fname} = {os.path.join(dest_dir, fname)}"' for fname in formatted_files]
-    remaps_str = ", ".join(remaps)
+    remaps = [f"{fname} = {os.path.join(dest_dir, fname)}" for fname in formatted_files]
+    remaps_str = f'"{"; ".join(remaps)}"'
+    json_basename = os.path.basename(input_json)
 
     submit = dedent(
         f"""\
@@ -139,7 +100,7 @@ def make_submit_content(
         should_transfer_files   = YES
         when_to_transfer_output = ON_EXIT
         transfer_input_files    = {input_json}, {executable}, {cmssw_tarball}
-        arguments               = {input_json} datacards/ {signal}
+        arguments               = {json_basename} datacards/ {signal}
 
         request_cpus            = {request_cpus}
         request_memory          = {request_memory}
@@ -149,14 +110,14 @@ def make_submit_content(
         error                   = {job_err}
         log                     = {job_log}
 
-        transfer_output_files   = {', '.join(formatted_files)}
+        transfer_output_files   = {", ".join(formatted_files)}
         transfer_output_remaps  = {remaps_str}
+        priority                = 3
 
         queue 1
         """
     )
     return submit
-
 
 def make_submit_file(
     signal: str,
@@ -197,7 +158,6 @@ def make_submit_file(
 
     return os.path.abspath(submit_basename)
 
-
 def submit_condor_with_retries(
     submit_path: str,
     *,
@@ -222,23 +182,18 @@ def submit_condor_with_retries(
     if known_schedds is None:
         known_schedds = DEFAULT_KNOWN_SCHEDDS
 
-    # If a condor_monitor is not provided, try to import/instantiate one as you requested.
     if condor_monitor is None:
         try:
-            # Attempt to import the class you mentioned; this is optional.
             from CondorJobCountMonitor import CondorJobCountMonitor  # type: ignore
-
             # instantiate a monitor with a safe default if possible
             try:
                 tmp = CondorJobCountMonitor()  # try default constructor
                 # If the instance has get_auto_THRESHOLD, compute an automatic threshold and re-create monitor
                 if hasattr(tmp, "get_auto_THRESHOLD"):
                     auto = tmp.get_auto_THRESHOLD()
-                    # Recreate monitor with a threshold scaled like your previous code
                     try:
                         condor_monitor = CondorJobCountMonitor(threshold=auto * 0.95, verbose=False)
                     except Exception:
-                        # If constructor doesn't accept threshold, just use tmp
                         condor_monitor = tmp
                 else:
                     condor_monitor = tmp
@@ -247,19 +202,14 @@ def submit_condor_with_retries(
                 condor_monitor = None
         except Exception:
             condor_monitor = None
-
-    # If provided/created, wait for jobs below threshold (this matches your previous
-    # pattern: condor_monitor.wait_until_jobs_below())
     if condor_monitor is not None:
         try:
             condor_monitor.wait_until_jobs_below()
         except Exception as e:
             print("[submitBFJobs WARN] condor_monitor.wait_until_jobs_below() raised:", e, flush=True)
-
     if dryrun:
         print("[submitBFJobs] would run:", f"condor_submit {submit_path}", flush=True)
         return True
-
     attempt = 0
     success = False
     last_proc = None
@@ -371,7 +321,6 @@ def submit_condor_with_retries(
 
     return True
 
-
 # ----------- CLI -----------
 def _cli():
     parser = argparse.ArgumentParser(description="Create Condor submit file for BF.x and submit with retries")
@@ -411,7 +360,5 @@ def _cli():
     else:
         print("condor_submit failed after retries.")
 
-
 if __name__ == "__main__":
     _cli()
-
