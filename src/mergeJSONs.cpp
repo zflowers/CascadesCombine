@@ -31,13 +31,6 @@ bool mergeJSONsFlattenedWithFileBreakdown(
     const std::vector<std::string> &preferredGroups = {}
 )
 {
-    // helper to get prefix (text before first underscore) from filename
-    auto getPrefix = [](const std::string &fname) -> std::string {
-        std::string base = fs::path(fname).filename().string();
-        auto pos = base.find("_");
-        return (pos == std::string::npos) ? base : base.substr(0, pos);
-    };
-
     // Recursive expansion of a group into concrete entries (avoid cycles)
     std::function<void(const std::string&, std::unordered_set<std::string>&, std::unordered_set<std::string>&)> expandGroupRec;
     expandGroupRec = [&ST, &expandGroupRec](const std::string &group,
@@ -78,35 +71,30 @@ bool mergeJSONsFlattenedWithFileBreakdown(
         return ret.first->second;
     };
 
-    // The resolveGroup logic: check YAML preferredGroups first (in order),
-    // then fall back to checking all groups.
-    auto resolveGroup = [&ST, &preferredGroups, &getExpandedEntries, &getPrefix](const std::string &jsonKey) -> std::string {
-        std::string keyBase = fs::path(jsonKey).filename().string();
+    auto fileStem = [](const std::string &path) {
+        return fs::path(path).stem().string();  // removes .root
+    };
 
-        // 1) Preferred groups first (YAML order)
+    auto resolveGroup = [&ST, &preferredGroups, &getExpandedEntries, &fileStem]
+                        (const std::string &jsonKey) -> std::string {
+        const std::string keyBase = fs::path(jsonKey).filename().string();
+        // 1) Preferred groups first
         for (const auto &pref : preferredGroups) {
-            const auto &entries = getExpandedEntries(pref);
-            for (const auto &entry : entries) {
-                std::string p = getPrefix(entry);
-                if (!p.empty() && keyBase.rfind(p, 0) == 0) {
+            for (const auto &entry : getExpandedEntries(pref)) {
+                if (keyBase == fileStem(entry)) {
                     return pref;
                 }
             }
         }
-
-        // 2) Fallback: scan all groups
+        // 2) Fallback: all groups
         for (const auto &kv : ST.MasterDict) {
             const std::string &group = kv.first;
-            const auto &entries = getExpandedEntries(group);
-            for (const auto &entry : entries) {
-                std::string entryBase = fs::path(entry).filename().string();
-                if (keyBase == entryBase) {
+            for (const auto &entry : getExpandedEntries(group)) {
+                if (keyBase == fileStem(entry)) {
                     return group;
                 }
             }
         }
-
-        // 3) No match -> return original key (unchanged)
         return jsonKey;
     };
 

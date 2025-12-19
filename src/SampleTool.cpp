@@ -1572,11 +1572,16 @@ void SampleTool::WriteLatexTablesForGroups(const std::vector<std::string>& group
                         out << "        &" << fname << " & " << sigoss.str() << " \\\\\n";
                     }
                 } // files
-                out << "        \\hline\n"; // separate processes
+                if(files.size() > 0) out << "        \\hline\n"; // separate processes
             } // prockeys
 
             out << "    \\end{tabular}\\\\\n"
-                << "    \\caption{" << yearSuffix << " " << group << " MC samples.}\n"
+                << "    \\caption{"
+                << yearSuffix << " " << group
+                << " MC samples. "
+                //<< "simulated using the \\texttt{106X\\_mcRun2\\_asymptotic\\_v17-v2} global tag. "
+                << "Cross sections are given for each sample; the process column denotes the type of " << group << " process."
+                << "}\n"
                 << "    \\label{tab:samples_" << group << "_" << yearSuffix << "}\n"
                 << "\\end{table}\n";
 

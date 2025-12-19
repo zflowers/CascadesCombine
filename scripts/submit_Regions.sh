@@ -23,7 +23,7 @@ run_all() {
 }
 BINS_PER_JOB=30
 SLEEP=70
-VERSION="v337"
+VERSION="v338"
 make clean
 make all -j 8
 echo "Submitting Regions..."
@@ -66,11 +66,13 @@ cat config/bin_cfgs/Regions_4L_Bronze.yaml >> config/bin_cfgs/Regions.yaml
 cat config/bin_cfgs/Regions_top_sideband_Gold.yaml >> config/bin_cfgs/Regions.yaml
 cat config/bin_cfgs/Regions_top_sideband_Silver.yaml >> config/bin_cfgs/Regions.yaml
 cat config/bin_cfgs/Regions_top_sideband_Bronze.yaml >> config/bin_cfgs/Regions.yaml
-#run_all --processes-cfg config/process_cfgs/processes_2018onlybkg.yaml --skip-plot-yields --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_Regions_234L_${VERSION}_2018onlybkg
-#sleep ${SLEEP}
-#run_all --skip-plot-yields --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_Regions_234L_${VERSION}
-#sleep ${SLEEP}
+run_all --skip-plot-yields --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_Regions_234L_${VERSION}
+sleep ${SLEEP}
+
+# Alternative all bins runs
 #run_all --skip-compile --skip-plot-yields --make-json --bins-cfg config/bin_cfgs/Regions.yaml --bins-per-job ${BINS_PER_JOB} --processes-cfg config/process_cfgs/processes_allTChiWZ.yaml --run-name Cascades_Regions_234L_allTChiWZ_${VERSION}
+#sleep ${SLEEP}
+#run_all --processes-cfg config/process_cfgs/processes_2018onlybkg.yaml --skip-plot-yields --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_Regions_234L_${VERSION}_2018onlybkg
 #sleep ${SLEEP}
 
 # CR Fit
@@ -85,8 +87,8 @@ cat config/bin_cfgs/Regions_3L_0J_hPTISR_Bronze.yaml >> config/bin_cfgs/Regions_
 cat config/bin_cfgs/Regions_3L_1J_hPTISR_Bronze.yaml >> config/bin_cfgs/Regions_Bronze_CR.yaml
 cat config/bin_cfgs/Regions_4L_Bronze.yaml >> config/bin_cfgs/Regions_Bronze_CR.yaml
 cat config/bin_cfgs/Regions_top_sideband_Bronze.yaml >> config/bin_cfgs/Regions_Bronze_CR.yaml
-run_all --skip-plot-yields --make-impacts --make-FD --processes-cfg config/process_cfgs/data_processes.yaml --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_Bronze_CR.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_CRs_Impacts_FD_234L_Bronze_${VERSION}
-sleep ${SLEEP}
+#run_all --skip-plot-yields --make-impacts --make-FD --processes-cfg config/process_cfgs/data_processes.yaml --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_Bronze_CR.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_CRs_Impacts_FD_234L_Bronze_${VERSION}
+#sleep ${SLEEP}
 
 #run_all --make-json --only-yields --skip-compile --bins-cfg config/bin_cfgs/Regions_2L_0J_lPTISR_Gold.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_2L_0J_lPTISR_Regions_Gold_${VERSION}
 #sleep ${SLEEP}

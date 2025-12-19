@@ -1,5 +1,5 @@
 Bin4L_Bronze_R7:
-  cuts: "Nlep==4;MET>=150;PTISR_LEP>=100;RISR_LEP>=0.7;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;MAX(abs(Eta_lep))<2.1;MIN(abs(Eta_lep))<1.4442;Nbjet==0;Njet_S==0"
+  cuts: "Nlep==4;MET>=150;PTISR_LEP>=100;RISR_LEP>=0.7;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Nbjet==0;Njet_S==0"
   lep-cuts: |
     >=1Gold;
     =2Bronze;
@@ -9,14 +9,14 @@ Bin4L_Bronze_R7:
 
 ## 2, 2
 #Bin4L_Gold_R7_Ml_22:
-#  cuts: "Nlep==4;MET>=150;PTISR_LEP>=100;RISR_LEP>=0.7;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;MAX(abs(Eta_lep))<2.1;MIN(abs(Eta_lep))<1.4442;Nbjet==0;Mperp_LEP<40;Nlep_b_LEP==2;Njet_S==0"
+#  cuts: "Nlep==4;MET>=150;PTISR_LEP>=100;RISR_LEP>=0.7;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Nbjet==0;Mperp_LEP<40;Nlep_b_LEP==2;Njet_S==0"
 #  lep-cuts: |
 #    =0OSSF|mass>=3|mass<=3.2;
 #    =4Gold;
 #  predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
 #  user-cuts: "minDR_ll;minM_ll;minMll_minDR_2D_low;minMll_minDR_2D_high;HEM_Veto;"
 #Bin4L_Gold_R7_Mh_22:
-#  cuts: "Nlep==4;MET>=150;PTISR_LEP>=100;RISR_LEP>=0.7;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;MAX(abs(Eta_lep))<2.1;MIN(abs(Eta_lep))<1.4442;Nbjet==0;Mperp_LEP>=40;Nlep_b_LEP==2;Njet_S==0"
+#  cuts: "Nlep==4;MET>=150;PTISR_LEP>=100;RISR_LEP>=0.7;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Nbjet==0;Mperp_LEP>=40;Nlep_b_LEP==2;Njet_S==0"
 #  lep-cuts: |
 #    =0OSSF|mass>=3|mass<=3.2;
 #    =4Gold;
@@ -24,14 +24,14 @@ Bin4L_Bronze_R7:
 #  user-cuts: "minDR_ll;minM_ll;minMll_minDR_2D_low;minMll_minDR_2D_high;HEM_Veto;"
 ## 3, 1
 #Bin4L_Gold_R7_Ml_31:
-#  cuts: "Nlep==4;MET>=150;PTISR_LEP>=100;RISR_LEP>=0.7;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;MAX(abs(Eta_lep))<2.1;MIN(abs(Eta_lep))<1.4442;Nbjet==0;Mperp_LEP<40;Nlep_b_LEP==1;Njet_S==0"
+#  cuts: "Nlep==4;MET>=150;PTISR_LEP>=100;RISR_LEP>=0.7;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Nbjet==0;Mperp_LEP<40;Nlep_b_LEP==1;Njet_S==0"
 #  lep-cuts: |
 #    =0OSSF|mass>=3|mass<=3.2;
 #    =4Gold;
 #  predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
 #  user-cuts: "minDR_ll;minM_ll;minMll_minDR_2D_low;minMll_minDR_2D_high;HEM_Veto;"
 #Bin4L_Gold_R7_Mh_31:
-#  cuts: "Nlep==4;MET>=150;PTISR_LEP>=100;RISR_LEP>=0.7;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;MAX(abs(Eta_lep))<2.1;MIN(abs(Eta_lep))<1.4442;Nbjet==0;Mperp_LEP>=40;Nlep_b_LEP==1;Njet_S==0"
+#  cuts: "Nlep==4;MET>=150;PTISR_LEP>=100;RISR_LEP>=0.7;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Nbjet==0;Mperp_LEP>=40;Nlep_b_LEP==1;Njet_S==0"
 #  lep-cuts: |
 #    =0OSSF|mass>=3|mass<=3.2;
 #    =4Gold;

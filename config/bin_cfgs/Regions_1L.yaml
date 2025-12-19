@@ -1,47 +1,47 @@
 Bin1L_0J_Rh:
-  cuts: "Nlep==1;MET>=150;Njet>0;PTISR>=400;RISR>=0.95;RISR<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;MAX(abs(Eta_lep))<2.1;MIN(abs(Eta_lep))<1.4442;Nbjet_ISR==0;MAX(SIP3D_lep)<3.0;Njet_S==0;"
+  cuts: "Nlep==1;MET>=150;Njet>0;PTISR>=400;RISR>=0.95;RISR<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Nbjet_ISR==0;MAX(SIP3D_lep)<3.0;Njet_S==0;"
   lep-cuts: |
     =0Bronze;
   predefined-cuts: "Cleaning;dphiMETV;"
   user-cuts: "minDR_ll;minM_ll;minMll_minDR_2D_low;minMll_minDR_2D_high;HEM_Veto;leadSjet_pt"
 Bin1L_1J_Rl_Mh:
-  cuts: "Nlep==1;MET>=150;Njet>0;PTISR>=400;RISR>=0.9;RISR<=0.95;METORtrigger==1;EventFilter==1;PassesJVM==1;MAX(abs(Eta_lep))<2.1;MIN(abs(Eta_lep))<1.4442;Nbjet_ISR==0;MAX(SIP3D_lep)<3.0;Njet_S==1;Mperp>=40"
+  cuts: "Nlep==1;MET>=150;Njet>0;PTISR>=400;RISR>=0.9;RISR<=0.95;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Nbjet_ISR==0;MAX(SIP3D_lep)<3.0;Njet_S==1;Mperp>=40"
   lep-cuts: |
     =0Bronze;
   predefined-cuts: "Cleaning;dphiMETV;"
   user-cuts: "minDR_ll;minM_ll;minMll_minDR_2D_low;minMll_minDR_2D_high;HEM_Veto;leadSjet_pt;"
 Bin1L_1J_Rl_Ml:
-  cuts: "Nlep==1;MET>=150;Njet>0;PTISR>=400;RISR>=0.9;RISR<=0.95;METORtrigger==1;EventFilter==1;PassesJVM==1;MAX(abs(Eta_lep))<2.1;MIN(abs(Eta_lep))<1.4442;Nbjet_ISR==0;MAX(SIP3D_lep)<3.0;Njet_S==1;Mperp<40"
+  cuts: "Nlep==1;MET>=150;Njet>0;PTISR>=400;RISR>=0.9;RISR<=0.95;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Nbjet_ISR==0;MAX(SIP3D_lep)<3.0;Njet_S==1;Mperp<40"
   lep-cuts: |
     =0Bronze;
   predefined-cuts: "Cleaning;dphiMETV;"
   user-cuts: "minDR_ll;minM_ll;minMll_minDR_2D_low;minMll_minDR_2D_high;HEM_Veto;leadSjet_pt;"
 Bin1L_1J_Rh_Mh:
-  cuts: "Nlep==1;MET>=150;Njet>0;PTISR>=400;RISR>0.95;RISR<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;MAX(abs(Eta_lep))<2.1;MIN(abs(Eta_lep))<1.4442;Nbjet_ISR==0;MAX(SIP3D_lep)<3.0;Njet_S==1;Mperp>=40"
+  cuts: "Nlep==1;MET>=150;Njet>0;PTISR>=400;RISR>0.95;RISR<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Nbjet_ISR==0;MAX(SIP3D_lep)<3.0;Njet_S==1;Mperp>=40"
   lep-cuts: |
     =0Bronze;
   predefined-cuts: "Cleaning;dphiMETV;"
   user-cuts: "minDR_ll;minM_ll;minMll_minDR_2D_low;minMll_minDR_2D_high;HEM_Veto;leadSjet_pt;"
 Bin1L_1J_Rh_Ml:
-  cuts: "Nlep==1;MET>=150;Njet>0;PTISR>=400;RISR>0.95;RISR<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;MAX(abs(Eta_lep))<2.1;MIN(abs(Eta_lep))<1.4442;Nbjet_ISR==0;MAX(SIP3D_lep)<3.0;Njet_S==1;Mperp<40"
+  cuts: "Nlep==1;MET>=150;Njet>0;PTISR>=400;RISR>0.95;RISR<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Nbjet_ISR==0;MAX(SIP3D_lep)<3.0;Njet_S==1;Mperp<40"
   lep-cuts: |
     =0Bronze;
   predefined-cuts: "Cleaning;dphiMETV;"
   user-cuts: "minDR_ll;minM_ll;minMll_minDR_2D_low;minMll_minDR_2D_high;HEM_Veto;leadSjet_pt;"
 Bin1L_2J_Rl_Mh:
-  cuts: "Nlep==1;MET>=150;Njet>0;PTISR>=400;RISR>=0.9;RISR<=0.95;METORtrigger==1;EventFilter==1;PassesJVM==1;MAX(abs(Eta_lep))<2.1;MIN(abs(Eta_lep))<1.4442;Nbjet_ISR==0;MAX(SIP3D_lep)<3.0;Njet_S>=2;Mperp>=80"
+  cuts: "Nlep==1;MET>=150;Njet>0;PTISR>=400;RISR>=0.9;RISR<=0.95;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Nbjet_ISR==0;MAX(SIP3D_lep)<3.0;Njet_S>=2;Mperp>=80"
   lep-cuts: |
     =0Bronze;
   predefined-cuts: "Cleaning;dphiMETV;"
   user-cuts: "minDR_ll;minM_ll;minMll_minDR_2D_low;minMll_minDR_2D_high;HEM_Veto;leadSjet_pt;"
 Bin1L_2J_Rl:
-  cuts: "Nlep==1;MET>=150;Njet>0;PTISR>=400;RISR>=0.9;RISR<=0.95;METORtrigger==1;EventFilter==1;PassesJVM==1;MAX(abs(Eta_lep))<2.1;MIN(abs(Eta_lep))<1.4442;Nbjet_ISR==0;MAX(SIP3D_lep)<3.0;Njet_S>=2"
+  cuts: "Nlep==1;MET>=150;Njet>0;PTISR>=400;RISR>=0.9;RISR<=0.95;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Nbjet_ISR==0;MAX(SIP3D_lep)<3.0;Njet_S>=2"
   lep-cuts: |
     =0Bronze;
   predefined-cuts: "Cleaning;dphiMETV;"
   user-cuts: "minDR_ll;minM_ll;minMll_minDR_2D_low;minMll_minDR_2D_high;HEM_Veto;leadSjet_pt;"
 Bin1L_2J_Rh:
-  cuts: "Nlep==1;MET>=150;Njet>0;PTISR>=400;RISR>0.95;RISR<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;MAX(abs(Eta_lep))<2.1;MIN(abs(Eta_lep))<1.4442;Nbjet_ISR==0;MAX(SIP3D_lep)<3.0;Njet_S>=2"
+  cuts: "Nlep==1;MET>=150;Njet>0;PTISR>=400;RISR>0.95;RISR<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Nbjet_ISR==0;MAX(SIP3D_lep)<3.0;Njet_S>=2"
   lep-cuts: |
     =0Bronze;
   predefined-cuts: "Cleaning;dphiMETV;"
