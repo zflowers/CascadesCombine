@@ -99,8 +99,8 @@ bool mergeJSONsFlattenedWithFileBreakdown(
             const std::string &group = kv.first;
             const auto &entries = getExpandedEntries(group);
             for (const auto &entry : entries) {
-                std::string p = getPrefix(entry);
-                if (!p.empty() && keyBase.rfind(p, 0) == 0) {
+                std::string entryBase = fs::path(entry).filename().string();
+                if (keyBase == entryBase) {
                     return group;
                 }
             }

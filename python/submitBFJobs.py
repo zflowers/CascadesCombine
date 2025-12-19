@@ -29,7 +29,7 @@ DEFAULT_MAX_RETRIES = 8
 DEFAULT_PER_SCHEDD_LIMIT = 3
 
 def make_cmssw_runtime_tarball(logs_dir):
-    """
+    """ 
     Create a fresh CMSSW runtime tarball in logs_dir.
     Returns the path to the tarball.
     """
@@ -43,9 +43,20 @@ def make_cmssw_runtime_tarball(logs_dir):
     items = [
         "src/CombineHarvester",
         "src/HiggsAnalysis",
-         f"lib/{os.environ['SCRAM_ARCH']}",
+        f"lib/{os.environ['SCRAM_ARCH']}",
     ]
-    cmd = ["tar", "czf", str(tarball), "-C", cmssw_base, *items]
+    exclude_items = [
+        ".git/",
+    ]
+    cmd = [
+        "tar", "czf", str(tarball),
+        "-C", cmssw_base,
+    ]
+    # Add --exclude flags
+    for ex in exclude_items:
+        cmd.append(f"--exclude={ex}")
+    # Add items to archive
+    cmd.extend(items)
     subprocess.check_call(cmd)
     print(f"[condor] CMSSW runtime tarball created at {tarball}", flush=True)
     return tarball

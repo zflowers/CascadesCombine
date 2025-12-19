@@ -434,48 +434,34 @@ struct BaseNodeHandle {
     ROOT::RDF::RNode node;                // node built from *df
 };
 
-// Small functor for computing per-event lumi
-struct EventLumi {
-    bool is_data;
-    int year;
-    double fullLumi;
-    double hemLumi;
-    bool is2018;
-
-    EventLumi(bool data, int y, double fLumi, double hLumi)
-        : is_data(data), year(y), fullLumi(fLumi), hemLumi(hLumi), is2018(y==2018) {}
 // https://cms-talk.web.cern.ch/t/question-about-hem15-16-issue-in-2018-ultra-legacy/38654/8?u=gagarwal
-    double operator()(int runnum, bool hem_veto) const {
-        if (is_data) return 1.0;
-        //return fullLumi; // hack until we have v7 samples fully ready
-			 // in v7 we will apply the below code and setup
-			 // the LumiDict so that 2018 signal gets the
-			 // "nominal" for 18 (~59-ish) and we use other
-			 // Run2 years to scale up to Run3 years
-        return (is2018 && hem_veto) ? hemLumi : fullLumi;
-    }
-};
-
 // Small functor for computing pass_HEM
 struct PassHEM {
     bool is_data;
-    int year;
     bool is2018;
-
-    PassHEM(bool data, int y) : is_data(data), year(y), is2018(y==2018) {}
-
-    bool operator()(int runnum, bool hem_veto) const {
-        if (is_data && is2018 && runnum >= 319077 && hem_veto) return false;
-        else return true;
+    Long64_t hemModulo;  // apply veto every Nth event
+    PassHEM(bool data, int y, double fullLumi, double hemLumi)
+        : is_data(data), is2018(y==2018), hemModulo(0)
+    {
+        if (!is_data && is2018 && fullLumi > 0.0) {
+            double frac = hemLumi / fullLumi;
+            double fracRounded = std::round(frac * 100.0) / 100.0;
+            hemModulo = static_cast<Long64_t>(std::round(1.0 / fracRounded));
+            if (hemModulo < 1) hemModulo = 1;
+        }
     }
-};
-
-// Small functor for weight scaling using event_lumi
-struct WeightScaled {
-    bool is_data;
-    WeightScaled(bool data) : is_data(data) {}
-    double operator()(double w, double event_lumi) const {
-        return is_data ? 1.0 : w * event_lumi;
+    bool operator()(Long64_t eventnum, int runnum, bool hem_veto) const {
+        // --- DATA ---
+        if (is_data) {
+            if (is2018 && runnum >= 319077 && hem_veto)
+                return false;
+            return true;
+        }
+        // --- MC ---
+        if (!is2018 || !hem_veto)
+            return true;
+        // Apply HEM veto to a fraction of events
+        return (eventnum % hemModulo) != 0;
     }
 };
 
@@ -498,20 +484,25 @@ static BaseNodeHandle MakeBaseNode(const std::string &tree_name,
     const double hemLumi  = ST.LumiDict.at("HEM_LUMI"); // assume key exists
 
     // Instantiate functors
-    EventLumi eventLumi(is_data, year, fullLumi, hemLumi);
-    PassHEM passHEM(is_data, year);
-    WeightScaled weightScaled(is_data);
+    PassHEM passHEM(is_data, year, fullLumi, hemLumi);
 
     ROOT::RDF::RNode node = (*df)
-        // event-by-event lumi and HEM pass flag
-        .Define("event_lumi", eventLumi, {"runnum", "HEM_Veto"})
-        .Define("pass_HEM",   passHEM,   {"runnum", "HEM_Veto"})
-
-        // scaled weights now include event_lumi directly
-        .Define("weight_scaled_raw",  weightScaled, {"weight", "event_lumi"})
+        .Define("pass_HEM", passHEM, {"eventnum", "runnum", "HEM_Veto"})
+        .Define("event_lumi",
+            [is_data, Lumi]() {
+                return is_data ? 1.0 : Lumi;
+            })
+        .Define("weight_scaled_raw",
+            [is_data](double w, double lumi) {
+                return is_data ? 1.0 : w * lumi;
+            },
+            {"weight", "event_lumi"})
         .Define("weight_sq_scaled_raw",
-            [weightScaled](double w2, double el){ return weightScaled(w2, el) * el; },
+            [is_data](double w2, double lumi) {
+                return is_data ? 1.0 : w2 * lumi * lumi;
+            },
             {"weight2", "event_lumi"})
+
     ;
 
     node = MultiSystWeights(node, is_data, year);

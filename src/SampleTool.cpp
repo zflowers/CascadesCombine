@@ -1488,7 +1488,7 @@ void SampleTool::WriteLatexTablesForGroups(const std::vector<std::string>& group
                 << "    \\centering\n"
                 << "    \\addtolength{\\leftskip}{-2cm}\n"
                 << "    \\addtolength{\\rightskip}{-2cm}\n"
-                << "    \\begin{tabular}{c|l|l} {\\textbf{process}}  & {\\textbf{" << group << " " << yearSuffix << "}} &  {\\textbf{$\\sigma$}} $pb^{-1}$ \\\\ \\hline\n";
+                << "    \\begin{tabular}{c|l|l} {\\textbf{process}}  & {\\textbf{" << group << " " << yearSuffix << "}} &  {\\textbf{$\\sigma$}} [pb$^{-1}$] \\\\ \\hline\n";
 
             // The authoritative file list for this groupKey (this defines membership)
             const stringlist &groupFiles = MasterDict.at(groupKey);
@@ -1555,6 +1555,15 @@ void SampleTool::WriteLatexTablesForGroups(const std::vector<std::string>& group
 
                     // file basename for the second column
                     std::string fname = basename_of(fpath);
+                    
+                    // strip everything from "_Summer" onward
+                    size_t summerPos = fname.find("_Summer");
+                    if (summerPos != std::string::npos) {
+                        fname = fname.substr(0, summerPos);
+                    }
+                    
+                    // make LaTeX-safe
+                    fname = std::regex_replace(fname, std::regex("_"), "\\_");
 
                     if (firstRowForProc) {
                         out << "        " << procName << "&" << fname << " & " << sigoss.str() << " \\\\\n";

@@ -302,7 +302,7 @@ std::vector<std::string> BuildFit::WriteJsonAsFlatHists(
             if (!isData && !BFTool::ContainsAnySubstring(procOrig, sigkeys)) {
                 binTotal += sumW;
                 binRaw   += static_cast<int>(nRaw + 0.5);
-            } else {
+            } else if (isData) {
                 binData = static_cast<int>(nRaw);
             }
 
