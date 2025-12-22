@@ -106,15 +106,38 @@ ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<st
     cuts[cut_minMll_gt1.name] = cut_minMll_gt1;
 
     if (do_2Dll_low && !node.HasColumn("pass2DLeptonCut_low")) {
-        node = node.Define("pass2DLeptonCut_low",
-            [](double mll, double dr) -> bool {
+        node = node.Define(
+            "pass2DLeptonCut_low",
+            [](const std::vector<double> &pt,
+               const std::vector<double> &eta,
+               const std::vector<double> &phi,
+               const std::vector<double> &mass) -> bool {
     
-                // Equation of the boundary line:
-                double mll_min = -1.0 * dr + 1.5; // line from Derek
-                if (mll_min < 0) mll_min = 0;
-                return mll > mll_min;
+                size_t n = std::min({pt.size(), eta.size(), phi.size(), mass.size()});
+                if (n < 2) return true; // no pair so pass
+    
+                for (size_t i = 0; i + 1 < n; ++i) {
+                    TLorentzVector li;
+                    li.SetPtEtaPhiM(pt[i], eta[i], phi[i], mass[i]);
+    
+                    for (size_t j = i + 1; j < n; ++j) {
+                        TLorentzVector lj;
+                        lj.SetPtEtaPhiM(pt[j], eta[j], phi[j], mass[j]);
+    
+                        double dr  = li.DeltaR(lj);
+                        double mll = (li + lj).M();
+    
+                        double mll_min = -1.0 * dr + 1.5;
+                        if (mll_min < 0.0) mll_min = 0.0;
+    
+                        // If ANY pair fails -> event fails
+                        if (mll <= mll_min)
+                            return false;
+                    }
+                }
+                return true; // all pairs passed
             },
-            {"minMll", "minDeltaR_leps"}
+            {"PT_lep","Eta_lep","Phi_lep","M_lep"}
         );
     }
 

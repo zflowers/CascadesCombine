@@ -21,29 +21,40 @@ SKIP_CUTFLOW = False
 # Edit this list to the run ids (directory names under runs/) you want processed.
 # If this list is empty, the script will auto-discover all run directories and process them.
 RUN_IDS = [
-"run_NSFProposal_v4_November28_2025_1121",
-"run_NSFProposal_v4_bkg_November28_2025_1122",
-"run_NSFProposal_v4_sig_November28_2025_1124",
+"run_Cascades_2L_0J_lPTISR_Regions_Gold_v339_December20_2025_1027",
+"run_Cascades_2L_0J_hPTISR_Regions_Gold_v339_December20_2025_1029",
+"run_Cascades_2L_1J_lPTISR_Regions_Gold_v339_December20_2025_1030",
+"run_Cascades_2L_1J_hPTISR_Regions_Gold_v339_December20_2025_1031",
+"run_Cascades_3L_0J_lPTISR_Regions_Gold_v339_December20_2025_1032",
+"run_Cascades_3L_0J_hPTISR_Regions_Gold_v339_December20_2025_1034",
+"run_Cascades_3L_1J_lPTISR_Regions_Gold_v339_December20_2025_1033",
+"run_Cascades_3L_1J_hPTISR_Regions_Gold_v339_December20_2025_1036",
+"run_Cascades_4L_Regions_Gold_v339_December20_2025_1037",
+"run_Cascades_2L_0J_lPTISR_Regions_Silver_v339_December20_2025_1038",
+"run_Cascades_2L_0J_hPTISR_Regions_Silver_v339_December20_2025_1039",
+"run_Cascades_2L_1J_lPTISR_Regions_Silver_v339_December20_2025_1040",
+"run_Cascades_2L_1J_hPTISR_Regions_Silver_v339_December20_2025_1042",
+"run_Cascades_3L_0J_lPTISR_Regions_Silver_v339_December20_2025_1043",
+"run_Cascades_3L_0J_hPTISR_Regions_Silver_v339_December20_2025_1045",
+"run_Cascades_3L_1J_lPTISR_Regions_Silver_v339_December20_2025_1044",
+"run_Cascades_3L_1J_hPTISR_Regions_Silver_v339_December20_2025_1046",
+"run_Cascades_4L_Regions_Silver_v339_December20_2025_1048",
+"run_Cascades_2L_0J_lPTISR_Regions_Bronze_v339_December20_2025_1049",
+"run_Cascades_2L_0J_hPTISR_Regions_Bronze_v339_December20_2025_1050",
+"run_Cascades_2L_1J_lPTISR_Regions_Bronze_v339_December20_2025_1051",
+"run_Cascades_2L_1J_hPTISR_Regions_Bronze_v339_December20_2025_1052",
+"run_Cascades_3L_0J_lPTISR_Regions_Bronze_v339_December20_2025_1053",
+"run_Cascades_3L_0J_hPTISR_Regions_Bronze_v339_December20_2025_1056",
+"run_Cascades_3L_1J_lPTISR_Regions_Bronze_v339_December20_2025_1055",
+"run_Cascades_3L_1J_hPTISR_Regions_Bronze_v339_December20_2025_1057",
+"run_Cascades_4L_Regions_Bronze_v339_December20_2025_1058",
+"run_Cascades_Regions_top_sideband_Bronze_v339_December20_2025_1059",
+"run_Cascades_Regions_top_sideband_Silver_v339_December20_2025_1101",
+"run_Cascades_Regions_top_sideband_Gold_v339_December20_2025_1102",
+"run_Cascades_CRs_Impacts_FD_234L_Bronze_v339_December19_2025_1120",
+"run_Cascades_Regions_234L_v339_December19_2025_1118",
 
-
-#"run_Cascades_2L_0J_lPTISR_Regions_Gold_v263_November13_2025_2125",
-#"run_Cascades_2L_0J_hPTISR_Regions_Gold_v263_November13_2025_2125",
-#"run_Cascades_2L_1J_lPTISR_Regions_Gold_v263_November13_2025_2126",
-#"run_Cascades_2L_1J_hPTISR_Regions_Gold_v263_November13_2025_2127",
-#"run_Cascades_3L_Regions_Gold_v263_November13_2025_2129",
-#"run_Cascades_4L_Regions_Gold_v263_November13_2025_2130",
-#"run_Cascades_2L_0J_lPTISR_Regions_Silver_v263_November13_2025_2131",
-#"run_Cascades_2L_0J_hPTISR_Regions_Silver_v263_November13_2025_2132",
-#"run_Cascades_2L_1J_lPTISR_Regions_Silver_v263_November13_2025_2133",
-#"run_Cascades_2L_1J_hPTISR_Regions_Silver_v263_November13_2025_2134",
-#"run_Cascades_3L_Regions_Silver_v263_November13_2025_2136",
-#"run_Cascades_4L_Regions_Silver_v263_November13_2025_2137",
-#"run_Cascades_2L_0J_lPTISR_Regions_Bronze_v263_November13_2025_2138",
-#"run_Cascades_2L_0J_hPTISR_Regions_Bronze_v263_November13_2025_2139",
-#"run_Cascades_2L_1J_lPTISR_Regions_Bronze_v263_November13_2025_2140",
-#"run_Cascades_2L_1J_hPTISR_Regions_Bronze_v263_November13_2025_2142",
-#"run_Cascades_3L_Regions_Bronze_v263_November13_2025_2143",
-#"run_Cascades_4L_Regions_Bronze_v263_November13_2025_2144",
+#"run_ANPlots_v0_December20_2025_0934",
 ]
 
 # -------------------------
@@ -497,6 +508,9 @@ end tell
 # -------------------------
 # Bin processing
 # -------------------------
+# -------------------------
+# Bin processing (updated to handle pre/post-fit pairs)
+# -------------------------
 def process_bin_dir(bin_dir: Path):
     bin_name = bin_dir.name
     pdf_files = sorted(bin_dir.glob("*.pdf"))
@@ -511,6 +525,38 @@ def process_bin_dir(bin_dir: Path):
             parsed["bin"] = bin_name
         parsed_list.append(parsed)
 
+    # --- Detect special prefit / fit_b pairs ---
+    token_prefit = "can_stack_shapes_prefit_"
+    token_fitb = "can_stack_shapes_fit_b_"
+
+    # map stems to entries for quick lookup
+    stems_map = {ent["path"].stem: ent for ent in parsed_list}
+
+    pairs = []  # list of (prefit_entry, fitb_entry)
+    used_stems = set()
+    for stem, ent in list(stems_map.items()):
+        if stem in used_stems:
+            continue
+        if token_prefit in stem:
+            counterpart = stem.replace(token_prefit, token_fitb, 1)
+            if counterpart in stems_map:
+                pairs.append((stems_map[stem], stems_map[counterpart]))
+                used_stems.add(stem); used_stems.add(counterpart)
+        elif token_fitb in stem:
+            counterpart = stem.replace(token_fitb, token_prefit, 1)
+            if counterpart in stems_map:
+                # ensure prefit is first in tuple
+                pairs.append((stems_map[counterpart], stems_map[stem]))
+                used_stems.add(stem); used_stems.add(counterpart)
+
+    # If any special pairs found, we will *not* add the folder title slide (per request).
+    special_pairs_found = len(pairs) > 0
+
+    # Remove paired entries from parsed_list so they don't get processed again below
+    if used_stems:
+        parsed_list = [p for p in parsed_list if p["path"].stem not in used_stems]
+
+    # classify remaining PDFs as before
     stack_pdfs = [d for d in parsed_list if d["is_stack"]]
     overlay_pdfs = [d for d in parsed_list if d["is_overlay"]]
     two_d = [d for d in parsed_list if d["is_2d"] and not d["is_stack"] and not d["is_overlay"] and not d["is_cutflow"] and (d.get("proc") in prefix_order)]
@@ -521,9 +567,30 @@ def process_bin_dir(bin_dir: Path):
     for var in var_to_entries:
         var_to_entries[var].sort(key=lambda e: prefix_order.index(e["proc"]) if e["proc"] in prefix_order else 999)
 
-    if not SKIP_CUTFLOW:
+    # If no special pair was found, keep the original behavior of adding a folder/bin title slide.
+    # If special pair(s) found we *skip* adding the bin title slide (per your step 4).
+    if not SKIP_CUTFLOW and not special_pairs_found:
         make_applescript_call_add_folder_title(bin_name, str(cutflow_pdf) if cutflow_pdf else None)
+    else:
+        # If there is a cutflow and you still want to show it even when pair-handling is active,
+        # uncomment the next two lines. For now we skip the folder-title slide entirely when pairs are present.
+        # if cutflow_pdf:
+        #     make_applescript_call_add_single_large(str(cutflow_pdf), bin_name.replace("_", " "))
+        pass
 
+    # --- Add special pre/post-fit slides (prefit first, then fit_b) ---
+    # Use the bin name (underscores -> spaces) and append "Pre-Fit" / "Post-Fit"
+    if special_pairs_found:
+        bin_title_base = bin_name.replace("_", " ")
+        for pre_ent, fitb_ent in pairs:
+            # Pre-Fit slide
+            pre_title = f"{bin_title_base} Pre-Fit"
+            make_applescript_call_add_single_large(str(pre_ent["path"]), pre_title)
+            # Post-Fit slide (fit_b)
+            post_title = f"{bin_title_base} Post-Fit"
+            make_applescript_call_add_single_large(str(fitb_ent["path"]), post_title)
+
+    # --- Continue with normal processing for remaining files ---
     for sp in stack_pdfs:
         var_title = sp.get("var") or "stack"
         make_applescript_call_add_single_large(str(sp["path"]), format_var_title(var_title))
@@ -696,7 +763,9 @@ def main():
                 "Cascades_220_220_209_200_190_180",
                 "SMS_TChiWZ_SMS_300_290",
                 "SMS_TChiWZ_SMS_300_270",
-                "Wjets", "QCD", "ZInv",
+                #"Wjets", "QCD", "ZInv",
+                #"Wjets",  "top", "boson",
+                "Wjets_2018",  "top_2018", "boson_2018",
             ]
 
         if "Gluinos" in run_id:
