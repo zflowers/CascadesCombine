@@ -158,10 +158,10 @@ SampleTool::SampleTool(){
   MasterDict["ttbar"] = mergeEntriesList(
     MasterDict,
     {
-      "ttbar_2023BPix",
-      "ttbar_2023",
+      //"ttbar_2023BPix",
+      //"ttbar_2023",
       "ttbar_2022EE",
-      "ttbar_2022",
+      //"ttbar_2022",
       "ttbar_2018",
       "ttbar_2017",
       "ttbar_2016",
@@ -383,8 +383,10 @@ SampleTool::SampleTool(){
   MasterDict["DY"] = mergeEntriesList(
     MasterDict,
     {
-      "DY_2023BPix",
-      "DY_2022",
+      //"DY_2023BPix",
+      //"DY_2023",
+      "DY_2022EE",
+      //"DY_2022",
       "DY_2018",
       "DY_2017",
       "DY_2016",
@@ -667,8 +669,10 @@ SampleTool::SampleTool(){
   MasterDict["DBTB"] = mergeEntriesList(
     MasterDict,
     {
-      "DBTB_2023BPix",
-      "DBTB_2022",
+      //"DBTB_2023BPix",
+      //"DBTB_2023",
+      "DBTB_2022EE",
+      //"DBTB_2022",
       "DBTB_2018",
       "DBTB_2017",
       "DBTB_2016",
@@ -967,7 +971,7 @@ SampleTool::SampleTool(){
     {
       //"Wjets_2023BPix",
       //"Wjets_2023",
-      //"Wjets_2022EE",
+      "Wjets_2022EE",
       //"Wjets_2022",
       "Wjets_2018",
       "Wjets_2017",

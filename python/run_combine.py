@@ -980,10 +980,11 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             idle_time_seconds, idle_time_seconds/60, idle_time_seconds/3600), flush=True)
         print("Time for condor processing: {:.2f} seconds = {:.2f} minutes = {:.2f} hours".format(
             condor_time_seconds, condor_time_seconds/60, condor_time_seconds/3600), flush=True)
-    print("Time for all BF condor jobs to start running: {0:.2f} seconds = {1:.2f} minutes = {2:.2f} hours".format(
-        idle_time_seconds_BF, idle_time_seconds_BF/60, idle_time_seconds_BF/3600), flush=True)
-    print("Total for BF condor processing: {0:.2f} seconds = {1:.2f} minutes = {2:.2f} hours".format(
-        condor_time_seconds_BF, condor_time_seconds_BF/60, condor_time_seconds_BF/3600), flush=True)
+    if not args.only_yields:
+        print("Time for all BF condor jobs to start running: {0:.2f} seconds = {1:.2f} minutes = {2:.2f} hours".format(
+            idle_time_seconds_BF, idle_time_seconds_BF/60, idle_time_seconds_BF/3600), flush=True)
+        print("Total for BF condor processing: {0:.2f} seconds = {1:.2f} minutes = {2:.2f} hours".format(
+            condor_time_seconds_BF, condor_time_seconds_BF/60, condor_time_seconds_BF/3600), flush=True)
     print("Total time: {0:.2f} seconds = {1:.2f} minutes = {2:.2f} hours".format(
         total_time_seconds, total_time_seconds/60, total_time_seconds/3600), flush=True)
 

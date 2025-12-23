@@ -1029,9 +1029,9 @@ void Plot_EventCount2D(TH2* h, const std::string &mode,
     h->GetXaxis()->SetTitleFont(42); h->GetXaxis()->SetTitleSize(0.06); h->GetXaxis()->SetTitleOffset(1.06);
     h->GetXaxis()->SetLabelFont(42);
 
-    float XLabelSize = 0.045;
-    if (h->GetNbinsX() > 10) XLabelSize = XLabelSize - 0.001f * (h->GetNbinsX() - 10);
-    if (XLabelSize < 0.015) XLabelSize = 0.015;
+    float XLabelSize = 0.04;
+    if (h->GetNbinsX() > 5) XLabelSize = XLabelSize - 0.001f * (h->GetNbinsX() - 10);
+    if (XLabelSize < 0.012) XLabelSize = 0.012;
     h->GetXaxis()->SetLabelSize(XLabelSize);
     h->GetYaxis()->CenterTitle();
     h->GetYaxis()->SetTitleFont(42); h->GetYaxis()->SetTitleSize(0.06); h->GetYaxis()->SetTitleOffset(1.1);

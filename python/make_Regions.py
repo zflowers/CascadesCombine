@@ -1,395 +1,238 @@
 #!/usr/bin/env python3
 """
-Make Silver/Bronze YAMLs and optional lPTISR Golds from Gold YAMLs; enforce Regions predef/user
-and ensure a baseline preselection of cuts in each bin's `cuts:` string.
-
-Behavior:
--- For *_Gold.yaml files (in config/bin_cfgs by default):
--  1) If filename contains _hPTISR and is 2L or 3L, create a corresponding lPTISR Gold:
--     - 2L: _P350 -> _P250 and PTISR_LEP>=350 -> PTISR_LEP>=250;PTISR_LEP<350
--     - 3L: _P300 -> _P200 and PTISR_LEP>=300 -> PTISR_LEP>=200;PTISR_LEP<300
--  2) For any file whose filename starts with "Regions" (case-insensitive),
--     set every bin's `predefined-cuts` and `user-cuts` to the hard-coded strings below.
--  3) Produce Silver and Bronze YAMLs (Gold -> Silver / Bronze) with lep-cuts modified
--     according to NEW_LEP_CUTS mapping.
--     CUTS_PRESELECTION: list of cut substrings (include trailing ';') which will be ensured to appear in each bin's `cuts:` line.
--     REMOVE_CUTS: list of cut substrings (include trailing ';') which will be removed if present.
-
-Run inside CMSSW after cmsenv with ruamel.yaml installed.
-
-CLI flags:
-  --no-preselection    : disable enforcing CUTS_PRESELECTION
-  --remove "A;B;C;"    : semicolon-separated string of cuts to remove (overrides REMOVE_CUTS default)
-  --dry-run            : don't write files; only print actions
+Create baseline Regions_2L_0J_hPTISR_Gold.yaml and Regions_2L_1J_hPTISR_Gold.yaml
+from scratch using tunable RISR and Mperp bin definitions.
+Run inside CMSSW (after cmsenv) where ruamel.yaml is available.
 """
 from pathlib import Path
-import sys
-import re
 from ruamel.yaml import YAML
 from ruamel.yaml.scalarstring import PreservedScalarString
+from ruamel.yaml.scalarstring import PlainScalarString
+from ruamel.yaml.scalarstring import DoubleQuotedScalarString
+import argparse, os, subprocess
 
-# ----------------------------
-# User-tunable defaults below
-# ----------------------------
+# ------------------ CONFIGURATION ------------------
+OUTDIR = Path("config/bin_cfgs")
 
-# Baseline cuts to ensure are present in every bin's cuts string.
-# IMPORTANT: include the trailing semicolon in each substring so matching is unambiguous.
-CUTS_PRESELECTION = [
+# PTISR tag and cut used for high-PTISR baseline files
+PTISR_TAG = 350
+PTISR_CUT_STR = f"PTISR_LEP>={PTISR_TAG};"
+PTISR_PNAME = f"P{PTISR_TAG}"
+
+# baseline parts of the cuts (keeps consistent with examples)
+BASE_CUTS_TOKENS = [
+    "Nlep==2;",
     "MET>=150;",
     "METORtrigger==1;",
     "EventFilter==1;",
     "PassesJVM==1;",
     "MIN(abs(Eta_lep))<1.4442;",
+    "Nbjet==0;",
+    "Njet>0;",
+    # S jet-dependent tokens added later
 ]
 
-# Cuts to remove if present. Empty by default; set e.g. ["PassesJVM==1;"] to remove.
-REMOVE_CUTS = [
-    # example: "PassesJVM==1;",
-]
+# baseline cuts
+PREDEFINED_CUTS = "Cleaning_LEP;dphiMETV_LEP;"
+USER_CUTS = "minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"
+COMMON_LEP = ["=0OSSF|mass>=3|mass<=3.2;", "=2Gold;"]
 
-# mapping for lep-cuts transforms
-NEW_LEP_CUTS = {
-    "Silver": {
-        "2L": ["<=1Gold;", "=0Bronze;"],
-        "3L": [">=1Gold;", ">=1Silver;", "=0Bronze;"],
-        "4L": [">=1Gold;", ">=1Silver;", ">=1Bronze;"],
+# S jet categories to build baseline gold files for (0J and 1J)
+JET_CONFIGS = {
+    "0J": {
+        "njet_cond": "Njet_S==0;",
+        "njet_note": "Njet_S==0;",
     },
-    "Bronze": {
-        "2L": ["=1Bronze;"],
-        "3L": [">=1Gold;", "=1Bronze;"],
-        "4L": [">=1Gold;", "=2Bronze;"],
+    "1J": {
+        "njet_cond": "Njet_S>=1;",
+        "njet_note": "Njet_S>=1;",
     },
 }
 
-# Hard-coded strings for Regions* files
-REGIONS_PREDEFINED_CUTS = "Cleaning_LEP;dphiMETV_LEP;"
-REGIONS_USER_CUTS = "minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"
+# RISR binning and Mperp thresholds
+# Each dict: name, min, max, Mh threshold, Mm range low/high, Ml upper bound
+RISR_BINS = [
+    #{"name": "R95", "min": 0.95, "max": 1.0,  "Mh": 20, "Mm_lo": 10, "Mm_hi": 20, "Ml_hi": 10},
+    #{"name": "R9",  "min": 0.9,  "max": 0.95, "Mh": 30, "Mm_lo": 15, "Mm_hi": 30, "Ml_hi": 15},
+    #{"name": "R8",  "min": 0.8,  "max": 0.9,  "Mh": 40, "Mm_lo": 20, "Mm_hi": 40, "Ml_hi": 20},
+    #{"name": "R7",  "min": 0.7,  "max": 0.8,  "Mh": 50, "Mm_lo": 30, "Mm_hi": 50, "Ml_hi": 30},
 
-# ----------------------------
-# Helper functions
-# ----------------------------
+    {"name": "R95", "min": 0.95, "max": 1.0,  "Mh": 20, "Mm_lo": 10, "Mm_hi": 20, "Ml_hi": 10},
+    {"name": "R9",  "min": 0.9,  "max": 0.95, "Mh": 25, "Mm_lo": 15, "Mm_hi": 25, "Ml_hi": 15},
+    {"name": "R85", "min": 0.85, "max": 0.9,  "Mh": 30, "Mm_lo": 20, "Mm_hi": 30, "Ml_hi": 20},
+    {"name": "R8",  "min": 0.8,  "max": 0.85, "Mh": 35, "Mm_lo": 25, "Mm_hi": 35, "Ml_hi": 25},
+    {"name": "R75", "min": 0.75, "max": 0.8,  "Mh": 40, "Mm_lo": 30, "Mm_hi": 40, "Ml_hi": 30},
+    {"name": "R7",  "min": 0.7,  "max": 0.75, "Mh": 45, "Mm_lo": 35, "Mm_hi": 45, "Ml_hi": 35},
+]
 
-def detect_mult_from_key(key: str):
-    """Return '2L'|'3L'|'4L' or None."""
-    for m in ("2L", "3L", "4L"):
-        if key.startswith(f"Bin{m}_"):
-            return m
-    for m in ("2L", "3L", "4L"):
-        if f"Bin{m}_" in key:
-            return m
-    return None
+# Flavor splits to produce per RISR Mperp
+# Each flavor entry: suffix_key (used in bin name), lep_cuts_extra_lines (list)
+FLAVOR_SPLITS = [
+    ("OS_ee", ["=1OSSF;", "=2Elec;"]),
+    ("OS_emu", ["=1OSOF;"]),          # mixed flavors
+    ("OS_mumu", ["=1OSSF;", "=2Muon;"]),
+    ("SS", ["AllSS;"]),               # inclusive SS
+]
 
-def normalize_cuts_string(cuts_text: str):
-    """
-    Normalize a cuts string: split on semicolons, strip whitespace,
-    rejoin with single semicolons and ensure trailing semicolon if non-empty.
-    """
-    if cuts_text is None:
-        return ""
-    s = str(cuts_text)
-    # remove surrounding quotes if ruamel kept them visually, but will keep raw string handling
-    parts = [p.strip() for p in s.split(';') if p.strip() != ""]
-    if not parts:
-        return ""
-    return ";".join(parts) + ";"
+# Additional constant tokens shared across generated bins
+COMMON_ADDITIONAL = "Njet_S"  # not used directly; kept for reference
+# ---------------------------------------------------
 
-def ensure_preselection_on_entry(entry, preselection_list):
-    """
-    Ensure every substring in preselection_list appears in entry['cuts'].
-    Returns True if modified.
-    """
-    if not isinstance(entry, dict):
-        return False
-    cuts = str(entry.get("cuts", "") or "")
-    orig = cuts
-    # Normalize existing cuts for robust substring checks
-    # but keep the original casing/format for parts untouched
-    # use normalized reconstruction at the end.
-    normalized = normalize_cuts_string(cuts)
-    present_parts = [p for p in normalized.split(';') if p]
-    changed = False
-    for req in preselection_list:
-        # req should include trailing ';' match presence by exact substring without trailing whitespace
-        req_stripped = req.strip()
-        if req_stripped.endswith(';'):
-            req_core = req_stripped[:-1]
-        else:
-            req_core = req_stripped
-        if req_core not in present_parts:
-            present_parts.append(req_core)
-            changed = True
+yaml = YAML()
+yaml.default_flow_style = False
+yaml.indent(mapping=2, sequence=4, offset=2)
+yaml.width = 4096
+yaml.preserve_quotes = True
 
-    if changed:
-        newcuts = ";".join(present_parts) + ";"
-        entry["cuts"] = newcuts
-        return True
-    return False
+def format_rISR_condition(r):
+    """Return RISR_LEP condition string and a human readable label part"""
+    if r["max"] >= 1.0:
+        # R9 special case with <=1.
+        cond = f"RISR_LEP>={r['min']};RISR_LEP<=1.;"
+    else:
+        cond = f"RISR_LEP>={r['min']};RISR_LEP<{r['max']};"
+    return cond
 
-def remove_cuts_from_entry(entry, remove_list):
+def make_mperp_cut_tokens(r, category):
     """
-    Remove any substrings in remove_list from entry['cuts'].
-    Returns True if modified.
+    category: "Mh" (high), "Mm" (mid), "Ml" (low)
+    returns (cut_string, name_fragment) where cut_string is appended to cuts and
+    name_fragment is used for the bin name (like M35 or M20_40 or Mlt20)
     """
-    if not isinstance(entry, dict):
-        return False
-    cuts = str(entry.get("cuts", "") or "")
-    normalized = normalize_cuts_string(cuts)
-    parts = [p for p in normalized.split(';') if p]
-    original_len = len(parts)
-    # for each removal, remove matching parts exactly (remove trailing semicolon assumed)
-    to_remove_cores = []
-    for r in remove_list:
-        rstr = r.strip()
-        if rstr.endswith(';'):
-            rcore = rstr[:-1]
-        else:
-            rcore = rstr
-        to_remove_cores.append(rcore)
-    parts = [p for p in parts if p not in to_remove_cores]
-    if len(parts) != original_len:
-        newcuts = ";".join(parts) + (";" if parts else "")
-        entry["cuts"] = newcuts
-        return True
-    return False
+    if category == "Mh":
+        cut = f"Mperp_LEP>={r['Mh']}"
+        name_frag = f"M{r['Mh']}"
+    elif category == "Mm":
+        cut = f"Mperp_LEP>={r['Mm_lo']};Mperp_LEP<{r['Mm_hi']}"
+        name_frag = f"M{r['Mm_lo']}_{r['Mm_hi']}"
+    elif category == "Ml":
+        # Ml is <= Ml_hi - use '<' style
+        cut = f"Mperp_LEP<{r['Ml_hi']}"
+        name_frag = f"Mlt{r['Ml_hi']}"
+    else:
+        raise ValueError("unknown category")
+    # ensure trailing semicolons in the returned string pieces
+    # if cut contains ';' already, preserve; otherwise add semicolon
+    if not cut.endswith(";"):
+        cut = cut + ";"
+    return cut, name_frag
 
-def enforce_common_cuts(doc):
-    """
-    Overwrite predefined-cuts and user-cuts for every bin in the document.
-    Operates in-place on the ruamel mapping.
-    """
-    for key, entry in doc.items():
-        if not isinstance(entry, dict):
+def assemble_cuts_string(base_tokens, ptisr_token, risr_token, jet_token, mperp_token):
+    """assemble and return a quoted cuts string."""
+    parts = []
+    parts.extend(base_tokens)
+    parts.append(ptisr_token)
+    parts.append(risr_token)
+    parts.append("METORtrigger==1;")
+    parts.append("EventFilter==1;")
+    parts.append("PassesJVM==1;")
+    # jet-specific token(s)
+    if jet_token:
+        parts.append(jet_token)
+    parts.append("MIN(abs(Eta_lep))<1.4442;")
+    parts.append("Nbjet==0;")
+    parts.append(mperp_token)
+    # remove duplicates while preserving order
+    seen = set()
+    out = []
+    for p in parts:
+        p = p.strip()
+        if p == "":
             continue
-        entry["predefined-cuts"] = REGIONS_PREDEFINED_CUTS
-        entry["user-cuts"] = REGIONS_USER_CUTS
+        # ensure it ends with semicolon
+        if not p.endswith(";"):
+            p = p + ";"
+        if p not in seen:
+            seen.add(p)
+            out.append(p)
+    return "".join(out)
 
-def transform_lep_cuts_ruamel(old_scalar, multiplicity, tier):
+def make_lep_cuts_block(common_lep_lines, flavor_extra):
     """
-    Replace any Gold marker lines in lep-cuts and prepend the new tier lines.
-    Returns a PreservedScalarString to keep block style.
+    common_lep_lines: list (e.g. ['=0OSSF|mass>=3|mass<=3.2;', '=2Gold;'])
+    flavor_extra: list, e.g. ['=1OSSF;', '=2Elec;'] or ['AllSS;']
+    returns a PreservedScalarString with proper newline endings
     """
-    old_text = "" if old_scalar is None else str(old_scalar)
-    old_lines = [ln.rstrip() for ln in old_text.splitlines() if ln.strip() != ""]
-    kept = [ln for ln in old_lines if "Gold" not in ln]
-    new_lines = NEW_LEP_CUTS[tier].get(multiplicity, [])
-    final = new_lines + kept
-    if not final:
-        return PreservedScalarString("")
-    return PreservedScalarString("\n".join(final) + "\n")
+    lines = []
+    for l in common_lep_lines:
+        if not l.endswith(";"):
+            l = l + ";"
+        lines.append(l)
+    for fe in flavor_extra:
+        if not fe.endswith(";"):
+            fe = fe + ";"
+        lines.append(fe)
+    # ensure newline-terminated block
+    return PreservedScalarString("\n".join(lines) + "\n")
 
-def make_lptisr_doc_ruamel(doc):
+def build_bins_for_jet(jtag, jet_conf):
     """
-    Produce a new ruamel CommentedMap for the lPTISR Gold version (operates on ruamel mapping).
+    Build dictionary of bins for a single jet tag (0J or 1J) for the hPTISR PTISR_TAG
     """
-    from ruamel.yaml.comments import CommentedMap
-    out = CommentedMap()
-    for key in list(doc.keys()):
-        value = doc[key]
-        entry = value.copy() if hasattr(value, "copy") else value
-        mult = None
-        if key.startswith("Bin2L_"):
-            mult = "2L"
-        elif key.startswith("Bin3L_"):
-            mult = "3L"
-        new_key = key
-        if mult == "2L" and "_P350" in key:
-            new_key = key.replace("_P350", "_P250")
-        if mult == "3L" and "_P300" in key:
-            new_key = key.replace("_P300", "_P200")
-        if isinstance(entry, dict) and "cuts" in entry:
-            old_text = str(entry.get("cuts", ""))
-            new_text = old_text
-            if mult == "2L":
-                new_text = new_text.replace(
-                    "PTISR_LEP>=350;", "PTISR_LEP>=250;PTISR_LEP<350;"
-                ).replace(
-                    "PTISR_LEP>=350", "PTISR_LEP>=250;PTISR_LEP<350"
+    out = {}
+    for r in RISR_BINS:
+        risr_cond = format_rISR_condition(r)
+        # generate three M categories: Mh, Mm, Ml
+        for mcat in ("Mh", "Mm", "Ml"):
+            mcut_token, mnamefrag = make_mperp_cut_tokens(r, mcat)
+            # for each flavor split produce bin entry
+            for (flav_key, flavor_lep_lines) in FLAVOR_SPLITS:
+                # name: Bin2L_Gold_{JTAG}_P{PTISR}_R{RNAME}_M{...}_{flav}
+                bin_key = f"Bin2L_Gold_{jtag}_{PTISR_PNAME}_{r['name']}_{mnamefrag}_{flav_key}"
+                # assemble cuts string
+                # jet_token differs between 0J and 1J
+                jet_token = jet_conf["njet_cond"]
+                cuts_txt = DoubleQuotedScalarString(
+                    assemble_cuts_string(
+                        BASE_CUTS_TOKENS,
+                        PTISR_CUT_STR,
+                        risr_cond,
+                        jet_token,
+                        mcut_token,
+                    )
                 )
-            if mult == "3L":
-                new_text = new_text.replace(
-                    "PTISR_LEP>=300;", "PTISR_LEP>=200;PTISR_LEP<300;"
-                ).replace(
-                    "PTISR_LEP>=300", "PTISR_LEP>=200;PTISR_LEP<300"
-                )
-            if new_text != old_text:
-                entry["cuts"] = new_text
-        out[new_key] = entry
-        try:
-            out.ca.items[new_key] = doc.ca.items[key]
-        except Exception:
-            pass
+                # flavor-specific additions
+                lep_block = make_lep_cuts_block(COMMON_LEP, flavor_lep_lines)
+                # add predefined and user cuts
+                predef = DoubleQuotedScalarString(PREDEFINED_CUTS)
+                user = DoubleQuotedScalarString(USER_CUTS)
+                out[bin_key] = {
+                    "cuts": cuts_txt,
+                    "lep-cuts": lep_block,
+                    "predefined-cuts": predef,
+                    "user-cuts": user,
+                }
     return out
 
-def process_ruamel_doc_for_tier(doc, tier):
-    """
-    Return a new ruamel mapping with Gold->tier in keys and lep-cuts transformed.
-    """
-    from ruamel.yaml.comments import CommentedMap
-    out = CommentedMap()
-    for key in list(doc.keys()):
-        value = doc[key]
-        new_key = key.replace("Gold", tier)
-        if hasattr(value, "copy"):
-            entry = value.copy()
+def write_yaml_map(filename: Path, mapping):
+    filename.parent.mkdir(parents=True, exist_ok=True)
+    with filename.open("w", encoding="utf-8") as f:
+        yaml.dump(mapping, f)
+    print("WROTE:", filename)
+
+def main(outdir: Path, dry_run=False):
+    # Build both 0J and 1J baseline Gold files
+    files_to_write = {}
+    for jtag, jconf in JET_CONFIGS.items():
+        doc_map = build_bins_for_jet(jtag, jconf)
+        fname = outdir / f"Regions_2L_{jtag}_{'hPTISR'}_Gold.yaml"
+        files_to_write[fname] = doc_map
+
+    # Write files
+    for path, doc in files_to_write.items():
+        if dry_run:
+            print("[DRY-RUN] would write", path, "with", len(doc), "bins")
         else:
-            entry = value
-        multiplicity = detect_mult_from_key(key)
-        if isinstance(entry, dict) and multiplicity is not None and "lep-cuts" in entry:
-            old_lep = entry.get("lep-cuts")
-            entry["lep-cuts"] = transform_lep_cuts_ruamel(old_lep, multiplicity, tier)
-        out[new_key] = entry
-        try:
-            out.ca.items[new_key] = doc.ca.items[key]
-        except Exception:
-            pass
-    return out
-
-# ----------------------------
-# Main processing
-# ----------------------------
-def main(indir="config/bin_cfgs", outdir=None, dry_run=False,
-         apply_preselection=True, remove_cuts_list=None):
-    indir = Path(indir)
-    outdir = Path(outdir) if outdir else indir
-    outdir.mkdir(parents=True, exist_ok=True)
-
-    yaml = YAML(typ="rt")
-    yaml.preserve_quotes = True
-    yaml.indent(mapping=2, sequence=4, offset=2)
-    yaml.width = 4096
-
-    remove_list = list(remove_cuts_list) if remove_cuts_list else list(REMOVE_CUTS)
-
-    gold_files = sorted(indir.glob("*_Gold.yaml"))
-    if not gold_files:
-        print("No *_Gold.yaml files found in", indir)
-        return 0
-
-    for gf in gold_files:
-        print("Processing Gold file:", gf.name)
-        with gf.open("r", encoding="utf-8") as f:
-            doc = yaml.load(f)
-
-        # If Regions* file, enforce the predefined/user cuts on the Gold doc immediately and write Gold back
-        if gf.name.lower().startswith("regions"):
-            print("  -> enforcing predefined-cuts and user-cuts for Regions file (Gold)")
-            enforce_common_cuts(doc)
-
-        # Ensure baseline preselection and/or removal operate on the *in-memory* doc BEFORE any writes
-        added_count = 0
-        removed_count = 0
-        if apply_preselection:
-            for key, entry in doc.items():
-                if isinstance(entry, dict):
-                    if ensure_preselection_on_entry(entry, CUTS_PRESELECTION):
-                        added_count += 1
-        if remove_list:
-            for key, entry in doc.items():
-                if isinstance(entry, dict):
-                    if remove_cuts_from_entry(entry, remove_list):
-                        removed_count += 1
-
-        if (apply_preselection and added_count > 0) or (remove_list and removed_count > 0):
-            print(f"  -> modified Gold in-memory cuts: +{added_count} bins had preselection added, -{removed_count} bins had removals")
-        else:
-            print("  -> no changes needed to Gold cuts for preselection/removals")
-
-        # If Regions* file, write updated Gold to disk so on-disk Gold is normalized
-        if gf.name.lower().startswith("regions"):
-            if not dry_run:
-                with gf.open("w", encoding="utf-8") as f:
-                    yaml.dump(doc, f)
-                print(f"  wrote updated Gold: {gf}")
-            else:
-                print(f"  [dry-run] would write updated Gold: {gf}")
-
-        # build list for later tier generation
-        process_list = [(doc, gf.name)]
-
-        # handle hPTISR -> lPTISR generation (use already-modified doc)
-        fname_lower = gf.name.lower()
-        is_hpt = ("_hptisr" in fname_lower)
-        is_2l = ("2l" in fname_lower)
-        is_3l = ("3l" in fname_lower)
-        if is_hpt and (is_2l or is_3l):
-            if "hPTISR" in gf.name:
-                l_name = gf.name.replace("hPTISR", "lPTISR")
-            elif "HPTISR" in gf.name:
-                l_name = gf.name.replace("HPTISR", "lPTISR")
-            else:
-                l_name = gf.name.replace("_hptisr", "_lptisr")
-            # create l_doc from the already-modified Gold doc
-            l_doc = make_lptisr_doc_ruamel(doc)
-            # ensure preselection/removal on generated l_doc as well
-            added_l = removed_l = 0
-            if apply_preselection:
-                for key, entry in l_doc.items():
-                    if isinstance(entry, dict) and ensure_preselection_on_entry(entry, CUTS_PRESELECTION):
-                        added_l += 1
-            if remove_list:
-                for key, entry in l_doc.items():
-                    if isinstance(entry, dict) and remove_cuts_from_entry(entry, remove_list):
-                        removed_l += 1
-            if added_l or removed_l:
-                print(f"  -> modified lPTISR in-memory cuts: +{added_l} added, -{removed_l} removed")
-
-            l_path = outdir / l_name
-            if dry_run:
-                print(f"  [dry-run] would write generated lPTISR Gold: {l_path}")
-            else:
-                with l_path.open("w", encoding="utf-8") as f:
-                    yaml.dump(l_doc, f)
-                print("  wrote lPTISR Gold:", l_path)
-
-            process_list.append((l_doc, l_name))
-
-        # Now produce Silver and Bronze for each doc in process_list
-        for dobj, base_name in process_list:
-            for tier in ("Silver", "Bronze"):
-                newdoc = process_ruamel_doc_for_tier(dobj, tier)
-                # Apply preselection/removal and Regions predef/user to the tier docs before writing
-                added_t = removed_t = 0
-                if apply_preselection:
-                    for key, entry in newdoc.items():
-                        if isinstance(entry, dict) and ensure_preselection_on_entry(entry, CUTS_PRESELECTION):
-                            added_t += 1
-                if remove_list:
-                    for key, entry in newdoc.items():
-                        if isinstance(entry, dict) and remove_cuts_from_entry(entry, remove_list):
-                            removed_t += 1
-                if base_name.lower().startswith("regions"):
-                    enforce_common_cuts(newdoc)
-                if added_t or removed_t:
-                    print(f"  -> modified {base_name.replace('Gold', tier)} in-memory cuts: +{added_t} added, -{removed_t} removed")
-                outname = base_name.replace("Gold", tier)
-                outpath = outdir / outname
-                if dry_run:
-                    print(f"  [dry-run] would write {outpath}")
-                else:
-                    with outpath.open("w", encoding="utf-8") as f:
-                        yaml.dump(newdoc, f)
-                    print("  wrote", outpath)
-
-    return 0
+            write_yaml_map(path, doc)
 
 if __name__ == "__main__":
-    import argparse
-    ap = argparse.ArgumentParser(description="Make Silver/Bronze YAMLs and optional lPTISR Golds from Gold YAMLs; enforce Regions predef/user and cuts preselection")
-    ap.add_argument("-i", "--indir", default="config/bin_cfgs", help="input directory")
-    ap.add_argument("-o", "--outdir", default=None, help="output directory (defaults to input)")
-    ap.add_argument("--dry-run", action="store_true", help="don't write files, just show actions")
-    ap.add_argument("--no-preselection", action="store_true", help="do not ensure CUTS_PRESELECTION in each bin")
-    ap.add_argument("--remove", type=str, default=None,
-                    help="semicolon-separated cuts to remove, e.g. \"PassesJVM==1;Other==1;\"")
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--outdir", "-o", default=str(OUTDIR))
+    ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
-
-    remove_list = None
-    if args.remove:
-        # parse into list of semicolon-terminated strings
-        parts = [p.strip() for p in args.remove.split(';') if p.strip() != ""]
-        remove_list = [p + ";" for p in parts]
-
-    rc = main(indir=args.indir, outdir=args.outdir, dry_run=args.dry_run,
-              apply_preselection=(not args.no_preselection), remove_cuts_list=remove_list)
-    sys.exit(rc)
+    main(Path(args.outdir), dry_run=args.dry_run)
+    make_GSB_cmd = ["python3", "python/make_GSB_Regions.py"]
+    print("making other regions: python3 python/make_GSB_Regions.py")
+    subprocess.run(make_GSB_cmd, check=True, text=True)
+    print("DONE!")
 
