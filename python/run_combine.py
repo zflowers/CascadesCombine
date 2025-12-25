@@ -200,7 +200,7 @@ def prepare_run_and_stage_assets_copy(
       dict mapping keys like 'bins_cfg','hist_cfg','processes_cfg','exe_dir','configs_dir',...
     """
     run_dir = run_info["run_dir"]
-    dirs_to_make = ["exe", "configs", "datacards", "include", "src", "macro", "condor_BF", "plots"]
+    dirs_to_make = ["exe", "configs", "datacards", "include", "python", "src", "macro", "condor_BF", "plots"]
     if not existing_run_dir:
         dirs_to_make.extend([
                              "condor",
@@ -216,6 +216,7 @@ def prepare_run_and_stage_assets_copy(
     condor_dir = run_path / "condor"
     plots_dir = run_path / "plots"
     include_dir = run_path / "include"
+    python_dir = run_path / "python"
     src_dir = run_path / "src"
     combine_dir = run_path / "combine"
     condor_BF_dir = run_path / "condor_BF"
@@ -264,6 +265,11 @@ def prepare_run_and_stage_assets_copy(
         "launchImpacts.sh",
         "launchFitDiagnostics.sh",
     ]
+    python_items = [
+        "make_Regions.py",
+        "make_GSB_Regions.py",
+    ]
+
     if not existing_run_dir:
         include_items.extend([
             "DefineUserHists.h",
@@ -300,6 +306,14 @@ def prepare_run_and_stage_assets_copy(
         dst = macro_dir / p.name
         _copy_file(p, dst)
 
+    for item in python_items:
+        p = Path(Path("python") / item)
+        if not p.exists():
+            print(f"[run_combine] WARNING: python item '{item}' not found, skipping.", file=os.sys.stderr, flush=True)
+            continue
+        dst = python_dir / p.name
+        _copy_file(p, dst)
+
     # -------------------------
     # 5) Return mapping for use by the workflow
     # -------------------------
@@ -311,6 +325,7 @@ def prepare_run_and_stage_assets_copy(
         "condor_dir": str(condor_dir),
         "plots_dir": str(plots_dir),
         "include_dir": str(include_dir),
+        "python_dir": str(python_dir),
         "src_dir": str(src_dir),
         "macro_dir": str(macro_dir),
         "combine": str(combine_dir),

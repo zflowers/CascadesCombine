@@ -1,62 +1,50 @@
 #!/usr/bin/env python3
 """
-Create baseline Regions_2L_0J_hPTISR_Gold.yaml and Regions_2L_1J_hPTISR_Gold.yaml
-from scratch using tunable RISR and Mperp bin definitions.
+Make Regions YAML for 2L (grid) and 3L (rule-driven).
+
+- Produces:
+    Regions_2L_0J_hPTISR_Gold.yaml
+    Regions_2L_1J_hPTISR_Gold.yaml
+    Regions_3L_0J_hPTISR_Gold.yaml
+    Regions_3L_1J_hPTISR_Gold.yaml
+
+- 2L behavior: combinatorial generation in RISR and Mperp
+- 3L behavior: generated from explicit rule table THREE_L_RULES
+
 Run inside CMSSW (after cmsenv) where ruamel.yaml is available.
 """
 from pathlib import Path
 from ruamel.yaml import YAML
-from ruamel.yaml.scalarstring import PreservedScalarString
-from ruamel.yaml.scalarstring import PlainScalarString
-from ruamel.yaml.scalarstring import DoubleQuotedScalarString
-import argparse, os, subprocess
+from ruamel.yaml.scalarstring import PreservedScalarString, DoubleQuotedScalarString
+import argparse, subprocess
 
-# ------------------ CONFIGURATION ------------------
+# ---------------- USER-TWEAKABLE CONSTANTS ----------------
 OUTDIR = Path("config/bin_cfgs")
 
-# PTISR tag and cut used for high-PTISR baseline files
-PTISR_TAG = 350
-PTISR_CUT_STR = f"PTISR_LEP>={PTISR_TAG};"
-PTISR_PNAME = f"P{PTISR_TAG}"
+# PTISR tags used in names and cuts
+PTISR_2L = 350
+PTISR_3L = 300
 
-# baseline parts of the cuts (keeps consistent with examples)
-BASE_CUTS_TOKENS = [
-    "Nlep==2;",
+COMMON_BASE_TOKENS = [
     "MET>=150;",
     "METORtrigger==1;",
     "EventFilter==1;",
     "PassesJVM==1;",
     "MIN(abs(Eta_lep))<1.4442;",
     "Nbjet==0;",
-    "Njet>0;",
-    # S jet-dependent tokens added later
+    "Njet>0",
 ]
 
-# baseline cuts
 PREDEFINED_CUTS = "Cleaning_LEP;dphiMETV_LEP;"
 USER_CUTS = "minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"
-COMMON_LEP = ["=0OSSF|mass>=3|mass<=3.2;", "=2Gold;"]
 
-# S jet categories to build baseline gold files for (0J and 1J)
 JET_CONFIGS = {
-    "0J": {
-        "njet_cond": "Njet_S==0;",
-        "njet_note": "Njet_S==0;",
-    },
-    "1J": {
-        "njet_cond": "Njet_S>=1;",
-        "njet_note": "Njet_S>=1;",
-    },
+    "0J": {"njet_cond": "Njet_S==0;", "njet_note": "Njet_S==0;"},
+    "1J": {"njet_cond": "Njet_S>=1;", "njet_note": "Njet_S>=1;"},
 }
 
-# RISR binning and Mperp thresholds
-# Each dict: name, min, max, Mh threshold, Mm range low/high, Ml upper bound
-RISR_BINS = [
-    #{"name": "R95", "min": 0.95, "max": 1.0,  "Mh": 20, "Mm_lo": 10, "Mm_hi": 20, "Ml_hi": 10},
-    #{"name": "R9",  "min": 0.9,  "max": 0.95, "Mh": 30, "Mm_lo": 15, "Mm_hi": 30, "Ml_hi": 15},
-    #{"name": "R8",  "min": 0.8,  "max": 0.9,  "Mh": 40, "Mm_lo": 20, "Mm_hi": 40, "Ml_hi": 20},
-    #{"name": "R7",  "min": 0.7,  "max": 0.8,  "Mh": 50, "Mm_lo": 30, "Mm_hi": 50, "Ml_hi": 30},
-
+# ---------------- RISR / Mperp bins ----------------
+RISR_BINS_2L = [
     {"name": "R95", "min": 0.95, "max": 1.0,  "Mh": 20, "Mm_lo": 10, "Mm_hi": 20, "Ml_hi": 10},
     {"name": "R9",  "min": 0.9,  "max": 0.95, "Mh": 25, "Mm_lo": 15, "Mm_hi": 25, "Ml_hi": 15},
     {"name": "R85", "min": 0.85, "max": 0.9,  "Mh": 30, "Mm_lo": 20, "Mm_hi": 30, "Ml_hi": 20},
@@ -65,18 +53,159 @@ RISR_BINS = [
     {"name": "R7",  "min": 0.7,  "max": 0.75, "Mh": 45, "Mm_lo": 35, "Mm_hi": 45, "Ml_hi": 35},
 ]
 
-# Flavor splits to produce per RISR Mperp
-# Each flavor entry: suffix_key (used in bin name), lep_cuts_extra_lines (list)
-FLAVOR_SPLITS = [
-    ("OS_ee", ["=1OSSF;", "=2Elec;"]),
-    ("OS_emu", ["=1OSOF;"]),          # mixed flavors
-    ("OS_mumu", ["=1OSSF;", "=2Muon;"]),
-    ("SS", ["AllSS;"]),               # inclusive SS
+# 3L RISR/Mperp bins
+RISR_BINS_3L = [
+    {"name": "R9",  "min": 0.9,  "max": 1.0,  "Mh": 30, "Mm_lo": 20, "Mm_hi": 30, "Ml_hi": 30},
+    {"name": "R8",  "min": 0.8,  "max": 0.9,  "Mh": 40, "Mm_lo": 30, "Mm_hi": 40, "Ml_hi": 40},
+    {"name": "R7",  "min": 0.7,  "max": 0.8,  "Mh": 40, "Mm_lo": 30, "Mm_hi": 40, "Ml_hi": 40},
 ]
 
-# Additional constant tokens shared across generated bins
-COMMON_ADDITIONAL = "Njet_S"  # not used directly; kept for reference
-# ---------------------------------------------------
+# 2L flavor splits
+FLAVOR_SPLITS_2L = [
+    ("OS_ee", ["=1OSSF;", "=2Elec;"]),
+    ("OS_emu", ["=1OSOF;"]),
+    ("OS_mumu", ["=1OSSF;", "=2Muon;"]),
+    ("SS", ["AllSS;"]),
+]
+
+# 3L mapping from semantic labels to lep-cuts lines (used by rules)
+LEP_CLASS_MAP_3L = {
+    "incl": [],                # just the common lep block
+    "OSOFa": ["=1OSOF_a;"],
+    "nOSOFa": ["=0OSOF_a;"],
+    "OSSFa": ["=1OSSF_a;"],
+    "OSSFa_AllSF": ["=1OSSF_a;", "AllSF;"],
+    "OSSFa_OSOF": ["=1OSSF_a;", "=1OSOF;"],
+    "AllSF": ["AllSF;"],
+    "AllSS": ["AllSS;"],
+    "OFa": ["=1Elec_a;", "=1Muon_a;"],
+    "OSa": ["=1Pos_a;", "=1Neg_a;"],
+    "SSa": ["AllSS_a;"],
+    "SFa": ["AllSF_a;"],
+}
+
+# default MaRatio parameters
+DEFAULT_MARATIO_THRESHOLD = 0.3
+MARATIO_NAME_A = "Ah"
+MARATIO_NAME_L = "Al"
+
+# ------------------ RULE TABLE for 3L (explicit, editable) ------------------
+# This table encodes the legacy 0J and 1J layouts you provided.
+# Each entry is intentionally explicit to avoid cartesian explosions.
+# Structure notes:
+# - for each jet ('0J'/'1J') provide keys for RISR names (R9, R8, R7)
+# - each RISR entry contains either:
+#    - {'incl': True}  -> single inclusive bin (no Mperp)
+#    - {'mperp': { 'Mh': {...}, 'Ml': {...}, ... } }
+# - per mperp branch:
+#    - 'use_mperp': bool (whether to add an Mperp token)
+#    - 'mperp_cat': 'Mh'/'Ml' (used to lookup thresholds)
+#    - 'maratio': bool (split Ah/Al)
+#    - 'lep_classes': list of keys from LEP_CLASS_MAP_3L OR 'incl'
+THREE_L_RULES = {
+    "0J": {
+        "R9": {
+            "mperp": {
+                "Mh": {
+                    "use_mperp": True,
+                    "mperp_cat": "Mh",
+                    # split by MaRatio; same lep_classes for Ah and Al
+                    # "maratio": {
+                    #     "Ah": ["OSOFa", "nOSOFa"],  # MaRatio >= threshold
+                    #     "Al": ["OSOFa", "nOSOFa"],  # MaRatio < threshold
+                    # },
+                    "maratio": False,
+                    "lep_classes": ["OSOFa", "nOSOFa"],
+                },
+                "Ml": {
+                    "use_mperp": True,
+                    "mperp_cat": "Ml",
+                    # split by MaRatio; Ah gets OSOF_a+nOSOF, Al gets incl
+                    # "maratio": {
+                    #     "Ah": ["OSOFa", "nOSOFa"],  # MaRatio >= threshold
+                    #     "Al": ["incl"],  # MaRatio < threshold
+                    # },
+                    "maratio": False,
+                    "lep_classes": ["OSOFa", "nOSOFa"],
+                },
+            }
+        },
+        "R8": {
+            "mperp": {
+                "Mh": {
+                    "use_mperp": True,
+                    "mperp_cat": "Mh",
+                    "maratio": False,
+                    "lep_classes": ["OSOFa", "OSSFa", "SSa"],
+                },
+                "Ml": {
+                    "use_mperp": True,
+                    "mperp_cat": "Ml",
+                    "maratio": False,
+                    "lep_classes": ["OSOFa", "OSSFa_AllSF", "OSSFa_OSOF", "SSa"],
+                },
+            }
+        },
+        "R7": {
+            "mperp": {
+                "Mh": {
+                    "use_mperp": True,
+                    "mperp_cat": "Mh",
+                    "maratio": False,
+                    "lep_classes": ["OSOFa", "OSSFa_AllSF", "OSSFa_OSOF", "SSa"],
+                },
+                "Ml": {
+                    "use_mperp": True,
+                    "mperp_cat": "Ml",
+                    "maratio": False,
+                    "lep_classes": ["OSa", "SSa"],
+                },
+            }
+        },
+    },
+    "1J": {
+        "R9": {"incl": True},
+        "R8": {
+            "mperp": {
+                "Mh": {
+                    "use_mperp": True,
+                    "mperp_cat": "Mh",
+                    "maratio": False,
+                    "lep_classes": ["incl"],
+                },
+                "Ml": {
+                    "use_mperp": True,
+                    "mperp_cat": "Ml",
+                    # Ml has a ma-ratio dict (Ah/Al) mapping to lep classes
+                    # "maratio": {
+                    #     "Ah": ["OFa", "SFa"],  # MaRatio >= threshold
+                    #     "Al": ["OFa", "SFa"],  # MaRatio < threshold
+                    # },
+                    "maratio": False,
+                    "lep_classes": ["OFa", "SFa"],
+                },
+            }
+        },
+        "R7": {
+            "mperp": {
+                "Mh": {
+                    "use_mperp": True,
+                    "mperp_cat": "Mh",
+                    "maratio": False,
+                    "lep_classes": ["incl"],
+                },
+                "Ml": {
+                    "use_mperp": True,
+                    "mperp_cat": "Ml",
+                    "maratio": False,
+                    "lep_classes": ["OFa", "SFa"],
+                },
+            }
+        },
+    },
+}
+
+# -------------------------------------------------------------------------
 
 yaml = YAML()
 yaml.default_flow_style = False
@@ -84,21 +213,14 @@ yaml.indent(mapping=2, sequence=4, offset=2)
 yaml.width = 4096
 yaml.preserve_quotes = True
 
+# ---------------- helper utilities ----------------
 def format_rISR_condition(r):
-    """Return RISR_LEP condition string and a human readable label part"""
     if r["max"] >= 1.0:
-        # R9 special case with <=1.
-        cond = f"RISR_LEP>={r['min']};RISR_LEP<=1.;"
+        return f"RISR_LEP>={r['min']};RISR_LEP<=1.;"
     else:
-        cond = f"RISR_LEP>={r['min']};RISR_LEP<{r['max']};"
-    return cond
+        return f"RISR_LEP>={r['min']};RISR_LEP<{r['max']};"
 
 def make_mperp_cut_tokens(r, category):
-    """
-    category: "Mh" (high), "Mm" (mid), "Ml" (low)
-    returns (cut_string, name_fragment) where cut_string is appended to cuts and
-    name_fragment is used for the bin name (like M35 or M20_40 or Mlt20)
-    """
     if category == "Mh":
         cut = f"Mperp_LEP>={r['Mh']}"
         name_frag = f"M{r['Mh']}"
@@ -106,40 +228,39 @@ def make_mperp_cut_tokens(r, category):
         cut = f"Mperp_LEP>={r['Mm_lo']};Mperp_LEP<{r['Mm_hi']}"
         name_frag = f"M{r['Mm_lo']}_{r['Mm_hi']}"
     elif category == "Ml":
-        # Ml is <= Ml_hi - use '<' style
         cut = f"Mperp_LEP<{r['Ml_hi']}"
         name_frag = f"Mlt{r['Ml_hi']}"
     else:
         raise ValueError("unknown category")
-    # ensure trailing semicolons in the returned string pieces
-    # if cut contains ';' already, preserve; otherwise add semicolon
     if not cut.endswith(";"):
-        cut = cut + ";"
+        cut += ";"
     return cut, name_frag
 
-def assemble_cuts_string(base_tokens, ptisr_token, risr_token, jet_token, mperp_token):
-    """assemble and return a quoted cuts string."""
+def assemble_cuts_string(nlep, base_tokens, ptisr_token, risr_token, jet_token, mperp_token, extra_tokens=None):
     parts = []
+    parts.append(f"Nlep=={nlep};")
     parts.extend(base_tokens)
     parts.append(ptisr_token)
     parts.append(risr_token)
     parts.append("METORtrigger==1;")
     parts.append("EventFilter==1;")
     parts.append("PassesJVM==1;")
-    # jet-specific token(s)
     if jet_token:
         parts.append(jet_token)
     parts.append("MIN(abs(Eta_lep))<1.4442;")
     parts.append("Nbjet==0;")
-    parts.append(mperp_token)
-    # remove duplicates while preserving order
+    parts.append("Njet>0;")
+    if mperp_token:
+        parts.append(mperp_token)
+    if extra_tokens:
+        parts.extend(extra_tokens)
+    # preserve order, dedupe
     seen = set()
     out = []
     for p in parts:
         p = p.strip()
         if p == "":
             continue
-        # ensure it ends with semicolon
         if not p.endswith(";"):
             p = p + ";"
         if p not in seen:
@@ -148,11 +269,6 @@ def assemble_cuts_string(base_tokens, ptisr_token, risr_token, jet_token, mperp_
     return "".join(out)
 
 def make_lep_cuts_block(common_lep_lines, flavor_extra):
-    """
-    common_lep_lines: list (e.g. ['=0OSSF|mass>=3|mass<=3.2;', '=2Gold;'])
-    flavor_extra: list, e.g. ['=1OSSF;', '=2Elec;'] or ['AllSS;']
-    returns a PreservedScalarString with proper newline endings
-    """
     lines = []
     for l in common_lep_lines:
         if not l.endswith(";"):
@@ -162,77 +278,224 @@ def make_lep_cuts_block(common_lep_lines, flavor_extra):
         if not fe.endswith(";"):
             fe = fe + ";"
         lines.append(fe)
-    # ensure newline-terminated block
     return PreservedScalarString("\n".join(lines) + "\n")
 
-def build_bins_for_jet(jtag, jet_conf):
-    """
-    Build dictionary of bins for a single jet tag (0J or 1J) for the hPTISR PTISR_TAG
-    """
+# find risr dict by name in a given list
+def lookup_risr_by_name(name, risr_list):
+    for r in risr_list:
+        if r["name"] == name:
+            return r
+    return None
+
+# ---------------- 2L generator (unchanged combinatorial generator) ----------------
+def build_bins_2l_for_jet(jtag, jconf, ptisr_tag, risr_bins):
     out = {}
-    for r in RISR_BINS:
+    PTISR_CUT_STR = f"PTISR_LEP>={ptisr_tag};"
+    PTISR_PNAME = f"P{ptisr_tag}"
+    COMMON_LEP = ["=0OSSF|mass>=3|mass<=3.2;", "=2Gold;"]
+    for r in risr_bins:
         risr_cond = format_rISR_condition(r)
-        # generate three M categories: Mh, Mm, Ml
-        for mcat in ("Mh", "Mm", "Ml"):
+        for mcat in ("Mh","Mm","Ml"):
             mcut_token, mnamefrag = make_mperp_cut_tokens(r, mcat)
-            # for each flavor split produce bin entry
-            for (flav_key, flavor_lep_lines) in FLAVOR_SPLITS:
-                # name: Bin2L_Gold_{JTAG}_P{PTISR}_R{RNAME}_M{...}_{flav}
+            for (flav_key, flavor_lep_lines) in FLAVOR_SPLITS_2L:
                 bin_key = f"Bin2L_Gold_{jtag}_{PTISR_PNAME}_{r['name']}_{mnamefrag}_{flav_key}"
-                # assemble cuts string
-                # jet_token differs between 0J and 1J
-                jet_token = jet_conf["njet_cond"]
+                jet_token = jconf["njet_cond"]
                 cuts_txt = DoubleQuotedScalarString(
                     assemble_cuts_string(
-                        BASE_CUTS_TOKENS,
+                        2,
+                        COMMON_BASE_TOKENS,
                         PTISR_CUT_STR,
                         risr_cond,
                         jet_token,
                         mcut_token,
+                        extra_tokens=None,
                     )
                 )
-                # flavor-specific additions
                 lep_block = make_lep_cuts_block(COMMON_LEP, flavor_lep_lines)
-                # add predefined and user cuts
-                predef = DoubleQuotedScalarString(PREDEFINED_CUTS)
-                user = DoubleQuotedScalarString(USER_CUTS)
                 out[bin_key] = {
                     "cuts": cuts_txt,
                     "lep-cuts": lep_block,
-                    "predefined-cuts": predef,
-                    "user-cuts": user,
+                    "predefined-cuts": DoubleQuotedScalarString(PREDEFINED_CUTS),
+                    "user-cuts": DoubleQuotedScalarString(USER_CUTS),
                 }
     return out
 
+# ---------------- 3L rule-driven generator ----------------
+def build_bins_3l_from_rules(jtag, jconf, ptisr_tag, risr_bins, rules_for_jet, maratio_threshold, verbose=False):
+    """
+    rules_for_jet: dict for that jet from THREE_L_RULES
+    risr_bins: list (RISR_BINS_3L)
+    """
+    out = {}
+    COMMON_LEP = ["=0OSSF|mass>=3|mass<=3.2;", "=3Gold;"]
+    PTISR_CUT_STR = f"PTISR_LEP>={ptisr_tag};"
+    PTISR_PNAME = f"P{ptisr_tag}"
+
+    # iterate over rules for this jet
+    for risr_name, risr_rule in rules_for_jet.items():
+        r = lookup_risr_by_name(risr_name, risr_bins)
+        if r is None:
+            # safety: skip unknown risr names
+            if verbose:
+                print(f"[WARN] No RISR definition found for {risr_name} in risr_bins; skipping")
+            continue
+        risr_cond = format_rISR_condition(r)
+
+        # inclusive-only branch (no Mperp token)
+        if risr_rule.get("incl", False):
+            bin_key = f"Bin3L_Gold_{jtag}_{PTISR_PNAME}_{r['name']}"
+            cuts_txt = DoubleQuotedScalarString(
+                assemble_cuts_string(
+                    3,
+                    COMMON_BASE_TOKENS,
+                    PTISR_CUT_STR,
+                    risr_cond,
+                    jconf["njet_cond"],
+                    mperp_token=None,
+                )
+            )
+            lep_block = make_lep_cuts_block(COMMON_LEP, [])  # no extra flavor lines
+            out[bin_key] = {
+                "cuts": cuts_txt,
+                "lep-cuts": lep_block,
+                "predefined-cuts": DoubleQuotedScalarString(PREDEFINED_CUTS),
+                "user-cuts": DoubleQuotedScalarString(USER_CUTS),
+            }
+            continue
+
+        # otherwise we expect a 'mperp' subdict
+        mperp_dict = risr_rule.get("mperp", {})
+        for mlabel, mrule in mperp_dict.items():
+            use_mperp = mrule.get("use_mperp", True)
+            mperp_cat = mrule.get("mperp_cat", mlabel)  # usually 'Mh' or 'Ml'
+            mcut_token = None
+            mnamefrag = ""
+            if use_mperp:
+                # ---------------------- Fixed MaRatio / 3L block ----------------------
+                mcut_token, mnamefrag = (None, "")
+                if use_mperp:
+                    mcut_token, mnamefrag = make_mperp_cut_tokens(r, mperp_cat)
+                
+                maratio_cfg = mrule.get("maratio", False)
+                
+                # default: no MaRatio, just use lep_classes
+                if not maratio_cfg:
+                    maratio_branches = [("", None, mrule.get("lep_classes", ["incl"]))]
+                else:
+                    if isinstance(maratio_cfg, dict):
+                        # dict-based MaRatio: Ah/Al branches
+                        maratio_branches = [
+                            ("_Ah", f"MaRatio_LEP>={maratio_threshold};", maratio_cfg.get("Ah", [])),
+                            ("_Al", f"MaRatio_LEP<{maratio_threshold};", maratio_cfg.get("Al", [])),
+                        ]
+                    else:
+                        # legacy boolean MaRatio
+                        maratio_branches = [
+                            ("_Ah", f"MaRatio_LEP>={maratio_threshold};", mrule.get("lep_classes", ["incl"])),
+                            ("_Al", f"MaRatio_LEP<{maratio_threshold};", mrule.get("lep_classes", ["incl"])),
+                        ]
+                
+                # now loop over branches
+                for maratio_suffix, maratio_token, lep_classes in maratio_branches:
+                    for lc in lep_classes:
+                        flavor_lines = []
+                        if lc != "incl":
+                            flavor_lines = LEP_CLASS_MAP_3L.get(lc, [])
+                
+                        # build name: include mnamefrag from mperp
+                        if use_mperp:
+                            if lc == "incl" and maratio_suffix == "":
+                                name_part = f"{mnamefrag}"
+                            else:
+                                name_part = f"{mnamefrag}{maratio_suffix}_{lc}"
+                        else:
+                            if lc == "incl" and maratio_suffix == "":
+                                name_part = ""
+                            else:
+                                name_part = f"{maratio_suffix}_{lc}".lstrip("_")
+                
+                        # create bin key
+                        if name_part:
+                            bin_key = f"Bin3L_Gold_{jtag}_{PTISR_PNAME}_{r['name']}_{name_part}"
+                        else:
+                            bin_key = f"Bin3L_Gold_{jtag}_{PTISR_PNAME}_{r['name']}"
+                
+                        # assemble cuts
+                        extra_tokens = []
+                        if maratio_token:
+                            extra_tokens.append(maratio_token)
+                        cuts_txt = DoubleQuotedScalarString(
+                            assemble_cuts_string(
+                                3,
+                                COMMON_BASE_TOKENS,
+                                PTISR_CUT_STR,
+                                risr_cond,
+                                jconf["njet_cond"],
+                                mcut_token if use_mperp else None,
+                                extra_tokens=extra_tokens if extra_tokens else None,
+                            )
+                        )
+                        lep_block = make_lep_cuts_block(COMMON_LEP, flavor_lines)
+                        out[bin_key] = {
+                            "cuts": cuts_txt,
+                            "lep-cuts": lep_block,
+                            "predefined-cuts": DoubleQuotedScalarString(PREDEFINED_CUTS),
+                            "user-cuts": DoubleQuotedScalarString(USER_CUTS),
+                        }
+    return out
+
+# ---------------- file writing helper ----------------
 def write_yaml_map(filename: Path, mapping):
     filename.parent.mkdir(parents=True, exist_ok=True)
     with filename.open("w", encoding="utf-8") as f:
         yaml.dump(mapping, f)
     print("WROTE:", filename)
 
-def main(outdir: Path, dry_run=False):
-    # Build both 0J and 1J baseline Gold files
+# ---------------- main entrypoint ----------------
+def main(outdir: Path, dry_run=False, maratio_threshold=DEFAULT_MARATIO_THRESHOLD, verbose=False):
     files_to_write = {}
+
+    # 2L outputs
     for jtag, jconf in JET_CONFIGS.items():
-        doc_map = build_bins_for_jet(jtag, jconf)
-        fname = outdir / f"Regions_2L_{jtag}_{'hPTISR'}_Gold.yaml"
+        doc_map = build_bins_2l_for_jet(jtag, jconf, PTISR_2L, RISR_BINS_2L)
+        fname = outdir / f"Regions_2L_{jtag}_hPTISR_Gold.yaml"
         files_to_write[fname] = doc_map
 
-    # Write files
+    # 3L outputs using rule table
+    for jtag, jconf in JET_CONFIGS.items():
+        rules_for_jet = THREE_L_RULES.get(jtag, {})
+        doc_map = build_bins_3l_from_rules(jtag, jconf, PTISR_3L, RISR_BINS_3L, rules_for_jet, maratio_threshold, verbose=verbose)
+        fname = outdir / f"Regions_3L_{jtag}_hPTISR_Gold.yaml"
+        files_to_write[fname] = doc_map
+
+    # write or dry-run
     for path, doc in files_to_write.items():
         if dry_run:
-            print("[DRY-RUN] would write", path, "with", len(doc), "bins")
+            print(f"[DRY-RUN] would write {path} with {len(doc)} bins")
+            # also print sample keys for quick sanity
+            sample_keys = list(doc.keys())[:12]
+            if sample_keys:
+                print("  sample keys:", sample_keys)
         else:
             write_yaml_map(path, doc)
 
+    # try calling downstream generator if present
+    try:
+        make_GSB_cmd = ["python3", "python/make_GSB_Regions.py"]
+        print("making other regions: python3 python/make_GSB_Regions.py")
+        subprocess.run(make_GSB_cmd, check=True, text=True)
+    except Exception as e:
+        print("skipping make_GSB_Regions.py (error calling it):", e)
+    print("DONE MAKING REGIONS YAMLS")
+
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser()
+    ap = argparse.ArgumentParser(description="Make Regions (2L grid + 3L rule-driven)")
     ap.add_argument("--outdir", "-o", default=str(OUTDIR))
-    ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--dry-run", action="store_true", help="Don't write files, just report counts")
+    ap.add_argument("--maratio-threshold", type=float, default=DEFAULT_MARATIO_THRESHOLD,
+                    help="MaRatio threshold used where MaRatio is enabled in rules (default %(default)s)")
+    ap.add_argument("--verbose", action="store_true", help="Verbose logging for debugging rule application")
     args = ap.parse_args()
-    main(Path(args.outdir), dry_run=args.dry_run)
-    make_GSB_cmd = ["python3", "python/make_GSB_Regions.py"]
-    print("making other regions: python3 python/make_GSB_Regions.py")
-    subprocess.run(make_GSB_cmd, check=True, text=True)
-    print("DONE!")
+
+    main(Path(args.outdir), dry_run=args.dry_run, maratio_threshold=args.maratio_threshold, verbose=args.verbose)
 

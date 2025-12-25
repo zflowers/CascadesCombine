@@ -272,7 +272,6 @@ def main(indir="config/bin_cfgs", outdir=None, dry_run=False,
 
         # If Regions* file, enforce the predefined/user cuts on the Gold doc immediately and write Gold back
         if gf.name.lower().startswith("regions"):
-            print("  -> enforcing predefined-cuts and user-cuts for Regions file (Gold)")
             enforce_common_cuts(doc)
 
         # Ensure baseline preselection and/or removal operate on the *in-memory* doc BEFORE any writes
@@ -291,8 +290,6 @@ def main(indir="config/bin_cfgs", outdir=None, dry_run=False,
 
         if (apply_preselection and added_count > 0) or (remove_list and removed_count > 0):
             print(f"  -> modified Gold in-memory cuts: +{added_count} bins had preselection added, -{removed_count} bins had removals")
-        else:
-            print("  -> no changes needed to Gold cuts for preselection/removals")
 
         # If Regions* file, write updated Gold to disk so on-disk Gold is normalized
         if gf.name.lower().startswith("regions"):
