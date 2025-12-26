@@ -9,6 +9,7 @@ using json = nlohmann::json;
 // ----------------------
 int main(int argc, char* argv[]) {
     string inputFile;
+    string patternFile;
     for(int i=1;i<argc;++i){
         string arg=argv[i];
         if(arg=="-i"||arg=="--input"){ if(i+1<argc) inputFile=argv[++i]; else{ cerr<<"[ERROR] Missing "<<arg<<endl; return 1;} }
@@ -16,9 +17,14 @@ int main(int argc, char* argv[]) {
         // lumi used when filling histograms upstream; doesn't rescale, just need for labels
         else if(arg=="-l"||arg=="--lumi"){ if(i+1<argc) lumi=std::stoi(argv[++i]); else{ lumi = 1.;} }
         else if(arg=="--help"){ cout<<"[PlotYields] Usage: "<<argv[0]<<" [options]\n -i <file.root>\n -h <hist.yaml>\n -d <process.yaml>\n -b <bins.yaml>\n"; return 0; }
+        else if(arg=="--config"){
+            if(i+1<argc) patternFile = argv[++i];
+            else { cerr<<"[ERROR] Missing --config\n"; return 1; }
+        }
         else{ cerr<<"[ERROR] Unknown arg "<<arg<<endl; return 1;}
     }
     if(inputFile.empty()){ cerr<<"[ERROR] No input JSON file provided.\n"; return 1; }
+    if(patternFile.empty()){ cerr << "[PlotYields] NEED TO SUPPLY CONFIG FILE FOR RULES\n"; return 1; }
 
     // Build outputDir safely
     if(outputDir.empty()){
@@ -45,6 +51,14 @@ int main(int argc, char* argv[]) {
     }
     json j;
     jsonFile >> j;
+
+    vector<string> allBinNames;
+    for (auto &[bin, _] : j.items())
+        allBinNames.push_back(bin);
+    
+    YamlConfig cfg = LoadYamlConfig(patternFile);
+    vector<MergedBinGroup> groups =
+        BuildMergedBinGroupsFromYaml(allBinNames, cfg);
 
     bool hasData = false;
     // Make map from JSON yields
@@ -77,12 +91,16 @@ int main(int argc, char* argv[]) {
         }
     }
     
-    // build global 2D cutflows from cutflowMap
-    MakeAndPlotCutflow2D(cutflowMap, "GlobalCutflow", "yield", 1.0);
-    MakeAndPlotCutflow2D(cutflowMap, "GlobalCutflow", "SoB",   1.0);
-    MakeAndPlotCutflow2D(cutflowMap, "GlobalCutflow", "SoverSqrtB", 1.0);
-    if(!hasData){
-        MakeAndPlotCutflow2D(cutflowMap, "GlobalCutflow", "Zbi", 3.0); // 3% systematic
+    auto mergedCutflows = BuildMergedJsonCutflow(cutflowMap, groups, cfg);
+    for (const auto &pair : mergedCutflows) {
+        const std::string &grpName = pair.first;
+        const auto &groupCutflowMap = pair.second; // map<binName, map<proc,TH1*>>
+    
+        MakeAndPlotCutflow2D(groupCutflowMap, grpName, "yield", 1.0);
+        MakeAndPlotCutflow2D(groupCutflowMap, grpName, "SoB",   1.0);
+        MakeAndPlotCutflow2D(groupCutflowMap, grpName, "SoverSqrtB", 1.0);
+        if (!hasData)
+            MakeAndPlotCutflow2D(groupCutflowMap, grpName, "Zbi", 3.0);
     }
 
     outFile->Close();

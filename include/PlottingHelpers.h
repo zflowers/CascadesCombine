@@ -474,12 +474,28 @@ YamlConfig LoadYamlConfig(const std::string& yamlFile) {
     if (root["bins"]) {
         for (const auto& n : root["bins"]) {
             YamlBinPattern b;
-            b.name    = n["name"]    ? n["name"].as<std::string>()    : "";
-            b.include = n["include"] ? n["include"].as<std::string>() : "*";
+            b.name = n["name"] ? n["name"].as<std::string>() : "";
 
+            // Include: scalar or sequence
+            if (n["include"]) {
+                if (n["include"].IsSequence()) {
+                    // Take first entry if only support one string
+                    b.include = n["include"][0].as<std::string>();
+                } else if (n["include"].IsScalar()) {
+                    b.include = n["include"].as<std::string>();
+                }
+            } else {
+                b.include = "*";
+            }
+
+            // Exclude: scalar or sequence
             if (n["exclude"]) {
-                for (const auto& ex : n["exclude"])
-                    b.exclude.push_back(ex.as<std::string>());
+                if (n["exclude"].IsSequence()) {
+                    for (const auto& ex : n["exclude"])
+                        b.exclude.push_back(ex.as<std::string>());
+                } else if (n["exclude"].IsScalar()) {
+                    b.exclude.push_back(n["exclude"].as<std::string>());
+                }
             }
 
             cfg.bins.push_back(b);
@@ -494,13 +510,24 @@ YamlConfig LoadYamlConfig(const std::string& yamlFile) {
             YamlProcessPattern p;
             p.name = n["name"].as<std::string>();
 
+            // Include: scalar or sequence
             if (n["include"]) {
-                for (const auto& inc : n["include"])
-                    p.include.push_back(inc.as<std::string>());
+                if (n["include"].IsSequence()) {
+                    for (const auto& inc : n["include"])
+                        p.include.push_back(inc.as<std::string>());
+                } else if (n["include"].IsScalar()) {
+                    p.include.push_back(n["include"].as<std::string>());
+                }
             }
+
+            // Exclude: scalar or sequence
             if (n["exclude"]) {
-                for (const auto& ex : n["exclude"])
-                    p.exclude.push_back(ex.as<std::string>());
+                if (n["exclude"].IsSequence()) {
+                    for (const auto& ex : n["exclude"])
+                        p.exclude.push_back(ex.as<std::string>());
+                } else if (n["exclude"].IsScalar()) {
+                    p.exclude.push_back(n["exclude"].as<std::string>());
+                }
             }
 
             cfg.process_merges.push_back(p);
@@ -546,9 +573,13 @@ BuildMergedBinGroupsFromYaml(const std::vector<std::string>& allBins,
                 continue;
 
             bool excluded = false;
-            for (const auto& ex : b.exclude)
-                if (bin.find(ex) != std::string::npos)
+            for (const auto& ex : b.exclude) {
+                std::regex exRegex(WildcardToRegex(ex));
+                if (std::regex_search(bin, exRegex)) {
                     excluded = true;
+                    break;
+                }
+            }
 
             if (!excluded)
                 g.bin_names.push_back(bin);
@@ -766,6 +797,150 @@ CombinedBinHists LoadAndCombineBinHists(TDirectory* treeDir,
     for (auto& [proc, vals] : bkgContents) out.bkg[proc] = BuildConcatHist(MakeHistName(binTag, proc), vals, finalBinLabels);
     for (auto& [proc, vals] : sigContents) out.signal[proc] = BuildConcatHist(MakeHistName(binTag, proc), vals, finalBinLabels);
     for (auto& [proc, vals] : dataContents) out.data[proc] = BuildConcatHist(MakeHistName(binTag, proc), vals, finalBinLabels);
+    return out;
+}
+
+std::map<std::string, std::map<std::string, std::map<std::string, TH1*>>>
+BuildMergedJsonCutflow(
+    const std::map<std::string, std::map<std::string, TH1*>> &cutflowMap,
+    const std::vector<MergedBinGroup> &groups,
+    const YamlConfig &cfg
+){
+    // return: groupName -> ( binName -> ( procName -> TH1* ) )
+    std::map<std::string, std::map<std::string, std::map<std::string, TH1*>>> out;
+
+    // Helper: merge processes inside a single bin according to YAML rules
+    auto MergeProcessesInBin = [&](const std::map<std::string, BinContent> &binContents)
+        -> std::map<std::string, BinContent>
+    {
+        std::map<std::string, BinContent> result;
+        std::unordered_set<std::string> consumed;
+
+        for (const auto &rule : cfg.process_merges) {
+            const std::string &target = rule.name;
+            const auto &includes = rule.include;
+            const auto &excludes = rule.exclude;
+
+            std::vector<std::string> matches;
+            for (const auto &kv : binContents) {
+                const std::string &proc = kv.first;
+                if (consumed.count(proc)) continue;
+
+                bool ok = false;
+                // include patterns
+                for (const auto &inc : includes) {
+                    if (fnmatch(inc.c_str(), proc.c_str(), 0) == 0) { ok = true; break; }
+                }
+                if (!ok) continue;
+
+                // exclude patterns
+                for (const auto &ex : excludes) {
+                    if (fnmatch(ex.c_str(), proc.c_str(), 0) == 0) { ok = false; break; }
+                }
+                if (ok) matches.push_back(proc);
+            }
+
+            if (matches.empty()) continue;
+
+            BinContent merged{0.0, 0.0};
+            for (const auto &m : matches) {
+                const auto &bc = binContents.at(m);
+                merged.content += bc.content;
+                merged.error = std::hypot(merged.error, bc.error);
+            }
+            result[target] = merged;
+            for (const auto &m : matches) consumed.insert(m);
+        }
+
+        // copy any unmerged procs
+        for (const auto &kv : binContents) {
+            if (!consumed.count(kv.first)) result[kv.first] = kv.second;
+        }
+
+        return result;
+    };
+
+    // Loop over groups
+    for (const auto &grp : groups) {
+        const std::string groupName = grp.group_name;
+        const auto &bins = grp.bin_names;
+
+        // 1) Collect only existing bins (preserve order), warn about missing ones
+        std::vector<std::string> existingBins;
+        existingBins.reserve(bins.size());
+        for (const auto &b : bins) {
+            auto it = cutflowMap.find(b);
+            if (it != cutflowMap.end()) existingBins.push_back(b);
+            else {
+                std::cerr << "[BuildMergedJsonCutflow] Warning: bin '" << b
+                          << "' listed in group '" << groupName << "' not found in input; skipping\n";
+            }
+        }
+        if (existingBins.empty()) {
+            std::cerr << "[BuildMergedJsonCutflow] Warning: no bins found for group '" << groupName << "'; skipping\n";
+            continue;
+        }
+
+        // 2) For each bin, compute merged per-bin yields (proc -> BinContent)
+        //    and also collect the union of all merged proc names across the group.
+        std::map<std::string, std::map<std::string, BinContent>> perBinMerged; // binName -> (proc -> BinContent)
+        std::unordered_set<std::string> allMergedProcs;
+
+        for (const auto &binName : existingBins) {
+            std::map<std::string, BinContent> binContents;
+
+            // read raw per-process values from cutflowMap[binName]
+            const auto &procMap = cutflowMap.at(binName);
+            for (const auto &kv : procMap) {
+                const std::string proc = kv.first;
+                TH1* h = kv.second;
+                double c = 0.0, e = 0.0;
+                if (h) {
+                    // each input TH1 is 1-bin with yield in bin 1
+                    c = h->GetBinContent(1);
+                    e = h->GetBinError(1);
+                }
+                binContents[proc] = {c, e};
+            }
+
+            // Merge processes inside this bin only
+            auto mergedBin = MergeProcessesInBin(binContents);
+
+            // Save and record process names
+            for (const auto &kv : mergedBin) {
+                perBinMerged[binName][kv.first] = kv.second;
+                allMergedProcs.insert(kv.first);
+            }
+        }
+
+        // 3) Build groupCutflowMap: for each bin and for every proc in allMergedProcs,
+        //    produce a single-bin TH1* (0 if proc missing in that bin).
+        std::map<std::string, std::map<std::string, TH1*>> groupCutflowMap; // binName -> (proc -> TH1*)
+
+        for (const auto &binName : existingBins) {
+            for (const auto &proc : allMergedProcs) {
+                double c = 0.0, e = 0.0;
+                auto itb = perBinMerged.find(binName);
+                if (itb != perBinMerged.end()) {
+                    auto itp = itb->second.find(proc);
+                    if (itp != itb->second.end()) {
+                        c = itp->second.content;
+                        e = itp->second.error;
+                    }
+                }
+                std::string histName = Form("%s__%s__%s", groupName.c_str(), binName.c_str(), proc.c_str());
+                TH1F* h = new TH1F(histName.c_str(), histName.c_str(), 1, 0, 1);
+                h->SetBinContent(1, c);
+                h->SetBinError(1, e);
+                h->SetDirectory(nullptr);
+                groupCutflowMap[binName][proc] = h;
+            }
+        }
+
+        // 4) store into out
+        out[groupName] = std::move(groupCutflowMap);
+    } // end groups loop
+
     return out;
 }
 

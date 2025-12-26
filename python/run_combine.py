@@ -839,7 +839,8 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                 "./"+exe_dir+"/PlotYields.x",
                 "-i", flattened_json,
                 "-o", plots_dir,
-                "-l", plot_lumi
+                "-l", plot_lumi,
+                "--config", FDpattern_cfg,
             ]
             print("[run_combine] Plotting yields with command:", " ".join(plot_cmd), flush=True)
             subprocess.run(plot_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)

@@ -961,7 +961,7 @@ void Plot_EventCount2D(TH2* h, const std::string &mode,
     TCanvas* can = new TCanvas(("can_"+std::string(h->GetName())).c_str(), "", 1200, 700);
     can->SetLeftMargin(0.13);
     can->SetRightMargin(0.13);
-    can->SetBottomMargin(0.16);
+    can->SetBottomMargin(0.17);
     can->SetTopMargin(0.06);
     can->SetGridx(); can->SetGridy();
     if(mode=="yield") can->SetLogz();
@@ -1029,9 +1029,9 @@ void Plot_EventCount2D(TH2* h, const std::string &mode,
     h->GetXaxis()->SetTitleFont(42); h->GetXaxis()->SetTitleSize(0.06); h->GetXaxis()->SetTitleOffset(1.06);
     h->GetXaxis()->SetLabelFont(42);
 
-    float XLabelSize = 0.04;
-    if (h->GetNbinsX() > 5) XLabelSize = XLabelSize - 0.001f * (h->GetNbinsX() - 10);
-    if (XLabelSize < 0.012) XLabelSize = 0.012;
+    float XLabelSize = 0.039;
+    if (h->GetNbinsX() > 5) XLabelSize = XLabelSize - 0.001f * (h->GetNbinsX() - 5);
+    if (XLabelSize < 0.015) XLabelSize = 0.015;
     h->GetXaxis()->SetLabelSize(XLabelSize);
     h->GetYaxis()->CenterTitle();
     h->GetYaxis()->SetTitleFont(42); h->GetYaxis()->SetTitleSize(0.06); h->GetYaxis()->SetTitleOffset(1.1);
@@ -1057,7 +1057,7 @@ void Plot_EventCount2D(TH2* h, const std::string &mode,
     l.DrawLatex(0.13, 0.947, "#bf{CMS} Simulation Preliminary");
 
     // Save canvas
-    TString pdfName = Form("%s/pdfs/CutFlow2D_%s.pdf", outputDir.c_str(), mode.c_str());
+    TString pdfName = Form("%s/pdfs/%s.pdf", outputDir.c_str(), h->GetName());
     gErrorIgnoreLevel = 1001; can->SaveAs(pdfName); gErrorIgnoreLevel = 0;
 
     delete can;
@@ -1278,5 +1278,4 @@ void MakeAndPlotCutflow2D(
     h2->SetMinimum(0.01);
     // --- 11) call plotting routine which handles drawing + special Zbi total-row masking ---
     Plot_EventCount2D(h2, mode, zmin_override, zmax_override);
-    // Plot_EventCount2D deletes h2 internally as per your convention
 }

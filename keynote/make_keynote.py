@@ -14,48 +14,29 @@ args = parser.parse_args()
 
 DRY_RUN = args.dry_run
 SKIP_CUTFLOW = False
+SKIP_SUMMARY = False
 
 # -------------------------
 # Hardcoded run-ids to loop over
 # -------------------------
-# Edit this list to the run ids (directory names under runs/) you want processed.
-# If this list is empty, the script will auto-discover all run directories and process them.
+# Edit this list to the run ids (directory names under runs/) to process
+# If this list is empty, the script will auto-discover all run directories and process them
 RUN_IDS = [
-"run_Cascades_2L_0J_lPTISR_Regions_Gold_v339_December20_2025_1027",
-"run_Cascades_2L_0J_hPTISR_Regions_Gold_v339_December20_2025_1029",
-"run_Cascades_2L_1J_lPTISR_Regions_Gold_v339_December20_2025_1030",
-"run_Cascades_2L_1J_hPTISR_Regions_Gold_v339_December20_2025_1031",
-"run_Cascades_3L_0J_lPTISR_Regions_Gold_v339_December20_2025_1032",
-"run_Cascades_3L_0J_hPTISR_Regions_Gold_v339_December20_2025_1034",
-"run_Cascades_3L_1J_lPTISR_Regions_Gold_v339_December20_2025_1033",
-"run_Cascades_3L_1J_hPTISR_Regions_Gold_v339_December20_2025_1036",
-"run_Cascades_4L_Regions_Gold_v339_December20_2025_1037",
-"run_Cascades_2L_0J_lPTISR_Regions_Silver_v339_December20_2025_1038",
-"run_Cascades_2L_0J_hPTISR_Regions_Silver_v339_December20_2025_1039",
-"run_Cascades_2L_1J_lPTISR_Regions_Silver_v339_December20_2025_1040",
-"run_Cascades_2L_1J_hPTISR_Regions_Silver_v339_December20_2025_1042",
-"run_Cascades_3L_0J_lPTISR_Regions_Silver_v339_December20_2025_1043",
-"run_Cascades_3L_0J_hPTISR_Regions_Silver_v339_December20_2025_1045",
-"run_Cascades_3L_1J_lPTISR_Regions_Silver_v339_December20_2025_1044",
-"run_Cascades_3L_1J_hPTISR_Regions_Silver_v339_December20_2025_1046",
-"run_Cascades_4L_Regions_Silver_v339_December20_2025_1048",
-"run_Cascades_2L_0J_lPTISR_Regions_Bronze_v339_December20_2025_1049",
-"run_Cascades_2L_0J_hPTISR_Regions_Bronze_v339_December20_2025_1050",
-"run_Cascades_2L_1J_lPTISR_Regions_Bronze_v339_December20_2025_1051",
-"run_Cascades_2L_1J_hPTISR_Regions_Bronze_v339_December20_2025_1052",
-"run_Cascades_3L_0J_lPTISR_Regions_Bronze_v339_December20_2025_1053",
-"run_Cascades_3L_0J_hPTISR_Regions_Bronze_v339_December20_2025_1056",
-"run_Cascades_3L_1J_lPTISR_Regions_Bronze_v339_December20_2025_1055",
-"run_Cascades_3L_1J_hPTISR_Regions_Bronze_v339_December20_2025_1057",
-"run_Cascades_4L_Regions_Bronze_v339_December20_2025_1058",
-"run_Cascades_Regions_top_sideband_Bronze_v339_December20_2025_1059",
-"run_Cascades_Regions_top_sideband_Silver_v339_December20_2025_1101",
-"run_Cascades_Regions_top_sideband_Gold_v339_December20_2025_1102",
-"run_Cascades_CRs_Impacts_FD_234L_Bronze_v339_December19_2025_1120",
-"run_Cascades_Regions_234L_v339_December19_2025_1118",
-
-#"run_ANPlots_v0_December20_2025_0934",
 ]
+
+# ordering for summary slides by token presence in filename (not run-order)
+# any summary file/group whose name contains "Gold" will be placed before "Silver", etc.
+SUMMARY_ORDER = ["Gold", "Silver", "Bronze"]  # customize sequence here (case-insensitive)
+
+def token_rank(name: str):
+    """Return the index of the first SUMMARY_ORDER token found in name (case-insensitive).
+       If none are found, return len(SUMMARY_ORDER) to place after ordered tokens.
+    """
+    low = name.lower()
+    for idx, tok in enumerate(SUMMARY_ORDER):
+        if tok.lower() in low:
+            return idx
+    return len(SUMMARY_ORDER)
 
 # -------------------------
 # Config
@@ -66,31 +47,24 @@ runs_root = base_dir / top_level / "runs"
 bin_names = []
 
 prefix_order = [
-    #"Cascades_300_300_289_280_275_270",
-    #"Cascades_289_300_289_280_270_260",
-    #"Cascades_300_300_289_260_240_220",
     "Cascades_220_220_209_200_190_180",
-    #"Wjets", "ttbar", "DBTB",
     "SMS_TChiWZ_SMS_300_290",
     "SMS_TChiWZ_SMS_300_270",
     "top", "boson", "Vfakeleps",
-    #"Wjets", "QCD", "ZInv",
     "impacts",
 ]
 
 ignore_bins = [
-    # signals:
-    #"Cascades_209_220_209_200_190_180",
-    #"Cascades_220_220_209_200_190_180",
-    #"Cascades_289_300_289_280_270_260",
-    #"Cascades_300_300_289_260_240_220",
-    #"Cascades_300_300_289_280_275_270",
-    #"SMS_TChiWZ_SMS_300_290",
-    #"SMS_TChiWZ_Sandwich_SMS_300_290",
-    ## backgrounds:
-    #"DBTB", "DY", "QCD",
-    #"ST", "ZInv", "ttbar", "Wjets",
 ]
+
+# For plotting yields — keep insertion order deterministic
+METRIC_LABELS = {
+    "yield": "Yield",
+    #"SoB": "S / B",
+    #"SoverSqrtB": "S / √B",
+    "Zbi": "Zbi",
+}
+METRIC_ORDER = list(METRIC_LABELS.keys())
 
 # -------------------------
 # Auto-discover RUN_IDS if list is empty
@@ -99,13 +73,11 @@ if not RUN_IDS:
     discovered = []
     if runs_root.exists():
         discovered = [p for p in runs_root.iterdir() if p.is_dir()]
-    # fallback to older layout base_dir/runs
     old_root = base_dir / "runs"
     if not discovered and old_root.exists():
         discovered = [p for p in old_root.iterdir() if p.is_dir()]
 
     if discovered:
-        # Sort newest first (change reverse=False if you prefer oldest-first)
         discovered.sort(key=lambda p: p.stat().st_mtime, reverse=True)
         RUN_IDS = [p.name for p in discovered]
         print(f"AUTO: discovered {len(RUN_IDS)} run-ids (newest first):")
@@ -119,9 +91,6 @@ if not RUN_IDS:
 # Rsync
 # -------------------------
 def run_initial_rsync_if_requested():
-    """If KEYNOTE_RSYNC / --rsync-source is given, run rsync to populate base_dir/top_level/.
-       Uses rsync -aR --prune-empty-dirs so remote './runs/*/plots/pdfs/' is preserved under top_level.
-    """
     if args.no_rsync:
         print("Skipping rsync due to --no-rsync.")
         return
@@ -132,13 +101,11 @@ def run_initial_rsync_if_requested():
     dest.mkdir(parents=True, exist_ok=True)
     print(f"Running rsync from '{rsync_src}' -> '{dest}' ...")
     try:
-        # use -aR --prune-empty-dirs to preserve the path part after './' in the remote spec
         subprocess.run(["rsync", "-aR", "--prune-empty-dirs", rsync_src, str(dest) + "/"], check=True)
         print("rsync finished.")
     except subprocess.CalledProcessError as e:
         print(f"rsync failed (code {e.returncode}); continuing without rsync.", file=sys.stderr)
 
-# run it early so the runs/ area can be populated before we look for run directories
 run_initial_rsync_if_requested()
 
 # -------------------------
@@ -173,7 +140,6 @@ repeat
             end if
         end tell
     end try
-    -- check timeout
     set now_time to (do shell script "date +%s")
     if ((now_time as integer) - (start_time as integer)) > timeout_seconds then
         do shell script "echo 'Timeout waiting for Keynote document to become ready' >&2"
@@ -245,7 +211,6 @@ def parse_pdf_stem(stem: str):
 # AppleScript helpers
 # -------------------------
 def make_applescript_call_show(show):
-    # show should be 'true' or 'false' as a string
     script = f'''
 tell application "System Events"
     set visible of application process "Keynote" to {show}
@@ -472,14 +437,12 @@ end tell
     run_applescript(script)
 
 def make_applescript_call_add_run_title(run_id: str):
-    """Insert a Run title slide at index 1 using master 'Plots' and set the slide title to '<run_id>'."""
     title_text = f"{run_id}".replace('"', '\\"')
     if DRY_RUN:
         print(f"[DRY RUN] Would add run title slide with title: {title_text}")
         return
     script = f'''
 tell application "Keynote"
-    -- ensure there's a front document (should be ready because open_keynote_template waited)
     repeat until (count of documents) > 0
         delay 0.2
     end repeat
@@ -496,7 +459,6 @@ tell application "Keynote"
                 end if
             end try
         end repeat
-        -- move the new slide to be the first slide
         try
             set the slide index of newSlide to 1
         end try
@@ -507,9 +469,6 @@ end tell
 
 # -------------------------
 # Bin processing
-# -------------------------
-# -------------------------
-# Bin processing (updated to handle pre/post-fit pairs)
 # -------------------------
 def process_bin_dir(bin_dir: Path):
     bin_name = bin_dir.name
@@ -525,14 +484,12 @@ def process_bin_dir(bin_dir: Path):
             parsed["bin"] = bin_name
         parsed_list.append(parsed)
 
-    # --- Detect special prefit / fit_b pairs ---
     token_prefit = "can_stack_shapes_prefit_"
     token_fitb = "can_stack_shapes_fit_b_"
 
-    # map stems to entries for quick lookup
     stems_map = {ent["path"].stem: ent for ent in parsed_list}
 
-    pairs = []  # list of (prefit_entry, fitb_entry)
+    pairs = []
     used_stems = set()
     for stem, ent in list(stems_map.items()):
         if stem in used_stems:
@@ -545,18 +502,14 @@ def process_bin_dir(bin_dir: Path):
         elif token_fitb in stem:
             counterpart = stem.replace(token_fitb, token_prefit, 1)
             if counterpart in stems_map:
-                # ensure prefit is first in tuple
                 pairs.append((stems_map[counterpart], stems_map[stem]))
                 used_stems.add(stem); used_stems.add(counterpart)
 
-    # If any special pairs found, we will *not* add the folder title slide (per request).
     special_pairs_found = len(pairs) > 0
 
-    # Remove paired entries from parsed_list so they don't get processed again below
     if used_stems:
         parsed_list = [p for p in parsed_list if p["path"].stem not in used_stems]
 
-    # classify remaining PDFs as before
     stack_pdfs = [d for d in parsed_list if d["is_stack"]]
     overlay_pdfs = [d for d in parsed_list if d["is_overlay"]]
     two_d = [d for d in parsed_list if d["is_2d"] and not d["is_stack"] and not d["is_overlay"] and not d["is_cutflow"] and (d.get("proc") in prefix_order)]
@@ -567,30 +520,17 @@ def process_bin_dir(bin_dir: Path):
     for var in var_to_entries:
         var_to_entries[var].sort(key=lambda e: prefix_order.index(e["proc"]) if e["proc"] in prefix_order else 999)
 
-    # If no special pair was found, keep the original behavior of adding a folder/bin title slide.
-    # If special pair(s) found we *skip* adding the bin title slide (per your step 4).
     if not SKIP_CUTFLOW and not special_pairs_found:
         make_applescript_call_add_folder_title(bin_name, str(cutflow_pdf) if cutflow_pdf else None)
-    else:
-        # If there is a cutflow and you still want to show it even when pair-handling is active,
-        # uncomment the next two lines. For now we skip the folder-title slide entirely when pairs are present.
-        # if cutflow_pdf:
-        #     make_applescript_call_add_single_large(str(cutflow_pdf), bin_name.replace("_", " "))
-        pass
 
-    # --- Add special pre/post-fit slides (prefit first, then fit_b) ---
-    # Use the bin name (underscores -> spaces) and append "Pre-Fit" / "Post-Fit"
     if special_pairs_found:
         bin_title_base = bin_name.replace("_", " ")
         for pre_ent, fitb_ent in pairs:
-            # Pre-Fit slide
             pre_title = f"{bin_title_base} Pre-Fit"
             make_applescript_call_add_single_large(str(pre_ent["path"]), pre_title)
-            # Post-Fit slide (fit_b)
             post_title = f"{bin_title_base} Post-Fit"
             make_applescript_call_add_single_large(str(fitb_ent["path"]), post_title)
 
-    # --- Continue with normal processing for remaining files ---
     for sp in stack_pdfs:
         var_title = sp.get("var") or "stack"
         make_applescript_call_add_single_large(str(sp["path"]), format_var_title(var_title))
@@ -605,11 +545,53 @@ def process_bin_dir(bin_dir: Path):
         for chunk in chunk_list(paths, 6):
             make_applescript_call_add_plots(chunk, format_var_title(var))
 
+    if not SKIP_SUMMARY:
+    	# Per-bin summary slides inside a real bin directory — keep loose matching to allow variants
+    	summary_candidates = [p for p in bin_dir.glob("*_Cutflow2D_*.pdf")]
+    	summary_candidates = [p for p in summary_candidates if p.stem.split("_Cutflow2D")[0].startswith(bin_name)]
+
+    	for metric in METRIC_ORDER:
+    	    label = METRIC_LABELS[metric]
+    	    matched = [p for p in summary_candidates if p.stem.endswith(f"_Cutflow2D_{metric}") or f"_Cutflow2D_{metric}" in p.stem]
+    	    # prioritize files containing tokens in SUMMARY_ORDER
+    	    matched.sort(key=lambda p: (token_rank(p.stem), p.stem.lower()))
+    	    for p in matched:
+    	        group_name = p.stem.split("_Cutflow2D")[0].replace("_", " ")
+    	        slide_title = f"{group_name} {label}"
+    	        make_applescript_call_add_single_Summary(str(p), slide_title)
+
 # -------------------------
-# New layout helpers (updated to runs/<run_id>/plots/pdfs/)
+# New helper to handle flat layout cutflow grouping
+# -------------------------
+def process_flat_plots_dir(plots_dir: Path):
+    """Handle flat layout: group *_Cutflow2D_*.pdf by the prefix before _Cutflow2D
+       and create per-group summary slides for each metric"""
+    print(f"Processing flat plots dir (grouping by prefix): {plots_dir}")
+    cutflow_files = sorted(plots_dir.glob("*_Cutflow2D_*.pdf"))
+    groups = defaultdict(list)
+    for p in cutflow_files:
+        key = p.stem.split("_Cutflow2D")[0]
+        groups[key].append(p)
+
+    # stable but token-prioritized iteration order:
+    sorted_groups = sorted(groups.keys(), key=lambda k: (token_rank(k), k.lower()))
+    for group in sorted_groups:
+        files = groups[group]
+        group_title = group.replace("_", " ")
+        # For each metric, find matching file(s) for this group and create slides
+        for metric in METRIC_ORDER:
+            label = METRIC_LABELS[metric]
+            matched = [f for f in files if f.stem.endswith(f"_Cutflow2D_{metric}") or f"_Cutflow2D_{metric}" in f.stem]
+            # sort matched by token_rank first, then stable name order
+            matched.sort(key=lambda p: (token_rank(p.stem), p.name.lower()))
+            for p in matched:
+                slide_title = f"{group_title} {label}"
+                make_applescript_call_add_single_Summary(str(p), slide_title)
+
+# -------------------------
+# Layout helpers
 # -------------------------
 def choose_run_dir_by_id(run_id: str) -> Path:
-    """Given a run_id, return Path to that run directory, checking both new and old layouts."""
     candidate = runs_root / run_id
     if candidate.exists():
         return candidate
@@ -619,27 +601,19 @@ def choose_run_dir_by_id(run_id: str) -> Path:
     raise FileNotFoundError(f"Requested run-id not found in either expected locations: {candidate} or {candidate_old}")
 
 def get_plots_dir_for_run(run_dir: Path):
-    # updated path for new layout: runs/<run_id>/plots/pdfs/
-    # But accept both runs/<run_id>/plots/pdfs and runs/<run_id>/pdfs (older)
     plots_dir_candidate = run_dir / "plots" / "pdfs"
     if plots_dir_candidate.exists():
         return plots_dir_candidate
-    # fallback (older layout)
     alt_candidate = run_dir / "pdfs"
     if alt_candidate.exists():
         return alt_candidate
     raise FileNotFoundError(f"Plots directory not found for run '{run_dir.name}': tried {plots_dir_candidate} and {alt_candidate}")
 
 def get_target_bin_dirs_for_run(run_dir: Path):
-    """Return list of directories that will be treated as 'bins' for the selected run.
-       If plots/pdfs/ contains subdirectories those are bins; otherwise treat pdfs/ as single bin.
-    """
     plots_dir = get_plots_dir_for_run(run_dir)
-    # subdirs that contain pdfs:
     subdirs = [d for d in sorted(plots_dir.iterdir()) if d.is_dir()]
     if subdirs:
         return [d for d in subdirs if d.name not in ignore_bins]
-    # no subdirs: treat the plots_dir itself as a bin
     if plots_dir.name in ignore_bins:
         return []
     return [plots_dir]
@@ -662,7 +636,6 @@ def get_latest_significance_pdf(plots_root):
 # Main
 # -------------------------
 def main():
-    # Ensure template exists and open it once (we'll append run slides for all RUN_IDS into this document)
     template_file = base_dir / "PlotsTemplate.key"
     if not template_file.exists():
         raise FileNotFoundError(f"Keynote template not found: {template_file}")
@@ -703,28 +676,20 @@ def main():
 
         global prefix_order
         missing_procs = [proc for proc in prefix_order if proc not in found_procs]
-        #if missing_procs:
-        #    print("WARNING: The following requested procs were not found in any bins:")
-        #    for proc in missing_procs:
-        #        print(f"  {proc}")
 
-        # Add a run title slide for this run
         print(f"Adding run title slide for run: {run_dir.name}")
         make_applescript_call_add_run_title(run_dir.name)
 
-        # Add latest Significance slide (search under this run's plots dir)
         sig_pdf = get_latest_significance_pdf(plots_dir)
         bin_names = [d.name for d in bin_dirs]
 
         bin_text = "Included bins: " + ", ".join(bin_names) if bin_names and [d.name for d in bin_dirs] != ['pdfs'] else ""
-        if bin_text == "": # pull JSON to get bin names
+        if bin_text == "":
             rsync_src = args.rsync_source or os.environ.get("KEYNOTE_RSYNC")
             if rsync_src:
                 if ":" not in rsync_src:
                     raise ValueError("rsync source must include user@host:/path")
                 host, remote_path = rsync_src.split(":", 1)
-                
-                # Build the truncated remote path
                 parts = Path(remote_path).parts
                 for i in range(len(parts) - 1):
                     if parts[i] == "CascadesCombine" and parts[i + 1] == "runs":
@@ -732,8 +697,7 @@ def main():
                         break
                 else:
                     raise ValueError("Could not find 'CascadesCombine/runs' in rsync_src")
-                
-                base_remote_path = Path(*parts[:idx + 2]) # up to .../CascadesCombine/runs/
+                base_remote_path = Path(*parts[:idx + 2])
                 json_path = f"{host}:{base_remote_path}/{Path(run_dir).name}/flattened.json"
                 dest = base_dir / top_level / run_dir
                 subprocess.run(["rsync", "-a", str(json_path), str(dest) + "/"], check=True)
@@ -742,29 +706,18 @@ def main():
                     with json_path.open("r") as f:
                         data = json.load(f)
                     bin_text = "Included bins: " + ", ".join([k for k in data.keys() if k.startswith("Bin")] if data else "")
-            
+
         if sig_pdf:
             print(f"Adding latest significance plot: {sig_pdf}")
             make_applescript_call_add_significance(str(sig_pdf), bin_text)
         else:
             print("No Significance PDF found for this run.")
 
-        print("Making summary yield slides")
-        summary_pdfs = [
-            (plots_dir / "CutFlow2D_yield.pdf", "Yield"),
-            (plots_dir / "CutFlow2D_SoB.pdf", "S / B"),
-            #(plots_dir / "CutFlow2D_SoverSqrtB.pdf", "S / √B"),
-            (plots_dir / "CutFlow2D_Zbi.pdf", "Zbi"),
-        ]
-        add_summary_slides(summary_pdfs)
-
-        if "LepEta" in run_id: 
+        if "LepEta" in run_id:
             prefix_order = [
                 "Cascades_220_220_209_200_190_180",
                 "SMS_TChiWZ_SMS_300_290",
                 "SMS_TChiWZ_SMS_300_270",
-                #"Wjets", "QCD", "ZInv",
-                #"Wjets",  "top", "boson",
                 "Wjets_2018",  "top_2018", "boson_2018",
             ]
 
@@ -797,12 +750,25 @@ def main():
                     "Cascades_220_220_209_200_190_180",
                 ]
 
+        if "ANPlot" in run_id:
+            prefix_order = [
+                "SMS_TChiWZ_SMS_300_295",
+                "SMS_TChiWZ_SMS_300_290",
+                "SMS_TChiWZ_SMS_300_270",
+                "Wjets",  "top", "DBTB",
+            ]
+
+        # If there are real subdirs (bins), process them using the existing logic
         if [d.name for d in bin_dirs] != ['pdfs']:
             print("Will make slides for bins:", [d.name for d in bin_dirs])
             for bin_dir in bin_dirs:
-                if(bin_dir.name == "pdfs" or bin_dir.name == "impacts"): continue
+                if bin_dir.name == "impacts": continue
                 print("  Making slides for bin:", bin_dir.name)
                 process_bin_dir(bin_dir)
+        elif not SKIP_SUMMARY:
+            # Flat layout detected: handle Cutflow2D files by grouping their prefix before _Cutflow2D
+            plots_dir = get_plots_dir_for_run(run_dir)
+            process_flat_plots_dir(plots_dir)
 
     if not any_run_processed:
         print("No runs were processed. Check RUN_IDS and the filesystem layout (runs_root/base_dir).")

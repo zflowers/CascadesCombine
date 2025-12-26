@@ -43,6 +43,12 @@ JET_CONFIGS = {
     "1J": {"njet_cond": "Njet_S>=1;", "njet_note": "Njet_S>=1;"},
 }
 
+JET_CONFIGS_3L = {
+    "0J": {"njet_cond": "Njet_S==0;", "njet_note": "Njet_S==0;"},
+    "1J": {"njet_cond": "Njet_S>=1;", "njet_note": "Njet_S>=1;"},
+    #"Jincl": {"njet_cond": None}  # no jet cut
+}
+
 # ---------------- RISR / Mperp bins ----------------
 RISR_BINS_2L = [
     {"name": "R95", "min": 0.95, "max": 1.0,  "Mh": 20, "Mm_lo": 10, "Mm_hi": 20, "Ml_hi": 10},
@@ -55,9 +61,9 @@ RISR_BINS_2L = [
 
 # 3L RISR/Mperp bins
 RISR_BINS_3L = [
-    {"name": "R9",  "min": 0.9,  "max": 1.0,  "Mh": 30, "Mm_lo": 20, "Mm_hi": 30, "Ml_hi": 30},
-    {"name": "R8",  "min": 0.8,  "max": 0.9,  "Mh": 40, "Mm_lo": 30, "Mm_hi": 40, "Ml_hi": 40},
-    {"name": "R7",  "min": 0.7,  "max": 0.8,  "Mh": 40, "Mm_lo": 30, "Mm_hi": 40, "Ml_hi": 40},
+    {"name": "R9",  "min": 0.9,  "max": 1.0,  "Mh": 30, "Mm_lo": 30, "Mm_hi": 30, "Ml_hi": 30},
+    {"name": "R8",  "min": 0.8,  "max": 0.9,  "Mh": 40, "Mm_lo": 40, "Mm_hi": 40, "Ml_hi": 40},
+    {"name": "R7",  "min": 0.7,  "max": 0.8,  "Mh": 50, "Mm_lo": 50, "Mm_hi": 50, "Ml_hi": 50},
 ]
 
 # 2L flavor splits
@@ -89,8 +95,7 @@ DEFAULT_MARATIO_THRESHOLD = 0.3
 MARATIO_NAME_A = "Ah"
 MARATIO_NAME_L = "Al"
 
-# ------------------ RULE TABLE for 3L (explicit, editable) ------------------
-# This table encodes the legacy 0J and 1J layouts you provided.
+# ------------------ RULE TABLE for 3L ------------------
 # Each entry is intentionally explicit to avoid cartesian explosions.
 # Structure notes:
 # - for each jet ('0J'/'1J') provide keys for RISR names (R9, R8, R7)
@@ -109,24 +114,14 @@ THREE_L_RULES = {
                 "Mh": {
                     "use_mperp": True,
                     "mperp_cat": "Mh",
-                    # split by MaRatio; same lep_classes for Ah and Al
-                    # "maratio": {
-                    #     "Ah": ["OSOFa", "nOSOFa"],  # MaRatio >= threshold
-                    #     "Al": ["OSOFa", "nOSOFa"],  # MaRatio < threshold
-                    # },
                     "maratio": False,
-                    "lep_classes": ["OSOFa", "nOSOFa"],
+                    "lep_classes": ["OSOFa", "OSSFa", "SSa"],
                 },
                 "Ml": {
                     "use_mperp": True,
                     "mperp_cat": "Ml",
-                    # split by MaRatio; Ah gets OSOF_a+nOSOF, Al gets incl
-                    # "maratio": {
-                    #     "Ah": ["OSOFa", "nOSOFa"],  # MaRatio >= threshold
-                    #     "Al": ["incl"],  # MaRatio < threshold
-                    # },
                     "maratio": False,
-                    "lep_classes": ["OSOFa", "nOSOFa"],
+                    "lep_classes": ["OSOFa", "OSSFa", "SSa"],
                 },
             }
         },
@@ -142,7 +137,7 @@ THREE_L_RULES = {
                     "use_mperp": True,
                     "mperp_cat": "Ml",
                     "maratio": False,
-                    "lep_classes": ["OSOFa", "OSSFa_AllSF", "OSSFa_OSOF", "SSa"],
+                    "lep_classes": ["OSOFa", "OSSFa", "SSa"],
                 },
             }
         },
@@ -152,37 +147,47 @@ THREE_L_RULES = {
                     "use_mperp": True,
                     "mperp_cat": "Mh",
                     "maratio": False,
-                    "lep_classes": ["OSOFa", "OSSFa_AllSF", "OSSFa_OSOF", "SSa"],
+                    "lep_classes": ["OSOFa", "OSSFa", "SSa"],
                 },
                 "Ml": {
                     "use_mperp": True,
                     "mperp_cat": "Ml",
                     "maratio": False,
-                    "lep_classes": ["OSa", "SSa"],
+                    "lep_classes": ["OSOFa", "OSSFa", "SSa"],
                 },
             }
         },
     },
     "1J": {
-        "R9": {"incl": True},
+        "R9": {
+            "mperp": {
+                "Mh": {
+                    "use_mperp": True,
+                    "mperp_cat": "Mh",
+                    "maratio": False,
+                    "lep_classes": ["OSOFa", "OSSFa", "SSa"],
+                },
+                "Ml": {
+                    "use_mperp": True,
+                    "mperp_cat": "Ml",
+                    "maratio": False,
+                    "lep_classes": ["OSOFa", "OSSFa", "SSa"],
+                },
+            }
+        },
         "R8": {
             "mperp": {
                 "Mh": {
                     "use_mperp": True,
                     "mperp_cat": "Mh",
                     "maratio": False,
-                    "lep_classes": ["incl"],
+                    "lep_classes": ["OSOFa", "OSSFa", "SSa"],
                 },
                 "Ml": {
                     "use_mperp": True,
                     "mperp_cat": "Ml",
-                    # Ml has a ma-ratio dict (Ah/Al) mapping to lep classes
-                    # "maratio": {
-                    #     "Ah": ["OFa", "SFa"],  # MaRatio >= threshold
-                    #     "Al": ["OFa", "SFa"],  # MaRatio < threshold
-                    # },
                     "maratio": False,
-                    "lep_classes": ["OFa", "SFa"],
+                    "lep_classes": ["OSOFa", "OSSFa", "SSa"],
                 },
             }
         },
@@ -192,13 +197,13 @@ THREE_L_RULES = {
                     "use_mperp": True,
                     "mperp_cat": "Mh",
                     "maratio": False,
-                    "lep_classes": ["incl"],
+                    "lep_classes": ["OSOFa", "OSSFa", "SSa"],
                 },
                 "Ml": {
                     "use_mperp": True,
                     "mperp_cat": "Ml",
                     "maratio": False,
-                    "lep_classes": ["OFa", "SFa"],
+                    "lep_classes": ["OSOFa", "OSSFa", "SSa"],
                 },
             }
         },
@@ -287,7 +292,7 @@ def lookup_risr_by_name(name, risr_list):
             return r
     return None
 
-# ---------------- 2L generator (unchanged combinatorial generator) ----------------
+# ---------------- 2L combinatorial generator ----------------
 def build_bins_2l_for_jet(jtag, jconf, ptisr_tag, risr_bins):
     out = {}
     PTISR_CUT_STR = f"PTISR_LEP>={ptisr_tag};"
@@ -363,7 +368,7 @@ def build_bins_3l_from_rules(jtag, jconf, ptisr_tag, risr_bins, rules_for_jet, m
             }
             continue
 
-        # otherwise we expect a 'mperp' subdict
+        # otherwise expect a 'mperp' subdict
         mperp_dict = risr_rule.get("mperp", {})
         for mlabel, mrule in mperp_dict.items():
             use_mperp = mrule.get("use_mperp", True)
@@ -462,9 +467,18 @@ def main(outdir: Path, dry_run=False, maratio_threshold=DEFAULT_MARATIO_THRESHOL
         files_to_write[fname] = doc_map
 
     # 3L outputs using rule table
-    for jtag, jconf in JET_CONFIGS.items():
+    for jtag, jconf in JET_CONFIGS_3L.items():
         rules_for_jet = THREE_L_RULES.get(jtag, {})
-        doc_map = build_bins_3l_from_rules(jtag, jconf, PTISR_3L, RISR_BINS_3L, rules_for_jet, maratio_threshold, verbose=verbose)
+        doc_map = build_bins_3l_from_rules(
+            jtag,
+            jconf,
+            PTISR_3L,
+            RISR_BINS_3L,
+            #THREE_L_RULES,
+            rules_for_jet,
+            maratio_threshold,
+            verbose=verbose,
+        )
         fname = outdir / f"Regions_3L_{jtag}_hPTISR_Gold.yaml"
         files_to_write[fname] = doc_map
 
@@ -479,7 +493,7 @@ def main(outdir: Path, dry_run=False, maratio_threshold=DEFAULT_MARATIO_THRESHOL
         else:
             write_yaml_map(path, doc)
 
-    # try calling downstream generator if present
+    # call generator for corresponding Gold, Silver, and Bronze
     try:
         make_GSB_cmd = ["python3", "python/make_GSB_Regions.py"]
         print("making other regions: python3 python/make_GSB_Regions.py")
