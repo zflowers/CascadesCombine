@@ -260,7 +260,9 @@ def prepare_run_and_stage_assets_copy(
     ]
     macro_items = [
         "CollectSignificance.py",
-        "launchCombine.sh",
+        "launchLimits.sh",
+        "launchSignificances.sh",
+        "launchCollectLimits.sh",
         "launchT2W.sh",
         "launchImpacts.sh",
         "launchFitDiagnostics.sh",
@@ -885,8 +887,12 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                 os.remove(cmssw_tarball)
 
             # combine
-            print("[run_combine] Launching combine jobs...", flush=True)
-            subprocess.run(["bash", macro_dir+"/launchCombine.sh", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
+            print("[run_combine] Launching limit jobs...", flush=True)
+            subprocess.run(["bash", macro_dir+"/launchLimits.sh", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
+            print("[run_combine] Launching significance jobs...", flush=True)
+            subprocess.run(["bash", macro_dir+"/launchSignificances.sh", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
+            print("[run_combine] Launching CollectLimits...", flush=True)
+            subprocess.run(["bash", macro_dir+"/launchCollectLimits.sh", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
 
             # yields
             #print(f"[run_combine] Yields for {bins_cfg}")
@@ -908,6 +914,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             print("[run_combine] Plotting significances with command:", " ".join(plot_cmd), flush=True)
             subprocess.run(plot_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
+            # Note impacts, T2W, and FD in macro only run on first signal
             if make_impacts or make_FD:
                 # T2W
                 T2W_cmd = [
@@ -919,8 +926,8 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                 print("[run_combine] Running T2W with command:", " ".join(T2W_cmd), flush=True)
                 subprocess.run(T2W_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
+            # FitDiagnostics
             if make_FD:
-                # FitDiagnostics
                 FD_cmd = [
                     "bash",
                     macro_dir+"/launchFitDiagnostics.sh",
