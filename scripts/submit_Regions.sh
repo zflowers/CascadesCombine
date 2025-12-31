@@ -22,7 +22,7 @@ run_all() {
     fi
 }
 SLEEP=70
-VERSION="v350"
+VERSION="v354"
 make clean
 make all -j 8
 echo "Submitting Regions..."
@@ -68,27 +68,27 @@ cat config/bin_cfgs/Regions_top_sideband_Bronze.yaml >> config/bin_cfgs/Regions.
 # Set BPJ to % of total
 BIN_COUNT=$(grep -c 'Bin' config/bin_cfgs/Regions.yaml)
 BINS_PER_JOB=$(awk -v n="$BIN_COUNT" 'BEGIN { printf "%d\n", n*0.05 + 0.5 }')
-run_all --skip-plot-yields --make-FD --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_Regions_234L_${VERSION}
-sleep ${SLEEP}
+#run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_Regions_234L_${VERSION}
+#sleep ${SLEEP}
 
 # Alternative all bins run(s)
 #run_all --skip-compile --skip-plot-yields --make-json --bins-cfg config/bin_cfgs/Regions.yaml --bins-per-job ${BINS_PER_JOB} --processes-cfg config/process_cfgs/processes_allTChiWZ.yaml --run-name Cascades_Regions_234L_allTChiWZ_${VERSION}
 #sleep ${SLEEP}
 
 # CR Fit
-rm -f config/bin_cfgs/Regions_Bronze_CR.yaml # Clean up yaml
-cat config/bin_cfgs/Regions_2L_0J_lPTISR_Bronze.yaml >> config/bin_cfgs/Regions_Bronze_CR.yaml
-cat config/bin_cfgs/Regions_2L_1J_lPTISR_Bronze.yaml >> config/bin_cfgs/Regions_Bronze_CR.yaml
-cat config/bin_cfgs/Regions_2L_0J_hPTISR_Bronze.yaml >> config/bin_cfgs/Regions_Bronze_CR.yaml
-cat config/bin_cfgs/Regions_2L_1J_hPTISR_Bronze.yaml >> config/bin_cfgs/Regions_Bronze_CR.yaml
-cat config/bin_cfgs/Regions_3L_0J_lPTISR_Bronze.yaml >> config/bin_cfgs/Regions_Bronze_CR.yaml
-cat config/bin_cfgs/Regions_3L_1J_lPTISR_Bronze.yaml >> config/bin_cfgs/Regions_Bronze_CR.yaml
-cat config/bin_cfgs/Regions_3L_0J_hPTISR_Bronze.yaml >> config/bin_cfgs/Regions_Bronze_CR.yaml
-cat config/bin_cfgs/Regions_3L_1J_hPTISR_Bronze.yaml >> config/bin_cfgs/Regions_Bronze_CR.yaml
-cat config/bin_cfgs/Regions_4L_Bronze.yaml >> config/bin_cfgs/Regions_Bronze_CR.yaml
-cat config/bin_cfgs/Regions_top_sideband_Bronze.yaml >> config/bin_cfgs/Regions_Bronze_CR.yaml
-run_all --skip-plot-yields --make-impacts --make-FD --processes-cfg config/process_cfgs/data_processes.yaml --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_Bronze_CR.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_CRs_Impacts_FD_234L_Bronze_${VERSION}
+rm -f config/bin_cfgs/Regions_CR.yaml # Clean up yaml
+cat config/bin_cfgs/Regions_2L_0J_lPTISR_Bronze.yaml >> config/bin_cfgs/Regions_CR.yaml
+cat config/bin_cfgs/Regions_2L_1J_lPTISR_Bronze.yaml >> config/bin_cfgs/Regions_CR.yaml
+cat config/bin_cfgs/Regions_2L_0J_hPTISR_Bronze.yaml >> config/bin_cfgs/Regions_CR.yaml
+cat config/bin_cfgs/Regions_2L_1J_hPTISR_Bronze.yaml >> config/bin_cfgs/Regions_CR.yaml
+cat config/bin_cfgs/Regions_3L_0J_lPTISR_Bronze.yaml >> config/bin_cfgs/Regions_CR.yaml
+cat config/bin_cfgs/Regions_3L_1J_lPTISR_Bronze.yaml >> config/bin_cfgs/Regions_CR.yaml
+cat config/bin_cfgs/Regions_3L_0J_hPTISR_Bronze.yaml >> config/bin_cfgs/Regions_CR.yaml
+cat config/bin_cfgs/Regions_3L_1J_hPTISR_Bronze.yaml >> config/bin_cfgs/Regions_CR.yaml
+cat config/bin_cfgs/Regions_4L_Bronze.yaml >> config/bin_cfgs/Regions_CR.yaml
+cat config/bin_cfgs/Regions_top_sideband_Bronze.yaml >> config/bin_cfgs/Regions_CR.yaml
+run_all --skip-plot-yields --make-impacts --make-FD --processes-cfg config/process_cfgs/data_processes.yaml --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_CR.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_CRs_Impacts_FD_234L_Bronze_${VERSION}
 sleep ${SLEEP}
 
-sleep ${SLEEP} # final sleep just to hold user from accidentally submitting something before last sub is out the door
+sleep 30 # final sleep just to hold user from accidentally submitting something before last sub is out the door
 echo "Submitted Regions!"

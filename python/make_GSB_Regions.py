@@ -40,6 +40,7 @@ CUTS_PRESELECTION = [
     "EventFilter==1;",
     "PassesJVM==1;",
     "MIN(abs(Eta_lep))<1.4442;",
+    "Njet>0",
 ]
 
 # Cuts to remove if present. Empty by default; set e.g. ["PassesJVM==1;"] to remove.

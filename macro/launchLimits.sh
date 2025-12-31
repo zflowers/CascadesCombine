@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # launchLimits.sh
+set -euo pipefail
 source "macro/utils.sh"
 
 dcdir="${1:-datacards_cascades}"
@@ -35,7 +36,6 @@ for d in "$dcdir"/*/ ; do
         --there \
         -n .limit \
         -m "$mass" \
-        --parallel 4 \
         --job-dir "${rundir}/combine/$base"
 
 done

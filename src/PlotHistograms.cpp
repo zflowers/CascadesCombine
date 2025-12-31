@@ -111,7 +111,7 @@ int main(int argc, char* argv[]) {
         bool isCutFlow = (groupKey.find("__CutFlow") != string::npos);
         
         // Separate histograms
-        vector<TH1*> bkgHists, sigHists;
+        vector<TH1*> bkgHists, sigHists, emptyHists;
         vector<string> bkgProcs, sigProcs;
         TH1* dataHist = nullptr;
         
@@ -159,6 +159,10 @@ int main(int argc, char* argv[]) {
                 if(sigHists.size() > 0) { if(sigHists[0]->InheritsFrom(TH2::Class())) continue; } // don't stack TH2s
                 Plot_Stack(groupKey, bkgHists, sigHists, dataHist, 1.0);
                 Plot_Overlay(groupKey, bkgHists, sigHists, dataHist);
+                // Only sigs or only bkgs
+                Plot_Stack(groupKey+"_bkg", bkgHists, emptyHists, nullptr, 1.0);
+                Plot_Overlay(groupKey+"_bkg", bkgHists, emptyHists, nullptr);
+                Plot_Overlay(groupKey+"_sig", emptyHists, sigHists, nullptr);
             }
         
         } else {

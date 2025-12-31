@@ -25,18 +25,11 @@ OUTDIR = Path("config/bin_cfgs")
 PTISR_2L = 350
 PTISR_3L = 300
 
-COMMON_BASE_TOKENS = [
-    "MET>=150;",
-    "METORtrigger==1;",
-    "EventFilter==1;",
-    "PassesJVM==1;",
-    "MIN(abs(Eta_lep))<1.4442;",
-    "Nbjet==0;",
-    "Njet>0",
-]
+# leave empty and apply in make_GSB
+COMMON_BASE_TOKENS = []
 
-PREDEFINED_CUTS = "Cleaning_LEP;dphiMETV_LEP;"
-USER_CUTS = "minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"
+PREDEFINED_CUTS = ""
+USER_CUTS = ""
 
 JET_CONFIGS = {
     "0J": {"njet_cond": "Njet_S==0;", "njet_note": "Njet_S==0;"},
@@ -57,6 +50,11 @@ RISR_BINS_2L = [
     {"name": "R8",  "min": 0.8,  "max": 0.85, "Mh": 35, "Mm_lo": 25, "Mm_hi": 35, "Ml_hi": 25},
     {"name": "R75", "min": 0.75, "max": 0.8,  "Mh": 40, "Mm_lo": 30, "Mm_hi": 40, "Ml_hi": 30},
     {"name": "R7",  "min": 0.7,  "max": 0.75, "Mh": 45, "Mm_lo": 35, "Mm_hi": 45, "Ml_hi": 35},
+
+    #{"name": "R95", "min": 0.95, "max": 1.0,  "Mh": 20, "Mm_lo": 10, "Mm_hi": 20, "Ml_hi": 10},
+    #{"name": "R9",  "min": 0.9,  "max": 0.95, "Mh": 25, "Mm_lo": 15, "Mm_hi": 25, "Ml_hi": 15},
+    #{"name": "R8",  "min": 0.8,  "max": 0.9, "Mh": 35, "Mm_lo": 20, "Mm_hi": 35, "Ml_hi": 20},
+    #{"name": "R7",  "min": 0.7,  "max": 0.8, "Mh": 50, "Mm_lo": 30, "Mm_hi": 50, "Ml_hi": 30},
 ]
 
 # 3L RISR/Mperp bins

@@ -43,8 +43,9 @@ void Plot_Hist2D(TH2* h) {
     DrawLogSmart(h, "COLZ");
     h->SetMinimum(0.);
     h->Draw("COLZ");
-    h->GetXaxis()->CenterTitle(); h->GetYaxis()->CenterTitle();
+    h->GetXaxis()->CenterTitle(); h->GetYaxis()->CenterTitle(); h->GetZaxis()->CenterTitle();
     h->GetZaxis()->SetTitle(("N_{events} / "+std::to_string(int(lumi))+" fb^{-1}").c_str());
+    h->GetXaxis()->SetTitleOffset(1.05);
     TLatex l; l.SetTextFont(42); l.SetNDC();
     std::string proc_title = title;
     if(proc_title.find("TChiWZ") != std::string::npos)
@@ -52,7 +53,7 @@ void Plot_Hist2D(TH2* h) {
     else
         proc_title = m_Title[ExtractProcName(proc_title)];
     l.SetTextSize(0.035); l.DrawLatex(0.65,0.943,proc_title.c_str());
-    l.SetTextSize(0.04); l.DrawLatex(0.01,0.943,"#bf{CMS} Simulation Preliminary");
+    l.SetTextSize(0.04); l.DrawLatex(0.13,0.943,"#bf{CMS} Simulation Preliminary");
     l.SetTextSize(0.045); l.DrawLatex(0.7,0.04,ExtractBinName(title).c_str());
     TString pdfName = Form("%spdfs/%s/%s.pdf", outputDir.c_str(), ExtractBinName(title).c_str(), title.c_str());
     gErrorIgnoreLevel = 1001;
@@ -473,8 +474,7 @@ void Plot_Overlay(const std::string& hname,
     for (auto* h : bkgHists) if (h) ymax = std::max(ymax, h->GetMaximum());
     for (auto* h : sigHists) if (h) ymax = std::max(ymax, h->GetMaximum());
     if (dataHist) ymax = std::max(ymax, dataHist->GetMaximum());
-    //axisHist->GetYaxis()->SetRangeUser(1e-4, 1.8 * ymax);
-    axisHist->GetYaxis()->SetRangeUser(1e-4, 1.2 * ymax);
+    axisHist->GetYaxis()->SetRangeUser(1e-4, 1.15 * ymax);
 
     // ------------------------
     // Draw backgrounds
@@ -494,7 +494,8 @@ void Plot_Overlay(const std::string& hname,
 
         h->SetLineColor(color);
         h->SetLineWidth(3);
-        h->SetLineStyle(7);
+        if(!sigHists.empty()) h->SetLineStyle(7);
+        else h->SetLineStyle(0);
         h->SetFillStyle(0);
         //DrawLogSmart(h, "SAME HIST");
         h->Draw("SAME HIST");
@@ -836,7 +837,6 @@ void Plot_Eff_Multi(const std::string& groupName,
         }
     
         if(!gr || gr->GetN() == 0){
-            // std::cerr << "[Warning] Skipping TEff with no valid points: " << e->GetName() << "\n";
             continue;
         }
     

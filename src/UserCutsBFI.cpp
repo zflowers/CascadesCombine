@@ -3,9 +3,9 @@
 #include <limits>
 #include <TLorentzVector.h>
 
-// -------------------------------------
-// User-defined cuts loader (with examples)
-// -------------------------------------
+// -------------------------
+// User-defined cuts loader
+// -------------------------
 ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<std::string, CutDef>& ValidCuts, bool run_validation){
     std::map<std::string, CutDef> cuts;
     RegisterSafeHelpers();

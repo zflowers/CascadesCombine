@@ -437,7 +437,7 @@ struct MergedBinGroup {
 
 struct YamlBinPattern {
     std::string name;
-    std::string include;
+    std::vector<std::string> include;
     std::vector<std::string> exclude;
 };
 
@@ -455,21 +455,20 @@ struct YamlConfig {
 YamlConfig LoadYamlConfig(const std::string& yamlFile) {
 
     YamlConfig cfg;
-
     if (yamlFile.empty()) return cfg;
 
     YAML::Node root;
     try {
         root = YAML::LoadFile(yamlFile);
     }
-    catch(const std::exception& e) {
+    catch (const std::exception& e) {
         std::cerr << "[ERROR] Failed to parse YAML file: " << yamlFile << "\n"
                   << "Exception: " << e.what() << "\n";
         return cfg;
     }
 
     // -------------------------
-    // Parse bins:
+    // Parse bins
     // -------------------------
     if (root["bins"]) {
         for (const auto& n : root["bins"]) {
@@ -479,13 +478,15 @@ YamlConfig LoadYamlConfig(const std::string& yamlFile) {
             // Include: scalar or sequence
             if (n["include"]) {
                 if (n["include"].IsSequence()) {
-                    // Take first entry if only support one string
-                    b.include = n["include"][0].as<std::string>();
-                } else if (n["include"].IsScalar()) {
-                    b.include = n["include"].as<std::string>();
+                    for (const auto& inc : n["include"])
+                        b.include.push_back(inc.as<std::string>());
                 }
-            } else {
-                b.include = "*";
+                else if (n["include"].IsScalar()) {
+                    b.include.push_back(n["include"].as<std::string>());
+                }
+            }
+            else {
+                b.include.push_back("*");
             }
 
             // Exclude: scalar or sequence
@@ -493,44 +494,45 @@ YamlConfig LoadYamlConfig(const std::string& yamlFile) {
                 if (n["exclude"].IsSequence()) {
                     for (const auto& ex : n["exclude"])
                         b.exclude.push_back(ex.as<std::string>());
-                } else if (n["exclude"].IsScalar()) {
+                }
+                else if (n["exclude"].IsScalar()) {
                     b.exclude.push_back(n["exclude"].as<std::string>());
                 }
             }
 
-            cfg.bins.push_back(b);
+            cfg.bins.push_back(std::move(b));
         }
     }
 
     // -------------------------
-    // Parse process merges:
+    // Parse process merges
     // -------------------------
     if (root["processes"] && root["processes"]["merge"]) {
         for (const auto& n : root["processes"]["merge"]) {
             YamlProcessPattern p;
             p.name = n["name"].as<std::string>();
 
-            // Include: scalar or sequence
             if (n["include"]) {
                 if (n["include"].IsSequence()) {
                     for (const auto& inc : n["include"])
                         p.include.push_back(inc.as<std::string>());
-                } else if (n["include"].IsScalar()) {
+                }
+                else if (n["include"].IsScalar()) {
                     p.include.push_back(n["include"].as<std::string>());
                 }
             }
 
-            // Exclude: scalar or sequence
             if (n["exclude"]) {
                 if (n["exclude"].IsSequence()) {
                     for (const auto& ex : n["exclude"])
                         p.exclude.push_back(ex.as<std::string>());
-                } else if (n["exclude"].IsScalar()) {
+                }
+                else if (n["exclude"].IsScalar()) {
                     p.exclude.push_back(n["exclude"].as<std::string>());
                 }
             }
 
-            cfg.process_merges.push_back(p);
+            cfg.process_merges.push_back(std::move(p));
         }
     }
 
@@ -560,18 +562,19 @@ BuildMergedBinGroupsFromYaml(const std::vector<std::string>& allBins,
                              const YamlConfig& cfg)
 {
     std::vector<MergedBinGroup> out;
-
     for (const auto& b : cfg.bins) {
-
         MergedBinGroup g;
         g.group_name = b.name;
-
-        std::regex includeRegex(WildcardToRegex(b.include));
-
         for (const auto& bin : allBins) {
-            if (!std::regex_match(bin, includeRegex))
-                continue;
-
+            bool included = false;
+            for (const auto& inc : b.include) {
+                std::regex incRegex(WildcardToRegex(inc));
+                if (std::regex_match(bin, incRegex)) {
+                    included = true;
+                    break;
+                }
+            }
+            if (!included) continue;
             bool excluded = false;
             for (const auto& ex : b.exclude) {
                 std::regex exRegex(WildcardToRegex(ex));
@@ -580,15 +583,12 @@ BuildMergedBinGroupsFromYaml(const std::vector<std::string>& allBins,
                     break;
                 }
             }
-
             if (!excluded)
                 g.bin_names.push_back(bin);
         }
-
         if (!g.bin_names.empty())
             out.push_back(g);
     }
-
     return out;
 }
 

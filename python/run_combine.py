@@ -833,6 +833,8 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             print("[run_combine] Plotting histograms with command:", " ".join(plot_cmd), flush=True)
             subprocess.run(plot_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
+    idle_time_seconds_BF = 0
+
     if make_json:
         flattened_json = get_flattened_json_path(run_dir=run_dir)
         if not args.existing_run_dir and not args.skip_plot_yields:
@@ -889,6 +891,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             # combine
             print("[run_combine] Launching limit jobs...", flush=True)
             subprocess.run(["bash", macro_dir+"/launchLimits.sh", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
+            #sys.exit(0) # debugging
             print("[run_combine] Launching significance jobs...", flush=True)
             subprocess.run(["bash", macro_dir+"/launchSignificances.sh", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
             print("[run_combine] Launching CollectLimits...", flush=True)
@@ -1003,7 +1006,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             idle_time_seconds, idle_time_seconds/60, idle_time_seconds/3600), flush=True)
         print("Time for condor processing: {:.2f} seconds = {:.2f} minutes = {:.2f} hours".format(
             condor_time_seconds, condor_time_seconds/60, condor_time_seconds/3600), flush=True)
-    if not args.only_yields:
+    if not args.only_yields and make_json:
         print("Time for all BF condor jobs to start running: {0:.2f} seconds = {1:.2f} minutes = {2:.2f} hours".format(
             idle_time_seconds_BF, idle_time_seconds_BF/60, idle_time_seconds_BF/3600), flush=True)
         print("Total for BF condor processing: {0:.2f} seconds = {1:.2f} minutes = {2:.2f} hours".format(

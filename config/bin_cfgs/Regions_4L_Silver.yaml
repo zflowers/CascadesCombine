@@ -1,5 +1,5 @@
 Bin4L_Silver_R7:
-  cuts: "Nlep==4;MET>=150;PTISR_LEP>=100;RISR_LEP>=0.7;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Nbjet==0;Njet_S==0"
+  cuts: "Nlep==4;MET>=150;PTISR_LEP>=100;RISR_LEP>=0.7;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet==0;Njet_S==0;MIN(abs(Eta_lep))<1.4442;Njet>0;"
   lep-cuts: |
     >=1Gold;
     =1Bronze;

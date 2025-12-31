@@ -2,11 +2,11 @@
 
 SampleTool::SampleTool(){
 
+  LumiDict["HEM_LUMI"] = 21.077794578; // need for HEM veto
   LumiDict["Summer20UL16APV_106X"] = 16.8;
   LumiDict["Summer20UL16_106X"] = 19.5;
   LumiDict["Summer20UL17_106X"] = 41.479680529;
   LumiDict["Summer20UL18_106X"] = 59.832475339;
-  LumiDict["HEM_LUMI"] = 21.077794578;
   LumiDict["Summer22_130X"] = 7.9804;
   LumiDict["Summer22EE_130X"] = 26.6717;
   LumiDict["Summer23_130X"] = 17.794;
@@ -32,8 +32,8 @@ SampleTool::SampleTool(){
 
   string pathPrefix = "root://cmseos.fnal.gov//store/user/lpcsusylep/";
   //pathPrefix += "NTUPLES_Cascades_v6/";
-  pathPrefix += "NTUPLES_Cascades_v7/";
-  //pathPrefix += "NTUPLES_Cascades_v8/";
+  //pathPrefix += "NTUPLES_Cascades_v7/";
+  pathPrefix += "NTUPLES_Cascades_v8/";
 
   MasterDict["ttbar_2023BPix"] = {
     pathPrefix + "Summer23BPix_130X/TTto2L2Nu-2Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer23BPix_130X.root",
@@ -1167,6 +1167,36 @@ SampleTool::SampleTool(){
     }
   );
 
+  MasterDict["top_Run2"] = mergeEntriesList(
+    MasterDict,
+    {
+      "top_2018",
+      "top_2017",
+      "top_2016",
+      "top_2016APV",
+    }
+  );
+
+  MasterDict["Vfakeleps_Run2"] = mergeEntriesList(
+    MasterDict,
+    {
+      "Vfakeleps_2018",
+      "Vfakeleps_2017",
+      "Vfakeleps_2016",
+      "Vfakeleps_2016APV",
+    }
+  );
+
+  MasterDict["boson_Run2"] = mergeEntriesList(
+    MasterDict,
+    {
+      "boson_2018",
+      "boson_2017",
+      "boson_2016",
+      "boson_2016APV",
+    }
+  );
+
   MasterDict["top"] = mergeEntriesList(
     MasterDict,
     {
@@ -1212,9 +1242,9 @@ SampleTool::SampleTool(){
   MasterDict["data_obs"] = mergeEntriesList(
     MasterDict,
     {
-      //"Data_2016APV",
-      //"Data_2016",
-      //"Data_2017",
+      "Data_2016APV",
+      "Data_2016",
+      "Data_2017",
       "Data_2018",
     }
   );
