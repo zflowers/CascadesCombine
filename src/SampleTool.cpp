@@ -141,7 +141,7 @@ SampleTool::SampleTool(){
     pathPrefix + "Summer20UL16APV_106X/ttHToNonbb_M125_TuneCP5_13TeV-powheg-pythia8_Summer20UL16APV_106X.root",
     pathPrefix + "Summer20UL16APV_106X/ttHTobb_M125_TuneCP5_13TeV-powheg-pythia8_Summer20UL16APV_106X.root",
     pathPrefix + "Summer20UL16APV_106X/ttWJets_TuneCP5_13TeV_madgraphMLM_pythia8_Summer20UL16APV_106X.root",
-    pathPrefix + "Summer20UL16APV_106X/ttZJets_TuneCP5_13TeV_madgraphMLM_pythia8_Summer20UL16APV_106X.root",
+    //pathPrefix + "Summer20UL16APV_106X/ttZJets_TuneCP5_13TeV_madgraphMLM_pythia8_Summer20UL16APV_106X.root",
     pathPrefix + "Summer20UL16APV_106X/TGJets_TuneCP5_13TeV-amcatnlo-madspin-pythia8_Summer20UL16APV_106X.root",
     pathPrefix + "Summer20UL16APV_106X/TTGJets_TuneCP5_13TeV-amcatnloFXFX-madspin-pythia8_Summer20UL16APV_106X.root",
     pathPrefix + "Summer20UL16APV_106X/TTJets_DiLept_TuneCP5_13TeV-madgraphMLM-pythia8_Summer20UL16APV_106X.root",

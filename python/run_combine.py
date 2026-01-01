@@ -884,22 +884,50 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                 sys.exit(1)
             condor_time_end_BF = time.time()
             condor_time_seconds_BF = condor_time_end_BF - condor_time_start_BF
-            cmssw_tarball = condor_BF + '/cmssw_runtime.tgz'
-            if os.path.exists(cmssw_tarball):
-                os.remove(cmssw_tarball)
 
             # combine
             print("[run_combine] Launching limit jobs...", flush=True)
+            # local
             subprocess.run(["bash", macro_dir+"/launchLimits.sh", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
-            #sys.exit(0) # debugging
-            print("[run_combine] Launching significance jobs...", flush=True)
+            # condor
+            #condor_time_start_limits = time.time()
+            #for sig in signals:
+            #    limits_submit_cmd = [
+            #        "python3", "python/submitCombineJobs.py",
+            #        "--signal", sig,
+            #        "--output-dir", output_dir,
+            #        "--method", "AsymptoticLimits",
+            #        "--extra-args", "-n .limit",
+            #    ]
+            #    print('[DEBUG] limits cmd:'," ".join(limits_submit_cmd))
+            #    subprocess.run(limits_submit_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr,)
+            #
+            #condor_time_end_limits = time.time()
+            #condor_time_seconds_limits = condor_time_end_limits - condor_time_start_limits
+
+            #print("[run_combine] Launching significance jobs...", flush=True)
+            # local
             subprocess.run(["bash", macro_dir+"/launchSignificances.sh", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
+            #condor_time_start_significances = time.time()
+            #for sig in signals:
+            #    significances_submit_cmd = [
+            #        "python3", "python/submitCombineJobs.py",
+            #        "--signal", sig,
+            #        "--output-dir", output_dir,
+            #        "--method", "Significance",
+            #        "--extra-args", "-n .Test",
+            #    ]
+            #    print('[DEBUG] significances cmd:'," ".join(significances_submit_cmd))
+            #    subprocess.run(significances_submit_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr,)
+            #
+            #condor_time_end_significances = time.time()
+            #condor_time_seconds_significances = condor_time_end_significances - condor_time_start_significances
+
+            #print("[DEBUG] stopping here for now")
+            #sys.exit(0) # debugging
+
             print("[run_combine] Launching CollectLimits...", flush=True)
             subprocess.run(["bash", macro_dir+"/launchCollectLimits.sh", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
-
-            # yields
-            #print(f"[run_combine] Yields for {bins_cfg}")
-            #print_events(flattened_json)
 
             # significances
             try:
@@ -996,6 +1024,10 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                         except Exception as e:
                             print(f"[run_combine] Warning: failed to copy {impacts_alpha_pdf}: {e}", flush=True)
 
+    # Clean up tar
+    cmssw_tarball = condor_BF + '/../cmssw_runtime.tgz'
+    if os.path.exists(cmssw_tarball):
+        os.remove(cmssw_tarball)
     print("[run_combine] All steps completed.", flush=True)
     end_time = time.time()
 

@@ -28,6 +28,7 @@ tar xzf cmssw_runtime.tgz -C "$CMSSW_VERSION"
 
 # --- Setup runtime ---
 cd "$CMSSW_VERSION/src"
+scram b ProjectRename
 eval `scram runtime -sh`
 cd "$OLDPWD"
 

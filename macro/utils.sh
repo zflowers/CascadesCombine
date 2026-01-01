@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+[[ -n "${UTILS_SH_LOADED:-}" ]] && return
+UTILS_SH_LOADED=1
 
 extract_mass() {
     local sig="$1"

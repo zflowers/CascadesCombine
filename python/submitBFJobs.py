@@ -14,6 +14,7 @@ import random
 import time
 import pathlib
 import shutil
+import time
 from pathlib import Path
 from collections import defaultdict
 from textwrap import dedent
@@ -36,17 +37,22 @@ def make_cmssw_runtime_tarball(logs_dir):
     cmssw_base = os.environ.get("CMSSW_BASE")
     if not cmssw_base:
         raise RuntimeError("CMSSW_BASE is not set. Did you cmsenv?")
-    tarball = pathlib.Path(logs_dir) / "../cmssw_runtime.tgz"
+    tarball = pathlib.Path(logs_dir) / "../../cmssw_runtime.tgz"
     tarball.parent.mkdir(parents=True, exist_ok=True)
     if tarball.exists():
         return tarball
     items = [
         "src/CombineHarvester",
         "src/HiggsAnalysis",
-        f"lib/{os.environ['SCRAM_ARCH']}",
+        "lib/",
+        "bin/",
+        "biglib/",
+        "python/",
+        ".SCRAM/",
     ]
     exclude_items = [
-        ".git/",
+        "*.git",
+        "*tutorials*",
     ]
     cmd = [
         "tar", "czf", str(tarball),
@@ -58,7 +64,6 @@ def make_cmssw_runtime_tarball(logs_dir):
     # Add items to archive
     cmd.extend(items)
     subprocess.check_call(cmd)
-    print(f"[condor] CMSSW runtime tarball created at {tarball}", flush=True)
     return tarball
 
 def make_submit_content(
@@ -181,18 +186,14 @@ def submit_condor_with_retries(
 ) -> bool:
     """
     Submit the condor submit file with transient-retry and schedd rotation.
-
     If successful, append "cluster_id schedd" (schedd optional) to record_dir/submitted_clusters.txt.
-
     Returns True if submission succeeded, False otherwise.
     """
     record_dir = Path(record_dir) if record_dir else Path.cwd()
     record_dir.mkdir(parents=True, exist_ok=True)
     record_path = record_dir / "submitted_clusters.txt"
-
     if known_schedds is None:
         known_schedds = DEFAULT_KNOWN_SCHEDDS
-
     if condor_monitor is None:
         try:
             from CondorJobCountMonitor import CondorJobCountMonitor  # type: ignore
@@ -257,7 +258,6 @@ def submit_condor_with_retries(
             break
 
         is_transient = any(sig in stdout or sig in stderr for sig in transient_signatures)
-
         # Try to discover which schedd condor tried
         match_schedd = re.search(r"Attempting to submit jobs to (\S+)", stdout)
         reported_schedd = match_schedd.group(1) if match_schedd else None
@@ -329,7 +329,6 @@ def submit_condor_with_retries(
     else:
         print("[submitBFJobs WARN] Submission succeeded but cluster id not parsed from condor output. Full stdout:")
         print(final_stdout)
-
     return True
 
 # ----------- CLI -----------
