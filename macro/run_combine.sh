@@ -72,7 +72,5 @@ shopt -s nullglob
 cp -a $CMSSW_VERSION/src/higgsCombine*.root . || true
 cp -a $CMSSW_VERSION/src/*.txt . || true
 shopt -u nullglob
-ls
 
 echo "[run_combine.sh] Finished running combine"
-

@@ -626,6 +626,101 @@ def run_checkjobs_loop_parallel_BF(condor_dir, work_dirs, no_resubmit=False, max
     print(f"[run_combine] Reached max_resubmits ({max_resubmits}). Some jobs may still be failing.", file=sys.stderr, flush=True)
     return False
 
+def run_checkjobs_loop_parallel_Combine(
+    condor_dir,
+    work_dirs,
+    checker="python/checkJobsCombine.py",
+    checker_args=None,
+    no_resubmit=False,
+    max_resubmits=3,
+):
+    """
+    Check combine jobs, resubmit failures across all dirs, then wait once for all resubmitted jobs.
+    """
+    if checker_args is None:
+        checker_args = []
+
+    attempt = 0
+
+    while attempt < max_resubmits:
+        attempt += 1
+        print(
+            f"[run_combine] Running combine check ({attempt}/{max_resubmits})...",
+            flush=True,
+        )
+
+        resubmitted_dirs = []
+
+        for work_dir in work_dirs:
+            check_cmd = [
+                "python3",
+                checker,
+                work_dir,
+                "--root-dir", condor_dir,
+            ] + checker_args
+
+            if no_resubmit:
+                check_cmd.append("--no-submit")
+
+            proc = subprocess.run(check_cmd, capture_output=True, text=True)
+
+            if proc.stdout:
+                print(f"----- combine check stdout ({work_dir}) -----", flush=True)
+                print(proc.stdout, flush=True)
+            if proc.stderr:
+                print(
+                    f"----- combine check stderr ({work_dir}) -----",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                print(proc.stderr, file=sys.stderr, flush=True)
+
+            if proc.returncode != 0:
+                print(
+                    f"[run_combine] Combine check returned non-zero "
+                    f"({proc.returncode}) for {work_dir}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                return False
+
+            resub_dir = os.path.join(condor_dir, work_dir)
+            resub_files = [
+                f for f in os.listdir(resub_dir)
+                if f.startswith("resubmit_") and f.endswith(".sub")
+            ]
+            if resub_files:
+                resubmitted_dirs.append(work_dir)
+
+        if not resubmitted_dirs:
+            print(
+                "[run_combine] No failed combine jobs remaining. Proceeding.",
+                flush=True,
+            )
+            return True
+
+        if no_resubmit:
+            print(
+                f"[run_combine] Failed combine jobs in {resubmitted_dirs}, "
+                "but no_resubmit=True. Stopping.",
+                flush=True,
+            )
+            return False
+
+        print(
+            f"[run_combine] Waiting for resubmitted combine jobs in {resubmitted_dirs}...",
+            flush=True,
+        )
+        wait_for_jobs(work_dirs=work_dirs, condor=condor_dir)
+        time.sleep(3)
+
+    print(
+        f"[run_combine] Reached max_resubmits ({max_resubmits}) for combine jobs.",
+        file=sys.stderr,
+        flush=True,
+    )
+    return False
+
 # ----- main workflow -----
 def main(args, run_info, try_acquire_lock_or_exit, start_time):
     # canonical run directory / name
@@ -886,50 +981,79 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             condor_time_seconds_BF = condor_time_end_BF - condor_time_start_BF
 
             # combine
-            print("[run_combine] Launching limit jobs...", flush=True)
             # local
-            subprocess.run(["bash", macro_dir+"/launchLimits.sh", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
+            #subprocess.run(["bash", macro_dir+"/launchLimits.sh", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
+            #subprocess.run(["bash", macro_dir+"/launchSignificances.sh", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
             # condor
-            #condor_time_start_limits = time.time()
-            #for sig in signals:
-            #    limits_submit_cmd = [
-            #        "python3", "python/submitCombineJobs.py",
-            #        "--signal", sig,
-            #        "--output-dir", output_dir,
-            #        "--method", "AsymptoticLimits",
-            #        "--extra-args", "-n .limit",
-            #    ]
-            #    print('[DEBUG] limits cmd:'," ".join(limits_submit_cmd))
-            #    subprocess.run(limits_submit_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr,)
-            #
-            #condor_time_end_limits = time.time()
-            #condor_time_seconds_limits = condor_time_end_limits - condor_time_start_limits
+            
+            print("[run_combine] Launching limit jobs...", flush=True)
+            condor_time_start_combine = time.time()
+            
+            for sig in signals:
+                limits_submit_cmd = [
+                    "python3", "python/submitCombineJobs.py",
+                    "--signal", sig,
+                    "--output-dir", output_dir,
+                    "--method", "AsymptoticLimits",
+                    "--extra-args", "-n .limit",
+                ]
+                subprocess.run(limits_submit_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
+            
+            print("[run_combine] Launched limit jobs", flush=True)
+            
+            print("[run_combine] Launching significance jobs...", flush=True)
+            
+            for sig in signals:
+                significances_submit_cmd = [
+                    "python3", "python/submitCombineJobs.py",
+                    "--signal", sig,
+                    "--output-dir", output_dir,
+                    "--method", "Significance",
+                    "--extra-args", "-n .Test",
+                ]
+                subprocess.run(significances_submit_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
+            
+            print("[run_combine] Launched significance jobs", flush=True)
+            
+            # Wait once for ALL combine jobs
+            
+            wait_for_jobs(work_dirs=signals, condor=output_dir)
 
-            #print("[run_combine] Launching significance jobs...", flush=True)
-            # local
-            subprocess.run(["bash", macro_dir+"/launchSignificances.sh", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
-            #condor_time_start_significances = time.time()
-            #for sig in signals:
-            #    significances_submit_cmd = [
-            #        "python3", "python/submitCombineJobs.py",
-            #        "--signal", sig,
-            #        "--output-dir", output_dir,
-            #        "--method", "Significance",
-            #        "--extra-args", "-n .Test",
-            #    ]
-            #    print('[DEBUG] significances cmd:'," ".join(significances_submit_cmd))
-            #    subprocess.run(significances_submit_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr,)
-            #
-            #condor_time_end_significances = time.time()
-            #condor_time_seconds_significances = condor_time_end_significances - condor_time_start_significances
-
-            #print("[DEBUG] stopping here for now")
-            #sys.exit(0) # debugging
+            # Check limits
+            ok = run_checkjobs_loop_parallel_Combine(
+                condor_dir=output_dir,
+                work_dirs=signals,
+                checker="python/checkJobsCombine.py",
+                checker_args=["--method", "AsymptoticLimits"],
+                no_resubmit=False,
+                max_resubmits=args.max_resubmits,
+            )
+            
+            if not ok:
+                print("[run_combine] Limit combine jobs failed. Aborting.", file=sys.stderr)
+                sys.exit(1)
+            
+            # Check significances
+            ok = run_checkjobs_loop_parallel_Combine(
+                condor_dir=output_dir,
+                work_dirs=signals,
+                checker="python/checkJobsCombine.py",
+                checker_args=["--method", "Significance"],
+                no_resubmit=False,
+                max_resubmits=args.max_resubmits,
+            )
+            
+            if not ok:
+                print("[run_combine] Significance combine jobs failed. Aborting.", file=sys.stderr)
+                sys.exit(1)
+            
+            condor_time_end_combine = time.time()
+            condor_time_seconds_combine = condor_time_end_combine - condor_time_start_combine
 
             print("[run_combine] Launching CollectLimits...", flush=True)
             subprocess.run(["bash", macro_dir+"/launchCollectLimits.sh", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
 
-            # significances
+            # collect significances
             try:
                 print("[run_combine] Collecting significances...", flush=True)
                 subprocess.run(["python3", "-u", macro_dir+"/CollectSignificance.py", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
@@ -1025,9 +1149,10 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                             print(f"[run_combine] Warning: failed to copy {impacts_alpha_pdf}: {e}", flush=True)
 
     # Clean up tar
-    cmssw_tarball = condor_BF + '/../cmssw_runtime.tgz'
-    if os.path.exists(cmssw_tarball):
-        os.remove(cmssw_tarball)
+    if not args.only_yields:
+        cmssw_tarball = condor_BF + '/../cmssw_runtime.tgz'
+        if os.path.exists(cmssw_tarball):
+            os.remove(cmssw_tarball)
     print("[run_combine] All steps completed.", flush=True)
     end_time = time.time()
 
@@ -1043,6 +1168,8 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             idle_time_seconds_BF, idle_time_seconds_BF/60, idle_time_seconds_BF/3600), flush=True)
         print("Total for BF condor processing: {0:.2f} seconds = {1:.2f} minutes = {2:.2f} hours".format(
             condor_time_seconds_BF, condor_time_seconds_BF/60, condor_time_seconds_BF/3600), flush=True)
+        print("Total for combine condor processing: {0:.2f} seconds = {1:.2f} minutes = {2:.2f} hours".format(
+            condor_time_seconds_combine, condor_time_seconds_combine/60, condor_time_seconds_combine/3600), flush=True)
     print("Total time: {0:.2f} seconds = {1:.2f} minutes = {2:.2f} hours".format(
         total_time_seconds, total_time_seconds/60, total_time_seconds/3600), flush=True)
 

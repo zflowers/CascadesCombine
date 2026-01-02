@@ -133,9 +133,9 @@ def make_submit_content(
         request_memory          = {request_memory}
         request_disk            = {request_disk}
 
-        output                  = {signal}_<method>.out
-        error                   = {signal}_<method>.err
-        log                     = {signal}_<method>.log
+        output                  = {signal}_{method}.out
+        error                   = {signal}_{method}.err
+        log                     = {signal}_{method}.log
 
         transfer_output_files   = {output_file}
         #transfer_output_remaps  = "{';'.join(remaps)}"
@@ -143,7 +143,6 @@ def make_submit_content(
 
         queue 1
     """)
-
 
 # ------------------------------------------------------------
 # Create submit directory + submit file
@@ -163,14 +162,8 @@ def make_submit_file(
     submit_dir = Path(f"{output_dir}") / signal
 
     # locate inputs
-    cards = list(submit_dir.glob("*.txt"))
-    shapes = list(submit_dir.glob("*.root"))
-
-    if len(cards) != 1 or len(shapes) != 1:
-        raise RuntimeError(f"{signal}: expected exactly 1 .txt and 1 .root")
-
-    card = cards[0].name
-    shape = shapes[0].name
+    card = f"{signal}.txt"
+    shape = "json_shapes_flat.root"
 
     # compute mass locally
     mass = extract_mass(signal)

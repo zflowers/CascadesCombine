@@ -21,8 +21,10 @@ SampleTool::SampleTool(){
 
   // Override lumis since not all samples available yet
   LumiDict["Summer23BPix_130X"] = 143.;
+  LumiDict["Summer23_130X"] = 143.;
   LumiDict["Summer22_130X"] = 143.;
-  LumiDict["Summer22EE_130X"] = 285.;
+  LumiDict["Summer22EE_130X"] = 143.;
+
   LumiDict["Summer22_130X_SMS"] = 285.;
   LumiDict["Summer22_130X_Cascades"] = 285. + 138.;
   LumiDict["Summer23BPix_130X_Cascades"] = 285. + 138.;
@@ -670,7 +672,7 @@ SampleTool::SampleTool(){
     MasterDict,
     {
       //"DBTB_2023BPix",
-      //"DBTB_2023",
+      "DBTB_2023",
       "DBTB_2022EE",
       //"DBTB_2022",
       "DBTB_2018",
@@ -942,8 +944,8 @@ SampleTool::SampleTool(){
     MasterDict,
     {
       //"QCD_2023BPix",
-      //"QCD_2023",
-      //"QCD_2022EE",
+      "QCD_2023",
+      "QCD_2022EE",
       //"QCD_2022",
       "QCD_2018",
       "QCD_2017",
@@ -956,8 +958,8 @@ SampleTool::SampleTool(){
     MasterDict,
     {
       //"ZInv_2023BPix",
-      //"ZInv_2023",
-      //"ZInv_2022EE",
+      "ZInv_2023",
+      "ZInv_2022EE",
       //"ZInv_2022",
       "ZInv_2018",
       "ZInv_2017",
@@ -970,7 +972,7 @@ SampleTool::SampleTool(){
     MasterDict,
     {
       //"Wjets_2023BPix",
-      //"Wjets_2023",
+      "Wjets_2023",
       "Wjets_2022EE",
       //"Wjets_2022",
       "Wjets_2018",
@@ -1201,7 +1203,7 @@ SampleTool::SampleTool(){
     MasterDict,
     {
       //"top_2023BPix",
-      //"top_2023",
+      "top_2023",
       "top_2022EE",
       //"top_2022",
       "top_2018",
@@ -1215,7 +1217,7 @@ SampleTool::SampleTool(){
     MasterDict,
     {
       //"Vfakeleps_2023BPix",
-      //"Vfakeleps_2023",
+      "Vfakeleps_2023",
       "Vfakeleps_2022EE",
       //"Vfakeleps_2022",
       "Vfakeleps_2018",
@@ -1229,7 +1231,7 @@ SampleTool::SampleTool(){
     MasterDict,
     {
       //"boson_2023BPix",
-      //"boson_2023",
+      "boson_2023",
       "boson_2022EE",
       //"boson_2022",
       "boson_2018",
