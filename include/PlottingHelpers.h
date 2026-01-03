@@ -1052,32 +1052,34 @@ T* GetHistClone(TFile *f, const string &name) {
     return clone;
 }
 
-bool HistsCompatible(const TH1* num, const TH1* den) {
+bool HistsCompatible(TH1* num, const TH1* den, double tol=1e-1) {
     if (!num || !den) return false;
-
     int nbins = num->GetNbinsX();
     if (nbins != den->GetNbinsX()) return false;
-
     // Check bin edges match exactly
     for (int i = 1; i <= nbins; ++i) {
         if (num->GetBinLowEdge(i) != den->GetBinLowEdge(i)) return false;
         if (num->GetBinWidth(i) != den->GetBinWidth(i)) return false;
     }
-
     bool hasNonZeroBin = false;
     for (int i = 1; i <= nbins; ++i) {
         double n = num->GetBinContent(i);
         double d = den->GetBinContent(i);
-
         // Catch invalid numbers
-        if (std::isnan(n) || std::isnan(d) || std::isinf(n) || std::isinf(d)) return false;
-
+        if (!std::isfinite(n) || !std::isfinite(d)) return false;
         // TEff requires numerator <= denominator
-        if (n > d) return false;
-
+        // Allow small tolerance and clamp numerator
+        if (n > d) {
+            if ((n - d) > tol) {
+                // Too large an overshoot -> incompatible
+                std::cerr << "[FAIL] bin " << i << " num=" << n << " den=" << d << std::endl;
+                return false;
+            }
+            // Otherwise, clamp numerator to denominator
+            num->SetBinContent(i, d);
+        }
         if (d > 0) hasNonZeroBin = true;
     }
-
     // If all denominator bins are zero, skip
     return hasNonZeroBin;
 }

@@ -62,7 +62,12 @@ int main(int argc, char* argv[]) {
                 groupKey = string(clone->GetName()) + "__CutFlow";
             }
         } else {
-            if(!id.bin.empty() && !id.var.empty()) groupKey = id.bin + "__" + id.var;
+            if(!id.bin.empty() && !id.var.empty()) {
+                groupKey = id.bin + "__" + id.var;
+                // Prevent num/den overwrites (TEff inputs)
+                if (hname.find("__num__") != std::string::npos) groupKey += "__num";
+                else if (hname.find("__den__") != std::string::npos) groupKey += "__den";
+            }
             else groupKey = id.var.empty() ? string(clone->GetName()) : id.var;
             if(!id.bin.empty()) uniqueBinNames.insert(id.bin);
         }

@@ -792,7 +792,7 @@ void Plot_Eff_Multi(const std::string& groupName,
             if(htot->GetBinContent(i) > 0){ hasPoints = true; break; }
         }
         if(!hasPoints){
-            // std::cerr << "[Warning] Skipping TEff with no valid points: " << e->GetName() << "\n";
+            std::cerr << "[Warning] Skipping TEff with no valid points: " << e->GetName() << "\n";
             continue;
         }
     
@@ -847,7 +847,11 @@ void Plot_Eff_Multi(const std::string& groupName,
         
         if (groupType == "Bin") {
             legendKey = id.proc.empty() ? "unknown_proc" : id.proc;
-            legendTitle = m_Title.count(legendKey) ? m_Title[legendKey] : legendKey;
+            legendTitle = id.proc;
+            if(legendTitle.find("TChiWZ") != std::string::npos)
+                legendTitle = makeSMSChiTitle(legendTitle);
+            else
+                legendTitle = m_Title[legendTitle];
         } else {
             legendKey = id.bin.empty() ? "unknown_bin" : id.bin;
             legendTitle = m_Title.count(legendKey) ? m_Title[legendKey] : legendKey;
