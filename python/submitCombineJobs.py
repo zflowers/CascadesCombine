@@ -91,10 +91,7 @@ def combine_mass_str(mass):
     m = int(mass)
     if m < 1_000_000:
         return str(m)
-
     s = f"{float(m):.5e}"      # Combine-style rounding
-    s = s.replace("+", "")     # drop + in exponent
-
     mantissa, exp = s.split("e")
     mantissa = mantissa.rstrip("0").rstrip(".")  # trim trailing zeros
     return f"{mantissa}e{exp}"
