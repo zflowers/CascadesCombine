@@ -87,6 +87,18 @@ def extract_mass(signal: str) -> str:
         raise RuntimeError(f"Failed to extract mass from signal '{signal}'")
     return mass
 
+def combine_mass_str(mass):
+    m = int(mass)
+    if m < 1_000_000:
+        return str(m)
+
+    s = f"{float(m):.5e}"      # Combine-style rounding
+    s = s.replace("+", "")     # drop + in exponent
+
+    mantissa, exp = s.split("e")
+    mantissa = mantissa.rstrip("0").rstrip(".")  # trim trailing zeros
+    return f"{mantissa}e{exp}"
+
 # ------------------------------------------------------------
 # Submit file content
 # ------------------------------------------------------------
@@ -107,18 +119,14 @@ def make_submit_content(
     extra_args: str,
 ) -> str:
 
-# higgsCombine.limit.AsymptoticLimits.mH3.00027e+06.root
     dest_dir = Path(output_dir) / signal
     dest_dir.mkdir(parents=True, exist_ok=True)
     cmssw_runtime = Path(cmssw_runtime).resolve()
 
     combine_name = extract_combine_name(extra_args)    
     name_part = combine_name if combine_name else ""
-    output_file = f"higgsCombine{name_part}.{method}.mH{float(mass):.5e}.root"
-
-    remaps = [
-        f"{output_file}={dest_dir}/{output_file}",
-    ]
+    mass_fileout = combine_mass_str(mass)
+    output_file = f"higgsCombine{name_part}.{method}.mH{mass_fileout}.root"
 
     return dedent(f"""\
         universe                = vanilla
@@ -138,7 +146,6 @@ def make_submit_content(
         log                     = {signal}_{method}.log
 
         transfer_output_files   = {output_file}
-        #transfer_output_remaps  = "{';'.join(remaps)}"
         priority                = 5
 
         queue 1

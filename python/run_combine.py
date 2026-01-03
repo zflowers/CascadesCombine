@@ -1102,7 +1102,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                         "-t", "shapes_prefit",
                         "--config", FDpattern_cfg
                     ]
-                    print("[run_combine] Running FitDiagnostics plotter with command:", " ".join(FD_plot_cmd_prefit), flush=True)
+                    print("[run_combine] Running prefit FitDiagnostics plotter with command:", " ".join(FD_plot_cmd_prefit), flush=True)
                     subprocess.run(FD_plot_cmd_prefit, check=True, stdout=sys.stdout, stderr=sys.stderr)
                     FD_plot_cmd_postfit = [
                         "./"+exe_dir+"/PlotFitDiagnostics.x",
@@ -1111,7 +1111,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                         "-t", "shapes_fit_b",
                         "--config", FDpattern_cfg
                     ]
-                    print("[run_combine] Running FitDiagnostics plotter with command:", " ".join(FD_plot_cmd_postfit), flush=True)
+                    print("[run_combine] Running postfit FitDiagnostics plotter with command:", " ".join(FD_plot_cmd_postfit), flush=True)
                 subprocess.run(FD_plot_cmd_postfit, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
             if make_impacts:
@@ -1149,7 +1149,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                             print(f"[run_combine] Warning: failed to copy {impacts_alpha_pdf}: {e}", flush=True)
 
     # Clean up tar
-    if not args.only_yields:
+    if not args.only_yields and make_json:
         cmssw_tarball = condor_BF + '/../cmssw_runtime.tgz'
         if os.path.exists(cmssw_tarball):
             os.remove(cmssw_tarball)
