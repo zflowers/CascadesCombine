@@ -22,9 +22,9 @@ run_all() {
     fi
 }
 SLEEP=70
-VERSION="v1"
+VERSION="v0"
 make clean
 make all -j 8
 
-run_all --make-root --processes-cfg config/process_cfgs/processes_ANPlots.yaml --hist-cfg config/hist_cfgs/hist_ANPlots.yaml --bins-cfg config/bin_cfgs/ANPlots.yaml --run-name ANPlots_${VERSION}
+run_all --make-root --processes-cfg config/process_cfgs/processes_TriggerStudies.yaml --hist-cfg config/hist_cfgs/hist_TriggerStudies.yaml --bins-cfg config/bin_cfgs/TriggerStudies.yaml --run-name TriggerStudies_${VERSION}
 sleep ${SLEEP} # sleep just to hold user from accidentally submitting something before sub is out the door
