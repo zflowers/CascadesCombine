@@ -1189,6 +1189,16 @@ SampleTool::SampleTool(){
     }
   );
 
+  MasterDict["Wjets_Run2"] = mergeEntriesList(
+    MasterDict,
+    {
+      "Wjets_2018",
+      "Wjets_2017",
+      "Wjets_2016",
+      "Wjets_2016APV",
+    }
+  );
+
   MasterDict["boson_Run2"] = mergeEntriesList(
     MasterDict,
     {

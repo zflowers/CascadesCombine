@@ -418,6 +418,9 @@ processes:
         - "Vfakeleps*"
       #exclude:
       #  - "ST"
+    - name: "Wjets"
+      include:
+        - "Wjet*"
 
     #- name: "top"
     #  include:
@@ -431,6 +434,18 @@ processes:
       include:
         - "top*FAKES*"
 
+    - name: "top"
+      include:
+        - "top*"
+      exclude:
+        - "*FAKE*"
+
     - name: "boson_FAKES"
       include:
         - "boson*FAKES*"
+
+    - name: "boson"
+      include:
+        - "boson*"
+      exclude:
+        - "*FAKE*"

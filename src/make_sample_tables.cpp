@@ -4,7 +4,7 @@
 int main(int argc, char** argv) {
     // optional CLI args: outdir first, then comma-separated groups (optional)
     std::string outdir = "latex_tables";
-    std::vector<std::string> groups = {"top","boson","Vfakeleps"};
+    std::vector<std::string> groups = {"top","boson","Wjets"};
 
     if (argc > 1) outdir = argv[1];
     if (argc > 2) {
