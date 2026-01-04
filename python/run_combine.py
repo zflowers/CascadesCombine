@@ -984,8 +984,8 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             # local
             #subprocess.run(["bash", macro_dir+"/launchLimits.sh", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
             #subprocess.run(["bash", macro_dir+"/launchSignificances.sh", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
+
             # condor
-            
             print("[run_combine] Launching limit jobs...", flush=True)
             condor_time_start_combine = time.time()
             
@@ -1009,7 +1009,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                     "--signal", sig,
                     "--output-dir", output_dir,
                     "--method", "Significance",
-                    "--extra-args", "-n .Test",
+                    "--extra-args", "-n .Test --expectSignal=1 -t -1",
                 ]
                 subprocess.run(significances_submit_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
             
