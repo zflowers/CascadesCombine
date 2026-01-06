@@ -22,7 +22,7 @@ run_all() {
     fi
 }
 SLEEP=70
-VERSION="v358"
+VERSION="v364"
 make clean
 make all -j 8
 echo "Submitting Regions..."
@@ -71,7 +71,7 @@ BINS_PER_JOB=$(awk -v n="$BIN_COUNT" 'BEGIN { printf "%d\n", n*0.05 + 0.5 }')
 run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_Regions_234L_${VERSION}
 sleep ${SLEEP}
 
-# Alternative all bins run(s)
+# Alternative all TChiWZ run
 #run_all --skip-compile --skip-plot-yields --make-json --bins-cfg config/bin_cfgs/Regions.yaml --bins-per-job ${BINS_PER_JOB} --processes-cfg config/process_cfgs/processes_allTChiWZ.yaml --run-name Cascades_Regions_234L_allTChiWZ_${VERSION}
 #sleep ${SLEEP}
 

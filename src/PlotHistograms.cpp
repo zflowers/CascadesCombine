@@ -207,11 +207,21 @@ int main(int argc, char* argv[]) {
                 effName.replace(start_pos, 5, "");
             }
             eff->SetName(effName.c_str());
-    
+            eff->SetTitle(effName.c_str());
+            gErrorIgnoreLevel = 3001; // ignore ROOT warnings temporarily
+            TCanvas* dum_canv = new TCanvas("dum_canv", "dum_canv", 750, 500);
+            dum_canv->cd();
+            eff->Draw();
+            dum_canv->Update();
+            eff->GetPaintedGraph()->GetYaxis()->SetTitle(nume.second->GetYaxis()->GetTitle());
+            delete dum_canv;
+            gErrorIgnoreLevel = 0;
+
             // Store in the maps
             effsByBin[denID.bin].push_back(eff);
             effsByProcess[denID.proc].push_back(eff);
-    
+
+            // Call plotting tool    
             Plot_Eff(eff);
         }
     }

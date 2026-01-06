@@ -22,11 +22,11 @@ SampleTool::SampleTool(){
   // Override lumis since not all samples available yet
   LumiDict["Summer23BPix_130X"] = 143.;
   LumiDict["Summer23_130X"] = 143.;
-  LumiDict["Summer22EE_130X"] = 143.;
+  LumiDict["Summer22EE_130X"] = 286.;
   LumiDict["Summer22_130X"] = 143.;
 
-  LumiDict["Summer22_130X_Cascades"] = 285. + 138.;
-  LumiDict["Summer23BPix_130X_Cascades"] = 285. + 138.;
+  LumiDict["Summer22_130X_Cascades"] = 286. + 138.;
+  LumiDict["Summer23BPix_130X_Cascades"] = 286. + 138.;
   LumiDict["Summer20UL16APV_106X_SMS"] = LumiDict["Summer20UL16APV_106X"] + 95.;
   LumiDict["Summer20UL16_106X_SMS"] = LumiDict["Summer20UL16_106X"] + 95.;
   LumiDict["Summer20UL17_106X_SMS"] = LumiDict["Summer20UL17_106X"] + 95.;
@@ -1011,7 +1011,6 @@ SampleTool::SampleTool(){
   };
 
   MasterDict["Data_2016APV"] = {
-    pathPrefix + "Summer20UL16APV_106X_Data/MET_Run2016B-ver1_HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16APV_106X_Data_Summer20UL16APV_106X.root",
     pathPrefix + "Summer20UL16APV_106X_Data/MET_Run2016B-ver2_HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16APV_106X_Data_Summer20UL16APV_106X.root",
     pathPrefix + "Summer20UL16APV_106X_Data/MET_Run2016C-HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16APV_106X_Data_Summer20UL16APV_106X.root",
     pathPrefix + "Summer20UL16APV_106X_Data/MET_Run2016D-HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16APV_106X_Data_Summer20UL16APV_106X.root",
@@ -1092,7 +1091,7 @@ SampleTool::SampleTool(){
     MasterDict,
     {
       //"Wjets_2023BPix",
-      "Wjets_2023",
+      //"Wjets_2023",
       "Wjets_2022EE",
       //"Wjets_2022",
       "Wjets_2018",
@@ -1333,7 +1332,7 @@ SampleTool::SampleTool(){
     MasterDict,
     {
       //"top_2023BPix",
-      "top_2023",
+      //"top_2023",
       "top_2022EE",
       //"top_2022",
       "top_2018",
@@ -1361,13 +1360,22 @@ SampleTool::SampleTool(){
     MasterDict,
     {
       //"boson_2023BPix",
-      "boson_2023",
+      //"boson_2023",
       "boson_2022EE",
       //"boson_2022",
       "boson_2018",
       "boson_2017",
       "boson_2016",
       "boson_2016APV",
+    }
+  );
+
+  MasterDict["bkg"] = mergeEntriesList(
+    MasterDict,
+    {
+      "boson",
+      "top",
+      "Wjets",
     }
   );
 
@@ -1449,7 +1457,7 @@ void SampleTool::LoadAllData() {
 }
 
 void SampleTool::LoadAllBkgs() {
-    stringlist allBkgs = {"ttbar","ST","DY","ZInv","DBTB","QCD","Wjets","top","boson","Vfakeleps"};
+    stringlist allBkgs = {"ttbar","ST","DY","ZInv","DBTB","QCD","Wjets","top","boson","Vfakeleps","bkg"};
     LoadBkgs(allBkgs);
 }
 

@@ -89,7 +89,6 @@ void Plot_Eff(TEfficiency* e){
     if(xmax > 0) xmax = xmax*1.1;
     else xmax = xmax*0.9;
     e->GetPaintedGraph()->GetXaxis()->SetRangeUser(xmin,xmax);
-    //e->GetPaintedGraph()->GetXaxis()->SetTitle(g_Xname.c_str());
     e->GetPaintedGraph()->GetYaxis()->CenterTitle();
     e->GetPaintedGraph()->GetYaxis()->SetTitleFont(42);
     e->GetPaintedGraph()->GetYaxis()->SetTitleSize(0.06);
@@ -761,7 +760,7 @@ void Plot_CutFlow(const std::string &hname,
 }
 
 // ----------------------
-// Plot TEff Multigraph (grouped by bin or process)
+// Plot TEff Multigraph
 // groupType should be "Bin" or "Process"
 // ----------------------
 void Plot_Eff_Multi(const std::string& groupName,
@@ -773,7 +772,7 @@ void Plot_Eff_Multi(const std::string& groupName,
 
     // Canvas
     TCanvas* can = new TCanvas(("can_multi_"+groupName).c_str(), ("can_"+groupName).c_str(), 1200, 700);
-    can->SetLeftMargin(hlo);
+    can->SetLeftMargin(hlo+0.025);
     can->SetRightMargin(hhi);
     can->SetBottomMargin(hbo);
     can->SetTopMargin(hto);
@@ -881,16 +880,18 @@ void Plot_Eff_Multi(const std::string& groupName,
     mg->GetXaxis()->CenterTitle();
     mg->GetXaxis()->SetTitleFont(42);
     mg->GetXaxis()->SetTitleSize(0.06);
-    mg->GetXaxis()->SetTitleOffset(1.06);
+    mg->GetXaxis()->SetTitleOffset(1.05);
     mg->GetXaxis()->SetLabelFont(42);
     mg->GetXaxis()->SetLabelSize(0.05);
     mg->GetYaxis()->CenterTitle();
     mg->GetYaxis()->SetTitleFont(42);
     mg->GetYaxis()->SetTitleSize(0.06);
-    mg->GetYaxis()->SetTitleOffset(1.12);
+    mg->GetYaxis()->SetTitleOffset(1.01);
     mg->GetYaxis()->SetLabelFont(42);
     mg->GetYaxis()->SetLabelSize(0.05);
     mg->GetYaxis()->SetRangeUser(ymin, ymax);
+    mg->GetXaxis()->SetTitle(effs[0]->GetPaintedGraph()->GetXaxis()->GetTitle());
+    mg->GetYaxis()->SetTitle(effs[0]->GetPaintedGraph()->GetYaxis()->GetTitle());
 
     // Draw legend
     leg->Draw();
@@ -898,7 +899,7 @@ void Plot_Eff_Multi(const std::string& groupName,
     // TLatex: CMS on top-left; group info on top-right
     TLatex l; l.SetNDC(); l.SetTextFont(42);
     l.SetTextSize(0.04);
-    l.DrawLatex(0.09, 0.943, "#bf{CMS} Simulation Preliminary");
+    l.DrawLatex(0.12, 0.943, "#bf{CMS} Simulation Preliminary");
 
     // top-right: show what this group is (Bin or Process)
     std::string topRight;

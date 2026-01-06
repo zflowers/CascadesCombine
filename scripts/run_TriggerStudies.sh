@@ -26,5 +26,7 @@ VERSION="v0"
 make clean
 make all -j 8
 
-run_all --make-root --processes-cfg config/process_cfgs/processes_TriggerStudies.yaml --hist-cfg config/hist_cfgs/hist_TriggerStudies.yaml --bins-cfg config/bin_cfgs/TriggerStudies.yaml --run-name TriggerStudies_${VERSION}
+run_all --skip-compile --make-root --processes-cfg config/process_cfgs/processes_TriggerStudies_bkg.yaml --hist-cfg config/hist_cfgs/hist_TriggerStudies.yaml --bins-cfg config/bin_cfgs/TriggerStudies.yaml --run-name TriggerStudies_bkg_${VERSION}
+sleep ${SLEEP}
+run_all --skip-compile --make-root --processes-cfg config/process_cfgs/processes_TriggerStudies_sig.yaml --hist-cfg config/hist_cfgs/hist_TriggerStudies.yaml --bins-cfg config/bin_cfgs/TriggerStudies.yaml --run-name TriggerStudies_sig_${VERSION}
 sleep ${SLEEP} # sleep just to hold user from accidentally submitting something before sub is out the door
