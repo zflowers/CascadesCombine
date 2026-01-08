@@ -64,6 +64,73 @@ void Plot_Hist2D(TH2* h) {
 }
 
 // ----------------------
+// Plot Ratio
+// ----------------------
+void Plot_Ratio(TH1* h, const std::string& outputDir, const RatioDef* rDef=nullptr){
+    if(!h) return;
+
+    std::string title = h->GetName();
+    TCanvas* can = new TCanvas(("can_"+title).c_str(), ("can_"+title).c_str(), 700, 600);
+    can->SetLeftMargin(0.15); can->SetRightMargin(0.18); can->SetBottomMargin(0.15);
+    can->SetGridx(); can->SetGridy();
+
+    // Determine if 1D or 2D
+    if(h->InheritsFrom(TH2::Class())){
+        TH2* h2 = dynamic_cast<TH2*>(h);
+        // Set Z axis first
+        if(rDef && rDef->z_range.has_value()) {
+            h2->SetMinimum(rDef->z_range->first);
+            h2->SetMaximum(rDef->z_range->second);
+        } else {
+            h2->SetMinimum(0.);
+        }
+        // Set Y axis (if provided)
+        if(rDef && rDef->y_range.has_value()) {
+            h2->GetYaxis()->SetRangeUser(rDef->y_range->first, rDef->y_range->second);
+        }
+        // Draw with style
+        DrawLogSmart(h2, "COLZ");
+        h2->GetXaxis()->CenterTitle();
+        h2->GetYaxis()->CenterTitle();
+        h2->GetZaxis()->CenterTitle();
+        h2->GetZaxis()->SetTitle("Ratio");
+    
+    } else {
+        // 1D histogram
+        DrawLogSmart(h, "HIST");
+        h->GetXaxis()->CenterTitle();
+        h->GetYaxis()->CenterTitle();
+        h->GetYaxis()->SetTitle("Ratio");
+        if(rDef && rDef->y_range.has_value()) {
+            h->GetYaxis()->SetRangeUser(rDef->y_range->first, rDef->y_range->second);
+        } else {
+            // fallback to reasonable auto-range
+            h->GetYaxis()->SetRangeUser(h->GetMinimum() * 0.9, 1.1 * h->GetMaximum());
+        }
+    }
+
+    // Label CMS / Process / Bin
+    TLatex l; l.SetTextFont(42); l.SetNDC();
+    std::string proc_title = title;
+    if(proc_title.find("TChiWZ") != std::string::npos)
+        proc_title = makeSMSChiTitle(ExtractProcName(proc_title));
+    else
+        proc_title = m_Title[ExtractProcName(proc_title)];
+    l.SetTextSize(0.035); l.DrawLatex(0.65,0.943,proc_title.c_str());
+    l.SetTextSize(0.04);  l.DrawLatex(0.13,0.943,"#bf{CMS} Simulation Preliminary");
+    l.SetTextSize(0.045); l.DrawLatex(0.7,0.04,ExtractBinName(title).c_str());
+
+    // Output file
+    TString pdfName = Form("%spdfs/%s__%s.pdf", outputDir.c_str(), ExtractBinName(title).c_str(), title.c_str());
+    gErrorIgnoreLevel = 1001;
+    can->SaveAs(pdfName);
+    gErrorIgnoreLevel = 0;
+
+    if(outFile) { outFile->cd(); can->Write(0, TObject::kWriteDelete); }
+    delete can;
+}
+
+// ----------------------
 // Plot Eff
 // ----------------------
 void Plot_Eff(TEfficiency* e){
@@ -922,6 +989,217 @@ void Plot_Eff_Multi(const std::string& groupName,
     delete can;
 }
 
+// RunRatios: create TEfficiencies for efficiency-style ratios and queue generic ratios.
+// This function fills effsByBin and effsByProcess with created TEff objects.
+// For generic (non-efficiency) ratios it calls Plot_Ratio
+void RunRatios(const std::vector<RatioDef>& ratioDefs,
+               const std::map<std::string, std::map<std::string, TH1*>>& groups,
+               const std::set<std::string>& uniqueBinNames,
+               const std::string& outputDir,
+               std::map<std::string, std::vector<TEfficiency*>> &effsByBin,
+               std::map<std::string, std::vector<TEfficiency*>> &effsByProcess)
+{
+    for(const auto &r : ratioDefs) {
+        // If explicit map mode
+        if(!r.map.empty()){
+            if(r.kind == RatioKind::Efficiency){
+                // Try to create TEffs for each explicit map entry if possible
+                for(const auto &p : r.map){
+                    // find all matches for numerator and denominator
+                    auto numMatches = FindMatchingHists(p.numerator, groups, uniqueBinNames, false);
+                    auto denMatches = FindMatchingHists(p.denominator, groups, uniqueBinNames, false);
+
+                    // only create TEff for any exact (bin,proc) pairs that match both numerator and denominator
+                    for(const auto &nm : numMatches){
+                        for(const auto &dm : denMatches){
+                            if(nm.bin == dm.bin && nm.proc == dm.proc){
+                                TH1* hnum = nm.hist;
+                                TH1* hden = dm.hist;
+                                if(!hnum || !hden) continue;
+                                if(!HistsCompatible(hnum, hden)) {
+                                    std::cerr << "[RunRatios] Hists incompatible for TEff: " << r.name 
+                                              << " bin="<<nm.bin<<" proc="<<nm.proc<<std::endl;
+                                    continue;
+                                }
+                                TEfficiency* eff = nullptr;
+                                gErrorIgnoreLevel = 1001;
+                                eff = new TEfficiency(*dynamic_cast<TH1*>(hnum), *dynamic_cast<TH1*>(hden));
+                                gErrorIgnoreLevel = 0;
+                                // Set a descriptive name
+                                std::string effName = r.name + "__" + (nm.bin.empty() ? "inclusive" : nm.bin) + "__" + nm.proc;
+                                eff->SetName(effName.c_str());
+                                eff->SetTitle(effName.c_str());
+                                // draw to make painted graph before adjusting titles
+                                gErrorIgnoreLevel = 3001;
+                                TCanvas* dum_canv = new TCanvas("dum_canv", "dum_canv", 750, 500);
+                                dum_canv->cd();
+                                eff->Draw();
+                                dum_canv->Update();
+                                // Copy y-axis title from numerator if available
+                                eff->GetPaintedGraph()->GetYaxis()->SetTitle(hnum->GetYaxis()->GetTitle());
+                                delete dum_canv;
+                                gErrorIgnoreLevel = 0;
+                                effsByBin[nm.bin].push_back(eff);
+                                effsByProcess[nm.proc].push_back(eff);
+                                // Plot it immediately using helper
+                                Plot_Eff(eff);
+                            }
+                        }
+                    }
+                }
+            } else {
+                for(const auto &p : r.map){
+                    auto numMatches = FindMatchingHists(p.numerator, groups, uniqueBinNames);
+                    auto denMatches = FindMatchingHists(p.denominator, groups, uniqueBinNames);
+                    for(const auto &nm : numMatches){
+                        for(const auto &dm : denMatches){
+                            TH1* hratio = MakeRatioHist(nm.hist, dm.hist, r.normalize);
+                            if(!hratio) continue;
+                            std::string hname = r.name + "__" + (nm.bin.empty() ? "inclusive" : nm.bin) + "__" + (dm.bin.empty() ? "inclusive" : dm.bin) + "__" + nm.proc + "__" + dm.proc;
+                            hratio->SetName(hname.c_str());
+                            hratio->SetTitle(hname.c_str());
+                            Plot_Ratio(hratio, outputDir, &r);
+                            delete hratio; // avoid memory leak
+                        }
+                    }
+                }
+            }
+            continue; // process next RatioDef
+        }
+
+        // --- Implicit mode (numerator_var/denominator_var + processes/bins) ---
+        if(!r.numerator_var.empty() && !r.denominator_var.empty() && r.kind == RatioKind::Efficiency){
+            // Determine bins to loop
+            std::vector<std::string> binsToUse;
+            if(!r.bins.empty()) binsToUse = r.bins;
+            else {
+                // use all known bins
+                binsToUse.assign(uniqueBinNames.begin(), uniqueBinNames.end());
+                // if none, also consider var-only groups (binless)
+                if(binsToUse.empty()) binsToUse.push_back("");
+            }
+
+            // For each bin, find groupKey and iterate processes
+            for(const auto &bin : binsToUse){
+                std::string gk = MakeGroupKeyForVar(bin, r.numerator_var);
+                auto it_group = groups.find(gk);
+                if(it_group == groups.end()){
+                    // nothing to do for this bin/var
+                    continue;
+                }
+
+                // determine processes to loop over
+                std::vector<std::string> procsToUse;
+                if(!r.processes.empty()){
+                    procsToUse = r.processes;
+                } else {
+                    // wildcard -> all processes present in this group
+                    for(const auto &pp : it_group->second) procsToUse.push_back(pp.first);
+                }
+
+                for(const auto &proc : procsToUse){
+                    // Find numerator and denominator hist in this (bin,var) group
+                    TH1* hnum = nullptr;
+                    TH1* hden = nullptr;
+                    auto it_proc_num = it_group->second.find(proc);
+                    if(it_proc_num != it_group->second.end()) hnum = it_proc_num->second;
+                    // denominator group might be same (bin + denominator_var)
+                    std::string gk_den = MakeGroupKeyForVar(bin, r.denominator_var);
+                    auto it_group_den = groups.find(gk_den);
+                    if(it_group_den != groups.end()){
+                        auto it_proc_den = it_group_den->second.find(proc);
+                        if(it_proc_den != it_group_den->second.end()) hden = it_proc_den->second;
+                    }
+                    // If either missing -> warn then skip
+                    if(!hnum || !hden){
+                        std::cerr << "[RunRatios] Missing hist for efficiency " << r.name
+                                  << " bin="<<bin<<" proc="<<proc
+                                  << " num="<<(hnum? "ok":"MISSING")<<" den="<<(hden? "ok":"MISSING")<<std::endl;
+                        continue;
+                    }
+                    if(!HistsCompatible(hnum, hden)){
+                        std::cerr << "[RunRatios] Hists incompatible for TEff: " << r.name 
+                                  << " bin="<<bin<<" proc="<<proc<<std::endl;
+                        continue;
+                    }
+                    // Build TEff
+                    TEfficiency* eff = nullptr;
+                    gErrorIgnoreLevel = 1001;
+                    eff = new TEfficiency(*dynamic_cast<TH1*>(hnum), *dynamic_cast<TH1*>(hden));
+                    gErrorIgnoreLevel = 0;
+
+                    // Create descriptive name and title
+                    std::string effName = r.name + "__" + (bin.empty() ? "inclusive" : bin) + "__" + proc;
+                    eff->SetName(effName.c_str());
+                    eff->SetTitle(effName.c_str());
+
+                    // Paint once to fix axes
+                    gErrorIgnoreLevel = 3001;
+                    TCanvas* dum_canv = new TCanvas("dum_canv", "dum_canv", 750, 500);
+                    dum_canv->cd();
+                    eff->Draw();
+                    dum_canv->Update();
+                    eff->GetPaintedGraph()->GetYaxis()->SetTitle(hnum->GetYaxis()->GetTitle());
+                    delete dum_canv;
+                    gErrorIgnoreLevel = 0;
+
+                    // Store and plot
+                    effsByBin[bin].push_back(eff);
+                    effsByProcess[proc].push_back(eff);
+                    Plot_Eff(eff);
+                } // end proc loop
+            } // end bin loop
+            continue;
+        } // end implicit efficiency mode
+
+        // Non-efficiency implicit mode
+        if(!r.numerator_var.empty() && !r.denominator_var.empty()){
+            // loop over bins
+            std::vector<std::string> binsToUse;
+            if(!r.bins.empty()) binsToUse = r.bins;
+            else binsToUse.assign(uniqueBinNames.begin(), uniqueBinNames.end());
+            if(binsToUse.empty()) binsToUse.push_back("");
+            
+            for(const auto &bin : binsToUse){
+                std::vector<std::string> procsToUse;
+                if(!r.processes.empty()) procsToUse = r.processes;
+                else {
+                    // all processes from numerator group
+                    std::string gknum = MakeGroupKeyForVar(bin, r.numerator_var);
+                    auto itg = groups.find(gknum);
+                    if(itg!=groups.end())
+                        for(const auto &pp : itg->second) procsToUse.push_back(pp.first);
+                }
+            
+                for(const auto &proc : procsToUse){
+                    std::string gknum = MakeGroupKeyForVar(bin, r.numerator_var);
+                    std::string gkden = MakeGroupKeyForVar(bin, r.denominator_var);
+                    TH1* hnum = nullptr;
+                    TH1* hden = nullptr;
+                    auto itgnum = groups.find(gknum);
+                    if(itgnum != groups.end()){
+                        auto itp = itgnum->second.find(proc);
+                        if(itp!=itgnum->second.end()) hnum = itp->second;
+                    }
+                    auto itgden = groups.find(gkden);
+                    if(itgden != groups.end()){
+                        auto itp = itgden->second.find(proc);
+                        if(itp!=itgden->second.end()) hden = itp->second;
+                    }
+                    if(!hnum || !hden) continue;
+                    TH1* hratio = MakeRatioHist(hnum,hden,r.normalize);
+                    if(!hratio) continue;
+                    std::string hname = r.name + "__" + (bin.empty()?"inclusive":bin) + "__" + proc;
+                    hratio->SetName(hname.c_str());
+                    hratio->SetTitle(hname.c_str());
+                    Plot_Ratio(hratio, outputDir, &r);
+                    delete hratio;
+                }
+            }
+        }
+    } // end ratioDefs loop
+}
+
 void Plot_EventCount2D(TH2* h, const std::string &mode,
                        double zmin_override = std::numeric_limits<double>::quiet_NaN(),
                        double zmax_override = std::numeric_limits<double>::quiet_NaN()) {
@@ -969,7 +1247,7 @@ void Plot_EventCount2D(TH2* h, const std::string &mode,
     can->SetBottomMargin(0.17);
     can->SetTopMargin(0.06);
     can->SetGridx(); can->SetGridy();
-    if(mode=="yield") can->SetLogz();
+    if(mode=="yield" || mode=="effective") can->SetLogz(); // <--- enable log for effective as well
 
     // Draw histogram COLZ
     h->Draw("COLZ");
@@ -1054,6 +1332,8 @@ void Plot_EventCount2D(TH2* h, const std::string &mode,
       h->GetZaxis()->SetTitle(("#frac{N_{events}}{#sqrt{N_{TOT BKG}}} for process in category scaled to "+std::to_string(lumi)+" fb^{-1}").c_str());
     else if(mode == "Zbi")
       h->GetZaxis()->SetTitle("Z_{bi} for signal in category");
+    else if(mode == "effective")
+      h->GetZaxis()->SetTitle(("Effective yield = yield^{2}/err^{2} for process in category scaled to "+std::to_string(lumi)+" fb^{-1}").c_str());
     else
       h->GetZaxis()->SetTitle("Yield");
 
@@ -1110,15 +1390,25 @@ void MakeAndPlotCutflow2D(
     // Can remove this safety check after approval
     if (!allData.empty()) allSigs.clear();
 
-    // --- 4) build yields[proc][binIndex] (binIndex: 0..nx-1) ---
+    // --- 4) build yields[proc][binIndex] and yields_err[proc][binIndex] (binIndex: 0..nx-1) ---
     std::map<std::string, std::vector<double>> yields;
-    for (const auto &p : procSet) yields[p] = std::vector<double>(nx, 0.0);
+    std::map<std::string, std::vector<double>> yields_err;
+    for (const auto &p : procSet) {
+        yields[p] = std::vector<double>(nx, 0.0);
+        yields_err[p] = std::vector<double>(nx, 0.0);
+    }
 
     auto BinContentSafe = [&](TH1* h, int bin)->double {
         if(!h) return 0.0;
         int nb = h->GetNbinsX();
         if(bin < 1 || bin > nb) return 0.0;
         return h->GetBinContent(bin);
+    };
+    auto BinErrorSafe = [&](TH1* h, int bin)->double {
+        if(!h) return 0.0;
+        int nb = h->GetNbinsX();
+        if(bin < 1 || bin > nb) return 0.0;
+        return h->GetBinError(bin);
     };
 
     for (int ib = 0; ib < nx; ++ib) {
@@ -1127,61 +1417,57 @@ void MakeAndPlotCutflow2D(
             const std::string &proc = pp.first;
             TH1* h = pp.second;
             if(!h) continue;
-    
+
             int nbins = h->GetNbinsX(); // number of regular bins
             double last = 0.0;
+            double last_err = 0.0;
             if(nbins >= 1) {
-                // safely get last regular bin using BinContentSafe
+                // safely get last regular bin using BinContentSafe and BinErrorSafe
                 last = BinContentSafe(h, nbins);
+                last_err = BinErrorSafe(h, nbins);
             } else {
                 // defensive: histogram has no regular bins
                 last = 0.0;
+                last_err = 0.0;
                 std::cerr << "[Warning] Proc '" << proc << "' in bin '" << bins[ib]
-                          << "' has zero bins; setting yield to 0\n";
+                          << "' has zero bins; setting yield and error to 0\n";
             }
             yields[proc][ib] = last;
+            yields_err[proc][ib] = last_err;
         }
     }
 
     // Ensure all bkgs/sigs exist in yields map (may be empty vectors already)
-    for (const auto &b : allBkgs) if(!yields.count(b)) yields[b] = std::vector<double>(nx,0.0);
-    for (const auto &s : allSigs) if(!yields.count(s)) yields[s] = std::vector<double>(nx,0.0);
-    for (const auto &s : allData) if(!yields.count(s)) yields[s] = std::vector<double>(nx,0.0);
+    for (const auto &b : allBkgs) if(!yields.count(b)) { yields[b] = std::vector<double>(nx,0.0); yields_err[b] = std::vector<double>(nx,0.0); }
+    for (const auto &s : allSigs) if(!yields.count(s)) { yields[s] = std::vector<double>(nx,0.0); yields_err[s] = std::vector<double>(nx,0.0); }
+    for (const auto &s : allData) if(!yields.count(s)) { yields[s] = std::vector<double>(nx,0.0); yields_err[s] = std::vector<double>(nx,0.0); }
 
-    // --- 5) compute total background per bin ---
+    // --- 5) compute total background per bin and its error in quadrature ---
     std::vector<double> totalBkg(nx, 0.0);
+    std::vector<double> totalBkgErr(nx, 0.0);
     for (int ib=0; ib<nx; ++ib) {
         double sum = 0.0;
+        double sumsqerr = 0.0;
         for (const auto &b : allBkgs) {
             auto it = yields.find(b);
             if (it != yields.end()) sum += it->second[ib];
+            auto iterr = yields_err.find(b);
+            if (iterr != yields_err.end()) {
+                double e = iterr->second[ib];
+                if(std::isfinite(e)) sumsqerr += e*e;
+            }
         }
         totalBkg[ib] = sum;
+        totalBkgErr[ib] = (sumsqerr > 0.0 ? std::sqrt(sumsqerr) : 0.0);
     }
 
     // --- 6) ordering: signals by last-bin yield (descending),
     //  backgrounds ascending by last-bin (so largest ends up last,
     //  i.e. adjacent to "Total Bkg"), bins by totalBkg (descending) ---
     if (nx <= 0) return;
-    //int lastCutflowIndex = nx - 1;
-    //std::sort(allSigs.begin(), allSigs.end(),
-    //    [&](const std::string &a, const std::string &b){
-    //        double A = (yields.count(a) ? yields[a][lastCutflowIndex] : 0.0);
-    //        double B = (yields.count(b) ? yields[b][lastCutflowIndex] : 0.0);
-    //        return A > B; // descending: biggest signals at top
-    //    });
-
-    //std::sort(allBkgs.begin(), allBkgs.end(),
-    //    [&](const std::string &a, const std::string &b){
-    //        double A = (yields.count(a) ? yields[a][lastCutflowIndex] : 0.0);
-    //        double B = (yields.count(b) ? yields[b][lastCutflowIndex] : 0.0);
-    //        return A < B; // ascending: biggest backgrounds at the end (closest to Total Bkg)
-    //    });
 
     std::vector<int> binOrder(nx);
     for (int i = 0; i < nx; ++i) binOrder[i] = i;
-    //std::sort(binOrder.begin(), binOrder.end(),
-    //    [&](int A, int B){ return totalBkg[A] > totalBkg[B]; });
 
     // --- 7) build Y-order depending on mode ---
     std::vector<std::string> yOrder;
@@ -1228,6 +1514,7 @@ void MakeAndPlotCutflow2D(
         int oldBin = binOrder[ix];
         double B = totalBkg[oldBin];
         double sqrtB = (B>0.0 ? std::sqrt(B) : 0.0);
+        double Berr = totalBkgErr[oldBin];
         for (int iy=0; iy<ny; ++iy) {
             const std::string &procName = yOrder[iy];
             double val = 0.0;
@@ -1246,19 +1533,35 @@ void MakeAndPlotCutflow2D(
                 }
             } else {
                 double pY = (yields.count(procName) ? yields[procName][oldBin] : 0.0);
+                double pErr = (yields_err.count(procName) ? yields_err[procName][oldBin] : 0.0);
                 if(procName == "Total Bkg") {
                     if(mode == "yield") val = B;
                     else if(mode == "SoB") val = (B > 0.0 ? 1.0 : 0.0);
                     else if(mode == "SoverSqrtB") val = (sqrtB > 0.0 ? sqrtB : 0.0);
-                    else val = B;
+                    else if(mode == "effective") {
+                        if (Berr > 0.0 && std::isfinite(Berr))
+                            val = (B*B) / (Berr * Berr);
+                        else
+                            val = 0.0;
+                    } else val = B;
                 } else if((procName.find("data") != std::string::npos || procName.find("Data") != std::string::npos)) {
                     if(mode == "SoB") val = (B > 0.0 ? pY / B : 0.0);
-                    else val = pY;
+                    else if(mode == "effective") {
+                        if (pErr > 0.0 && std::isfinite(pErr))
+                            val = (pY*pY) / (pErr * pErr);
+                        else
+                            val = 0.0;
+                    } else val = pY;
                 } else {
                     if(mode == "yield") val = pY;
                     else if(mode == "SoB") val = (B > 0.0 ? pY / B : 0.0);
                     else if(mode == "SoverSqrtB") val = (sqrtB > 0.0 ? pY / sqrtB : 0.0);
-                    else val = pY;
+                    else if(mode == "effective") {
+                        if (pErr > 0.0 && std::isfinite(pErr))
+                            val = (pY*pY) / (pErr * pErr);
+                        else
+                            val = 0.0;
+                    } else val = pY;
                 }
             }
             h2->SetBinContent(ix+1, iy+1, val);

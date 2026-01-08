@@ -6,13 +6,23 @@
 // ----------------------
 int main(int argc, char* argv[]) {
     string inputFile;
+    string ratiosYaml;
     for(int i=1;i<argc;++i){
         string arg=argv[i];
         if(arg=="-i"||arg=="--input"){ if(i+1<argc) inputFile=argv[++i]; else{ cerr<<"[ERROR] Missing "<<arg<<endl; return 1;} }
         else if(arg=="-o"||arg=="--output"){ if(i+1<argc) outputDir=argv[++i]; else{ cerr<<"[ERROR] Missing "<<arg<<endl; return 1;} }
         // lumi used when filling histograms upstream; doesn't rescale, just need for labels
         else if(arg=="-l"||arg=="--lumi"){ if(i+1<argc) lumi=std::stoi(argv[++i]); else{ lumi = 1.;} }
-        else if(arg=="--help"){ cout<<"[PlotHistograms] Usage: "<<argv[0]<<" [options]\n -i <file.root>\n -h <hist.yaml>\n -d <process.yaml>\n -b <bins.yaml>\n"; return 0; }
+        else if(arg=="-r" || arg=="--ratios"){
+            if(i+1<argc) ratiosYaml = argv[++i];
+            else { cerr<<"[ERROR] Missing "<<arg<<endl; return 1; }
+        }
+        else if(arg=="--help"){
+            cout << "[PlotHistograms] Usage: " << argv[0] << " [options]\n"
+                 << " -i <file.root>\n"
+                 << " -r <ratios.yaml>\n";
+            return 0;
+        }
         else{ cerr<<"[ERROR] Unknown arg "<<arg<<endl; return 1;}
     }
     if(inputFile.empty()){ cerr<<"[ERROR] No input ROOT file provided.\n"; return 1; }
@@ -62,13 +72,17 @@ int main(int argc, char* argv[]) {
                 groupKey = string(clone->GetName()) + "__CutFlow";
             }
         } else {
-            if(!id.bin.empty() && !id.var.empty()) {
-                groupKey = id.bin + "__" + id.var;
-                // Prevent num/den overwrites (TEff inputs)
-                if (hname.find("__num__") != std::string::npos) groupKey += "__num";
-                else if (hname.find("__den__") != std::string::npos) groupKey += "__den";
+            if(!id.var.empty()) {
+                if(!id.bin.empty()) {
+                    groupKey = id.bin + "__" + id.var;
+                    uniqueBinNames.insert(id.bin);
+                } else {
+                    groupKey = id.var;
+                }
+            } else {
+                // Only CutFlow or malformed names should land here
+                groupKey = string(clone->GetName());
             }
-            else groupKey = id.var.empty() ? string(clone->GetName()) : id.var;
             if(!id.bin.empty()) uniqueBinNames.insert(id.bin);
         }
 
@@ -106,7 +120,6 @@ int main(int argc, char* argv[]) {
     outFile=new TFile(outRootName,"RECREATE");
 
     // maps for TEff inputs
-    map<HistId, TH1*> numHists, denHists;
     // Main plotting loop
     for(auto &gpair : groups){
         string groupKey = gpair.first;
@@ -142,24 +155,12 @@ int main(int argc, char* argv[]) {
             // Individual plots for 1D/2D histograms
             for(auto &pp : procmap){
                 TH1* h = pp.second; if(!h) continue;
-                if(string(h->GetName()).find("num__")!=string::npos) continue;
-                if(string(h->GetName()).find("den__")!=string::npos) continue;
                 if(h->InheritsFrom(TH2::Class())) Plot_Hist2D(dynamic_cast<TH2*>(h));
                 else Plot_Hist1D(h);
             }
         
-            // TEfficiency
-            for(const auto &pp : procmap){
-                TH1* h = pp.second; if(!h) continue;
-                std::string hname = h->GetName();
-                HistId hId = ParseHistName(hname);
-                if(string(pp.second->GetName()).find("num__")!=string::npos) numHists[hId]=pp.second;
-                else if(string(pp.second->GetName()).find("den__")!=string::npos) denHists[hId]=pp.second;
-            }
-        
             // Plot stack
             if(!bkgHists.empty() || !sigHists.empty() || dataHist){
-                if(groupKey.find("num__")!=string::npos || groupKey.find("den__")!=string::npos) continue; // don't stack efficiency inputs
                 if(bkgHists.size() > 0) { if(bkgHists[0]->InheritsFrom(TH2::Class())) continue; } // don't stack TH2s
                 if(sigHists.size() > 0) { if(sigHists[0]->InheritsFrom(TH2::Class())) continue; } // don't stack TH2s
                 Plot_Stack(groupKey, bkgHists, sigHists, dataHist, 1.0);
@@ -178,54 +179,15 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // Maps to store TEffs grouped by bin and by process
+    // Ratios 
+    vector<RatioDef> ratioDefs;
     std::map<std::string, std::vector<TEfficiency*>> effsByBin;
     std::map<std::string, std::vector<TEfficiency*>> effsByProcess;
-    
-    for(const auto &nume : numHists){
-        string denName = nume.second->GetName();
-        size_t start_pos = 0;
-        while ((start_pos = denName.find("__num__", start_pos)) != std::string::npos) {
-            denName.replace(start_pos, 7, "__den__");
-            start_pos += 7;
-        }
-    
-        HistId denID = ParseHistName(denName);
-        if(denHists.count(denID)){
-            TEfficiency* eff = nullptr;
-            if (HistsCompatible(nume.second, denHists[denID])) {
-                gErrorIgnoreLevel = 1001; // ignore ROOT warnings temporarily
-                eff = new TEfficiency(*nume.second, *denHists[denID]);
-                gErrorIgnoreLevel = 0;
-            }
-            else continue;
-    
-            // Clean the name
-            string effName = denName;
-            start_pos = 0;
-            while ((start_pos = effName.find("den__", start_pos)) != std::string::npos) {
-                effName.replace(start_pos, 5, "");
-            }
-            eff->SetName(effName.c_str());
-            eff->SetTitle(effName.c_str());
-            gErrorIgnoreLevel = 3001; // ignore ROOT warnings temporarily
-            TCanvas* dum_canv = new TCanvas("dum_canv", "dum_canv", 750, 500);
-            dum_canv->cd();
-            eff->Draw();
-            dum_canv->Update();
-            eff->GetPaintedGraph()->GetYaxis()->SetTitle(nume.second->GetYaxis()->GetTitle());
-            delete dum_canv;
-            gErrorIgnoreLevel = 0;
-
-            // Store in the maps
-            effsByBin[denID.bin].push_back(eff);
-            effsByProcess[denID.proc].push_back(eff);
-
-            // Call plotting tool    
-            Plot_Eff(eff);
-        }
+    if(!ratiosYaml.empty()){
+        cout << "[PlotHistograms] Loading ratios from " << ratiosYaml << endl;
+        ratioDefs = LoadRatioYAML(ratiosYaml);
+        RunRatios(ratioDefs, groups, uniqueBinNames, outputDir, effsByBin, effsByProcess);
     }
-
     for(const auto& pair : effsByBin)
         Plot_Eff_Multi(pair.first, pair.second, "Bin");
     for(const auto& pair : effsByProcess)

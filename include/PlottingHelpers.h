@@ -14,6 +14,7 @@
 #include <regex>
 #include <fnmatch.h>
 #include <unordered_set>
+#include <optional>
 
 #include <TFile.h>
 #include <TH1.h>
@@ -369,6 +370,12 @@ void loadFormatMaps(){
   m_Color["Total"] = 7000;
   m_Title["Total Bkg"] = "Total Bkg";
   m_Color["Total Bkg"] = 7000;
+
+  m_Title["bkg"] = "Bkg";
+  m_Color["bkg"] = 7001;
+
+  m_Title["Data_2016"] = "Data";
+  m_Color["Data_2016"] = 7001;
 
   m_Title["Cascades_300_300_289_260_240_220_220_209_200_190_180"] = "Cascades 180";
   m_Color["Cascades_300_300_289_260_240_220_220_209_200_190_180"] = 7040; // 7072 might look better...?
@@ -1043,6 +1050,182 @@ bool IsBkgHist(const std::string &histName, const SampleTool &tool) {
     return tool.BkgDict.count(id.proc) > 0;
 }
 
+struct RatioPair {
+    HistId numerator;
+    HistId denominator;
+};
+
+enum class RatioKind {
+    Generic,
+    Efficiency
+};
+
+struct RatioDef {
+    std::string name;
+    std::string type;              // "1D", "2D"
+    RatioKind kind = RatioKind::Generic;
+
+    bool normalize = false;
+
+    std::optional<std::pair<double,double>> y_range;
+    std::optional<std::pair<double,double>> z_range;
+
+    // Implicit expansion mode
+    std::string numerator_var;
+    std::string denominator_var;
+    std::vector<std::string> processes; // empty = all
+    std::vector<std::string> bins;      // empty = all
+
+    // Explicit mode
+    std::vector<RatioPair> map;
+};
+
+// ----------------------
+// Ratio YAML loader
+// ----------------------
+std::vector<RatioDef> LoadRatioYAML(const std::string &filename) {
+    std::vector<RatioDef> ratios;
+
+    YAML::Node doc = YAML::LoadFile(filename);
+    if(!doc["ratios"]) {
+        std::cerr << "[LoadRatioYAML] No 'ratios:' key found in " << filename << std::endl;
+        return ratios;
+    }
+
+    for(const auto &node : doc["ratios"]) {
+        RatioDef r;
+
+        if(node["name"]) r.name = node["name"].as<std::string>();
+        if(node["type"]) r.type = node["type"].as<std::string>();
+        if(node["kind"]) {
+            std::string k = node["kind"].as<std::string>();
+            if(k == "efficiency") r.kind = RatioKind::Efficiency;
+        }
+
+        if(node["normalize"]) r.normalize = node["normalize"].as<bool>();
+
+        if(node["y_range"]) {
+            auto yr = node["y_range"];
+            if(yr.size() == 2) r.y_range = std::make_pair(yr[0].as<double>(), yr[1].as<double>());
+        }
+        if(node["z_range"]) {
+            auto zr = node["z_range"];
+            if(zr.size() == 2) r.z_range = std::make_pair(zr[0].as<double>(), zr[1].as<double>());
+        }
+
+        // --- Explicit map mode ---
+        if(node["map"]) {
+            for(const auto &m : node["map"]) {
+                RatioPair p;
+                if(m["numerator"]) {
+                    auto num = m["numerator"];
+                    p.numerator.var  = num["hist"] ? num["hist"].as<std::string>() : "";
+                    p.numerator.proc = num["process"] ? num["process"].as<std::string>() : "";
+                    p.numerator.bin  = num["bin"] ? num["bin"].as<std::string>() : "";
+                }
+                if(m["denominator"]) {
+                    auto den = m["denominator"];
+                    p.denominator.var  = den["hist"] ? den["hist"].as<std::string>() : "";
+                    p.denominator.proc = den["process"] ? den["process"].as<std::string>() : "";
+                    p.denominator.bin  = den["bin"] ? den["bin"].as<std::string>() : "";
+                }
+                r.map.push_back(p);
+            }
+        }
+        // --- Implicit mode (efficiency style) ---
+        else if(node["numerator"] && node["denominator"]) {
+            r.numerator_var   = node["numerator"].as<std::string>();
+            r.denominator_var = node["denominator"].as<std::string>();
+
+            if(node["processes"]) {
+                for(const auto &p : node["processes"])
+                    r.processes.push_back(p.as<std::string>());
+            }
+            if(node["bins"]) {
+                for(const auto &b : node["bins"])
+                    r.bins.push_back(b.as<std::string>());
+            }
+        }
+
+        ratios.push_back(r);
+    }
+
+    return ratios;
+}
+
+static std::string MakeGroupKeyForVar(const std::string &bin, const std::string &var) {
+    if(!bin.empty()) return bin + "__" + var;
+    return var;
+}
+
+// Helper: find histogram pointer(s) in groups that match a HistId
+// If HistId.proc or HistId.bin is empty, these act as wildcards and this function
+// returns all matching (bin,proc,TH1*) tuples as a vector of tuples.
+struct HistMatch { std::string bin, proc; TH1* hist; };
+std::vector<HistMatch> FindMatchingHists(
+    const HistId &hid,
+    const std::map<std::string, std::map<std::string, TH1*>> &groups,
+    const std::set<std::string> &allBins,
+    bool exact = false 
+) {
+    std::vector<HistMatch> out;
+
+    // If bin specified -> single groupKey
+    if(!hid.bin.empty()){
+        std::string gk = MakeGroupKeyForVar(hid.bin, hid.var);
+        auto it = groups.find(gk);
+        if(it == groups.end()) return out;
+        // if proc specified -> narrow
+        if(!hid.proc.empty()){
+            auto itp = it->second.find(hid.proc);
+            if(itp != it->second.end()){
+                out.push_back({hid.bin, hid.proc, itp->second});
+            }
+        } else {
+            // wildcard proc -> return all procs in this group
+            for(const auto &pp : it->second){
+                out.push_back({hid.bin, pp.first, pp.second});
+            }
+        }
+        return out;
+    }
+
+    // If bin not specified, search across allBins
+    for(const auto &bin : allBins){
+        std::string gk = MakeGroupKeyForVar(bin, hid.var);
+        auto it = groups.find(gk);
+        if(it == groups.end()) continue;
+        if(!hid.proc.empty()){
+            auto itp = it->second.find(hid.proc);
+            if(itp != it->second.end()){
+                out.push_back({bin, hid.proc, itp->second});
+            }
+        } else {
+            for(const auto &pp : it->second){
+                out.push_back({bin, pp.first, pp.second});
+            }
+        }
+    }
+
+    // --- ONLY fallback to var-only groups if exact==false ---
+    if(!exact){
+        auto it_varonly = groups.find(hid.var);
+        if(it_varonly != groups.end()){
+            if(!hid.proc.empty()){
+                auto itp = it_varonly->second.find(hid.proc);
+                if(itp != it_varonly->second.end()){
+                    out.push_back({"", hid.proc, itp->second});
+                }
+            } else {
+                for(const auto &pp : it_varonly->second){
+                    out.push_back({"", pp.first, pp.second});
+                }
+            }
+        }
+    }
+    return out;
+}
+
 template<typename T>
 T* GetHistClone(TFile *f, const string &name) {
     T* h = dynamic_cast<T*>(f->Get(name.c_str()));
@@ -1082,6 +1265,52 @@ bool HistsCompatible(TH1* num, const TH1* den, double tol=1e-1) {
     }
     // If all denominator bins are zero, skip
     return hasNonZeroBin;
+}
+
+// Divide two histograms bin-by-bin, optionally normalize to 1, returns new TH1/TH2
+TH1* MakeRatioHist(TH1* hnum, TH1* hden, bool normalize = false) {
+    if(!hnum || !hden) return nullptr;
+
+    TH1* hratio = (TH1*)hnum->Clone();
+    hratio->SetName(Form("%s_ratio", hnum->GetName()));
+    hratio->SetTitle(hratio->GetName());
+    hratio->Reset();
+
+    if(hnum->InheritsFrom(TH2::Class())){
+        TH2* h2num = dynamic_cast<TH2*>(hnum);
+        TH2* h2den = dynamic_cast<TH2*>(hden);
+        TH2* h2ratio = dynamic_cast<TH2*>(hratio);
+
+        int nx = h2num->GetNbinsX();
+        int ny = h2num->GetNbinsY();
+        for(int ix=1; ix<=nx; ++ix){
+            for(int iy=1; iy<=ny; ++iy){
+                double n = h2num->GetBinContent(ix,iy);
+                double d = h2den->GetBinContent(ix,iy);
+                double val = (d!=0) ? n/d : 0.;
+                h2ratio->SetBinContent(ix,iy,val);
+                h2ratio->SetBinError(ix,iy,0.); // optional: could compute errors
+            }
+        }
+        if(normalize){
+            double s = h2ratio->Integral();
+            if(s>0) h2ratio->Scale(1./s);
+        }
+    } else {
+        int nb = hnum->GetNbinsX();
+        for(int i=1;i<=nb;++i){
+            double n = hnum->GetBinContent(i);
+            double d = hden->GetBinContent(i);
+            double val = (d!=0) ? n/d : 0.;
+            hratio->SetBinContent(i,val);
+            hratio->SetBinError(i,0.); // optional
+        }
+        if(normalize){
+            double s = hratio->Integral();
+            if(s>0) hratio->Scale(1./s);
+        }
+    }
+    return hratio;
 }
 
 // --------------------------------------------------

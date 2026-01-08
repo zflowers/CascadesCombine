@@ -99,8 +99,9 @@ int main(int argc, char* argv[]) {
         MakeAndPlotCutflow2D(groupCutflowMap, grpName, "yield", 1.0);
         MakeAndPlotCutflow2D(groupCutflowMap, grpName, "SoB",   1.0);
         MakeAndPlotCutflow2D(groupCutflowMap, grpName, "SoverSqrtB", 1.0);
+        MakeAndPlotCutflow2D(groupCutflowMap, grpName, "effective", 1.0);
         if (!hasData)
-            MakeAndPlotCutflow2D(groupCutflowMap, grpName, "Zbi", 3.0);
+            MakeAndPlotCutflow2D(groupCutflowMap, grpName, "Zbi", 3.0); // 3% systematic
     }
 
     outFile->Close();
