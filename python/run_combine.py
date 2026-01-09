@@ -1084,6 +1084,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
 
             # FitDiagnostics
             if make_FD:
+                # local
                 FD_cmd = [
                     "bash",
                     macro_dir+"/launchFitDiagnostics.sh",

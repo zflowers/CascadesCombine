@@ -37,9 +37,9 @@ JET_CONFIGS = {
 }
 
 JET_CONFIGS_3L = {
-    "0J": {"njet_cond": "Njet_S==0;", "njet_note": "Njet_S==0;"},
-    "1J": {"njet_cond": "Njet_S>=1;", "njet_note": "Njet_S>=1;"},
-    #"Jincl": {"njet_cond": None}  # no jet cut
+    #"0J": {"njet_cond": "Njet_S==0;", "njet_note": "Njet_S==0;"},
+    #"1J": {"njet_cond": "Njet_S>=1;", "njet_note": "Njet_S>=1;"},
+    "Jincl": {"njet_cond": None}  # no jet cut
 }
 
 # ---------------- RISR / Mperp bins ----------------
@@ -49,7 +49,7 @@ RISR_BINS_2L = [
     {"name": "R85", "min": 0.85, "max": 0.9,  "Mh": 30, "Mm_lo": 20, "Mm_hi": 30, "Ml_hi": 20},
     {"name": "R8",  "min": 0.8,  "max": 0.85, "Mh": 35, "Mm_lo": 25, "Mm_hi": 35, "Ml_hi": 25},
 
-    # 359/363
+    # 359/364
     {"name": "R75", "min": 0.75, "max": 0.8,  "Mh": 35, "Mm_lo": 25, "Mm_hi": 35, "Ml_hi": 25},
     {"name": "R7",  "min": 0.7,  "max": 0.75, "Mh": 35, "Mm_lo": 25, "Mm_hi": 35, "Ml_hi": 25},
 
@@ -60,9 +60,9 @@ RISR_BINS_2L = [
 
 # 3L RISR/Mperp bins
 RISR_BINS_3L = [
-    {"name": "R9",  "min": 0.9,  "max": 1.0,  "Mh": 30, "Mm_lo": 30, "Mm_hi": 30, "Ml_hi": 30},
-    {"name": "R8",  "min": 0.8,  "max": 0.9,  "Mh": 40, "Mm_lo": 40, "Mm_hi": 40, "Ml_hi": 40},
-    {"name": "R7",  "min": 0.7,  "max": 0.8,  "Mh": 50, "Mm_lo": 50, "Mm_hi": 50, "Ml_hi": 50},
+    {"name": "R9",  "min": 0.9,  "max": 1.0,  "Mh": 20, "Mm_lo": 20, "Mm_hi": 20, "Ml_hi": 20},
+    {"name": "R8",  "min": 0.8,  "max": 0.9,  "Mh": 30, "Mm_lo": 30, "Mm_hi": 30, "Ml_hi": 30},
+    {"name": "R7",  "min": 0.7,  "max": 0.8,  "Mh": 40, "Mm_lo": 40, "Mm_hi": 40, "Ml_hi": 40},
 ]
 
 # 2L flavor splits
@@ -107,7 +107,107 @@ MARATIO_NAME_L = "Al"
 #    - 'maratio': bool (split Ah/Al)
 #    - 'lep_classes': list of keys from LEP_CLASS_MAP_3L OR 'incl'
 THREE_L_RULES = {
-    "0J": {
+    #"0J": {
+    #    "R9": {
+    #        "mperp": {
+    #            "Mh": {
+    #                "use_mperp": True,
+    #                "mperp_cat": "Mh",
+    #                "maratio": False,
+    #                "lep_classes": ["OSOFa", "OSSFa", "SSa"],
+    #            },
+    #            "Ml": {
+    #                "use_mperp": True,
+    #                "mperp_cat": "Ml",
+    #                "maratio": False,
+    #                "lep_classes": ["OSOFa", "OSSFa", "SSa"],
+    #            },
+    #        }
+    #    },
+    #    "R8": {
+    #        "mperp": {
+    #            "Mh": {
+    #                "use_mperp": True,
+    #                "mperp_cat": "Mh",
+    #                "maratio": False,
+    #                "lep_classes": ["OSOFa", "OSSFa", "SSa"],
+    #            },
+    #            "Ml": {
+    #                "use_mperp": True,
+    #                "mperp_cat": "Ml",
+    #                "maratio": False,
+    #                "lep_classes": ["OSOFa", "OSSFa", "SSa"],
+    #            },
+    #        }
+    #    },
+    #    "R7": {
+    #        "mperp": {
+    #            "Mh": {
+    #                "use_mperp": True,
+    #                "mperp_cat": "Mh",
+    #                "maratio": False,
+    #                "lep_classes": ["OSOFa", "OSSFa", "SSa"],
+    #            },
+    #            "Ml": {
+    #                "use_mperp": True,
+    #                "mperp_cat": "Ml",
+    #                "maratio": False,
+    #                "lep_classes": ["OSOFa", "OSSFa", "SSa"],
+    #            },
+    #        }
+    #    },
+    #},
+    #"1J": {
+    #    "R9": {
+    #        "mperp": {
+    #            "Mh": {
+    #                "use_mperp": True,
+    #                "mperp_cat": "Mh",
+    #                "maratio": False,
+    #                "lep_classes": ["OSOFa", "OSSFa", "SSa"],
+    #            },
+    #            "Ml": {
+    #                "use_mperp": True,
+    #                "mperp_cat": "Ml",
+    #                "maratio": False,
+    #                "lep_classes": ["OSOFa", "OSSFa", "SSa"],
+    #            },
+    #        }
+    #    },
+    #    "R8": {
+    #        "mperp": {
+    #            "Mh": {
+    #                "use_mperp": True,
+    #                "mperp_cat": "Mh",
+    #                "maratio": False,
+    #                "lep_classes": ["OSOFa", "OSSFa", "SSa"],
+    #            },
+    #            "Ml": {
+    #                "use_mperp": True,
+    #                "mperp_cat": "Ml",
+    #                "maratio": False,
+    #                "lep_classes": ["OSOFa", "OSSFa", "SSa"],
+    #            },
+    #        }
+    #    },
+    #    "R7": {
+    #        "mperp": {
+    #            "Mh": {
+    #                "use_mperp": True,
+    #                "mperp_cat": "Mh",
+    #                "maratio": False,
+    #                "lep_classes": ["OSOFa", "OSSFa", "SSa"],
+    #            },
+    #            "Ml": {
+    #                "use_mperp": True,
+    #                "mperp_cat": "Ml",
+    #                "maratio": False,
+    #                "lep_classes": ["OSOFa", "OSSFa", "SSa"],
+    #            },
+    #        }
+    #    },
+    #},
+    "Jincl": {
         "R9": {
             "mperp": {
                 "Mh": {
@@ -141,88 +241,6 @@ THREE_L_RULES = {
             }
         },
         "R7": {
-            "mperp": {
-                "Mh": {
-                    "use_mperp": True,
-                    "mperp_cat": "Mh",
-                    "maratio": False,
-                    "lep_classes": ["OSOFa", "OSSFa", "SSa"],
-                },
-                "Ml": {
-                    "use_mperp": True,
-                    "mperp_cat": "Ml",
-                    "maratio": False,
-                    "lep_classes": ["OSOFa", "OSSFa", "SSa"],
-                },
-            }
-        },
-        "R6": {
-            "mperp": {
-                "Mh": {
-                    "use_mperp": True,
-                    "mperp_cat": "Mh",
-                    "maratio": False,
-                    "lep_classes": ["OSOFa", "OSSFa", "SSa"],
-                },
-                "Ml": {
-                    "use_mperp": True,
-                    "mperp_cat": "Ml",
-                    "maratio": False,
-                    "lep_classes": ["OSOFa", "OSSFa", "SSa"],
-                },
-            }
-        },
-    },
-    "1J": {
-        "R9": {
-            "mperp": {
-                "Mh": {
-                    "use_mperp": True,
-                    "mperp_cat": "Mh",
-                    "maratio": False,
-                    "lep_classes": ["OSOFa", "OSSFa", "SSa"],
-                },
-                "Ml": {
-                    "use_mperp": True,
-                    "mperp_cat": "Ml",
-                    "maratio": False,
-                    "lep_classes": ["OSOFa", "OSSFa", "SSa"],
-                },
-            }
-        },
-        "R8": {
-            "mperp": {
-                "Mh": {
-                    "use_mperp": True,
-                    "mperp_cat": "Mh",
-                    "maratio": False,
-                    "lep_classes": ["OSOFa", "OSSFa", "SSa"],
-                },
-                "Ml": {
-                    "use_mperp": True,
-                    "mperp_cat": "Ml",
-                    "maratio": False,
-                    "lep_classes": ["OSOFa", "OSSFa", "SSa"],
-                },
-            }
-        },
-        "R7": {
-            "mperp": {
-                "Mh": {
-                    "use_mperp": True,
-                    "mperp_cat": "Mh",
-                    "maratio": False,
-                    "lep_classes": ["OSOFa", "OSSFa", "SSa"],
-                },
-                "Ml": {
-                    "use_mperp": True,
-                    "mperp_cat": "Ml",
-                    "maratio": False,
-                    "lep_classes": ["OSOFa", "OSSFa", "SSa"],
-                },
-            }
-        },
-        "R6": {
             "mperp": {
                 "Mh": {
                     "use_mperp": True,

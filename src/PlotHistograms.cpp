@@ -129,8 +129,8 @@ int main(int argc, char* argv[]) {
         bool isCutFlow = (groupKey.find("__CutFlow") != string::npos);
         
         // Separate histograms
-        vector<TH1*> bkgHists, sigHists, emptyHists;
-        vector<string> bkgProcs, sigProcs;
+        vector<TH1*> bkgHists, sigHists, emptyHists, bkgHists_Run2, bkgHists_Run3, sigHists_Run2, sigHists_Run3;
+        vector<string> bkgProcs, sigProcs, bkgProcs_Run2, bkgProcs_Run3, sigProcs_Run2, sigProcs_Run3;
         TH1* dataHist = nullptr;
         
         for(auto &pp : procmap){
@@ -138,18 +138,37 @@ int main(int argc, char* argv[]) {
             if(!h) continue;
             const string& proc = pp.first;
         
-            if(proc=="data" || proc=="Data" || proc=="data_obs") { dataHist = h; continue; }
+            //if(proc=="data" || proc=="Data" || proc=="data_obs") { dataHist = h; continue; }
             if(tool.BkgDict.count(proc)) {
                 bkgHists.push_back(h); 
                 bkgProcs.push_back(proc); 
+                if(proc.find("Run2") != std::string::npos){
+                    bkgHists_Run2.push_back(h); 
+                    bkgProcs_Run2.push_back(proc); 
+                }
+                if(proc.find("Run3") != std::string::npos){
+                    bkgHists_Run3.push_back(h); 
+                    bkgProcs_Run3.push_back(proc); 
+                }
             }
             else if(find(tool.SignalKeys.begin(), tool.SignalKeys.end(), proc) != tool.SignalKeys.end() 
                 || proc.find("SMS") != std::string::npos || proc.find("Cascades") != std::string::npos) {
-              sigHists.push_back(h); sigProcs.push_back(proc); 
+                sigHists.push_back(h);
+                sigProcs.push_back(proc); 
+                if(proc.find("Run2") != std::string::npos){
+                    sigHists_Run2.push_back(h);
+                    sigProcs_Run2.push_back(proc); 
+                }
+                if(proc.find("Run3") != std::string::npos){
+                    sigHists_Run3.push_back(h);
+                    sigProcs_Run3.push_back(proc); 
+                }
             }
         }
         
         SortByYield(bkgHists, bkgProcs);
+        SortByYield(bkgHists_Run2, bkgProcs_Run2);
+        SortByYield(bkgHists_Run3, bkgProcs_Run3);
         
         if(!isCutFlow){
             // Individual plots for 1D/2D histograms
@@ -169,6 +188,16 @@ int main(int argc, char* argv[]) {
                 Plot_Stack(groupKey+"_bkg", bkgHists, emptyHists, nullptr, 1.0);
                 Plot_Overlay(groupKey+"_bkg", bkgHists, emptyHists, nullptr);
                 Plot_Overlay(groupKey+"_sig", emptyHists, sigHists, nullptr);
+                // Only Run2 bkg
+                Plot_Stack(groupKey+"_bkgRun2", bkgHists_Run2, emptyHists, nullptr, 1.0);
+                Plot_Overlay(groupKey+"_bkgRun2", bkgHists_Run2, emptyHists, nullptr);
+                // Only Run3 bkg
+                Plot_Stack(groupKey+"_bkgRun3", bkgHists_Run3, emptyHists, nullptr, 1.0);
+                Plot_Overlay(groupKey+"_bkgRun3", bkgHists_Run3, emptyHists, nullptr);
+                // Only Run2 sig
+                Plot_Overlay(groupKey+"_sigRun2", emptyHists, sigHists_Run2, nullptr);
+                // Only Run3 sig
+                Plot_Overlay(groupKey+"_sigRun3", emptyHists, sigHists_Run3, nullptr);
             }
         
         } else {

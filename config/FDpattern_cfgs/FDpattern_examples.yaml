@@ -63,6 +63,22 @@ bins:
         - "*3L_Bronze_0J_P300_R9_*"
     exclude:
         - "*Btag*"
+  - name: "3L_Bronze_Low_PTISR"
+    include:
+        - "*3L_Bronze_Jincl_P200_R6_*"
+        - "*3L_Bronze_Jincl_P200_R7_*"
+        - "*3L_Bronze_Jincl_P200_R8_*"
+        - "*3L_Bronze_Jincl_P200_R9_*"
+    exclude:
+        - "*Btag*"
+  - name: "3L_Bronze_High_PTISR"
+    include:
+        - "*3L_Bronze_Jincl_P300_R6_*"
+        - "*3L_Bronze_Jincl_P300_R7_*"
+        - "*3L_Bronze_Jincl_P300_R8_*"
+        - "*3L_Bronze_Jincl_P300_R9_*"
+    exclude:
+        - "*Btag*"
   - name: "2L_Bronze_0J_High_PTISR_Lowest_RISR"
     include:
         - "*2L_Bronze_0J_P350_R6_*"
@@ -264,6 +280,22 @@ bins:
         - "*3L_Silver_1J_P300_R9_*"
     exclude:
         - "*Btag*"
+  - name: "3L_Silver_Low_PTISR"
+    include:
+        - "*3L_Silver_Jincl_P200_R6_*"
+        - "*3L_Silver_Jincl_P200_R7_*"
+        - "*3L_Silver_Jincl_P200_R8_*"
+        - "*3L_Silver_Jincl_P200_R9_*"
+    exclude:
+        - "*Btag*"
+  - name: "3L_Silver_High_PTISR"
+    include:
+        - "*3L_Silver_Jincl_P300_R6_*"
+        - "*3L_Silver_Jincl_P300_R7_*"
+        - "*3L_Silver_Jincl_P300_R8_*"
+        - "*3L_Silver_Jincl_P300_R9_*"
+    exclude:
+        - "*Btag*"
   - name: "4L_Silver"
     include:
         "*4L_Silver_*"
@@ -401,6 +433,22 @@ bins:
         - "*3L_Gold_1J_P300_R9_*"
     exclude:
         - "*Btag*"
+  - name: "3L_Gold_Low_PTISR"
+    include:
+        - "*3L_Gold_Jincl_P200_R6_*"
+        - "*3L_Gold_Jincl_P200_R7_*"
+        - "*3L_Gold_Jincl_P200_R8_*"
+        - "*3L_Gold_Jincl_P200_R9_*"
+    exclude:
+        - "*Btag*"
+  - name: "3L_Gold_High_PTISR"
+    include:
+        - "*3L_Gold_Jincl_P300_R6_*"
+        - "*3L_Gold_Jincl_P300_R7_*"
+        - "*3L_Gold_Jincl_P300_R8_*"
+        - "*3L_Gold_Jincl_P300_R9_*"
+    exclude:
+        - "*Btag*"
   - name: "4L_Gold"
     include:
         "*4L_Gold_*"
@@ -418,21 +466,13 @@ processes:
         - "Vfakeleps*"
       #exclude:
       #  - "ST"
-    - name: "Wjets"
-      include:
-        - "Wjet*"
-
-    #- name: "top"
+    #- name: "Wjets"
     #  include:
-    #    - "top_2018*"
+    #    - "Wjet*"
 
-    #- name: "boson"
+    #- name: "top_FAKES"
     #  include:
-    #    - "boson_2018*"
-
-    - name: "top_FAKES"
-      include:
-        - "top*FAKES*"
+    #    - "top*FAKES*"
 
     - name: "top"
       include:
@@ -440,12 +480,24 @@ processes:
       exclude:
         - "*FAKE*"
 
-    - name: "boson_FAKES"
-      include:
-        - "boson*FAKES*"
+    #- name: "boson_FAKES"
+    #  include:
+    #    - "boson*FAKES*"
 
     - name: "boson"
       include:
         - "boson*"
       exclude:
         - "*FAKE*"
+
+    - name: "Fakes_el"
+      include:
+        - "*FAKES_Elec"
+
+    - name: "Fakes_mu"
+      include:
+        - "*FAKES_Muon"
+
+    - name: "Fakes_emu"
+      include:
+        - "*FAKES_Both"

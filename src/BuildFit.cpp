@@ -519,22 +519,26 @@ void BuildFit::AddSameSignSys(const stringlist& binset, const stringlist& procs)
 
 void BuildFit::AddBtagSys(const stringlist& binset, const stringlist& procs){
     cb.SetFlag("filters-use-regex", true);
-    cb.cp().process(procs).bin({".*2L.*0J.*P250.*.*Btag.*"})
+    cb.cp().process(procs).bin({".*2L.*0J.*P250.*Btag.*"})
         .AddSyst(cb, "Btag_2L_0J_lPTISR", "lnN", SystMap<>::init(1.20));
-    cb.cp().process(procs).bin({".*2L.*0J.*P350.*.*Btag.*"})
+    cb.cp().process(procs).bin({".*2L.*0J.*P350.*Btag.*"})
         .AddSyst(cb, "Btag_2L_0J_hPTISR", "lnN", SystMap<>::init(1.20));
-    cb.cp().process(procs).bin({".*2L.*1J.*P250.*.*Btag.*"})
+    cb.cp().process(procs).bin({".*2L.*1J.*P250.*Btag.*"})
         .AddSyst(cb, "Btag_2L_1J_lPTISR", "lnN", SystMap<>::init(1.20));
-    cb.cp().process(procs).bin({".*2L.*1J.*P350.*.*Btag.*"})
+    cb.cp().process(procs).bin({".*2L.*1J.*P350.*Btag.*"})
         .AddSyst(cb, "Btag_2L_1J_hPTISR", "lnN", SystMap<>::init(1.20));
-    cb.cp().process(procs).bin({".*3L.*0J.*P200.*.*Btag.*"})
-        .AddSyst(cb, "Btag_3L_0J_lPTISR", "lnN", SystMap<>::init(1.20));
-    cb.cp().process(procs).bin({".*3L.*0J.*P300.*.*Btag.*"})
-        .AddSyst(cb, "Btag_3L_0J_hPTISR", "lnN", SystMap<>::init(1.20));
-    cb.cp().process(procs).bin({".*3L.*1J.*P200.*.*Btag.*"})
-        .AddSyst(cb, "Btag_3L_1J_lPTISR", "lnN", SystMap<>::init(1.20));
-    cb.cp().process(procs).bin({".*3L.*1J.*P300.*.*Btag.*"})
-        .AddSyst(cb, "Btag_3L_1J_hPTISR", "lnN", SystMap<>::init(1.20));
+    //cb.cp().process(procs).bin({".*3L.*0J.*P200.*Btag.*"})
+    //    .AddSyst(cb, "Btag_3L_0J_lPTISR", "lnN", SystMap<>::init(1.20));
+    //cb.cp().process(procs).bin({".*3L.*0J.*P300.*Btag.*"})
+    //    .AddSyst(cb, "Btag_3L_0J_hPTISR", "lnN", SystMap<>::init(1.20));
+    //cb.cp().process(procs).bin({".*3L.*1J.*P200.*Btag.*"})
+    //    .AddSyst(cb, "Btag_3L_1J_lPTISR", "lnN", SystMap<>::init(1.20));
+    //cb.cp().process(procs).bin({".*3L.*1J.*P300.*Btag.*"})
+    //    .AddSyst(cb, "Btag_3L_1J_hPTISR", "lnN", SystMap<>::init(1.20));
+    cb.cp().process(procs).bin({".*3L.*P200.*Btag.*"})
+        .AddSyst(cb, "Btag_3L_lPTISR", "lnN", SystMap<>::init(1.20));
+    cb.cp().process(procs).bin({".*3L.*P300.*Btag.*"})
+        .AddSyst(cb, "Btag_3L_hPTISR", "lnN", SystMap<>::init(1.20));
     cb.cp().process(procs).bin({".*4L.*Btag.*"})
         .AddSyst(cb, "Btag_4L", "lnN", SystMap<>::init(1.20));
     cb.SetFlag("filters-use-regex", false);

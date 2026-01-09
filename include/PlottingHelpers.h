@@ -348,6 +348,15 @@ void loadFormatMaps(){
   m_Title["ZDY_FAKES"] = "Z / #gamma* + jets fakes";
   m_Color["ZDY_FAKES"] = 7014;
 
+  m_Title["Fakes_el"] = "e^{#pm} fakes";
+  m_Color["Fakes_el"] = 7020;
+
+  m_Title["Fakes_mu"] = "#mu^{#pm} fakes";
+  m_Color["Fakes_mu"] = 7023;
+
+  m_Title["Fakes_emu"] = "e^{#pm} #mu^{#pm} fakes";
+  m_Color["Fakes_emu"] = 7012;
+
   m_Title["ttbar_all"] = "t #bar{t} + jets";
   m_Color["ttbar_all"] = 7011;
 

@@ -20,10 +20,10 @@ SampleTool::SampleTool(){
   LumiDict["Summer20UL18_106X_SMS"] = LumiDict["Summer20UL18_106X"];
 
   // Override lumis since not all samples available yet
-  LumiDict["Summer23BPix_130X"] = 143.;
-  LumiDict["Summer23_130X"] = 143.;
-  LumiDict["Summer22EE_130X"] = 286.;
-  LumiDict["Summer22_130X"] = 143.;
+  LumiDict["Summer23BPix_130X"] = 71.5;
+  LumiDict["Summer23_130X"] = 71.5;
+  LumiDict["Summer22EE_130X"] = 71.5;
+  LumiDict["Summer22_130X"] = 71.5;
 
   LumiDict["Summer22_130X_Cascades"] = 286. + 138.;
   LumiDict["Summer23BPix_130X_Cascades"] = 286. + 138.;
@@ -179,10 +179,10 @@ SampleTool::SampleTool(){
   MasterDict["ttbar"] = mergeEntriesList(
     MasterDict,
     {
-      //"ttbar_2023BPix",
-      //"ttbar_2023",
+      "ttbar_2023BPix",
+      "ttbar_2023",
       "ttbar_2022EE",
-      //"ttbar_2022",
+      "ttbar_2022",
       "ttbar_2018",
       "ttbar_2017",
       "ttbar_2016",
@@ -287,6 +287,8 @@ SampleTool::SampleTool(){
     MasterDict,
     {
       "ST_2023BPix",
+      "ST_2023",
+      "ST_2022EE",
       "ST_2022",
       "ST_2018",
       "ST_2017",
@@ -443,10 +445,10 @@ SampleTool::SampleTool(){
   MasterDict["DY"] = mergeEntriesList(
     MasterDict,
     {
-      //"DY_2023BPix",
-      //"DY_2023",
+      "DY_2023BPix",
+      "DY_2023",
       "DY_2022EE",
-      //"DY_2022",
+      "DY_2022",
       "DY_2018",
       "DY_2017",
       "DY_2016",
@@ -766,10 +768,10 @@ SampleTool::SampleTool(){
   MasterDict["DBTB"] = mergeEntriesList(
     MasterDict,
     {
-      //"DBTB_2023BPix",
+      "DBTB_2023BPix",
       "DBTB_2023",
       "DBTB_2022EE",
-      //"DBTB_2022",
+      "DBTB_2022",
       "DBTB_2018",
       "DBTB_2017",
       "DBTB_2016",
@@ -1062,10 +1064,10 @@ SampleTool::SampleTool(){
   MasterDict["QCD"] = mergeEntriesList(
     MasterDict,
     {
-      //"QCD_2023BPix",
+      "QCD_2023BPix",
       "QCD_2023",
       "QCD_2022EE",
-      //"QCD_2022",
+      "QCD_2022",
       "QCD_2018",
       "QCD_2017",
       "QCD_2016",
@@ -1076,10 +1078,10 @@ SampleTool::SampleTool(){
   MasterDict["ZInv"] = mergeEntriesList(
     MasterDict,
     {
-      //"ZInv_2023BPix",
+      "ZInv_2023BPix",
       "ZInv_2023",
       "ZInv_2022EE",
-      //"ZInv_2022",
+      "ZInv_2022",
       "ZInv_2018",
       "ZInv_2017",
       "ZInv_2016",
@@ -1090,10 +1092,10 @@ SampleTool::SampleTool(){
   MasterDict["Wjets"] = mergeEntriesList(
     MasterDict,
     {
-      //"Wjets_2023BPix",
-      //"Wjets_2023",
+      "Wjets_2023BPix",
+      "Wjets_2023",
       "Wjets_2022EE",
-      //"Wjets_2022",
+      "Wjets_2022",
       "Wjets_2018",
       "Wjets_2017",
       "Wjets_2016",
@@ -1328,13 +1330,73 @@ SampleTool::SampleTool(){
     }
   );
 
+  MasterDict["DY_Run2"] = mergeEntriesList(
+    MasterDict,
+    {
+      "DY_2018",
+      "DY_2017",
+      "DY_2016",
+      "DY_2016APV",
+    }
+  );
+
+  MasterDict["top_Run3"] = mergeEntriesList(
+    MasterDict,
+    {
+      "top_2023BPix",
+      "top_2023",
+      "top_2022EE",
+      "top_2022",
+    }
+  );
+
+  MasterDict["Vfakeleps_Run3"] = mergeEntriesList(
+    MasterDict,
+    {
+      "Vfakeleps_2023BPix",
+      "Vfakeleps_2023",
+      "Vfakeleps_2022EE",
+      "Vfakeleps_2022",
+    }
+  );
+
+  MasterDict["Wjets_Run3"] = mergeEntriesList(
+    MasterDict,
+    {
+      "Wjets_2023BPix",
+      "Wjets_2023",
+      "Wjets_2022EE",
+      "Wjets_2022",
+    }
+  );
+
+  MasterDict["boson_Run3"] = mergeEntriesList(
+    MasterDict,
+    {
+      "boson_2023BPix",
+      "boson_2023",
+      "boson_2022EE",
+      "boson_2022",
+    }
+  );
+
+  MasterDict["DY_Run3"] = mergeEntriesList(
+    MasterDict,
+    {
+      "DY_2023BPix",
+      "DY_2023",
+      "DY_2022EE",
+      "DY_2022",
+    }
+  );
+
   MasterDict["top"] = mergeEntriesList(
     MasterDict,
     {
-      //"top_2023BPix",
-      //"top_2023",
+      "top_2023BPix",
+      "top_2023",
       "top_2022EE",
-      //"top_2022",
+      "top_2022",
       "top_2018",
       "top_2017",
       "top_2016",
@@ -1345,10 +1407,10 @@ SampleTool::SampleTool(){
   MasterDict["Vfakeleps"] = mergeEntriesList(
     MasterDict,
     {
-      //"Vfakeleps_2023BPix",
+      "Vfakeleps_2023BPix",
       "Vfakeleps_2023",
       "Vfakeleps_2022EE",
-      //"Vfakeleps_2022",
+      "Vfakeleps_2022",
       "Vfakeleps_2018",
       "Vfakeleps_2017",
       "Vfakeleps_2016",
@@ -1359,10 +1421,10 @@ SampleTool::SampleTool(){
   MasterDict["boson"] = mergeEntriesList(
     MasterDict,
     {
-      //"boson_2023BPix",
-      //"boson_2023",
+      "boson_2023BPix",
+      "boson_2023",
       "boson_2022EE",
-      //"boson_2022",
+      "boson_2022",
       "boson_2018",
       "boson_2017",
       "boson_2016",
@@ -1370,7 +1432,7 @@ SampleTool::SampleTool(){
     }
   );
 
-  MasterDict["bkg"] = mergeEntriesList(
+  MasterDict["bkg"] = mergeEntriesList( // used for histogram plots
     MasterDict,
     {
       "boson",
@@ -1551,6 +1613,11 @@ stringlist SampleTool::loadPreferredGroupsFromYaml(const std::string &yamlPath) 
             }
             if (procs["sig"] && procs["sig"].IsSequence()) {
                 for (const auto &n : procs["sig"]) {
+                    if (n.IsScalar()) out.push_back(n.as<std::string>());
+                }
+            }
+            if (procs["data"] && procs["data"].IsSequence()) {
+                for (const auto &n : procs["data"]) {
                     if (n.IsScalar()) out.push_back(n.as<std::string>());
                 }
             }

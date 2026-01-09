@@ -3,7 +3,7 @@ import os, sys, subprocess, argparse, re, shutil, time, random, hashlib, glob, y
 from pathlib import Path
 import importlib.util
 from collections import defaultdict
-from typing import Optional, Union
+from typing import Optional, Union, List
 from CondorJobCountMonitor import CondorJobCountMonitor
 
 # ----------------------------------------
@@ -91,7 +91,6 @@ def _flatten_field(value):
 # ----------------------------------------
 def write_merge_script(bin_name, condor_bin_dir: Path, json_dirname="json", proc_yaml_file=""):
     """Make a merge script that expects json files to be in condor_bin_dir/json
-
     The script calls the run-local exe `exe/mergeJSONs.x` with two quoted args:
       1) merged output JSON path (condor_bin_dir/<bin_safe>.json)
       2) input json directory (condor_bin_dir/json)
@@ -122,16 +121,108 @@ def write_merge_script(bin_name, condor_bin_dir: Path, json_dirname="json", proc
 
     os.chmod(merge_script_path, 0o755)
 
-def write_hadd_script(bin_name, condor_bin_dir: Path, root_dirname="root"):
+def _extract_proc_order_from_yaml(proc_yaml_path: Path) -> List[str]:
+    """General extractor: data group first (if present), then all other groups in YAML order."""
+    try:
+        cfg = yaml.safe_load(proc_yaml_path.read_text()) or {}
+    except Exception:
+        return []
+    processes = cfg.get("processes")
+    if not isinstance(processes, dict):
+        return []
+    ordered = []
+    # data first (if present)
+    if "data" in processes and isinstance(processes["data"], list):
+        ordered.extend(processes["data"])
+    # then everything else, YAML order preserved
+    for group, procs in processes.items():
+        if group == "data":
+            continue
+        if isinstance(procs, list):
+            ordered.extend(procs)
+    # deduplicate, preserve order
+    seen = set()
+    final = []
+    for p in ordered:
+        if p not in seen:
+            final.append(p)
+            seen.add(p)
+    return final
+
+def write_hadd_script(
+    bin_name,
+    condor_bin_dir: Path,
+    root_dirname="root",
+    proc_yaml_file: str = ""
+):
+    """
+    Write a hadd script that:
+      1) expands ONE representative glob per process first
+      2) then expands a final catch-all glob
+      3) chunks large merges to avoid argv / fd limits
+    IMPORTANT:
+      - Python does NOT glob files
+      - Bash does ALL glob expansion at runtime
+    """
+
     hadd_script_path = condor_bin_dir / "haddROOTs.sh"
     merged_root = condor_bin_dir / f"{condor_bin_dir.name}.root"
-    with open(hadd_script_path, "w") as f:
-        f.write("#!/usr/bin/env bash\n")
-        f.write("# Auto-generated per-bin hadd script\n")
-        f.write(
-            f'hadd -f "{merged_root.as_posix()}" {condor_bin_dir.as_posix()}/{root_dirname}/*.root > /dev/null 2>&1 || '
-            f'hadd -f "{merged_root.as_posix()}" {condor_bin_dir.as_posix()}/{root_dirname}/*.root\n'
-        )
+    root_abs = (condor_bin_dir / root_dirname).resolve()
+    # Determine process order from YAML
+    proc_order = []
+    if proc_yaml_file:
+        proc_yaml_path = Path(proc_yaml_file)
+        if not proc_yaml_path.is_absolute():
+            proc_yaml_path = (condor_bin_dir / ".." / ".." / proc_yaml_path).resolve()
+        if proc_yaml_path.exists():
+            proc_order = _extract_proc_order_from_yaml(proc_yaml_path)
+    CHUNK = 200
+    with open(hadd_script_path, "w") as sh:
+        sh.write("#!/usr/bin/env bash\n")
+        sh.write("set -euo pipefail\n")
+        sh.write("shopt -s nullglob\n")
+        sh.write("# Auto-generated hadd script (process-ordered, glob-expanded at runtime)\n\n")
+
+        sh.write("FILES=()\n\n")
+
+        # 1) Representative-first: one glob per process
+        sh.write("# Register one file per process (ordering matters)\n")
+        for proc in proc_order:
+            sh.write(
+                f'for f in {root_abs.as_posix()}/*{proc}*.root; do '
+                'FILES+=( "$f" ); break; '
+                'done\n'
+            )
+
+        sh.write("\n# Append all files (duplicates are harmless; hadd ignores exact dup inputs)\n")
+        sh.write(f'for f in {root_abs.as_posix()}/*.root; do FILES+=( "$f" ); done\n\n')
+
+        sh.write(f'OUT="{merged_root.as_posix()}"\n')
+        sh.write(f'CHUNK={CHUNK}\n\n')
+
+        sh.write('if [ "${#FILES[@]}" -le "$CHUNK" ]; then\n')
+        sh.write('  hadd -f "$OUT" "${FILES[@]}" > /dev/null 2>&1 || hadd -f "$OUT" "${FILES[@]}"\n')
+        sh.write('else\n')
+        sh.write('  parts=()\n')
+        sh.write('  total=${#FILES[@]}\n')
+        sh.write('  i=0\n')
+        sh.write('  part_idx=0\n')
+        sh.write('  while [ $i -lt $total ]; do\n')
+        sh.write('    remaining=$((total - i))\n')
+        sh.write('    len=$(( remaining < CHUNK ? remaining : CHUNK ))\n')
+        sh.write('    part_out="$(dirname "$OUT")/$(basename "$OUT" .root)_part_${part_idx}.root"\n')
+        sh.write('    sub=( "${FILES[@]:$i:$len}" )\n')
+        sh.write('    echo "[hadd] Creating $part_out from ${#sub[@]} files"\n')
+        sh.write('    hadd -f "$part_out" "${sub[@]}" > /dev/null 2>&1 || hadd -f "$part_out" "${sub[@]}"\n')
+        sh.write('    parts+=( "$part_out" )\n')
+        sh.write('    i=$(( i + len ))\n')
+        sh.write('    part_idx=$(( part_idx + 1 ))\n')
+        sh.write('  done\n')
+        sh.write('  echo "[hadd] Merging ${#parts[@]} parts into $OUT"\n')
+        sh.write('  hadd -f "$OUT" "${parts[@]}" > /dev/null 2>&1 || hadd -f "$OUT" "${parts[@]}"\n')
+        sh.write('  rm -f "${parts[@]}"\n')
+        sh.write('fi\n')
+
     os.chmod(hadd_script_path, 0o755)
 
 # ----------------------------------------
@@ -606,7 +697,7 @@ def write_submit_file(
             if make_json:
                 write_merge_script(bin_name, bin_dir, json_dirname="json", proc_yaml_file=proc_yaml_file)
             if make_root:
-                write_hadd_script(bin_name, bin_dir, root_dirname="root")
+                write_hadd_script(bin_name, bin_dir, root_dirname="root", proc_yaml_file=proc_yaml_file)
 
 # ----------------------------------------
 # Main
