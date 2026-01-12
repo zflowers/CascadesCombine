@@ -298,17 +298,32 @@ int main(int argc, char** argv) {
         base_node_val = BuildFitInput::loadCutsUser(base_node_val, allUserCuts, true);
     
         // precompute fake-key variants
-        std::string key_elec = key + "_FAKES_Elec";
-        std::string key_muon = key + "_FAKES_Muon";
-        std::string key_both = key + "_FAKES_Both";
-        std::string processName_elec = processName + "_FAKES_Elec";
-        std::string processName_muon = processName + "_FAKES_Muon";
-        std::string processName_both = processName + "_FAKES_Both";
+        //std::string key_elec = key + "_FAKES_Elec";
+        //std::string key_muon = key + "_FAKES_Muon";
+        //std::string key_both = key + "_FAKES_Both";
+        //std::string processName_elec = processName + "_FAKES_Elec";
+        //std::string processName_muon = processName + "_FAKES_Muon";
+        //std::string processName_both = processName + "_FAKES_Both";
+        //std::map<std::string,std::string> map_key_to_process;
+        //map_key_to_process.insert({key, processName});
+        //map_key_to_process.insert({key_elec, processName_elec});
+        //map_key_to_process.insert({key_muon, processName_muon});
+        //map_key_to_process.insert({key_both, processName_both});
+
+        std::string key_HFelec = key + "_FAKES_HFElec";
+        std::string key_HFmuon = key + "_FAKES_HFMuon";
+        std::string processName_HFelec = processName + "_FAKES_HFElec";
+        std::string processName_HFmuon = processName + "_FAKES_HFMuon";
+        std::string key_LFelec = key + "_FAKES_LFElec";
+        std::string key_LFmuon = key + "_FAKES_LFMuon";
+        std::string processName_LFelec = processName + "_FAKES_LFElec";
+        std::string processName_LFmuon = processName + "_FAKES_LFMuon";
         std::map<std::string,std::string> map_key_to_process;
         map_key_to_process.insert({key, processName});
-        map_key_to_process.insert({key_elec, processName_elec});
-        map_key_to_process.insert({key_muon, processName_muon});
-        map_key_to_process.insert({key_both, processName_both});
+        map_key_to_process.insert({key_HFelec, processName_HFelec});
+        map_key_to_process.insert({key_HFmuon, processName_HFmuon});
+        map_key_to_process.insert({key_LFelec, processName_LFelec});
+        map_key_to_process.insert({key_LFmuon, processName_LFmuon});
     
         for (const auto &bin : binNames) {
             if(ROOT::IsImplicitMTEnabled()) ROOT::DisableImplicitMT(); // disable MT for validation
@@ -471,15 +486,27 @@ int main(int argc, char** argv) {
                     proc_nodes_val.emplace_back(key, node);
                 } else {
                     // Create mutually exclusive filters
-                    auto node_elec = node.Filter("hasFakeElectron");
-                    auto node_muon = node.Filter("hasFakeMuon");
-                    auto node_both = node.Filter("hasFakeBoth");
-                    auto node_clean = node.Filter("hasNoFake");
+                    //auto node_elec = node.Filter("hasFakeElectron");
+                    //auto node_muon = node.Filter("hasFakeMuon");
+                    //auto node_both = node.Filter("hasFakeBoth");
+                    //auto node_clean = node.Filter("hasNoFake");
     
-                    proc_nodes_val.emplace_back(key_elec, node_elec);
-                    proc_nodes_val.emplace_back(key_muon, node_muon);
-                    proc_nodes_val.emplace_back(key_both, node_both);
-                    proc_nodes_val.emplace_back(key, node_clean); // keep original key for clean events
+                    //proc_nodes_val.emplace_back(key_elec, node_elec);
+                    //proc_nodes_val.emplace_back(key_muon, node_muon);
+                    //proc_nodes_val.emplace_back(key_both, node_both);
+                    //proc_nodes_val.emplace_back(key, node_clean); // keep original key for clean events
+
+                    auto node_HFelec = node.Filter("isHFFakeElectron");
+                    auto node_HFmuon = node.Filter("isHFFakeMuon");
+                    auto node_LFelec = node.Filter("isLFFakeElectron");
+                    auto node_LFmuon = node.Filter("isLFFakeMuon");
+                    auto node_clean  = node.Filter("hasNoFake");
+    
+                    proc_nodes_val.emplace_back(key_HFelec, node_HFelec);
+                    proc_nodes_val.emplace_back(key_HFmuon, node_HFmuon);
+                    proc_nodes_val.emplace_back(key_LFelec, node_LFelec);
+                    proc_nodes_val.emplace_back(key_LFmuon, node_LFmuon);
+                    proc_nodes_val.emplace_back(key, node_clean);
                 }
     
                 for (auto &pkv : proc_nodes_val) {
@@ -575,14 +602,26 @@ int main(int argc, char** argv) {
                     if (!runFAKES) {
                         proc_nodes_fill.emplace_back(key, base_node_fill);
                     } else {
-                        auto node_elec = base_node_fill.Filter("hasFakeElectron");
-                        auto node_muon = base_node_fill.Filter("hasFakeMuon");
-                        auto node_both = base_node_fill.Filter("hasFakeBoth");
+                        //auto node_elec = base_node_fill.Filter("hasFakeElectron");
+                        //auto node_muon = base_node_fill.Filter("hasFakeMuon");
+                        //auto node_both = base_node_fill.Filter("hasFakeBoth");
+                        //auto node_clean = base_node_fill.Filter("hasNoFake");
+    
+                        //proc_nodes_fill.emplace_back(key_elec, node_elec);
+                        //proc_nodes_fill.emplace_back(key_muon, node_muon);
+                        //proc_nodes_fill.emplace_back(key_both, node_both);
+                        //proc_nodes_fill.emplace_back(key, node_clean);
+
+                        auto node_HFelec = base_node_fill.Filter("isHFFakeElectron");
+                        auto node_HFmuon = base_node_fill.Filter("isHFFakeMuon");
+                        auto node_LFelec = base_node_fill.Filter("isLFFakeElectron");
+                        auto node_LFmuon = base_node_fill.Filter("isLFFakeMuon");
                         auto node_clean = base_node_fill.Filter("hasNoFake");
     
-                        proc_nodes_fill.emplace_back(key_elec, node_elec);
-                        proc_nodes_fill.emplace_back(key_muon, node_muon);
-                        proc_nodes_fill.emplace_back(key_both, node_both);
+                        proc_nodes_fill.emplace_back(key_HFelec, node_HFelec);
+                        proc_nodes_fill.emplace_back(key_HFmuon, node_HFmuon);
+                        proc_nodes_fill.emplace_back(key_LFelec, node_LFelec);
+                        proc_nodes_fill.emplace_back(key_LFmuon, node_LFmuon);
                         proc_nodes_fill.emplace_back(key, node_clean);
                     }
     
@@ -617,14 +656,26 @@ int main(int argc, char** argv) {
                 if (!runFAKES) {
                     proc_json_nodes.emplace_back(key, json_node_base);
                 } else {
-                    auto node_elec = json_node_base.Filter("hasFakeElectron");
-                    auto node_muon = json_node_base.Filter("hasFakeMuon");
-                    auto node_both = json_node_base.Filter("hasFakeBoth");
-                    auto node_clean = json_node_base.Filter("hasNoFake");
+                    //auto node_elec = json_node_base.Filter("hasFakeElectron");
+                    //auto node_muon = json_node_base.Filter("hasFakeMuon");
+                    //auto node_both = json_node_base.Filter("hasFakeBoth");
+                    //auto node_clean = json_node_base.Filter("hasNoFake");
     
-                    proc_json_nodes.emplace_back(key_elec, node_elec);
-                    proc_json_nodes.emplace_back(key_muon, node_muon);
-                    proc_json_nodes.emplace_back(key_both, node_both);
+                    //proc_json_nodes.emplace_back(key_elec, node_elec);
+                    //proc_json_nodes.emplace_back(key_muon, node_muon);
+                    //proc_json_nodes.emplace_back(key_both, node_both);
+                    //proc_json_nodes.emplace_back(key, node_clean);
+
+                    auto node_HFelec = json_node_base.Filter("isHFFakeElectron");
+                    auto node_HFmuon = json_node_base.Filter("isHFFakeMuon");
+                    auto node_LFelec = json_node_base.Filter("isLFFakeElectron");
+                    auto node_LFmuon = json_node_base.Filter("isLFFakeMuon");
+                    auto node_clean  = json_node_base.Filter("hasNoFake");
+    
+                    proc_json_nodes.emplace_back(key_HFelec, node_HFelec);
+                    proc_json_nodes.emplace_back(key_HFmuon, node_HFmuon);
+                    proc_json_nodes.emplace_back(key_LFelec, node_LFelec);
+                    proc_json_nodes.emplace_back(key_LFmuon, node_LFmuon);
                     proc_json_nodes.emplace_back(key, node_clean);
                 }
     

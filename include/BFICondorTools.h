@@ -553,7 +553,45 @@ static BaseNodeHandle MakeBaseNode(const std::string &tree_name,
             // Event has both
             .Define("hasFakeBoth",     "nFakeElectron > 0 && nFakeMuon > 0")
             // Event has neither
-            .Define("hasNoFake",     "nFakeElectron == 0 && nFakeMuon == 0");
+            .Define("hasNoFake",     "nFakeElectron == 0 && nFakeMuon == 0")
+
+            .Define("nHFFakeElectron", [](const std::vector<int>& sid, const std::vector<int>& pdg) {
+                int n = 0;
+                for (size_t i = 0; i < sid.size(); ++i)
+                    if (sid[i] > 1 && sid[i] < 4 && std::abs(pdg[i]) == 11)
+                        ++n;
+                return n;
+            }, {"SourceID_lep", "PDGID_lep"})
+
+            .Define("nLFFakeElectron", [](const std::vector<int>& sid, const std::vector<int>& pdg) {
+                int n = 0;
+                for (size_t i = 0; i < sid.size(); ++i)
+                    if (sid[i] >= 4 && std::abs(pdg[i]) == 11)
+                        ++n;
+                return n;
+            }, {"SourceID_lep", "PDGID_lep"})
+
+            .Define("nHFFakeMuon", [](const std::vector<int>& sid, const std::vector<int>& pdg) {
+                int n = 0;
+                for (size_t i = 0; i < sid.size(); ++i)
+                    if (sid[i] > 1 && sid[i] < 4 && std::abs(pdg[i]) == 13)
+                        ++n;
+                return n;
+            }, {"SourceID_lep", "PDGID_lep"})
+
+            .Define("nLFFakeMuon", [](const std::vector<int>& sid, const std::vector<int>& pdg) {
+                int n = 0;
+                for (size_t i = 0; i < sid.size(); ++i)
+                    if (sid[i] >= 4 && std::abs(pdg[i]) == 13)
+                        ++n;
+                return n;
+            }, {"SourceID_lep", "PDGID_lep"})
+        
+            // Mutually exclusive flags
+            .Define("isHFFakeMuon",     "nHFFakeMuon > 0")
+            .Define("isHFFakeElectron", "nHFFakeElectron > 0 && nHFFakeMuon == 0")
+            .Define("isLFFakeElectron", "nLFFakeElectron > 0 && nHFFakeMuon == 0 && nHFFakeElectron == 0")
+            .Define("isLFFakeMuon",     "nLFFakeMuon > 0 && nHFFakeMuon == 0 && nHFFakeElectron == 0 && nLFFakeElectron == 0");
     }
 
     return {df, node};

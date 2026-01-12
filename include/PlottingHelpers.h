@@ -314,6 +314,18 @@ void loadFormatMaps(){
   m_Title["FAKES"] = "fake leptons";
   m_Color["FAKES"] = 7021;
   //m_Color["FAKES"] = 8010;
+  
+  m_Title["Fakes_elHF"] = "HF fake e^{#pm}";
+  m_Color["Fakes_elHF"] = 7021;
+
+  m_Title["Fakes_elLF"] = "LF fake e^{#pm}";
+  m_Color["Fakes_elLF"] = 7022;
+
+  m_Title["Fakes_muHF"] = "HF fake #mu^{#pm}";
+  m_Color["Fakes_muHF"] = 7023;
+
+  m_Title["Fakes_muLF"] = "LF fake #mu^{#pm}";
+  m_Color["Fakes_muLF"] = 7024;
 
   m_Title["HF"] = "heavy flavor";
   m_Color["HF"] = 7022;
@@ -363,17 +375,17 @@ void loadFormatMaps(){
   m_Title["ST_all"] = "single top";
   m_Color["ST_all"] = 7010;
 
-  m_Title["DB_all"] = "di-bosons";
-  m_Color["DB_all"] = 7051;
+  m_Title["diboson"] = "di-bosons";
+  m_Color["diboson"] = 7051;
 
-  m_Title["TB_all"] = "tri-bosons";
-  m_Color["TB_all"] = 7050;
+  m_Title["triboson"] = "tri-bosons";
+  m_Color["triboson"] = 7050;
 
   m_Title["ZDY_all"] = "Z / #gamma* + jets";
   m_Color["ZDY_all"] = 7000;
 
-  m_Title["Wjets_all"] = "W + jets";
-  m_Color["Wjets_all"] = 7001;
+  m_Title["boson"] = "V + jets";
+  m_Color["boson"] = 7001;
 
   m_Title["Total"] = "Total Bkg";
   m_Color["Total"] = 7000;
@@ -1284,6 +1296,10 @@ TH1* MakeRatioHist(TH1* hnum, TH1* hden, bool normalize = false) {
     hratio->SetName(Form("%s_ratio", hnum->GetName()));
     hratio->SetTitle(hratio->GetName());
     hratio->Reset();
+    if(normalize){
+        if(hnum->Integral()>0) hnum->Scale(1./hnum->Integral());
+        if(hden->Integral()>0) hden->Scale(1./hden->Integral());
+    }
 
     if(hnum->InheritsFrom(TH2::Class())){
         TH2* h2num = dynamic_cast<TH2*>(hnum);
@@ -1301,10 +1317,6 @@ TH1* MakeRatioHist(TH1* hnum, TH1* hden, bool normalize = false) {
                 h2ratio->SetBinError(ix,iy,0.); // optional: could compute errors
             }
         }
-        if(normalize){
-            double s = h2ratio->Integral();
-            if(s>0) h2ratio->Scale(1./s);
-        }
     } else {
         int nb = hnum->GetNbinsX();
         for(int i=1;i<=nb;++i){
@@ -1317,7 +1329,7 @@ TH1* MakeRatioHist(TH1* hnum, TH1* hden, bool normalize = false) {
         if(normalize){
             double s = hratio->Integral();
             if(s>0) hratio->Scale(1./s);
-        }
+	}
     }
     return hratio;
 }

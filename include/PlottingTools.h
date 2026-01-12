@@ -89,7 +89,10 @@ void Plot_Ratio(TH1* h, const std::string& outputDir, const RatioDef* rDef=nullp
             h2->GetYaxis()->SetRangeUser(rDef->y_range->first, rDef->y_range->second);
         }
         // Draw with style
-        DrawLogSmart(h2, "COLZ");
+        if(!rDef->normalize)
+          DrawLogSmart(h2, "COLZ");
+        else
+          h2->Draw("COLZ");
         h2->GetXaxis()->CenterTitle();
         h2->GetYaxis()->CenterTitle();
         h2->GetZaxis()->CenterTitle();
@@ -97,7 +100,10 @@ void Plot_Ratio(TH1* h, const std::string& outputDir, const RatioDef* rDef=nullp
     
     } else {
         // 1D histogram
-        DrawLogSmart(h, "HIST");
+        if(!rDef->normalize)
+          DrawLogSmart(h, "HIST");
+        else
+          h->Draw("HIST");
         h->GetXaxis()->CenterTitle();
         h->GetYaxis()->CenterTitle();
         h->GetYaxis()->SetTitle("Ratio");
@@ -116,12 +122,12 @@ void Plot_Ratio(TH1* h, const std::string& outputDir, const RatioDef* rDef=nullp
         proc_title = makeSMSChiTitle(ExtractProcName(proc_title));
     else
         proc_title = m_Title[ExtractProcName(proc_title)];
-    l.SetTextSize(0.035); l.DrawLatex(0.65,0.943,proc_title.c_str());
+    //l.SetTextSize(0.035); l.DrawLatex(0.65,0.943,proc_title.c_str());
     l.SetTextSize(0.04);  l.DrawLatex(0.13,0.943,"#bf{CMS} Simulation Preliminary");
-    l.SetTextSize(0.045); l.DrawLatex(0.7,0.04,ExtractBinName(title).c_str());
+    //l.SetTextSize(0.045); l.DrawLatex(0.7,0.04,ExtractBinName(title).c_str());
 
     // Output file
-    TString pdfName = Form("%spdfs/%s__%s.pdf", outputDir.c_str(), ExtractBinName(title).c_str(), title.c_str());
+    TString pdfName = Form("%spdfs/%s.pdf", outputDir.c_str(), title.c_str());
     gErrorIgnoreLevel = 1001;
     can->SaveAs(pdfName);
     gErrorIgnoreLevel = 0;
@@ -1055,7 +1061,7 @@ void RunRatios(const std::vector<RatioDef>& ratioDefs,
                         for(const auto &dm : denMatches){
                             TH1* hratio = MakeRatioHist(nm.hist, dm.hist, r.normalize);
                             if(!hratio) continue;
-                            std::string hname = r.name + "__" + (nm.bin.empty() ? "inclusive" : nm.bin) + "__" + (dm.bin.empty() ? "inclusive" : dm.bin) + "__" + nm.proc + "__" + dm.proc;
+                            std::string hname = r.name;
                             hratio->SetName(hname.c_str());
                             hratio->SetTitle(hname.c_str());
                             Plot_Ratio(hratio, outputDir, &r);

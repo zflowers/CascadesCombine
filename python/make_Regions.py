@@ -60,9 +60,9 @@ RISR_BINS_2L = [
 
 # 3L RISR/Mperp bins
 RISR_BINS_3L = [
-    {"name": "R9",  "min": 0.9,  "max": 1.0,  "Mh": 20, "Mm_lo": 20, "Mm_hi": 20, "Ml_hi": 20},
-    {"name": "R8",  "min": 0.8,  "max": 0.9,  "Mh": 30, "Mm_lo": 30, "Mm_hi": 30, "Ml_hi": 30},
-    {"name": "R7",  "min": 0.7,  "max": 0.8,  "Mh": 40, "Mm_lo": 40, "Mm_hi": 40, "Ml_hi": 40},
+    {"name": "R9",  "min": 0.9,  "max": 1.0,  "Mh": 30, "Mm_lo": 30, "Mm_hi": 30, "Ml_hi": 30},
+    {"name": "R8",  "min": 0.8,  "max": 0.9,  "Mh": 40, "Mm_lo": 40, "Mm_hi": 40, "Ml_hi": 40},
+    {"name": "R7",  "min": 0.7,  "max": 0.8,  "Mh": 50, "Mm_lo": 50, "Mm_hi": 50, "Ml_hi": 50},
 ]
 
 # 2L flavor splits

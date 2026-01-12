@@ -51,13 +51,13 @@ REMOVE_CUTS = [
 # mapping for lep-cuts transforms
 NEW_LEP_CUTS = {
     "Silver": {
-        "2L": ["<=1Gold;", "=0Bronze;"],
-        "3L": [">=1Silver;", "=0Bronze;"],
+        "2L": [">=1Silver;"],
+        "3L": ["<=1Gold;", ">=1Silver;"],
         "4L": [">=1Gold;", "=1Bronze;"],
     },
     "Bronze": {
         "2L": ["=1Bronze;"],
-        "3L": [">=1Gold;", "=1Bronze;"],
+        "3L": [">=1Gold;", "=0Silver;", ">=1Bronze;"],
         "4L": [">=1Gold;", "=2Bronze;"],
     },
 }

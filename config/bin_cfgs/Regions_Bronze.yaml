@@ -1020,7 +1020,8 @@ Bin3L_Bronze_1J_R9:
   cuts: "Nlep==3;MET>=150;PTISR_LEP>=200;RISR_LEP>=0.9;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet==0;Njet_S>=1;MIN(abs(Eta_lep))<1.4442;Njet>0;"
   lep-cuts: |
     >=1Gold;
-    =1Bronze;
+    =0Silver;
+    >=1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
   user-cuts: "minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"
@@ -1030,7 +1031,8 @@ Bin3L_Bronze_0J_R9_Mh_Ah_OSOF:
   cuts: "Nlep==3;MET>=150;PTISR_LEP>=200;RISR_LEP>=0.9;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet==0;Njet_S==0;Mperp_LEP>=30;MaRatio_LEP>=0.3;MIN(abs(Eta_lep))<1.4442;Njet>0;"
   lep-cuts: |
     >=1Gold;
-    =1Bronze;
+    =0Silver;
+    >=1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
     =1OSOF_a;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
@@ -1039,7 +1041,8 @@ Bin3L_Bronze_0J_R9_Mh_Al_OSOF:
   cuts: "Nlep==3;MET>=150;PTISR_LEP>=200;RISR_LEP>=0.9;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet==0;Njet_S==0;Mperp_LEP>=30;MaRatio_LEP<0.3;MIN(abs(Eta_lep))<1.4442;Njet>0;"
   lep-cuts: |
     >=1Gold;
-    =1Bronze;
+    =0Silver;
+    >=1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
     =1OSOF_a;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
@@ -1048,7 +1051,8 @@ Bin3L_Bronze_0J_R9_Ml_Ah_OSOF:
   cuts: "Nlep==3;MET>=150;PTISR_LEP>=200;RISR_LEP>=0.9;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet==0;Njet_S==0;Mperp_LEP<30;MaRatio_LEP>=0.3;MIN(abs(Eta_lep))<1.4442;Njet>0;"
   lep-cuts: |
     >=1Gold;
-    =1Bronze;
+    =0Silver;
+    >=1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
     =1OSOF_a;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
@@ -1057,7 +1061,8 @@ Bin3L_Bronze_0J_R9_Ml_Al_OSOF:
   cuts: "Nlep==3;MET>=150;PTISR_LEP>=200;RISR_LEP>=0.9;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet==0;Njet_S==0;Mperp_LEP<30;MaRatio_LEP<0.3;MIN(abs(Eta_lep))<1.4442;Njet>0;"
   lep-cuts: |
     >=1Gold;
-    =1Bronze;
+    =0Silver;
+    >=1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
     =1OSOF_a;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
@@ -1067,7 +1072,8 @@ Bin3L_Bronze_0J_R9_Mh_Ah_nOSOF:
   cuts: "Nlep==3;MET>=150;PTISR_LEP>=200;RISR_LEP>=0.9;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet==0;Njet_S==0;Mperp_LEP>=30;MaRatio_LEP>=0.3;MIN(abs(Eta_lep))<1.4442;Njet>0;"
   lep-cuts: |
     >=1Gold;
-    =1Bronze;
+    =0Silver;
+    >=1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
     =0OSOF_a;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
@@ -1076,7 +1082,8 @@ Bin3L_Bronze_0J_R9_Mh_Al_nOSOF:
   cuts: "Nlep==3;MET>=150;PTISR_LEP>=200;RISR_LEP>=0.9;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet==0;Njet_S==0;Mperp_LEP>=30;MaRatio_LEP<0.3;MIN(abs(Eta_lep))<1.4442;Njet>0;"
   lep-cuts: |
     >=1Gold;
-    =1Bronze;
+    =0Silver;
+    >=1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
     =0OSOF_a;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
@@ -1085,7 +1092,8 @@ Bin3L_Bronze_0J_R9_Ml_Ah_nOSOF:
   cuts: "Nlep==3;MET>=150;PTISR_LEP>=200;RISR_LEP>=0.9;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet==0;Njet_S==0;Mperp_LEP<30;MaRatio_LEP>=0.3;MIN(abs(Eta_lep))<1.4442;Njet>0;"
   lep-cuts: |
     >=1Gold;
-    =1Bronze;
+    =0Silver;
+    >=1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
     =0OSOF_a;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
@@ -1094,7 +1102,8 @@ Bin3L_Bronze_0J_R9_Ml_Al_nOSOF:
   cuts: "Nlep==3;MET>=150;PTISR_LEP>=200;RISR_LEP>=0.9;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet==0;Njet_S==0;Mperp_LEP<30;MaRatio_LEP<0.3;MIN(abs(Eta_lep))<1.4442;Njet>0;"
   lep-cuts: |
     >=1Gold;
-    =1Bronze;
+    =0Silver;
+    >=1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
     =0OSOF_a;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
@@ -1104,7 +1113,8 @@ Bin3L_Bronze_1J_R8_Ml_Ah_SF:
   cuts: "Nlep==3;MET>=150;PTISR_LEP>=200;RISR_LEP>=0.8;RISR_LEP<0.9;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet==0;Njet_S>=1;Mperp_LEP<40;MaRatio_LEP>=0.3;MIN(abs(Eta_lep))<1.4442;Njet>0;"
   lep-cuts: |
     >=1Gold;
-    =1Bronze;
+    =0Silver;
+    >=1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
     AllSF;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
@@ -1113,7 +1123,8 @@ Bin3L_Bronze_1J_R8_Ml_Ah_OF:
   cuts: "Nlep==3;MET>=150;PTISR_LEP>=200;RISR_LEP>=0.8;RISR_LEP<0.9;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet==0;Njet_S>=1;Mperp_LEP<40;MaRatio_LEP>=0.3;MIN(abs(Eta_lep))<1.4442;Njet>0;"
   lep-cuts: |
     >=1Gold;
-    =1Bronze;
+    =0Silver;
+    >=1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
     =1Elec_a;
     =1Muon_a;
@@ -1123,7 +1134,8 @@ Bin3L_Bronze_1J_R7_Ml_OF:
   cuts: "Nlep==3;MET>=150;PTISR_LEP>=200;RISR_LEP>=0.7;RISR_LEP<0.8;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet==0;Njet_S>=1;Mperp_LEP<40;MIN(abs(Eta_lep))<1.4442;Njet>0;"
   lep-cuts: |
     >=1Gold;
-    =1Bronze;
+    =0Silver;
+    >=1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
     =1Elec_a;
     =1Muon_a;
@@ -1133,7 +1145,8 @@ Bin3L_Bronze_1J_R8_Ml_Al_SF:
   cuts: "Nlep==3;MET>=150;PTISR_LEP>=200;RISR_LEP>=0.8;RISR_LEP<0.9;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet==0;Njet_S>=1;Mperp_LEP<40;MaRatio_LEP<0.3;MIN(abs(Eta_lep))<1.4442;Njet>0;"
   lep-cuts: |
     >=1Gold;
-    =1Bronze;
+    =0Silver;
+    >=1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
     AllSF;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
@@ -1142,7 +1155,8 @@ Bin3L_Bronze_1J_R7_Ml_SF:
   cuts: "Nlep==3;MET>=150;PTISR_LEP>=200;RISR_LEP>=0.7;RISR_LEP<0.8;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet==0;Njet_S>=1;Mperp_LEP<40;MIN(abs(Eta_lep))<1.4442;Njet>0;"
   lep-cuts: |
     >=1Gold;
-    =1Bronze;
+    =0Silver;
+    >=1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
     AllSF;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
@@ -1151,7 +1165,8 @@ Bin3L_Bronze_1J_R8_Ml_Al_OF:
   cuts: "Nlep==3;MET>=150;PTISR_LEP>=200;RISR_LEP>=0.8;RISR_LEP<0.9;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet==0;Njet_S>=1;Mperp_LEP<40;MaRatio_LEP<0.3;MIN(abs(Eta_lep))<1.4442;Njet>0;"
   lep-cuts: |
     >=1Gold;
-    =1Bronze;
+    =0Silver;
+    >=1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
     =1Elec_a;
     =1Muon_a;
@@ -1161,7 +1176,8 @@ Bin3L_Bronze_1J_R8_Mh:
   cuts: "Nlep==3;MET>=150;PTISR_LEP>=200;RISR_LEP>=0.8;RISR_LEP<0.9;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet==0;Njet_S>=1;Mperp_LEP>=40;MIN(abs(Eta_lep))<1.4442;Njet>0;"
   lep-cuts: |
     >=1Gold;
-    =1Bronze;
+    =0Silver;
+    >=1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
   user-cuts: "minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"
@@ -1169,7 +1185,8 @@ Bin3L_Bronze_1J_R7_Mh:
   cuts: "Nlep==3;MET>=150;PTISR_LEP>=200;RISR_LEP>=0.7;RISR_LEP<0.8;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet==0;Njet_S>=1;Mperp_LEP>=40;MIN(abs(Eta_lep))<1.4442;Njet>0;"
   lep-cuts: |
     >=1Gold;
-    =1Bronze;
+    =0Silver;
+    >=1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
   user-cuts: "minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"
@@ -1179,7 +1196,8 @@ Bin3L_Bronze_0J_R8_Mh_OSSF_OSOF:
   cuts: "Nlep==3;MET>=150;PTISR_LEP>=200;RISR_LEP>=0.8;RISR_LEP<0.9;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet==0;Njet_S==0;Mperp_LEP>=40;MIN(abs(Eta_lep))<1.4442;Njet>0;"
   lep-cuts: |
     >=1Gold;
-    =1Bronze;
+    =0Silver;
+    >=1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
     =1OSSF_a;
     =1OSOF;
@@ -1189,7 +1207,8 @@ Bin3L_Bronze_0J_R7_Mh_OSSFa_OSOF:
   cuts: "Nlep==3;MET>=150;PTISR_LEP>=200;RISR_LEP>=0.7;RISR_LEP<0.8;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet==0;Njet_S==0;Mperp_LEP>=40;MIN(abs(Eta_lep))<1.4442;Njet>0;"
   lep-cuts: |
     >=1Gold;
-    =1Bronze;
+    =0Silver;
+    >=1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
     =1OSSF_a;
     =1OSOF;
@@ -1199,7 +1218,8 @@ Bin3L_Bronze_0J_R8_Ml_OSSFa_OSOF:
   cuts: "Nlep==3;MET>=150;PTISR_LEP>=200;RISR_LEP>=0.8;RISR_LEP<0.9;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet==0;Njet_S==0;Mperp_LEP<40;MIN(abs(Eta_lep))<1.4442;Njet>0;"
   lep-cuts: |
     >=1Gold;
-    =1Bronze;
+    =0Silver;
+    >=1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
     =1OSSF_a;
     =1OSOF;
@@ -1211,7 +1231,8 @@ Bin3L_Bronze_0J_R8_Mh_OSSF_ee_e:
   cuts: "Nlep==3;MET>=150;PTISR_LEP>=200;RISR_LEP>=0.8;RISR_LEP<0.9;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet==0;Njet_S==0;Mperp_LEP>=40;MIN(abs(Eta_lep))<1.4442;Njet>0;"
   lep-cuts: |
     >=1Gold;
-    =1Bronze;
+    =0Silver;
+    >=1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
     =1OSSF_a;
     =3Elec;
@@ -1221,7 +1242,8 @@ Bin3L_Bronze_0J_R7_Mh_OSSFa_AllSF:
   cuts: "Nlep==3;MET>=150;PTISR_LEP>=200;RISR_LEP>=0.7;RISR_LEP<0.8;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet==0;Njet_S==0;Mperp_LEP>=40;MIN(abs(Eta_lep))<1.4442;Njet>0;"
   lep-cuts: |
     >=1Gold;
-    =1Bronze;
+    =0Silver;
+    >=1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
     =1OSSF_a;
     AllSF;
@@ -1231,7 +1253,8 @@ Bin3L_Bronze_0J_R8_Ml_OSSFa_AllSF:
   cuts: "Nlep==3;MET>=150;PTISR_LEP>=200;RISR_LEP>=0.8;RISR_LEP<0.9;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet==0;Njet_S==0;Mperp_LEP<40;MIN(abs(Eta_lep))<1.4442;Njet>0;"
   lep-cuts: |
     >=1Gold;
-    =1Bronze;
+    =0Silver;
+    >=1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
     =1OSSF_a;
     AllSF;
@@ -1243,7 +1266,8 @@ Bin3L_Bronze_0J_R8_Mh_OSSF_mumu_mu:
   cuts: "Nlep==3;MET>=150;PTISR_LEP>=200;RISR_LEP>=0.8;RISR_LEP<0.9;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet==0;Njet_S==0;Mperp_LEP>=40;MIN(abs(Eta_lep))<1.4442;Njet>0;"
   lep-cuts: |
     >=1Gold;
-    =1Bronze;
+    =0Silver;
+    >=1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
     =1OSSF_a;
     =3Muon;
@@ -1255,7 +1279,8 @@ Bin3L_Bronze_0J_R8_Mh_OSOFa:
   cuts: "Nlep==3;MET>=150;PTISR_LEP>=200;RISR_LEP>=0.8;RISR_LEP<0.9;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet==0;Njet_S==0;Mperp_LEP>=40;MIN(abs(Eta_lep))<1.4442;Njet>0;"
   lep-cuts: |
     >=1Gold;
-    =1Bronze;
+    =0Silver;
+    >=1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
     =1OSOF_a;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
@@ -1264,7 +1289,8 @@ Bin3L_Bronze_0J_R7_Mh_OSOFa:
   cuts: "Nlep==3;MET>=150;PTISR_LEP>=200;RISR_LEP>=0.7;RISR_LEP<0.8;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet==0;Njet_S==0;Mperp_LEP>=40;MIN(abs(Eta_lep))<1.4442;Njet>0;"
   lep-cuts: |
     >=1Gold;
-    =1Bronze;
+    =0Silver;
+    >=1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
     =1OSOF_a;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
@@ -1273,7 +1299,8 @@ Bin3L_Bronze_0J_R8_Ml_OSOFa:
   cuts: "Nlep==3;MET>=150;PTISR_LEP>=200;RISR_LEP>=0.8;RISR_LEP<0.9;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet==0;Njet_S==0;Mperp_LEP<40;MIN(abs(Eta_lep))<1.4442;Njet>0;"
   lep-cuts: |
     >=1Gold;
-    =1Bronze;
+    =0Silver;
+    >=1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
     =1OSOF_a;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
@@ -1282,7 +1309,8 @@ Bin3L_Bronze_0J_R7_Ml_OS:
   cuts: "Nlep==3;MET>=150;PTISR_LEP>=200;RISR_LEP>=0.7;RISR_LEP<0.8;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet==0;Njet_S==0;Mperp_LEP<40;MIN(abs(Eta_lep))<1.4442;Njet>0;"
   lep-cuts: |
     >=1Gold;
-    =1Bronze;
+    =0Silver;
+    >=1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
     =1Pos_a;
     =1Neg_a;
@@ -1294,7 +1322,8 @@ Bin3L_Bronze_0J_R8_Mh_SS:
   cuts: "Nlep==3;MET>=150;PTISR_LEP>=200;RISR_LEP>=0.8;RISR_LEP<0.9;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet==0;Njet_S==0;Mperp_LEP>=40;MIN(abs(Eta_lep))<1.4442;Njet>0;"
   lep-cuts: |
     >=1Gold;
-    =1Bronze;
+    =0Silver;
+    >=1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
     AllSS_a;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
@@ -1303,7 +1332,8 @@ Bin3L_Bronze_0J_R7_Mh_SS:
   cuts: "Nlep==3;MET>=150;PTISR_LEP>=200;RISR_LEP>=0.7;RISR_LEP<0.8;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet==0;Njet_S==0;Mperp_LEP>=40;MIN(abs(Eta_lep))<1.4442;Njet>0;"
   lep-cuts: |
     >=1Gold;
-    =1Bronze;
+    =0Silver;
+    >=1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
     AllSS_a;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
@@ -1312,7 +1342,8 @@ Bin3L_Bronze_0J_R8_Ml_SS:
   cuts: "Nlep==3;MET>=150;PTISR_LEP>=200;RISR_LEP>=0.8;RISR_LEP<0.9;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet==0;Njet_S==0;Mperp_LEP<40;MIN(abs(Eta_lep))<1.4442;Njet>0;"
   lep-cuts: |
     >=1Gold;
-    =1Bronze;
+    =0Silver;
+    >=1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
     AllSS_a;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
@@ -1321,7 +1352,8 @@ Bin3L_Bronze_0J_R7_Ml_SS:
   cuts: "Nlep==3;MET>=150;PTISR_LEP>=200;RISR_LEP>=0.7;RISR_LEP<0.8;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet==0;Njet_S==0;Mperp_LEP<40;MIN(abs(Eta_lep))<1.4442;Njet>0;"
   lep-cuts: |
     >=1Gold;
-    =1Bronze;
+    =0Silver;
+    >=1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
     AllSS_a;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"

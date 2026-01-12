@@ -78,23 +78,36 @@ bool mergeJSONsFlattenedWithFileBreakdown(
     auto resolveGroup = [&ST, &preferredGroups, &getExpandedEntries, &fileStem]
                         (const std::string &jsonKey) -> std::string {
         const std::string keyBase = fs::path(jsonKey).filename().string();
-        // 1) Preferred groups first
+    
+        // --- 0) Always check data_obs first ---
+        if (ST.MasterDict.find("data_obs") != ST.MasterDict.end()) {
+            for (const auto &entry : getExpandedEntries("data_obs")) {
+                if (keyBase == fileStem(entry)) return "data_obs";
+            }
+        }
+    
+        // --- 1) Preferred groups from YAML ---
         for (const auto &pref : preferredGroups) {
+            if (pref == "data_obs") continue; // already handled
             for (const auto &entry : getExpandedEntries(pref)) {
                 if (keyBase == fileStem(entry)) {
                     return pref;
                 }
             }
         }
-        // 2) Fallback: all groups
+    
+        // --- 2) Fallback: all groups ---
         for (const auto &kv : ST.MasterDict) {
             const std::string &group = kv.first;
+            if (group == "data_obs") continue; // already handled
             for (const auto &entry : getExpandedEntries(group)) {
                 if (keyBase == fileStem(entry)) {
                     return group;
                 }
             }
         }
+    
+        // --- 3) If nothing matched, just return the original key ---
         return jsonKey;
     };
 

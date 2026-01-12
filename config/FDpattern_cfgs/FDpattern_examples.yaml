@@ -489,6 +489,20 @@ processes:
         - "boson*"
       exclude:
         - "*FAKE*"
+        - "*diboson"
+        - "*triboson"
+
+    - name: "diboson"
+      include:
+        - "diboson*"
+      exclude:
+        - "*FAKE*"
+
+    - name: "triboson"
+      include:
+        - "triboson*"
+      exclude:
+        - "*FAKE*"
 
     - name: "Fakes_el"
       include:
@@ -501,3 +515,19 @@ processes:
     - name: "Fakes_emu"
       include:
         - "*FAKES_Both"
+
+    - name: "Fakes_muHF"
+      include:
+        - "*FAKES_HFMuon"
+
+    - name: "Fakes_muLF"
+      include:
+        - "*FAKES_LFMuon"
+
+    - name: "Fakes_elHF"
+      include:
+        - "*FAKES_HFElec"
+
+    - name: "Fakes_elLF"
+      include:
+        - "*FAKES_LFElec"

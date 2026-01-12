@@ -2,7 +2,8 @@ processes:
   bkg:
     - top_FAKES
     - boson_FAKES
-    - Wjets_FAKES
+    - diboson_FAKES
+    - triboson_FAKES
 
   sig:
     - Cascades

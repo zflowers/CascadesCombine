@@ -22,7 +22,7 @@ run_all() {
     fi
 }
 SLEEP=70
-VERSION="v368"
+VERSION="v370"
 make clean
 make all -j 8
 echo "Submitting Regions..."
@@ -86,8 +86,8 @@ cat config/bin_cfgs/Regions_3L_Jincl_hPTISR_Bronze.yaml >> config/bin_cfgs/Regio
 cat config/bin_cfgs/Regions_4L_Bronze.yaml >> config/bin_cfgs/Regions_CR.yaml
 cat config/bin_cfgs/Regions_top_sideband_Bronze.yaml >> config/bin_cfgs/Regions_CR.yaml
 cat config/bin_cfgs/Regions_top_sideband_Silver.yaml >> config/bin_cfgs/Regions_CR.yaml
-#run_all --skip-plot-yields --make-impacts --make-FD --processes-cfg config/process_cfgs/data_processes.yaml --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_CR.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_CRFit_Impacts_FD_234L_${VERSION}
-#sleep ${SLEEP}
+run_all --skip-plot-yields --make-impacts --make-FD --processes-cfg config/process_cfgs/data_processes.yaml --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_CR.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_CRFit_Impacts_FD_234L_${VERSION}
+sleep ${SLEEP}
 
 sleep 30 # final sleep just to hold user from accidentally submitting something before last sub is out the door
 echo "Submitted Regions!"

@@ -566,6 +566,7 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
     if (kept_bins.empty()) {
         throw std::runtime_error("No bins kept after filtering signal-only bins. Aborting.");
     }
+    std::cout << "Wrote root file\n";
 
     // 2) Build CH categories from the kept bin list
     ch::Categories cats = BuildCatsFromList(kept_bins);
@@ -580,6 +581,7 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
 
     // 4) Register shape systematics only for kept bins
     AddShapeSystsFromJSON(j, kept_bins);
+    std::cout << "Added shape systs\n";
 
     // 5) Extract shapes (backgrounds + signals for kept bins)
     cb.cp().backgrounds().ExtractShapes(json_to_root_file, "$BIN__$PROCESS", "$BIN__$PROCESS__$SYSTEMATIC");
@@ -594,7 +596,9 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
     AddSameSignSys(kept_bins, bkgprocs);
     AddRaSys(kept_bins, bkgprocs);
     AddBtagSys(kept_bins, bkgprocs);
+
     cb.FilterSysts([](ch::Systematic const *s){ return s->value_u() == 1.0 && s->value_d() == 1.0; });
+    std::cout << "Added all systs\n";
     //std::cout << "Printing systematics..." << std::endl; cb.PrintSysts();
     //cb.PrintAll();
 
@@ -602,6 +606,7 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
     if (!json_root_file || json_root_file->IsZombie()) {
         throw std::runtime_error("Cannot open " + json_to_root_file);
     }
+    std::cout << "Writing datacard\n";
     cb.WriteDatacard(datacard_dir+"/"+signalPoint+"/"+signalPoint+".txt", *json_root_file);
     json_root_file->Close();
     delete json_root_file;
