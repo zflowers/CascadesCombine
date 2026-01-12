@@ -12,9 +12,12 @@ run_all() {
 
     # Wait briefly to ensure a new run directory is created
     sleep 1
-    RUN_DIR=$(ls -td runs/run_* 2>/dev/null | head -n1)
+
+    RUN_DIR=$(find runs -mindepth 1 -maxdepth 1 -type d -print0 \
+              | xargs -0 ls -td 2>/dev/null \
+              | head -n1)
+
     if [[ -z "$RUN_DIR" ]]; then
-        echo "[run_all] Warning: Could not find a run directory."
         return
     fi
 

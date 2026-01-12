@@ -33,6 +33,8 @@ def parse_args():
                    help="Optional run name prefix to prepend to timestamp for the run directory")
     p.add_argument("--existing-BFI-dir", dest="existing_BFI_dir", type=str, default=None,
                    help="Optional pass in existing run dir and make new run dir that takes the existing BFI output as input to do BF and later steps")
+    p.add_argument("--existing-BF-dir", dest="existing_BF_dir", type=str, default=None,
+                   help="Optional pass in existing run dir and make new run dir that takes the existing BF output as input and starts after BF (launching limits step). Also copies qualifying datacards/ subdirs.")
     p.add_argument("--skip-compile", action="store_true",
                    help="Skip running the compile step")
     p.add_argument("--skip-plot-yields", action="store_true",
@@ -43,7 +45,7 @@ def parse_args():
                    help="Number of bins to group per job")
     return p.parse_args()
 
-def early_setup(run_name, existing_BFI_name=None):
+def early_setup(run_name, existing_BFI_name: Optional[str]=None, existing_BF_name: Optional[str]=None):
     """
     Early logging/setup called before the main workflow begins.
 
@@ -60,8 +62,12 @@ def early_setup(run_name, existing_BFI_name=None):
         ts = datetime.datetime.now().strftime("%B%d_%Y_%H%M")
         run_name = f"run_{ts}"
 
-    if existing_BFI_name:
-        run_name = existing_BFI_name.split('/')[1] + "_" + run_name 
+    # If an existing run name is provided, prefix the new run with the existing run base name
+    existing_name = existing_BFI_name or existing_BF_name
+    if existing_name:
+        # use the basename of the provided path so this works with absolute/relative paths
+        existing_base = Path(existing_name).name
+        run_name = existing_base + "_" + run_name 
 
     # Create the run_dir and debug file immediately (so wrapper can tail it)
     run_dir = os.path.join("runs", run_name)
@@ -108,7 +114,6 @@ def early_setup(run_name, existing_BFI_name=None):
                 sys.exit(1)
             return lock
         else:
-            # blocking acquire (no timeout here; could be extended)
             lock.acquire()
             return lock
 
@@ -187,12 +192,13 @@ def _copy_file(src, dst_dir_or_file):
     return dst
 
 def prepare_run_and_stage_assets_copy(
-    run_info: {},
+    run_info: Dict[str, Any],
     bins_cfg: str,
     processes_cfg: str,
     hists_cfg: Optional[str] = None,
     FDpattern_cfg: Optional[str] = None,
     existing_BFI_dir: Optional[bool] = False,
+    existing_BF_dir: Optional[bool] = False,
 ):
     """
     Copy-only staging for run_dir.
@@ -200,10 +206,14 @@ def prepare_run_and_stage_assets_copy(
       dict mapping keys like 'bins_cfg','hist_cfg','processes_cfg','exe_dir','configs_dir',...
     """
     run_dir = run_info["run_dir"]
-    dirs_to_make = ["exe", "configs", "datacards", "include", "python", "src", "macro", "condor_BF", "plots"]
+    dirs_to_make = ["exe", "configs", "datacards", "include", "python", "src", "macro", "plots"]
     if not existing_BFI_dir:
         dirs_to_make.extend([
                              "condor",
+                            ])
+    if not existing_BF_dir:
+        dirs_to_make.extend([
+                             "condor_BF",
                             ])
     for sub in dirs_to_make:
         os.makedirs(os.path.join(run_dir, sub), exist_ok=True)
@@ -272,10 +282,10 @@ def prepare_run_and_stage_assets_copy(
         "make_GSB_Regions.py",
     ]
 
-    if not existing_BFI_dir:
+    if not existing_BFI_dir and not existing_BF_dir:
         include_items.extend([
             "DefineUserHists.h",
-             "BFICondorTools.h", # for systematics
+            "BFICondorTools.h", # for systematics
         ])
         src_items.extend([
             "BFI_condor.cpp",
@@ -730,9 +740,16 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
 
     make_impacts = args.make_impacts
     make_FD = args.make_FD
-    if args.existing_BFI_dir:
-        existing_BFI_dir = args.existing_BFI_dir
-        config_dir = os.path.join(existing_BFI_dir, "configs")
+
+    # Disallow passing both existing-BFI-dir and existing-BF-dir
+    if args.existing_BFI_dir and args.existing_BF_dir:
+        print("[run_combine] ERROR: --existing-BFI-dir and --existing-BF-dir are mutually exclusive.", file=sys.stderr, flush=True)
+        sys.exit(1)
+
+    # If either existing_BFI or existing_BF is provided, load configs from the existing run's configs/
+    if args.existing_BFI_dir or args.existing_BF_dir:
+        existing_dir = args.existing_BFI_dir if args.existing_BFI_dir else args.existing_BF_dir
+        config_dir = os.path.join(existing_dir, "configs")
         bins_files = glob.glob(os.path.join(config_dir, "*bins.yaml"))
         hists_files = glob.glob(os.path.join(config_dir, "*hists.yaml"))
         processes_files = glob.glob(os.path.join(config_dir, "*processes.yaml"))
@@ -761,17 +778,53 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
         FDpattern_cfg = ""
         if len(FDpatterns_files) > 0:
             FDpattern_cfg = FDpatterns_files[0]
-        make_json = os.path.isfile(os.path.join(existing_BFI_dir, "flattened.json"))
+        make_json = os.path.isfile(os.path.join(existing_dir, "flattened.json"))
         make_root = False
         
         if not make_json:
-            print("[run_combine] ERROR: Could not find flattened.json in",args.existing_BFI_dir)
+            print("[run_combine] ERROR: Could not find flattened.json in", existing_dir)
             sys.exit(1)
         else:
-            _copy_file(os.path.join(existing_BFI_dir, "flattened.json"), run_dir)
+            _copy_file(os.path.join(existing_dir, "flattened.json"), run_dir)
             flattened_json = os.path.join(run_dir, "flattened.json")
 
+        # If this is an existing BF run, copy its datacards under the new run's datacards/,
+        # but only copy subdirectories which contain both:
+        #   1) a datacard named <subdirname>.txt
+        #   2) json_shapes_flat.root
+        if args.existing_BF_dir:
+            src_datacards = os.path.join(existing_dir, "datacards")
+            dst_datacards = os.path.join(run_dir, "datacards")
+            if os.path.isdir(src_datacards):
+                print(f"[run_combine] Copying qualifying datacards from {src_datacards} -> {dst_datacards}", flush=True)
+                # Walk all directories under src_datacards and look for qualifying folders
+                for root, dirs, files in os.walk(src_datacards):
+                    # basename of the directory we're inspecting
+                    base = os.path.basename(root)
+                    # skip the top-level datacards directory itself (it won't have base datacard)
+                    if root == src_datacards:
+                        continue
+                    expected_datacard = os.path.join(root, f"{base}.txt")
+                    expected_shapes = os.path.join(root, "json_shapes_flat.root")
+                    if os.path.isfile(expected_datacard) and os.path.isfile(expected_shapes):
+                        rel = os.path.relpath(root, src_datacards)
+                        dest_dir = os.path.join(dst_datacards, rel)
+                        os.makedirs(dest_dir, exist_ok=True)
+                        try:
+                            _copy_file(expected_datacard, dest_dir)
+                            _copy_file(expected_shapes, dest_dir)
+                        except Exception as e:
+                            print(f"[run_combine] Warning: failed copying datacard files for {rel}: {e}", file=sys.stderr, flush=True)
+                    else:
+                        # skip if the two required files are not both present
+                        pass
+                print(f"[run_combine] Copied datacard and shapes from {src_datacards}", flush=True)
+            else:
+                print(f"[run_combine] ERROR: no datacards directory found in {existing_dir}!", flush=True)
+                sys.exit(1)
+
     else:
+        # use args when no existing run provided
         bins_cfg = args.bins_cfg
         hist_cfg = args.hist_cfg
         processes_cfg = args.processes_cfg
@@ -801,7 +854,16 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             build_binaries()
 
         # Stage files into the run directory (configs, exe, src, include, condor, plots, macro, etc.)
-        run_dir_map = prepare_run_and_stage_assets_copy(run_info, bins_cfg, processes_cfg, hist_cfg, FDpattern_cfg, True if args.existing_BFI_dir else False)
+        # For either existing_BFI_dir or existing_BF_dir want the same "existing" behavior for staging
+        run_dir_map = prepare_run_and_stage_assets_copy(
+            run_info,
+            bins_cfg,
+            processes_cfg,
+            hist_cfg,
+            FDpattern_cfg,
+            existing_BFI_dir=bool(args.existing_BFI_dir),
+            existing_BF_dir=bool(args.existing_BF_dir),
+        )
         # merge staged mapping into run_info so downstream code can use run_info everywhere
         run_info.update(run_dir_map)
 
@@ -839,12 +901,15 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
     configs_dir = run_info.get("configs_dir")
     exe_dir = run_info.get("exe_dir")
     macro_dir = run_info.get("macro_dir")
+    condor_BF = run_info["condor_BF"]
+    output_dir = run_info["datacards_dir"]
     lumi = args.lumi
     plot_lumi = lumi # lumi used for labels in plots
     if plot_lumi == "-1":
         plot_lumi = "400" # set to estimated Run2 + Run3 for now
 
-    if not args.existing_BFI_dir:
+    # Skip BFI steps if BFI_dir or BF_dir
+    if not (args.existing_BFI_dir or args.existing_BF_dir):
         # Submit jobs (give submit_jobs the run-local condor dir so everything stays inside the run)
         print("[run_combine] Submitting jobs...", flush=True)
         submit_jobs(
@@ -886,7 +951,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                 loaded_bins = sorted(detected)
                 print(f"[run_combine] Using detected condor work dirs", flush=True)
             else:
-                # Final fallback: YAML bins (old behavior)
+                # Final fallback: YAML bins
                 loaded_bins = load_bins(bins_cfg)
                 print(f"[run_combine] No condor work dirs found; falling back to YAML bin list ({len(loaded_bins)} bins).", flush=True)
         
@@ -933,7 +998,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
 
     if make_json:
         flattened_json = get_flattened_json_path(run_dir=run_dir)
-        if not args.existing_BFI_dir and not args.skip_plot_yields:
+        if not args.existing_BFI_dir and not args.existing_BF_dir and not args.skip_plot_yields:
             # Plot Yields
             plot_cmd = [
                 "./"+exe_dir+"/PlotYields.x",
@@ -945,41 +1010,39 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             print("[run_combine] Plotting yields with command:", " ".join(plot_cmd), flush=True)
             subprocess.run(plot_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
         if not args.only_yields:
-            output_dir = run_info["datacards_dir"]
-            condor_BF = run_info["condor_BF"]
-
             signals = extract_signals(flattened_json)
-            condor_time_start_BF = time.time()
-            for sig in signals:
-                # local BF
-                #BF_condor_cmd = ["./"+exe_dir+"/BF.x", flattened_json, output_dir, sig]
-                # condor BF
-                BF_condor_cmd = [
-                    "python3", "python/submitBFJobs.py",
-                    "--output-dir", output_dir,
-                    "--executable", "./"+exe_dir+"/BF.x",
-                    "--logs-dir", f'{condor_BF}/{sig}/',
-                    "--json", flattened_json, 
-                    "--signal", sig,
-                    "--submit-file", f'{condor_BF}/{sig}/job_{sig}.sub',
-                    "--record-dir", f'{condor_BF}/{sig}/',
-                ]
-                subprocess.run(BF_condor_cmd, check=True, capture_output=True, text=True)
+            if not args.existing_BF_dir:
+                condor_time_start_BF = time.time()
+                for sig in signals:
+                    # local BF
+                    #BF_condor_cmd = ["./"+exe_dir+"/BF.x", flattened_json, output_dir, sig]
+                    # condor BF
+                    BF_condor_cmd = [
+                        "python3", "python/submitBFJobs.py",
+                        "--output-dir", output_dir,
+                        "--executable", "./"+exe_dir+"/BF.x",
+                        "--logs-dir", f'{condor_BF}/{sig}/',
+                        "--json", flattened_json, 
+                        "--signal", sig,
+                        "--submit-file", f'{condor_BF}/{sig}/job_{sig}.sub',
+                        "--record-dir", f'{condor_BF}/{sig}/',
+                    ]
+                    subprocess.run(BF_condor_cmd, check=True, capture_output=True, text=True)
 
-            # Run checkJobs loop and resubmit if necessary
-            idle_time_seconds_BF = wait_for_jobs(work_dirs=signals, condor=condor_BF)
-            print("[run_combine] Checking for failed jobs and resubmitting if necessary...", flush=True)
-            ok = run_checkjobs_loop_parallel_BF(
-                condor_dir=condor_BF,
-                work_dirs=signals,
-                no_resubmit=False,
-                max_resubmits=args.max_resubmits,
-            )
-            if not ok:
-                print("[run_combine] BF checkJobs step did not complete successfully. Aborting further steps.", file=sys.stderr)
-                sys.exit(1)
-            condor_time_end_BF = time.time()
-            condor_time_seconds_BF = condor_time_end_BF - condor_time_start_BF
+                # Run checkJobs loop and resubmit if necessary
+                idle_time_seconds_BF = wait_for_jobs(work_dirs=signals, condor=condor_BF)
+                print("[run_combine] Checking for failed jobs and resubmitting if necessary...", flush=True)
+                ok = run_checkjobs_loop_parallel_BF(
+                    condor_dir=condor_BF,
+                    work_dirs=signals,
+                    no_resubmit=False,
+                    max_resubmits=args.max_resubmits,
+                )
+                if not ok:
+                    print("[run_combine] BF checkJobs step did not complete successfully. Aborting further steps.", file=sys.stderr)
+                    sys.exit(1)
+                condor_time_end_BF = time.time()
+                condor_time_seconds_BF = condor_time_end_BF - condor_time_start_BF
 
             # combine
             # local
@@ -1001,7 +1064,6 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                 subprocess.run(limits_submit_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
             
             print("[run_combine] Launched limit jobs", flush=True)
-            
             print("[run_combine] Launching significance jobs...", flush=True)
             
             for sig in signals:
@@ -1160,16 +1222,17 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
 
     # total time
     total_time_seconds = end_time - start_time
-    if not args.existing_BFI_dir:
+    if not args.existing_BFI_dir and not args.existing_BF_dir:
         print("Time for all condor jobs to start running: {:.2f} seconds = {:.2f} minutes = {:.2f} hours".format(
             idle_time_seconds, idle_time_seconds/60, idle_time_seconds/3600), flush=True)
         print("Time for condor processing: {:.2f} seconds = {:.2f} minutes = {:.2f} hours".format(
             condor_time_seconds, condor_time_seconds/60, condor_time_seconds/3600), flush=True)
     if not args.only_yields and make_json:
-        print("Time for all BF condor jobs to start running: {0:.2f} seconds = {1:.2f} minutes = {2:.2f} hours".format(
-            idle_time_seconds_BF, idle_time_seconds_BF/60, idle_time_seconds_BF/3600), flush=True)
-        print("Total for BF condor processing: {0:.2f} seconds = {1:.2f} minutes = {2:.2f} hours".format(
-            condor_time_seconds_BF, condor_time_seconds_BF/60, condor_time_seconds_BF/3600), flush=True)
+        if not args.existing_BF_dir:
+            print("Time for all BF condor jobs to start running: {0:.2f} seconds = {1:.2f} minutes = {2:.2f} hours".format(
+                idle_time_seconds_BF, idle_time_seconds_BF/60, idle_time_seconds_BF/3600), flush=True)
+            print("Total for BF condor processing: {0:.2f} seconds = {1:.2f} minutes = {2:.2f} hours".format(
+                condor_time_seconds_BF, condor_time_seconds_BF/60, condor_time_seconds_BF/3600), flush=True)
         print("Total for combine condor processing: {0:.2f} seconds = {1:.2f} minutes = {2:.2f} hours".format(
             condor_time_seconds_combine, condor_time_seconds_combine/60, condor_time_seconds_combine/3600), flush=True)
     print("Total time: {0:.2f} seconds = {1:.2f} minutes = {2:.2f} hours".format(
@@ -1181,6 +1244,8 @@ if __name__ == "__main__":
     # call early_setup first so run_dir and logging redirection exist early
     if args.existing_BFI_dir:
         run_info, try_acquire_lock_or_exit = early_setup(args.run_name, args.existing_BFI_dir)
+    elif args.existing_BF_dir:
+        run_info, try_acquire_lock_or_exit = early_setup(args.run_name, args.existing_BF_dir)
     else:
         run_info, try_acquire_lock_or_exit = early_setup(args.run_name)
     main(args, run_info, try_acquire_lock_or_exit, start_time)
