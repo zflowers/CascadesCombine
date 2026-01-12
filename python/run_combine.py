@@ -31,7 +31,7 @@ def parse_args():
                    help="Lumi to scale everything to overriding SampleTool values")
     p.add_argument("--run-name", dest="run_name", type=str, default=None,
                    help="Optional run name prefix to prepend to timestamp for the run directory")
-    p.add_argument("--existing-run-dir", dest="existing_run_dir", type=str, default=None,
+    p.add_argument("--existing-BFI-dir", dest="existing_BFI_dir", type=str, default=None,
                    help="Optional pass in existing run dir and make new run dir that takes the existing BFI output as input to do BF and later steps")
     p.add_argument("--skip-compile", action="store_true",
                    help="Skip running the compile step")
@@ -43,7 +43,7 @@ def parse_args():
                    help="Number of bins to group per job")
     return p.parse_args()
 
-def early_setup(run_name, existing_run_name=None):
+def early_setup(run_name, existing_BFI_name=None):
     """
     Early logging/setup called before the main workflow begins.
 
@@ -60,8 +60,8 @@ def early_setup(run_name, existing_run_name=None):
         ts = datetime.datetime.now().strftime("%B%d_%Y_%H%M")
         run_name = f"run_{ts}"
 
-    if existing_run_name:
-        run_name = existing_run_name.split('/')[1] + "_" + run_name 
+    if existing_BFI_name:
+        run_name = existing_BFI_name.split('/')[1] + "_" + run_name 
 
     # Create the run_dir and debug file immediately (so wrapper can tail it)
     run_dir = os.path.join("runs", run_name)
@@ -192,7 +192,7 @@ def prepare_run_and_stage_assets_copy(
     processes_cfg: str,
     hists_cfg: Optional[str] = None,
     FDpattern_cfg: Optional[str] = None,
-    existing_run_dir: Optional[bool] = False,
+    existing_BFI_dir: Optional[bool] = False,
 ):
     """
     Copy-only staging for run_dir.
@@ -201,7 +201,7 @@ def prepare_run_and_stage_assets_copy(
     """
     run_dir = run_info["run_dir"]
     dirs_to_make = ["exe", "configs", "datacards", "include", "python", "src", "macro", "condor_BF", "plots"]
-    if not existing_run_dir:
+    if not existing_BFI_dir:
         dirs_to_make.extend([
                              "condor",
                             ])
@@ -272,7 +272,7 @@ def prepare_run_and_stage_assets_copy(
         "make_GSB_Regions.py",
     ]
 
-    if not existing_run_dir:
+    if not existing_BFI_dir:
         include_items.extend([
             "DefineUserHists.h",
              "BFICondorTools.h", # for systematics
@@ -730,9 +730,9 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
 
     make_impacts = args.make_impacts
     make_FD = args.make_FD
-    if args.existing_run_dir:
-        existing_run_dir = args.existing_run_dir
-        config_dir = os.path.join(existing_run_dir, "configs")
+    if args.existing_BFI_dir:
+        existing_BFI_dir = args.existing_BFI_dir
+        config_dir = os.path.join(existing_BFI_dir, "configs")
         bins_files = glob.glob(os.path.join(config_dir, "*bins.yaml"))
         hists_files = glob.glob(os.path.join(config_dir, "*hists.yaml"))
         processes_files = glob.glob(os.path.join(config_dir, "*processes.yaml"))
@@ -761,14 +761,14 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
         FDpattern_cfg = ""
         if len(FDpatterns_files) > 0:
             FDpattern_cfg = FDpatterns_files[0]
-        make_json = os.path.isfile(os.path.join(existing_run_dir, "flattened.json"))
+        make_json = os.path.isfile(os.path.join(existing_BFI_dir, "flattened.json"))
         make_root = False
         
         if not make_json:
-            print("[run_combine] ERROR: Could not find flattened.json in",args.existing_run_dir)
+            print("[run_combine] ERROR: Could not find flattened.json in",args.existing_BFI_dir)
             sys.exit(1)
         else:
-            _copy_file(os.path.join(existing_run_dir, "flattened.json"), run_dir)
+            _copy_file(os.path.join(existing_BFI_dir, "flattened.json"), run_dir)
             flattened_json = os.path.join(run_dir, "flattened.json")
 
     else:
@@ -801,7 +801,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             build_binaries()
 
         # Stage files into the run directory (configs, exe, src, include, condor, plots, macro, etc.)
-        run_dir_map = prepare_run_and_stage_assets_copy(run_info, bins_cfg, processes_cfg, hist_cfg, FDpattern_cfg, True if args.existing_run_dir else False)
+        run_dir_map = prepare_run_and_stage_assets_copy(run_info, bins_cfg, processes_cfg, hist_cfg, FDpattern_cfg, True if args.existing_BFI_dir else False)
         # merge staged mapping into run_info so downstream code can use run_info everywhere
         run_info.update(run_dir_map)
 
@@ -844,7 +844,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
     if plot_lumi == "-1":
         plot_lumi = "400" # set to estimated Run2 + Run3 for now
 
-    if not args.existing_run_dir:
+    if not args.existing_BFI_dir:
         # Submit jobs (give submit_jobs the run-local condor dir so everything stays inside the run)
         print("[run_combine] Submitting jobs...", flush=True)
         submit_jobs(
@@ -933,7 +933,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
 
     if make_json:
         flattened_json = get_flattened_json_path(run_dir=run_dir)
-        if not args.existing_run_dir and not args.skip_plot_yields:
+        if not args.existing_BFI_dir and not args.skip_plot_yields:
             # Plot Yields
             plot_cmd = [
                 "./"+exe_dir+"/PlotYields.x",
@@ -1160,7 +1160,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
 
     # total time
     total_time_seconds = end_time - start_time
-    if not args.existing_run_dir:
+    if not args.existing_BFI_dir:
         print("Time for all condor jobs to start running: {:.2f} seconds = {:.2f} minutes = {:.2f} hours".format(
             idle_time_seconds, idle_time_seconds/60, idle_time_seconds/3600), flush=True)
         print("Time for condor processing: {:.2f} seconds = {:.2f} minutes = {:.2f} hours".format(
@@ -1179,8 +1179,8 @@ if __name__ == "__main__":
     start_time = time.time()
     args = parse_args()
     # call early_setup first so run_dir and logging redirection exist early
-    if args.existing_run_dir:
-        run_info, try_acquire_lock_or_exit = early_setup(args.run_name, args.existing_run_dir)
+    if args.existing_BFI_dir:
+        run_info, try_acquire_lock_or_exit = early_setup(args.run_name, args.existing_BFI_dir)
     else:
         run_info, try_acquire_lock_or_exit = early_setup(args.run_name)
     main(args, run_info, try_acquire_lock_or_exit, start_time)
