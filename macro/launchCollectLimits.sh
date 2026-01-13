@@ -21,6 +21,10 @@ if (( ${#files[@]} )); then
         --job-dir "${rundir}/combine"
 fi
 
+if (( ${#files[@]} >= 50 )); then
+    root -l -b -q "macro/PlotLimitJSON.C++(\"${dcdir}_SMS_TChiWZ_SMS_Limits.json\", false, kTChiWZ, \"${dcdir}_SMS_TChiWZ_SMS_Limits.root\")"
+fi
+
 shopt -s nullglob
 files=( "${dcdir}"/Cascades_*/higgsCombine*AsymptoticLimits*.root )
 shopt -u nullglob

@@ -1064,19 +1064,20 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                 subprocess.run(limits_submit_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
             
             print("[run_combine] Launched limit jobs", flush=True)
-            print("[run_combine] Launching significance jobs...", flush=True)
             
-            for sig in signals:
-                significances_submit_cmd = [
-                    "python3", "python/submitCombineJobs.py",
-                    "--signal", sig,
-                    "--output-dir", output_dir,
-                    "--method", "Significance",
-                    "--extra-args", "-n .Test --expectSignal=1 -t -1",
-                ]
-                subprocess.run(significances_submit_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
-            
-            print("[run_combine] Launched significance jobs", flush=True)
+            if len(signals) < 20: # don't run significance for all points
+                print("[run_combine] Launching significance jobs...", flush=True)
+                for sig in signals:
+                    significances_submit_cmd = [
+                        "python3", "python/submitCombineJobs.py",
+                        "--signal", sig,
+                        "--output-dir", output_dir,
+                        "--method", "Significance",
+                        "--extra-args", "-n .Test --expectSignal=1 -t -1",
+                    ]
+                    subprocess.run(significances_submit_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
+                
+                print("[run_combine] Launched significance jobs", flush=True)
             
             # Wait once for ALL combine jobs
             
@@ -1096,19 +1097,20 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                 print("[run_combine] Limit combine jobs failed. Aborting.", file=sys.stderr)
                 sys.exit(1)
             
-            # Check significances
-            ok = run_checkjobs_loop_parallel_Combine(
-                condor_dir=output_dir,
-                work_dirs=signals,
-                checker="python/checkJobsCombine.py",
-                checker_args=["--method", "Significance"],
-                no_resubmit=False,
-                max_resubmits=args.max_resubmits,
-            )
-            
-            if not ok:
-                print("[run_combine] Significance combine jobs failed. Aborting.", file=sys.stderr)
-                sys.exit(1)
+            if len(signals) < 20: # don't run significance for all points
+                # Check significances
+                ok = run_checkjobs_loop_parallel_Combine(
+                    condor_dir=output_dir,
+                    work_dirs=signals,
+                    checker="python/checkJobsCombine.py",
+                    checker_args=["--method", "Significance"],
+                    no_resubmit=False,
+                    max_resubmits=args.max_resubmits,
+                )
+                
+                if not ok:
+                    print("[run_combine] Significance combine jobs failed. Aborting.", file=sys.stderr)
+                    sys.exit(1)
             
             condor_time_end_combine = time.time()
             condor_time_seconds_combine = condor_time_end_combine - condor_time_start_combine
@@ -1117,20 +1119,21 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             subprocess.run(["bash", macro_dir+"/launchCollectLimits.sh", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
 
             # collect significances
-            try:
-                print("[run_combine] Collecting significances...", flush=True)
-                subprocess.run(["python3", "-u", macro_dir+"/CollectSignificance.py", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
-            except Exception: # typical failure is because a signal process has 0 events in any bins
-                pass
+            if len(signals) < 20: # don't run significance for all points
+                try:
+                    print("[run_combine] Collecting significances...", flush=True)
+                    subprocess.run(["python3", "-u", macro_dir+"/CollectSignificance.py", output_dir, run_dir], check=True, stdout=sys.stdout, stderr=sys.stderr)
+                except Exception: # typical failure is because a signal process has 0 events in any bins
+                    pass
 
-            # plot significances
-            plot_cmd = [
-                "./"+exe_dir+"/PlotSignificances.x",
-                "-i", run_dir+"/Significance_datacards.txt",
-                "-o", plots_dir
-            ]
-            print("[run_combine] Plotting significances with command:", " ".join(plot_cmd), flush=True)
-            subprocess.run(plot_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
+                # plot significances
+                plot_cmd = [
+                    "./"+exe_dir+"/PlotSignificances.x",
+                    "-i", run_dir+"/Significance_datacards.txt",
+                    "-o", plots_dir
+                ]
+                print("[run_combine] Plotting significances with command:", " ".join(plot_cmd), flush=True)
+                subprocess.run(plot_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
             # Note impacts, T2W, and FD in macro only run on first signal
             if make_impacts or make_FD:

@@ -1,6 +1,7 @@
 #include "SampleTool.h"
 
 SampleTool::SampleTool(){
+  const double RUN3_TOTAL_LUMI = 286.0;  
 
   LumiDict["HEM_LUMI"] = 21.077794578; // need for HEM veto
   LumiDict["Summer20UL16APV_106X"] = 16.8;
@@ -19,18 +20,30 @@ SampleTool::SampleTool(){
   LumiDict["Summer20UL17_106X_SMS"] = LumiDict["Summer20UL17_106X"];
   LumiDict["Summer20UL18_106X_SMS"] = LumiDict["Summer20UL18_106X"];
 
-  // Override lumis since not all samples available yet
-  LumiDict["Summer23BPix_130X"] = 71.5;
-  LumiDict["Summer23_130X"] = 71.5;
-  LumiDict["Summer22EE_130X"] = 71.5;
-  LumiDict["Summer22_130X"] = 71.5;
+  // Scale lumis since not all samples available yet
+  std::vector<std::string> run3Eras = {
+      "Summer22_130X",
+      "Summer22EE_130X",
+      "Summer23_130X",
+      "Summer23BPix_130X"
+  };
+  
+  double run3_available_lumi = 0.0;
+  for (const auto& era : run3Eras) {
+      run3_available_lumi += LumiDict[era];
+  }
+  double scale = RUN3_TOTAL_LUMI / run3_available_lumi;
+  for (const auto& era : run3Eras) {
+    LumiDict[era] *= scale;
+  }
 
-  LumiDict["Summer22_130X_Cascades"] = 286. + 138.;
-  LumiDict["Summer23BPix_130X_Cascades"] = 286. + 138.;
-  LumiDict["Summer20UL16APV_106X_SMS"] = LumiDict["Summer20UL16APV_106X"] + 95.;
-  LumiDict["Summer20UL16_106X_SMS"] = LumiDict["Summer20UL16_106X"] + 95.;
-  LumiDict["Summer20UL17_106X_SMS"] = LumiDict["Summer20UL17_106X"] + 95.;
+  //LumiDict["Summer20UL16APV_106X_SMS"] = LumiDict["Summer20UL16APV_106X"] + 95.;
+  //LumiDict["Summer20UL16_106X_SMS"] = LumiDict["Summer20UL16_106X"] + 95.;
+  //LumiDict["Summer20UL17_106X_SMS"] = LumiDict["Summer20UL17_106X"] + 95.;
+  LumiDict["Summer22_130X_Cascades"] = RUN3_TOTAL_LUMI + 138.;
+  LumiDict["Summer23BPix_130X_Cascades"] = RUN3_TOTAL_LUMI + 138.;
 
+  // Path to ntuples in fnal eos
   string pathPrefix = "root://cmseos.fnal.gov//store/user/lpcsusylep/";
   //pathPrefix += "NTUPLES_Cascades_v6/";
   //pathPrefix += "NTUPLES_Cascades_v7/";
@@ -1587,21 +1600,67 @@ SampleTool::SampleTool(){
     }
   );
 
+  MasterDict["bkg_2016"] = mergeEntriesList( // used for histogram plots
+    MasterDict,
+    {
+      "top_2016",
+      "boson_2016",
+      "DB_2016",
+      "TB_2016",
+      "top_2016APV",
+      "boson_2016APV",
+      "DB_2016APV",
+      "TB_2016APV",
+    }
+  );
+
+  MasterDict["bkg_2017"] = mergeEntriesList( // used for histogram plots
+    MasterDict,
+    {
+      "top_2017",
+      "boson_2017",
+      "DB_2017",
+      "TB_2017",
+    }
+  );
+
+  MasterDict["bkg_2018"] = mergeEntriesList( // used for histogram plots
+    MasterDict,
+    {
+      "top_2018",
+      "boson_2018",
+      "DB_2018",
+      "TB_2018",
+    }
+  );
+
   MasterDict["bkg_Run2"] = mergeEntriesList( // used for histogram plots
     MasterDict,
     {
-      "boson_Run2",
       "top_Run2",
-      "Wjets_Run2",
+      "boson_Run2",
+      "diboson_Run2",
+      "triboson_Run2",
+    }
+  );
+
+  MasterDict["bkg_Run3"] = mergeEntriesList( // used for histogram plots
+    MasterDict,
+    {
+      "top_Run3",
+      "boson_Run3",
+      "diboson_Run3",
+      "triboson_Run3",
     }
   );
 
   MasterDict["bkg"] = mergeEntriesList( // used for histogram plots
     MasterDict,
     {
-      "boson",
       "top",
-      "Wjets",
+      "boson",
+      "diboson",
+      "triboson",
     }
   );
 
