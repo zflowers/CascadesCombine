@@ -59,6 +59,26 @@ RISR_BINS_3L = [
     {"name": "R7",  "min": 0.7,  "max": 0.8,  "Mh": 40, "Mm_lo": 40, "Mm_hi": 40, "Ml_hi": 40},
 ]
 
+# 4L RISR/Mperp bins
+RISR_BINS_4L = [
+    {"name": "R7", "min": 0.7, "max": 1.0, "Mh": 40, "Ml_hi": 40},
+]
+
+NLEP_B_SPLITS_4L = [2, 1]  # order just for readability
+
+# btag sideband
+RISR_SB = [
+    {"name": "R7", "min": 0.7, "max": 0.8},
+    {"name": "R8", "min": 0.8, "max": 0.9},
+    {"name": "R9", "min": 0.9, "max": 1.0},
+]
+
+PTISR_SB = {
+    2: [(250, 350), (350, None)],
+    3: [(200, 300), (300, None)],
+    4: [(100, None)],
+}
+
 # 2L flavor splits
 FLAVOR_SPLITS_2L = [
     ("OS_ee", ["=1OSSF;", "=2Elec;"]),
@@ -196,7 +216,6 @@ def assemble_cuts_string(nlep, base_tokens, ptisr_token, risr_token, jet_token, 
     if jet_token:
         parts.append(jet_token)
     parts.append("MIN(abs(Eta_lep))<1.4442;")
-    parts.append("Nbjet==0;")
     parts.append("Njet>0;")
     if mperp_token:
         parts.append(mperp_token)
@@ -258,7 +277,7 @@ def build_bins_2l_for_jet(jtag, jconf, ptisr_tag, risr_bins):
                         risr_cond,
                         jet_token,
                         mcut_token,
-                        extra_tokens=None,
+                        extra_tokens=["Nbjet==0;"],
                     )
                 )
                 lep_block = make_lep_cuts_block(COMMON_LEP, flavor_lep_lines)
@@ -302,6 +321,7 @@ def build_bins_3l_from_rules(jtag, jconf, ptisr_tag, risr_bins, rules_for_jet, m
                     risr_cond,
                     jconf["njet_cond"],
                     mperp_token=None,
+                    extra_tokens=["Nbjet==0;"],
                 )
             )
             lep_block = make_lep_cuts_block(COMMON_LEP, [])  # no extra flavor lines
@@ -374,6 +394,7 @@ def build_bins_3l_from_rules(jtag, jconf, ptisr_tag, risr_bins, rules_for_jet, m
                         extra_tokens = []
                         if maratio_token:
                             extra_tokens.append(maratio_token)
+                        extra_tokens.append("Nbjet==0;"),
                         cuts_txt = DoubleQuotedScalarString(
                             assemble_cuts_string(
                                 3,
@@ -392,6 +413,92 @@ def build_bins_3l_from_rules(jtag, jconf, ptisr_tag, risr_bins, rules_for_jet, m
                             "predefined-cuts": DoubleQuotedScalarString(PREDEFINED_CUTS),
                             "user-cuts": DoubleQuotedScalarString(USER_CUTS),
                         }
+    return out
+
+# ---------------- 4L generator ----------------
+def build_bins_4l(ptisr_tag=100):
+    out = {}
+    COMMON_LEP = ["=0OSSF|mass>=3|mass<=3.2;", "=4Gold;"]
+
+    PTISR_CUT = f"PTISR_LEP>={ptisr_tag};"
+    MET_CUT = "MET>=150;"
+    JET_CUT = "Njet_S==0;"
+    EXTRA_BASE = ["Njet>0;"]  # matches your YAML
+
+    for r in RISR_BINS_4L:
+        risr_cond = format_rISR_condition(r)
+
+        for mcat in ("Ml", "Mh"):
+            if mcat == "Mh":
+                mcut = f"Mperp_LEP>={r['Mh']};"
+                mname = "Mh"
+            else:
+                mcut = f"Mperp_LEP<{r['Ml_hi']};"
+                mname = "Ml"
+
+            for nb in NLEP_B_SPLITS_4L:
+                key = f"Bin4L_Gold_{r['name']}_{mname}_{nb}1" if nb == 1 else f"Bin4L_Gold_{r['name']}_{mname}_{nb}2"
+
+                cuts = DoubleQuotedScalarString(
+                    assemble_cuts_string(
+                        4,
+                        COMMON_BASE_TOKENS + [MET_CUT],
+                        PTISR_CUT,
+                        risr_cond,
+                        JET_CUT,
+                        mcut,
+                        extra_tokens=[f"Nlep_b_LEP=={nb};Nbjet==0;"] + EXTRA_BASE,
+                    )
+                )
+
+                out[key] = {
+                    "cuts": cuts,
+                    "lep-cuts": make_lep_cuts_block(COMMON_LEP, []),
+                    "predefined-cuts": DoubleQuotedScalarString("Cleaning_LEP;dphiMETV_LEP;"),
+                    "user-cuts": DoubleQuotedScalarString("minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"),
+                }
+    return out
+
+# ---------------- sideband generator ----------------
+def build_bins_btag_sideband():
+    out = {}
+
+    for nlep in (2, 3, 4):
+        COMMON_LEP = ["=0OSSF|mass>=3|mass<=3.2;", f"={nlep}Gold;"]
+
+        for (ptlo, pthi) in PTISR_SB[nlep]:
+            if pthi:
+                ptcut = f"PTISR_LEP>={ptlo};PTISR_LEP<{pthi};"
+                pname = f"P{ptlo}"
+            else:
+                ptcut = f"PTISR_LEP>={ptlo};"
+                pname = f"P{ptlo}"
+
+            for r in RISR_SB:
+                risr_cond = format_rISR_condition(r)
+
+                for jtag, jconf in JET_CONFIGS.items():
+                    key = f"Bin{nlep}L_Gold_{jtag}_{pname}_{r['name']}_Btag"
+
+                    cuts = DoubleQuotedScalarString(
+                        assemble_cuts_string(
+                            nlep,
+                            COMMON_BASE_TOKENS + ["MET>=150;", "Njet>0;"],
+                            ptcut,
+                            risr_cond,
+                            jconf["njet_cond"],
+                            None,
+                            extra_tokens=["Nbjet>=1;"],
+                        )
+                    )
+
+                    out[key] = {
+                        "cuts": cuts,
+                        "lep-cuts": make_lep_cuts_block(COMMON_LEP, []),
+                        "predefined-cuts": DoubleQuotedScalarString("Cleaning_LEP;dphiMETV_LEP;"),
+                        "user-cuts": DoubleQuotedScalarString("minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"),
+                    }
+
     return out
 
 # ---------------- file writing helper ----------------
@@ -426,6 +533,12 @@ def main(outdir: Path, dry_run=False, maratio_threshold=DEFAULT_MARATIO_THRESHOL
         )
         fname = outdir / f"Regions_3L_{jtag}_hPTISR_Gold.yaml"
         files_to_write[fname] = doc_map
+
+    # 4L
+    files_to_write[outdir / "Regions_4L_Gold.yaml"] = build_bins_4l()
+    
+    # b-tag sideband
+    files_to_write[outdir / "Regions_top_sideband_Gold.yaml"] = build_bins_btag_sideband()
 
     # write or dry-run
     for path, doc in files_to_write.items():
