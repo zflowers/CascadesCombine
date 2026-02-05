@@ -695,6 +695,8 @@ def run_checkjobs_loop_parallel_Combine(
                 return False
 
             resub_dir = os.path.join(condor_dir, work_dir)
+            if not os.path.isdir(resub_dir):
+                continue
             resub_files = [
                 f for f in os.listdir(resub_dir)
                 if f.startswith("resubmit_") and f.endswith(".sub")
@@ -1080,7 +1082,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                 print("[run_combine] Launched significance jobs", flush=True)
             
             # Wait once for ALL combine jobs
-            
+            print("[run_combine] Waiting for combine jobs...", flush=True)
             wait_for_jobs(work_dirs=signals, condor=output_dir)
 
             # Check limits
@@ -1202,14 +1204,14 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                     subdir_path = os.path.join(impacts_src_root, subdir)
                     impacts_pdf = os.path.join(subdir_path, "impacts.pdf")
                     if os.path.isdir(subdir_path) and os.path.isfile(impacts_pdf):
-                        dst_file = os.path.join(impacts_dst_root, f"impacts__{subdir}.pdf")
+                        dst_file = os.path.join(impacts_dst_root, f"impacts__{run_name}__{subdir}.pdf")
                         try:
                             _copy_file(impacts_pdf, dst_file)
                         except Exception as e:
                             print(f"[run_combine] Warning: failed to copy {impacts_pdf}: {e}", flush=True)
                     impacts_alpha_pdf = os.path.join(subdir_path, "impacts_alpha.pdf")
                     if os.path.isdir(subdir_path) and os.path.isfile(impacts_alpha_pdf):
-                        dst_file = os.path.join(impacts_dst_root, f"impacts_alpha__{subdir}.pdf")
+                        dst_file = os.path.join(impacts_dst_root, f"impacts_alpha__{run_name}__{subdir}.pdf")
                         try:
                             _copy_file(impacts_alpha_pdf, dst_file)
                         except Exception as e:

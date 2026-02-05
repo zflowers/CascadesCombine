@@ -86,8 +86,7 @@ Bin3L_Bronze_P200_R7_Btag:
   cuts: "Nlep==3;MET>=150;Njet>0;PTISR_LEP>=200;PTISR<300;RISR_LEP>=0.7;RISR_LEP<0.8;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet>=1;MIN(abs(Eta_lep))<1.4442;"
   lep-cuts: |
     >=1Gold;
-    =0Silver;
-    >=1Bronze;
+    =1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
   user-cuts: "minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"
@@ -95,8 +94,7 @@ Bin3L_Bronze_P200_R8_Btag:
   cuts: "Nlep==3;MET>=150;Njet>0;PTISR_LEP>=200;PTISR<300;RISR_LEP>=0.8;RISR_LEP<0.9;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet>=1;MIN(abs(Eta_lep))<1.4442;"
   lep-cuts: |
     >=1Gold;
-    =0Silver;
-    >=1Bronze;
+    =1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
   user-cuts: "minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"
@@ -104,8 +102,7 @@ Bin3L_Bronze_P200_R9_Btag:
   cuts: "Nlep==3;MET>=150;Njet>0;PTISR_LEP>=200;PTISR<300;RISR_LEP>=0.9;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet>=1;MIN(abs(Eta_lep))<1.4442;"
   lep-cuts: |
     >=1Gold;
-    =0Silver;
-    >=1Bronze;
+    =1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
   user-cuts: "minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"
@@ -113,8 +110,7 @@ Bin3L_Bronze_P300_R7_Btag:
   cuts: "Nlep==3;MET>=150;Njet>0;PTISR_LEP>=300;RISR_LEP>=0.7;RISR_LEP<0.8;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet>=1;MIN(abs(Eta_lep))<1.4442;"
   lep-cuts: |
     >=1Gold;
-    =0Silver;
-    >=1Bronze;
+    =1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
   user-cuts: "minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"
@@ -122,8 +118,7 @@ Bin3L_Bronze_P300_R8_Btag:
   cuts: "Nlep==3;MET>=150;Njet>0;PTISR_LEP>=300;RISR_LEP>=0.8;RISR_LEP<0.9;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet>=1;MIN(abs(Eta_lep))<1.4442;"
   lep-cuts: |
     >=1Gold;
-    =0Silver;
-    >=1Bronze;
+    =1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
   user-cuts: "minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"
@@ -131,8 +126,7 @@ Bin3L_Bronze_P300_R9_Btag:
   cuts: "Nlep==3;MET>=150;Njet>0;PTISR_LEP>=300;RISR_LEP>=0.9;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;Nbjet>=1;MIN(abs(Eta_lep))<1.4442;"
   lep-cuts: |
     >=1Gold;
-    =0Silver;
-    >=1Bronze;
+    =1Bronze;
     =0OSSF|mass>=3|mass<=3.2;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
   user-cuts: "minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"

@@ -114,16 +114,15 @@ def main():
 
     submit_files = [
         f for f in os.listdir(base_dir)
-        if f.endswith(".sub") and args.method in f
+        if f.endswith(".sub") and (args.method is None or args.method in f)
     ]
 
     if not submit_files:
         print(
             f"[checkJobsCombine] No .sub files found in {base_dir} "
-            f"for method '{args.method}'.",
-            file=sys.stderr,
+            f"for method '{args.method}'. Skipping."
         )
-        sys.exit(1)
+        sys.exit(0)
 
     failed_jobs: List[str] = []
 

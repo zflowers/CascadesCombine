@@ -138,7 +138,6 @@ int main(int argc, char* argv[]) {
             if(!h) continue;
             const string& proc = pp.first;
         
-            //if(proc=="data" || proc=="Data" || proc=="data_obs") { dataHist = h; continue; }
             if(tool.BkgDict.count(proc)) {
                 bkgHists.push_back(h); 
                 bkgProcs.push_back(proc); 
@@ -175,7 +174,7 @@ int main(int argc, char* argv[]) {
             for(auto &pp : procmap){
                 TH1* h = pp.second; if(!h) continue;
                 if(h->InheritsFrom(TH2::Class())) Plot_Hist2D(dynamic_cast<TH2*>(h));
-                else Plot_Hist1D(h);
+                //else Plot_Hist1D(h); // turn off individual 2D hists for now
             }
         
             // Plot stack
@@ -184,10 +183,13 @@ int main(int argc, char* argv[]) {
                 if(sigHists.size() > 0) { if(sigHists[0]->InheritsFrom(TH2::Class())) continue; } // don't stack TH2s
                 Plot_Stack(groupKey, bkgHists, sigHists, dataHist, 1.0);
                 Plot_Overlay(groupKey, bkgHists, sigHists, dataHist);
+                Plot_Overlay(groupKey, bkgHists, sigHists, dataHist, true);
                 // Only sigs or only bkgs
                 Plot_Stack(groupKey+"_bkg", bkgHists, emptyHists, nullptr, 1.0);
                 Plot_Overlay(groupKey+"_bkg", bkgHists, emptyHists, nullptr);
+                Plot_Overlay(groupKey+"_bkg", bkgHists, emptyHists, nullptr, true);
                 Plot_Overlay(groupKey+"_sig", emptyHists, sigHists, nullptr);
+                Plot_Overlay(groupKey+"_sig", emptyHists, sigHists, nullptr, true);
                 // Only Run2 bkg
                 Plot_Stack(groupKey+"_bkgRun2", bkgHists_Run2, emptyHists, nullptr, 1.0);
                 Plot_Overlay(groupKey+"_bkgRun2", bkgHists_Run2, emptyHists, nullptr);

@@ -560,6 +560,7 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
     std::string json_to_root_file = (p.parent_path() / "datacards" / signalPoint / "json_shapes_flat.root").string();
 
     // 1) Write ROOT file and get the kept bins (this also fills obs_rates)
+    std::cout << "Writing root file\n";
     std::set<std::string> skipped_bins;
     stringlist kept_bins = WriteJsonAsFlatHists(j, json_to_root_file, &obs_rates, signalPoint, &skipped_bins);
 
@@ -589,7 +590,7 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
     cb.FilterProcs([](ch::Process const *p){ return p->rate() <= 0; });
 
     // 6) Add Systematics
-    cb.cp().SetAutoMCStats(cb, 0.); // Turn on autoMCstats
+    //cb.cp().SetAutoMCStats(cb, 0.); // Turn on autoMCstats
     AddFakeFamiliesAsSharedNorms(truebkgprocs, fakesprocs, "rateParam", 1.0);
     AddFloatingNormsGroupedByFakeType(fakesprocs, "lnN", 1.2);
     AddPTISRSys(kept_bins, bkgprocs);

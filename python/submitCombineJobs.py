@@ -13,9 +13,9 @@ from collections import defaultdict
 from textwrap import dedent
 from typing import List, Optional
 
-# ------------------------------------------------------------
+# ----------------
 # Retry defaults
-# ------------------------------------------------------------
+# ----------------
 DEFAULT_KNOWN_SCHEDDS = [
     "lpcschedd4.fnal.gov",
     "lpcschedd5.fnal.gov",
@@ -23,6 +23,24 @@ DEFAULT_KNOWN_SCHEDDS = [
 ]
 DEFAULT_MAX_RETRIES = 8
 DEFAULT_PER_SCHEDD_LIMIT = 3
+
+# ---------------
+# Helper to check inputs exist
+# ---------------
+def require_inputs_exist(submit_dir: Path, paths: List[str], signal: str):
+    missing = []
+    for p in paths:
+        p = Path(p)
+        check_path = p if p.is_absolute() else submit_dir / p
+        if not check_path.exists():
+            missing.append(str(p))
+    if missing:
+        print(
+            f"[submitCombineJobs ERROR] Missing input files for signal '{signal}':\n"
+            + "\n".join(f"  - {p}" for p in missing)
+        )
+        return False
+    return True
 
 # ----------------------
 # CMSSW runtime tarball 
@@ -164,10 +182,17 @@ def make_submit_file(
 ) -> Path:
 
     submit_dir = Path(f"{output_dir}") / signal
+    submit_dir.mkdir(parents=True, exist_ok=True)
 
     # locate inputs
     card = f"{signal}.txt"
     shape = "json_shapes_flat.root"
+
+    if not require_inputs_exist(
+        submit_dir,
+        paths=[card, shape, executable],
+        signal=signal,
+    ): return None
 
     # compute mass locally
     mass = extract_mass(signal)
@@ -366,6 +391,7 @@ def _cli():
         request_memory=args.memory,
         request_disk=args.disk,
     )
+    if submit_path is None: return
 
     ok = submit_condor_with_retries(submit_path, dryrun=args.dryrun, record_dir=args.output_dir)
 

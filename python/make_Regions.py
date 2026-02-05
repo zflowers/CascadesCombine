@@ -44,25 +44,19 @@ JET_CONFIGS_3L = {
 
 # ---------------- RISR / Mperp bins ----------------
 RISR_BINS_2L = [
-    {"name": "R95", "min": 0.95, "max": 1.0,  "Mh": 20, "Mm_lo": 10, "Mm_hi": 20, "Ml_hi": 10},
-    {"name": "R9",  "min": 0.9,  "max": 0.95, "Mh": 25, "Mm_lo": 15, "Mm_hi": 25, "Ml_hi": 15},
-    {"name": "R85", "min": 0.85, "max": 0.9,  "Mh": 30, "Mm_lo": 20, "Mm_hi": 30, "Ml_hi": 20},
-    {"name": "R8",  "min": 0.8,  "max": 0.85, "Mh": 35, "Mm_lo": 25, "Mm_hi": 35, "Ml_hi": 25},
-
-    # 359/364
-    {"name": "R75", "min": 0.75, "max": 0.8,  "Mh": 35, "Mm_lo": 25, "Mm_hi": 35, "Ml_hi": 25},
+    {"name": "R95", "min": 0.95, "max": 1.0,  "Mh": 15, "Mm_lo": 5,  "Mm_hi": 15, "Ml_hi": 5},
+    {"name": "R9",  "min": 0.9,  "max": 0.95, "Mh": 20, "Mm_lo": 10, "Mm_hi": 20, "Ml_hi": 10},
+    {"name": "R85", "min": 0.85, "max": 0.9,  "Mh": 25, "Mm_lo": 15, "Mm_hi": 25, "Ml_hi": 15},
+    {"name": "R8",  "min": 0.8,  "max": 0.85, "Mh": 30, "Mm_lo": 15, "Mm_hi": 30, "Ml_hi": 15},
+    {"name": "R75", "min": 0.75, "max": 0.8,  "Mh": 30, "Mm_lo": 20, "Mm_hi": 30, "Ml_hi": 20},
     {"name": "R7",  "min": 0.7,  "max": 0.75, "Mh": 35, "Mm_lo": 25, "Mm_hi": 35, "Ml_hi": 25},
-
-    # 356
-    #{"name": "R75", "min": 0.75, "max": 0.8,  "Mh": 40, "Mm_lo": 30, "Mm_hi": 40, "Ml_hi": 30},
-    #{"name": "R7",  "min": 0.7,  "max": 0.75, "Mh": 45, "Mm_lo": 35, "Mm_hi": 45, "Ml_hi": 35},
 ]
 
 # 3L RISR/Mperp bins
 RISR_BINS_3L = [
     {"name": "R9",  "min": 0.9,  "max": 1.0,  "Mh": 30, "Mm_lo": 30, "Mm_hi": 30, "Ml_hi": 30},
-    {"name": "R8",  "min": 0.8,  "max": 0.9,  "Mh": 40, "Mm_lo": 40, "Mm_hi": 40, "Ml_hi": 40},
-    {"name": "R7",  "min": 0.7,  "max": 0.8,  "Mh": 50, "Mm_lo": 50, "Mm_hi": 50, "Ml_hi": 50},
+    {"name": "R8",  "min": 0.8,  "max": 0.9,  "Mh": 35, "Mm_lo": 35, "Mm_hi": 35, "Ml_hi": 35},
+    {"name": "R7",  "min": 0.7,  "max": 0.8,  "Mh": 40, "Mm_lo": 40, "Mm_hi": 40, "Ml_hi": 40},
 ]
 
 # 2L flavor splits
@@ -107,106 +101,6 @@ MARATIO_NAME_L = "Al"
 #    - 'maratio': bool (split Ah/Al)
 #    - 'lep_classes': list of keys from LEP_CLASS_MAP_3L OR 'incl'
 THREE_L_RULES = {
-    #"0J": {
-    #    "R9": {
-    #        "mperp": {
-    #            "Mh": {
-    #                "use_mperp": True,
-    #                "mperp_cat": "Mh",
-    #                "maratio": False,
-    #                "lep_classes": ["OSOFa", "OSSFa", "SSa"],
-    #            },
-    #            "Ml": {
-    #                "use_mperp": True,
-    #                "mperp_cat": "Ml",
-    #                "maratio": False,
-    #                "lep_classes": ["OSOFa", "OSSFa", "SSa"],
-    #            },
-    #        }
-    #    },
-    #    "R8": {
-    #        "mperp": {
-    #            "Mh": {
-    #                "use_mperp": True,
-    #                "mperp_cat": "Mh",
-    #                "maratio": False,
-    #                "lep_classes": ["OSOFa", "OSSFa", "SSa"],
-    #            },
-    #            "Ml": {
-    #                "use_mperp": True,
-    #                "mperp_cat": "Ml",
-    #                "maratio": False,
-    #                "lep_classes": ["OSOFa", "OSSFa", "SSa"],
-    #            },
-    #        }
-    #    },
-    #    "R7": {
-    #        "mperp": {
-    #            "Mh": {
-    #                "use_mperp": True,
-    #                "mperp_cat": "Mh",
-    #                "maratio": False,
-    #                "lep_classes": ["OSOFa", "OSSFa", "SSa"],
-    #            },
-    #            "Ml": {
-    #                "use_mperp": True,
-    #                "mperp_cat": "Ml",
-    #                "maratio": False,
-    #                "lep_classes": ["OSOFa", "OSSFa", "SSa"],
-    #            },
-    #        }
-    #    },
-    #},
-    #"1J": {
-    #    "R9": {
-    #        "mperp": {
-    #            "Mh": {
-    #                "use_mperp": True,
-    #                "mperp_cat": "Mh",
-    #                "maratio": False,
-    #                "lep_classes": ["OSOFa", "OSSFa", "SSa"],
-    #            },
-    #            "Ml": {
-    #                "use_mperp": True,
-    #                "mperp_cat": "Ml",
-    #                "maratio": False,
-    #                "lep_classes": ["OSOFa", "OSSFa", "SSa"],
-    #            },
-    #        }
-    #    },
-    #    "R8": {
-    #        "mperp": {
-    #            "Mh": {
-    #                "use_mperp": True,
-    #                "mperp_cat": "Mh",
-    #                "maratio": False,
-    #                "lep_classes": ["OSOFa", "OSSFa", "SSa"],
-    #            },
-    #            "Ml": {
-    #                "use_mperp": True,
-    #                "mperp_cat": "Ml",
-    #                "maratio": False,
-    #                "lep_classes": ["OSOFa", "OSSFa", "SSa"],
-    #            },
-    #        }
-    #    },
-    #    "R7": {
-    #        "mperp": {
-    #            "Mh": {
-    #                "use_mperp": True,
-    #                "mperp_cat": "Mh",
-    #                "maratio": False,
-    #                "lep_classes": ["OSOFa", "OSSFa", "SSa"],
-    #            },
-    #            "Ml": {
-    #                "use_mperp": True,
-    #                "mperp_cat": "Ml",
-    #                "maratio": False,
-    #                "lep_classes": ["OSOFa", "OSSFa", "SSa"],
-    #            },
-    #        }
-    #    },
-    #},
     "Jincl": {
         "R9": {
             "mperp": {
@@ -349,7 +243,9 @@ def build_bins_2l_for_jet(jtag, jconf, ptisr_tag, risr_bins):
     COMMON_LEP = ["=0OSSF|mass>=3|mass<=3.2;", "=2Gold;"]
     for r in risr_bins:
         risr_cond = format_rISR_condition(r)
-        for mcat in ("Mh","Mm","Ml"):
+        for mcat in ("Mh", "Mm", "Ml"):
+            if mcat == "Mm" and r["Mm_lo"] >= r["Mm_hi"]: # skip middle bin if its bin boundaries are the hi/lo
+                continue
             mcut_token, mnamefrag = make_mperp_cut_tokens(r, mcat)
             for (flav_key, flavor_lep_lines) in FLAVOR_SPLITS_2L:
                 bin_key = f"Bin2L_Gold_{jtag}_{PTISR_PNAME}_{r['name']}_{mnamefrag}_{flav_key}"

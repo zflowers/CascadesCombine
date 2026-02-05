@@ -106,6 +106,7 @@ int main(int argc, char** argv) {
     hFrame->GetYaxis()->SetTitle("Exp. Significance");
     hFrame->GetYaxis()->SetTitleOffset(1.03);
     hFrame->GetYaxis()->CenterTitle();
+    hFrame->GetYaxis()->SetRangeUser(0., 5.0);
     hFrame->Draw();
 
     TGraph *g = new TGraph(N);

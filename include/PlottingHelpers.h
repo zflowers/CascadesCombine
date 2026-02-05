@@ -205,7 +205,7 @@ std::string makeSMSChiTitle(const std::string& key) {
     std::string model;
     if (key.find("TChiWZ") != std::string::npos) model = "TChiWZ";
     else if (key.find("TChiHZ") != std::string::npos) model = "TChiHZ";
-    else if (key.find("TChipmWW") != std::string::npos) model = "TChipmWW";
+    else if (key.find("TChipmWW") != std::string::npos || key.find("TChiWW") != std::string::npos) model = "TChipmWW";
     else model = "Unknown";
 
     // Determine particle text for the model
@@ -234,10 +234,12 @@ std::string makeSMSChiTitle(const std::string& key) {
     // Handle Sandwich models
     bool isSandwich = key.find("Sandwich") != std::string::npos;
     int m2 = (isSandwich && model != "TChipmWW") ? (m1 + m3) / 2 : m1;
+    std::string preUL = "";
+    if(key.find("preUL") != std::string::npos) preUL = "preUL ";
 
     // Compose final title
     std::ostringstream title;
-    title << particles << " " << m1 << ", " << m2 << ", " << m3;
+    title << preUL << particles << " " << m1 << ", " << m2 << ", " << m3;
     return title.str();
 }
 
@@ -255,7 +257,9 @@ void loadFormatMaps(){
   
   m_Title["top"] = "t + X";
   m_Color["top"] = 7011;
-  //m_Color["top"] = 8003;
+
+  m_Title["top_Run2"] = "t + X Run2";
+  m_Title["top_Run3"] = "t + X Run3";
 
   m_Title["Vfakeleps"] = "fake enriched";
   m_Color["Vfakeleps"] = 7001;
@@ -316,6 +320,13 @@ void loadFormatMaps(){
   m_Title["DY"] = "DY";
   m_Color["DY"] = 7021;
   //m_Color["DY"] = 8006;
+
+  m_Title["boson_Run2"] = "boson Run2";
+  m_Title["boson_Run3"] = "boson Run3";
+  m_Title["diboson_Run2"] = "diboson Run2";
+  m_Title["diboson_Run3"] = "diboson Run3";
+  m_Title["triboson_Run2"] = "triboson Run2";
+  m_Title["triboson_Run3"] = "triboson Run3";
 
   m_Title["HF_FAKES"] = "HF leptons";
   m_Color["HF_FAKES"] = 7022;
@@ -1346,10 +1357,10 @@ TH1* MakeRatioHist(TH1* hnum, TH1* hden, bool normalize = false) {
             hratio->SetBinContent(i,val);
             hratio->SetBinError(i,0.); // optional
         }
-        if(normalize){
-            double s = hratio->Integral();
-            if(s>0) hratio->Scale(1./s);
-	}
+        //if(normalize){
+        //    double s = hratio->Integral();
+        //    if(s>0) hratio->Scale(1./s);
+	//}
     }
     return hratio;
 }

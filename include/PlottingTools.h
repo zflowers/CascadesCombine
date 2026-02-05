@@ -54,7 +54,9 @@ void Plot_Hist2D(TH2* h) {
         proc_title = m_Title[ExtractProcName(proc_title)];
     l.SetTextSize(0.035); l.DrawLatex(0.65,0.943,proc_title.c_str());
     l.SetTextSize(0.04); l.DrawLatex(0.13,0.943,"#bf{CMS} Simulation Preliminary");
-    l.SetTextSize(0.045); l.DrawLatex(0.7,0.04,ExtractBinName(title).c_str());
+    string bin_label = ExtractBinName(title);
+    std::replace(bin_label.begin(), bin_label.end(), '_', ' ');
+    l.SetTextSize(0.045); l.DrawLatex(0.7,0.04,bin_label.c_str());
     TString pdfName = Form("%spdfs/%s/%s.pdf", outputDir.c_str(), ExtractBinName(title).c_str(), title.c_str());
     gErrorIgnoreLevel = 1001;
     can->SaveAs(pdfName);
@@ -490,7 +492,9 @@ void PlotMergedStack(const std::string& mergedName,
 void Plot_Overlay(const std::string& hname,
                   std::vector<TH1*>& bkgHists,
                   std::vector<TH1*>& sigHists,
-                  TH1* dataHist = nullptr)
+                  TH1* dataHist = nullptr,
+                  bool do_LogScale = false
+                 )
 {
     if (bkgHists.empty() && sigHists.empty() && !dataHist) return;
 
@@ -569,8 +573,8 @@ void Plot_Overlay(const std::string& hname,
         if(!sigHists.empty()) h->SetLineStyle(7);
         else h->SetLineStyle(0);
         h->SetFillStyle(0);
-        //DrawLogSmart(h, "SAME HIST");
-        h->Draw("SAME HIST");
+        if(do_LogScale) DrawLogSmart(h, "SAME HIST");
+        else h->Draw("SAME HIST");
     }
 
     // ------------------------
@@ -594,8 +598,8 @@ void Plot_Overlay(const std::string& hname,
         //if(bkgHists.size() != 0) h->SetLineWidth(4);
         //else h->SetLineWidth(3);
         h->SetLineWidth(3);
-        //DrawLogSmart(h, "SAME HIST");
-        h->Draw("SAME HIST");
+        if(do_LogScale) DrawLogSmart(h, "SAME HIST");
+        else h->Draw("SAME HIST");
     }
 
     // ------------------------
@@ -605,8 +609,8 @@ void Plot_Overlay(const std::string& hname,
         dataHist->SetMarkerStyle(20);
         dataHist->SetMarkerSize(0.8);
         dataHist->SetLineColor(kBlack);
-        //DrawLogSmart(dataHist, "SAME E");
-        dataHist->Draw("SAME HIST");
+        if(do_LogScale) DrawLogSmart(dataHist, "SAME E");
+        else dataHist->Draw("SAME HIST");
     }
 
     // ------------------------
