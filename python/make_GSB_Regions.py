@@ -72,12 +72,15 @@ REGIONS_USER_CUTS = "minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"
 
 def detect_mult_from_key(key: str):
     """Return '2L'|'3L'|'4L' or None."""
-    for m in ("2L", "3L", "4L"):
-        if key.startswith(f"Bin{m}_"):
-            return m
-    for m in ("2L", "3L", "4L"):
-        if f"Bin{m}_" in key:
-            return m
+    parts = key.split("_")
+    if parts and parts[0] == "Bin":
+        for p in parts[1:4]:  # era + mult usually live here
+            if p in ("2L", "3L", "4L"):
+                return p
+    # fallback: anywhere as a full token
+    for p in parts:
+        if p in ("2L", "3L", "4L"):
+            return p
     return None
 
 def normalize_cuts_string(cuts_text: str):

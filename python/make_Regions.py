@@ -21,6 +21,24 @@ import argparse, subprocess
 # ---------------- USER-TWEAKABLE CONSTANTS ----------------
 OUTDIR = Path("config/bin_cfgs")
 
+# ---------------- ERA CONFIG ----------------
+ERAS = {
+    "Run2": {
+        "tag": "Run2",
+        # future hooks:
+        # "ptisr_2l": 350,
+        # "ptisr_3l": 300,
+        # "extra_tokens": [],
+    },
+    "Run3": {
+        "tag": "Run3",
+        # future hooks:
+        # "ptisr_2l": 350,
+        # "ptisr_3l": 300,
+        # "extra_tokens": [],
+    },
+}
+
 # PTISR tags used in names and cuts
 PTISR_2L = 350
 PTISR_3L = 300
@@ -182,6 +200,17 @@ yaml.width = 4096
 yaml.preserve_quotes = True
 
 # ---------------- helper utilities ----------------
+def era_bin_name(era, base_name):
+    """
+    Insert era into a bin name.
+    Example:
+      Bin2L_Gold_0J_P250_R95_M15_OS_mumu
+      -> Bin_Run2_2L_Gold_0J_P250_R95_M15_OS_mumu
+    """
+    if not base_name.startswith("Bin"):
+        raise ValueError(f"Bin name does not start with 'Bin': {base_name}")
+    return f"Bin_{era}_{base_name[3:]}"
+
 def format_rISR_condition(r):
     if r["max"] >= 1.0:
         return f"RISR_LEP>={r['min']};RISR_LEP<=1.;"
@@ -255,7 +284,7 @@ def lookup_risr_by_name(name, risr_list):
     return None
 
 # ---------------- 2L combinatorial generator ----------------
-def build_bins_2l_for_jet(jtag, jconf, ptisr_tag, risr_bins):
+def build_bins_2l_for_jet(era, jtag, jconf, ptisr_tag, risr_bins):
     out = {}
     PTISR_CUT_STR = f"PTISR_LEP>={ptisr_tag};"
     PTISR_PNAME = f"P{ptisr_tag}"
@@ -267,7 +296,8 @@ def build_bins_2l_for_jet(jtag, jconf, ptisr_tag, risr_bins):
                 continue
             mcut_token, mnamefrag = make_mperp_cut_tokens(r, mcat)
             for (flav_key, flavor_lep_lines) in FLAVOR_SPLITS_2L:
-                bin_key = f"Bin2L_Gold_{jtag}_{PTISR_PNAME}_{r['name']}_{mnamefrag}_{flav_key}"
+                raw_key = f"Bin2L_Gold_{jtag}_{PTISR_PNAME}_{r['name']}_{mnamefrag}_{flav_key}"
+                bin_key = era_bin_name(era, raw_key)
                 jet_token = jconf["njet_cond"]
                 cuts_txt = DoubleQuotedScalarString(
                     assemble_cuts_string(
@@ -290,7 +320,7 @@ def build_bins_2l_for_jet(jtag, jconf, ptisr_tag, risr_bins):
     return out
 
 # ---------------- 3L rule-driven generator ----------------
-def build_bins_3l_from_rules(jtag, jconf, ptisr_tag, risr_bins, rules_for_jet, maratio_threshold, verbose=False):
+def build_bins_3l_from_rules(era, jtag, jconf, ptisr_tag, risr_bins, rules_for_jet, maratio_threshold, verbose=False):
     """
     rules_for_jet: dict for that jet from THREE_L_RULES
     risr_bins: list (RISR_BINS_3L)
@@ -407,7 +437,7 @@ def build_bins_3l_from_rules(jtag, jconf, ptisr_tag, risr_bins, rules_for_jet, m
                             )
                         )
                         lep_block = make_lep_cuts_block(COMMON_LEP, flavor_lines)
-                        out[bin_key] = {
+                        out[era_bin_name(era, bin_key)] = {
                             "cuts": cuts_txt,
                             "lep-cuts": lep_block,
                             "predefined-cuts": DoubleQuotedScalarString(PREDEFINED_CUTS),
@@ -416,7 +446,7 @@ def build_bins_3l_from_rules(jtag, jconf, ptisr_tag, risr_bins, rules_for_jet, m
     return out
 
 # ---------------- 4L generator ----------------
-def build_bins_4l(ptisr_tag=100):
+def build_bins_4l(era, ptisr_tag=100):
     out = {}
     COMMON_LEP = ["=0OSSF|mass>=3|mass<=3.2;", "=4Gold;"]
 
@@ -437,8 +467,10 @@ def build_bins_4l(ptisr_tag=100):
                 mname = "Ml"
 
             for nb in NLEP_B_SPLITS_4L:
-                key = f"Bin4L_Gold_{r['name']}_{mname}_{nb}1" if nb == 1 else f"Bin4L_Gold_{r['name']}_{mname}_{nb}2"
-
+                raw_key = f"Bin4L_Gold_{r['name']}_{mname}"
+                if   nb == 2: raw_key += "_22"
+                elif nb == 1: raw_key += "_31"
+                key = era_bin_name(era, raw_key)
                 cuts = DoubleQuotedScalarString(
                     assemble_cuts_string(
                         4,
@@ -460,7 +492,7 @@ def build_bins_4l(ptisr_tag=100):
     return out
 
 # ---------------- sideband generator ----------------
-def build_bins_btag_sideband():
+def build_bins_btag_sideband(era):
     out = {}
 
     for nlep in (2, 3, 4):
@@ -478,8 +510,8 @@ def build_bins_btag_sideband():
                 risr_cond = format_rISR_condition(r)
 
                 for jtag, jconf in JET_CONFIGS.items():
-                    key = f"Bin{nlep}L_Gold_{jtag}_{pname}_{r['name']}_Btag"
-
+                    raw_key = f"Bin{nlep}L_Gold_{jtag}_{pname}_{r['name']}_Btag"
+                    key = era_bin_name(era, raw_key)
                     cuts = DoubleQuotedScalarString(
                         assemble_cuts_string(
                             nlep,
@@ -512,33 +544,33 @@ def write_yaml_map(filename: Path, mapping):
 def main(outdir: Path, dry_run=False, maratio_threshold=DEFAULT_MARATIO_THRESHOLD, verbose=False):
     files_to_write = {}
 
-    # 2L outputs
-    for jtag, jconf in JET_CONFIGS.items():
-        doc_map = build_bins_2l_for_jet(jtag, jconf, PTISR_2L, RISR_BINS_2L)
-        fname = outdir / f"Regions_2L_{jtag}_hPTISR_Gold.yaml"
-        files_to_write[fname] = doc_map
-
-    # 3L outputs using rule table
-    for jtag, jconf in JET_CONFIGS_3L.items():
-        rules_for_jet = THREE_L_RULES.get(jtag, {})
-        doc_map = build_bins_3l_from_rules(
-            jtag,
-            jconf,
-            PTISR_3L,
-            RISR_BINS_3L,
-            #THREE_L_RULES,
-            rules_for_jet,
-            maratio_threshold,
-            verbose=verbose,
-        )
-        fname = outdir / f"Regions_3L_{jtag}_hPTISR_Gold.yaml"
-        files_to_write[fname] = doc_map
-
-    # 4L
-    files_to_write[outdir / "Regions_4L_Gold.yaml"] = build_bins_4l()
-    
-    # b-tag sideband
-    files_to_write[outdir / "Regions_top_sideband_Gold.yaml"] = build_bins_btag_sideband()
+    for era, era_cfg in ERAS.items():
+        # 2L
+        for jtag, jconf in JET_CONFIGS.items():
+            doc_map = build_bins_2l_for_jet(
+                era, jtag, jconf, PTISR_2L, RISR_BINS_2L
+            )
+            fname = outdir / f"Regions_{era}_2L_{jtag}_hPTISR_Gold.yaml"
+            files_to_write[fname] = doc_map
+        # 3L
+        for jtag, jconf in JET_CONFIGS_3L.items():
+            rules_for_jet = THREE_L_RULES.get(jtag, {})
+            doc_map = build_bins_3l_from_rules(
+                era,
+                jtag,
+                jconf,
+                PTISR_3L,
+                RISR_BINS_3L,
+                rules_for_jet,
+                maratio_threshold,
+                verbose=verbose,
+            )
+            fname = outdir / f"Regions_{era}_3L_{jtag}_hPTISR_Gold.yaml"
+            files_to_write[fname] = doc_map
+        # 4L
+        files_to_write[outdir / f"Regions_{era}_4L_Gold.yaml"] = build_bins_4l(era)
+        # b-tag sideband
+        files_to_write[outdir / f"Regions_{era}_top_sideband_Gold.yaml"] = build_bins_btag_sideband(era)
 
     # write or dry-run
     for path, doc in files_to_write.items():
