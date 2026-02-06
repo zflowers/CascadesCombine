@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    int max_Nsig = 10; // maximum number of signals to read in from file
+    int max_Nsig = 20; // maximum number of signals to read in from file
     int Nsig = 0;
     std::vector<std::string> procs;
     std::vector<double> vals;

@@ -112,14 +112,17 @@ int main(int argc, char** argv) {
     ST.LoadAllFromMaster();
     bool IsData = SampleIsData(rootFilePath);
     int year = 0;
-    if (rootFilePath.find("Summer20UL16_") != std::string::npos) year = 2016;
-    if (rootFilePath.find("Summer20UL16APV_") != std::string::npos) year = 2016;
-    if (rootFilePath.find("Summer20UL17_") != std::string::npos) year = 2017;
-    if (rootFilePath.find("Summer20UL18_") != std::string::npos) year = 2018;
-    if (rootFilePath.find("Summer22_") != std::string::npos) year = 2022;
-    if (rootFilePath.find("Summer22EE_") != std::string::npos) year = 2022;
-    if (rootFilePath.find("Summer23_") != std::string::npos) year = 2023;
-    if (rootFilePath.find("Summer23BPix_") != std::string::npos) year = 2023;
+    if (rootFilePath.find("Summer16_102X") != std::string::npos) year = 2016;
+    else if (rootFilePath.find("Fall17_102X") != std::string::npos) year = 2017;
+    else if (rootFilePath.find("Autumn18_102X") != std::string::npos) year = 2018;
+    else if (rootFilePath.find("Summer20UL16_106X") != std::string::npos) year = 2016;
+    else if (rootFilePath.find("Summer20UL16APV_106X") != std::string::npos) year = 2016;
+    else if (rootFilePath.find("Summer20UL17_106X") != std::string::npos) year = 2017;
+    else if (rootFilePath.find("Summer20UL18_106X") != std::string::npos) year = 2018;
+    else if (rootFilePath.find("Summer22_130X") != std::string::npos) year = 2022;
+    else if (rootFilePath.find("Summer22EE_130X") != std::string::npos) year = 2022;
+    else if (rootFilePath.find("Summer23_130X") != std::string::npos) year = 2023;
+    else if (rootFilePath.find("Summer23BPix_130X") != std::string::npos) year = 2023;
     if (Lumi <= 0.) Lumi = GetLumiFromKey(rootFilePath); // get lumi from ST for file
     if (sampleName.empty()) sampleName = GetSampleNameFromKey(rootFilePath);
     if (binArg.empty() || rootFilePath.empty() || (!doHist && !doJSON)) { usage(argv[0]); return 1; }
@@ -326,6 +329,18 @@ int main(int argc, char** argv) {
         map_key_to_process.insert({key_LFmuon, processName_LFmuon});
     
         for (const auto &bin : binNames) {
+            // Skip Run2 bins if rootFilePath doesn't contain 106X or 102X
+            if (bin.find("Run2") != std::string::npos &&
+                rootFilePath.find("106X") == std::string::npos &&
+                rootFilePath.find("102X") == std::string::npos) {
+                continue;
+            }
+
+            // Skip Run3 bins if rootFilePath doesn't contain 130X
+            if (bin.find("Run3") != std::string::npos &&
+                rootFilePath.find("130X") == std::string::npos) {
+                continue;
+            }
             if(ROOT::IsImplicitMTEnabled()) ROOT::DisableImplicitMT(); // disable MT for validation
             BaseNodeHandle bin_valHandle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi, IsData, year, validatedDerivedVars);
             ROOT::RDF::RNode bin_base_node_val = bin_valHandle.node; // RNode constructed under IMT OFF

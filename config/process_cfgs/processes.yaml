@@ -1,17 +1,20 @@
 processes:
   bkg:
-    - top_FAKES
-    - boson_FAKES
-    - diboson_FAKES
-    - triboson_FAKES
+    - top_Run2_FAKES
+    - boson_Run2_FAKES
+    - diboson_Run2_FAKES
+    - triboson_Run2_FAKES
+    - top_Run3_FAKES
+    - boson_Run3_FAKES
+    - diboson_Run3_FAKES
+    - triboson_Run3_FAKES
 
   sig:
     - Cascades
     - SMS_TChiWZ
-    #- SMS_TChiWZ_Sandwich
+    - SMS_TChiWZpreUL
 
 sms_filters:
-  - SMS_300_297
   - SMS_300_295
   - SMS_300_290
   - SMS_300_280

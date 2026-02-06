@@ -38,6 +38,41 @@ def sanitize_for_base(s: str, maxlen: int = 240) -> str:
     s = re.sub(r'[^A-Za-z0-9_.-]', '_', s)
     return s[:maxlen]
 
+def file_supports_run2(fpath: str) -> bool:
+    return ("106X" in fpath) or ("102X" in fpath)
+
+def file_supports_run3(fpath: str) -> bool:
+    return ("130X" in fpath)
+
+def bins_require_run2(bin_name: str) -> bool:
+    return any("Run2" in b for b in bin_name.split(";"))
+
+def bins_require_run3(bin_name: str) -> bool:
+    return any("Run3" in b for b in bin_name.split(";"))
+
+def job_is_compatible_with_bins(job, bin_name: str) -> bool:
+    fpath = job["filepath"]
+    # File capabilities
+    file_r2 = ("106X" in fpath) or ("102X" in fpath)
+    file_r3 = ("130X" in fpath)
+    # Bin requirements
+    bins = bin_name.split(";")
+    need_r2 = any("Run2" in b for b in bins)
+    need_r3 = any("Run3" in b for b in bins)
+    # If bins do NOT explicitly require an era → always submit
+    if not need_r2 and not need_r3:
+        return True
+    # Mixed bins -> submit (exe will skip internally)
+    if need_r2 and need_r3:
+        return True
+    # Run2-only bins
+    if need_r2 and not need_r3:
+        return file_r2
+    # Run3-only bins
+    if need_r3 and not need_r2:
+        return file_r3
+    return True
+
 def make_condor_dir_name(bin_name: str, bins_cfg_path: Optional[Union[str, Path]] = None) -> str:
     """
     Produce a short stable condor directory name for the given bin group.
@@ -780,6 +815,12 @@ def main():
         sms_filters,
         hist_yaml_file=args.hist_yaml if args.hist_yaml else None,
     )
+
+    filtered_jobs = []
+    for job in jobs:
+        if job_is_compatible_with_bins(job, args.bin):
+            filtered_jobs.append(job)
+    jobs = filtered_jobs
 
     # If a hist YAML was provided, store it in each job (reference staged configs if available)
     if args.hist_yaml:

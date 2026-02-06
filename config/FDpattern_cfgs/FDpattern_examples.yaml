@@ -1,533 +1,1006 @@
 bins:
-  - name: "2L_Bronze_0J_Low_PTISR_Lowest_RISR"
+  - name: "Run2_2L_Bronze_0J_Low_PTISR_Lowest_RISR"
     include:
-        - "*2L_Bronze_0J_P250_R6_*"
-        - "*2L_Bronze_0J_P250_R65_*"
+        - "*Run2*2L_Bronze_0J_P250_R6_*"
+        - "*Run2*2L_Bronze_0J_P250_R65_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Bronze_0J_Low_PTISR_Low_RISR"
+  - name: "Run2_2L_Bronze_0J_Low_PTISR_Low_RISR"
     include:
-        - "*2L_Bronze_0J_P250_R7_*"
-        - "*2L_Bronze_0J_P250_R75_*"
+        - "*Run2*2L_Bronze_0J_P250_R7_*"
+        - "*Run2*2L_Bronze_0J_P250_R75_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Bronze_0J_Low_PTISR_Mid_RISR"
+  - name: "Run2_2L_Bronze_0J_Low_PTISR_Mid_RISR"
     include:
-        - "*2L_Bronze_0J_P250_R8_*"
-        - "*2L_Bronze_0J_P250_R85_*"
+        - "*Run2*2L_Bronze_0J_P250_R8_*"
+        - "*Run2*2L_Bronze_0J_P250_R85_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Bronze_0J_Low_PTISR_High_RISR"
+  - name: "Run2_2L_Bronze_0J_Low_PTISR_High_RISR"
     include:
-        - "*2L_Bronze_0J_P250_R9_*"
-        - "*2L_Bronze_0J_P250_R95_*"
+        - "*Run2*2L_Bronze_0J_P250_R9_*"
+        - "*Run2*2L_Bronze_0J_P250_R95_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Bronze_1J_Low_PTISR_Lowest_RISR"
+  - name: "Run2_2L_Bronze_1J_Low_PTISR_Lowest_RISR"
     include:
-        - "*2L_Bronze_1J_P250_R6_*"
-        - "*2L_Bronze_1J_P250_R65_*"
+        - "*Run2*2L_Bronze_1J_P250_R6_*"
+        - "*Run2*2L_Bronze_1J_P250_R65_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Bronze_1J_Low_PTISR_Low_RISR"
+  - name: "Run2_2L_Bronze_1J_Low_PTISR_Low_RISR"
     include:
-        - "*2L_Bronze_1J_P250_R7_*"
-        - "*2L_Bronze_1J_P250_R75_*"
+        - "*Run2*2L_Bronze_1J_P250_R7_*"
+        - "*Run2*2L_Bronze_1J_P250_R75_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Bronze_1J_Low_PTISR_Mid_RISR"
+  - name: "Run2_2L_Bronze_1J_Low_PTISR_Mid_RISR"
     include:
-        - "*2L_Bronze_1J_P250_R8_*"
-        - "*2L_Bronze_1J_P250_R85_*"
+        - "*Run2*2L_Bronze_1J_P250_R8_*"
+        - "*Run2*2L_Bronze_1J_P250_R85_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Bronze_1J_Low_PTISR_High_RISR"
+  - name: "Run2_2L_Bronze_1J_Low_PTISR_High_RISR"
     include:
-        - "*2L_Bronze_1J_P250_R9_*"
-        - "*2L_Bronze_1J_P250_R95_*"
+        - "*Run2*2L_Bronze_1J_P250_R9_*"
+        - "*Run2*2L_Bronze_1J_P250_R95_*"
     exclude:
         - "*Btag*"
-  - name: "3L_Bronze_0J_Low_PTISR"
+  - name: "Run2_3L_Bronze_0J_Low_PTISR"
     include:
-        - "*3L_Bronze_0J_P200_R6_*"
-        - "*3L_Bronze_0J_P200_R7_*"
-        - "*3L_Bronze_0J_P200_R8_*"
-        - "*3L_Bronze_0J_P200_R9_*"
+        - "*Run2*3L_Bronze_0J_P200_R6_*"
+        - "*Run2*3L_Bronze_0J_P200_R7_*"
+        - "*Run2*3L_Bronze_0J_P200_R8_*"
+        - "*Run2*3L_Bronze_0J_P200_R9_*"
     exclude:
         - "*Btag*"
-  - name: "3L_Bronze_0J_High_PTISR"
+  - name: "Run2_3L_Bronze_0J_High_PTISR"
     include:
-        - "*3L_Bronze_0J_P300_R6_*"
-        - "*3L_Bronze_0J_P300_R7_*"
-        - "*3L_Bronze_0J_P300_R8_*"
-        - "*3L_Bronze_0J_P300_R9_*"
+        - "*Run2*3L_Bronze_0J_P300_R6_*"
+        - "*Run2*3L_Bronze_0J_P300_R7_*"
+        - "*Run2*3L_Bronze_0J_P300_R8_*"
+        - "*Run2*3L_Bronze_0J_P300_R9_*"
     exclude:
         - "*Btag*"
-  - name: "3L_Bronze_Low_PTISR"
+  - name: "Run2_3L_Bronze_Low_PTISR"
     include:
-        - "*3L_Bronze_Jincl_P200_R6_*"
-        - "*3L_Bronze_Jincl_P200_R7_*"
-        - "*3L_Bronze_Jincl_P200_R8_*"
-        - "*3L_Bronze_Jincl_P200_R9_*"
+        - "*Run2*3L_Bronze_Jincl_P200_R6_*"
+        - "*Run2*3L_Bronze_Jincl_P200_R7_*"
+        - "*Run2*3L_Bronze_Jincl_P200_R8_*"
+        - "*Run2*3L_Bronze_Jincl_P200_R9_*"
     exclude:
         - "*Btag*"
-  - name: "3L_Bronze_High_PTISR"
+  - name: "Run2_3L_Bronze_High_PTISR"
     include:
-        - "*3L_Bronze_Jincl_P300_R6_*"
-        - "*3L_Bronze_Jincl_P300_R7_*"
-        - "*3L_Bronze_Jincl_P300_R8_*"
-        - "*3L_Bronze_Jincl_P300_R9_*"
+        - "*Run2*3L_Bronze_Jincl_P300_R6_*"
+        - "*Run2*3L_Bronze_Jincl_P300_R7_*"
+        - "*Run2*3L_Bronze_Jincl_P300_R8_*"
+        - "*Run2*3L_Bronze_Jincl_P300_R9_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Bronze_0J_High_PTISR_Lowest_RISR"
+  - name: "Run2_2L_Bronze_0J_High_PTISR_Lowest_RISR"
     include:
-        - "*2L_Bronze_0J_P350_R6_*"
-        - "*2L_Bronze_0J_P350_R65_*"
+        - "*Run2*2L_Bronze_0J_P350_R6_*"
+        - "*Run2*2L_Bronze_0J_P350_R65_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Bronze_0J_High_PTISR_Low_RISR"
+  - name: "Run2_2L_Bronze_0J_High_PTISR_Low_RISR"
     include:
-        - "*2L_Bronze_0J_P350_R7_*"
-        - "*2L_Bronze_0J_P350_R75_*"
+        - "*Run2*2L_Bronze_0J_P350_R7_*"
+        - "*Run2*2L_Bronze_0J_P350_R75_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Bronze_0J_High_PTISR_Mid_RISR"
+  - name: "Run2_2L_Bronze_0J_High_PTISR_Mid_RISR"
     include:
-        - "*2L_Bronze_0J_P350_R8_*"
-        - "*2L_Bronze_0J_P350_R85_*"
+        - "*Run2*2L_Bronze_0J_P350_R8_*"
+        - "*Run2*2L_Bronze_0J_P350_R85_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Bronze_0J_High_PTISR_High_RISR"
+  - name: "Run2_2L_Bronze_0J_High_PTISR_High_RISR"
     include:
-        - "*2L_Bronze_0J_P350_R9_*"
-        - "*2L_Bronze_0J_P350_R95_*"
+        - "*Run2*2L_Bronze_0J_P350_R9_*"
+        - "*Run2*2L_Bronze_0J_P350_R95_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Bronze_1J_High_PTISR_Lowest_RISR"
+  - name: "Run2_2L_Bronze_1J_High_PTISR_Lowest_RISR"
     include:
-        - "*2L_Bronze_1J_P350_R6_*"
-        - "*2L_Bronze_1J_P350_R65_*"
+        - "*Run2*2L_Bronze_1J_P350_R6_*"
+        - "*Run2*2L_Bronze_1J_P350_R65_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Bronze_1J_High_PTISR_Low_RISR"
+  - name: "Run2_2L_Bronze_1J_High_PTISR_Low_RISR"
     include:
-        - "*2L_Bronze_1J_P350_R7_*"
-        - "*2L_Bronze_1J_P350_R75_*"
+        - "*Run2*2L_Bronze_1J_P350_R7_*"
+        - "*Run2*2L_Bronze_1J_P350_R75_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Bronze_1J_High_PTISR_Mid_RISR"
+  - name: "Run2_2L_Bronze_1J_High_PTISR_Mid_RISR"
     include:
-        - "*2L_Bronze_1J_P350_R8_*"
-        - "*2L_Bronze_1J_P350_R85_*"
+        - "*Run2*2L_Bronze_1J_P350_R8_*"
+        - "*Run2*2L_Bronze_1J_P350_R85_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Bronze_1J_High_PTISR_High_RISR"
+  - name: "Run2_2L_Bronze_1J_High_PTISR_High_RISR"
     include:
-        - "*2L_Bronze_1J_P350_R9_*"
-        - "*2L_Bronze_1J_P350_R95_*"
+        - "*Run2*2L_Bronze_1J_P350_R9_*"
+        - "*Run2*2L_Bronze_1J_P350_R95_*"
     exclude:
         - "*Btag*"
-  - name: "3L_Bronze_1J_Low_PTISR"
+  - name: "Run2_3L_Bronze_1J_Low_PTISR"
     include:
-        - "*3L_Bronze_1J_P200_R6_*"
-        - "*3L_Bronze_1J_P200_R7_*"
-        - "*3L_Bronze_1J_P200_R8_*"
-        - "*3L_Bronze_1J_P200_R9_*"
+        - "*Run2*3L_Bronze_1J_P200_R6_*"
+        - "*Run2*3L_Bronze_1J_P200_R7_*"
+        - "*Run2*3L_Bronze_1J_P200_R8_*"
+        - "*Run2*3L_Bronze_1J_P200_R9_*"
     exclude:
         - "*Btag*"
-  - name: "3L_Bronze_1J_High_PTISR"
+  - name: "Run2_3L_Bronze_1J_High_PTISR"
     include:
-        - "*3L_Bronze_1J_P300_R6_*"
-        - "*3L_Bronze_1J_P300_R7_*"
-        - "*3L_Bronze_1J_P300_R8_*"
-        - "*3L_Bronze_1J_P300_R9_*"
+        - "*Run2*3L_Bronze_1J_P300_R6_*"
+        - "*Run2*3L_Bronze_1J_P300_R7_*"
+        - "*Run2*3L_Bronze_1J_P300_R8_*"
+        - "*Run2*3L_Bronze_1J_P300_R9_*"
     exclude:
         - "*Btag*"
-  - name: "4L_Bronze"
+  - name: "Run2_4L_Bronze"
     include:
-        "*4L_Bronze_*"
+        - "*Run2*4L_Bronze_*"
     exclude:
         - "*Btag*"
-  - name: "Bronze_Btag"
+  - name: "Run2_Bronze_Btag"
     include:
-        "*Bronze_*Btag"
+        "Run2*Bronze_*Btag"
 
-  - name: "2L_Silver_0J_Low_PTISR_Lowest_RISR"
+  - name: "Run2_2L_Silver_0J_Low_PTISR_Lowest_RISR"
     include:
-        - "*2L_Silver_0J_P250_R6_*"
-        - "*2L_Silver_0J_P250_R65_*"
+        - "*Run2*2L_Silver_0J_P250_R6_*"
+        - "*Run2*2L_Silver_0J_P250_R65_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Silver_0J_Low_PTISR_Low_RISR"
+  - name: "Run2_2L_Silver_0J_Low_PTISR_Low_RISR"
     include:
-        - "*2L_Silver_0J_P250_R7_*"
-        - "*2L_Silver_0J_P250_R75_*"
+        - "*Run2*2L_Silver_0J_P250_R7_*"
+        - "*Run2*2L_Silver_0J_P250_R75_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Silver_0J_Low_PTISR_Mid_RISR"
+  - name: "Run2_2L_Silver_0J_Low_PTISR_Mid_RISR"
     include:
-        - "*2L_Silver_0J_P250_R8_*"
-        - "*2L_Silver_0J_P250_R85_*"
+        - "*Run2*2L_Silver_0J_P250_R8_*"
+        - "*Run2*2L_Silver_0J_P250_R85_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Silver_0J_Low_PTISR_High_RISR"
+  - name: "Run2_2L_Silver_0J_Low_PTISR_High_RISR"
     include:
-        - "*2L_Silver_0J_P250_R9_*"
-        - "*2L_Silver_0J_P250_R95_*"
+        - "*Run2*2L_Silver_0J_P250_R9_*"
+        - "*Run2*2L_Silver_0J_P250_R95_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Silver_1J_Low_PTISR_Lowest_RISR"
+  - name: "Run2_2L_Silver_1J_Low_PTISR_Lowest_RISR"
     include:
-        - "*2L_Silver_1J_P250_R6_*"
-        - "*2L_Silver_1J_P250_R65_*"
+        - "*Run2*2L_Silver_1J_P250_R6_*"
+        - "*Run2*2L_Silver_1J_P250_R65_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Silver_1J_Low_PTISR_Low_RISR"
+  - name: "Run2_2L_Silver_1J_Low_PTISR_Low_RISR"
     include:
-        - "*2L_Silver_1J_P250_R7_*"
-        - "*2L_Silver_1J_P250_R75_*"
+        - "*Run2*2L_Silver_1J_P250_R7_*"
+        - "*Run2*2L_Silver_1J_P250_R75_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Silver_1J_Low_PTISR_Mid_RISR"
+  - name: "Run2_2L_Silver_1J_Low_PTISR_Mid_RISR"
     include:
-        - "*2L_Silver_1J_P250_R8_*"
-        - "*2L_Silver_1J_P250_R85_*"
+        - "*Run2*2L_Silver_1J_P250_R8_*"
+        - "*Run2*2L_Silver_1J_P250_R85_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Silver_1J_Low_PTISR_High_RISR"
+  - name: "Run2_2L_Silver_1J_Low_PTISR_High_RISR"
     include:
-        - "*2L_Silver_1J_P250_R9_*"
-        - "*2L_Silver_1J_P250_R95_*"
+        - "*Run2*2L_Silver_1J_P250_R9_*"
+        - "*Run2*2L_Silver_1J_P250_R95_*"
     exclude:
         - "*Btag*"
-  - name: "3L_Silver_0J_Low_PTISR"
+  - name: "Run2_3L_Silver_0J_Low_PTISR"
     include:
-        - "*3L_Silver_0J_P200_R6_*"
-        - "*3L_Silver_0J_P200_R7_*"
-        - "*3L_Silver_0J_P200_R8_*"
-        - "*3L_Silver_0J_P200_R9_*"
+        - "*Run2*3L_Silver_0J_P200_R6_*"
+        - "*Run2*3L_Silver_0J_P200_R7_*"
+        - "*Run2*3L_Silver_0J_P200_R8_*"
+        - "*Run2*3L_Silver_0J_P200_R9_*"
     exclude:
         - "*Btag*"
-  - name: "3L_Silver_0J_High_PTISR"
+  - name: "Run2_3L_Silver_0J_High_PTISR"
     include:
-        - "*3L_Silver_0J_P300_R6_*"
-        - "*3L_Silver_0J_P300_R7_*"
-        - "*3L_Silver_0J_P300_R8_*"
-        - "*3L_Silver_0J_P300_R9_*"
+        - "*Run2*3L_Silver_0J_P300_R6_*"
+        - "*Run2*3L_Silver_0J_P300_R7_*"
+        - "*Run2*3L_Silver_0J_P300_R8_*"
+        - "*Run2*3L_Silver_0J_P300_R9_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Silver_0J_High_PTISR_Lowest_RISR"
+  - name: "Run2_2L_Silver_0J_High_PTISR_Lowest_RISR"
     include:
-        - "*2L_Silver_0J_P350_R6_*"
-        - "*2L_Silver_0J_P350_R65_*"
+        - "*Run2*2L_Silver_0J_P350_R6_*"
+        - "*Run2*2L_Silver_0J_P350_R65_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Silver_0J_High_PTISR_Low_RISR"
+  - name: "Run2_2L_Silver_0J_High_PTISR_Low_RISR"
     include:
-        - "*2L_Silver_0J_P350_R7_*"
-        - "*2L_Silver_0J_P350_R75_*"
+        - "*Run2*2L_Silver_0J_P350_R7_*"
+        - "*Run2*2L_Silver_0J_P350_R75_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Silver_0J_High_PTISR_Mid_RISR"
+  - name: "Run2_2L_Silver_0J_High_PTISR_Mid_RISR"
     include:
-        - "*2L_Silver_0J_P350_R8_*"
-        - "*2L_Silver_0J_P350_R85_*"
+        - "*Run2*2L_Silver_0J_P350_R8_*"
+        - "*Run2*2L_Silver_0J_P350_R85_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Silver_0J_High_PTISR_High_RISR"
+  - name: "Run2_2L_Silver_0J_High_PTISR_High_RISR"
     include:
-        - "*2L_Silver_0J_P350_R9_*"
-        - "*2L_Silver_0J_P350_R95_*"
+        - "*Run2*2L_Silver_0J_P350_R9_*"
+        - "*Run2*2L_Silver_0J_P350_R95_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Silver_1J_High_PTISR_Lowest_RISR"
+  - name: "Run2_2L_Silver_1J_High_PTISR_Lowest_RISR"
     include:
-        - "*2L_Silver_1J_P350_R6_*"
-        - "*2L_Silver_1J_P350_R65_*"
+        - "*Run2*2L_Silver_1J_P350_R6_*"
+        - "*Run2*2L_Silver_1J_P350_R65_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Silver_1J_High_PTISR_Low_RISR"
+  - name: "Run2_2L_Silver_1J_High_PTISR_Low_RISR"
     include:
-        - "*2L_Silver_1J_P350_R7_*"
-        - "*2L_Silver_1J_P350_R75_*"
+        - "*Run2*2L_Silver_1J_P350_R7_*"
+        - "*Run2*2L_Silver_1J_P350_R75_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Silver_1J_High_PTISR_Mid_RISR"
+  - name: "Run2_2L_Silver_1J_High_PTISR_Mid_RISR"
     include:
-        - "*2L_Silver_1J_P350_R8_*"
-        - "*2L_Silver_1J_P350_R85_*"
+        - "*Run2*2L_Silver_1J_P350_R8_*"
+        - "*Run2*2L_Silver_1J_P350_R85_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Silver_1J_High_PTISR_High_RISR"
+  - name: "Run2_2L_Silver_1J_High_PTISR_High_RISR"
     include:
-        - "*2L_Silver_1J_P350_R9_*"
-        - "*2L_Silver_1J_P350_R95_*"
+        - "*Run2*2L_Silver_1J_P350_R9_*"
+        - "*Run2*2L_Silver_1J_P350_R95_*"
     exclude:
         - "*Btag*"
-  - name: "3L_Silver_1J_Low_PTISR"
+  - name: "Run2_3L_Silver_1J_Low_PTISR"
     include:
-        - "*3L_Silver_1J_P200_R6_*"
-        - "*3L_Silver_1J_P200_R7_*"
-        - "*3L_Silver_1J_P200_R8_*"
-        - "*3L_Silver_1J_P200_R9_*"
+        - "*Run2*3L_Silver_1J_P200_R6_*"
+        - "*Run2*3L_Silver_1J_P200_R7_*"
+        - "*Run2*3L_Silver_1J_P200_R8_*"
+        - "*Run2*3L_Silver_1J_P200_R9_*"
     exclude:
         - "*Btag*"
-  - name: "3L_Silver_1J_High_PTISR"
+  - name: "Run2_3L_Silver_1J_High_PTISR"
     include:
-        - "*3L_Silver_1J_P300_R6_*"
-        - "*3L_Silver_1J_P300_R7_*"
-        - "*3L_Silver_1J_P300_R8_*"
-        - "*3L_Silver_1J_P300_R9_*"
+        - "*Run2*3L_Silver_1J_P300_R6_*"
+        - "*Run2*3L_Silver_1J_P300_R7_*"
+        - "*Run2*3L_Silver_1J_P300_R8_*"
+        - "*Run2*3L_Silver_1J_P300_R9_*"
     exclude:
         - "*Btag*"
-  - name: "3L_Silver_Low_PTISR"
+  - name: "Run2_3L_Silver_Low_PTISR"
     include:
-        - "*3L_Silver_Jincl_P200_R6_*"
-        - "*3L_Silver_Jincl_P200_R7_*"
-        - "*3L_Silver_Jincl_P200_R8_*"
-        - "*3L_Silver_Jincl_P200_R9_*"
+        - "*Run2*3L_Silver_Jincl_P200_R6_*"
+        - "*Run2*3L_Silver_Jincl_P200_R7_*"
+        - "*Run2*3L_Silver_Jincl_P200_R8_*"
+        - "*Run2*3L_Silver_Jincl_P200_R9_*"
     exclude:
         - "*Btag*"
-  - name: "3L_Silver_High_PTISR"
+  - name: "Run2_3L_Silver_High_PTISR"
     include:
-        - "*3L_Silver_Jincl_P300_R6_*"
-        - "*3L_Silver_Jincl_P300_R7_*"
-        - "*3L_Silver_Jincl_P300_R8_*"
-        - "*3L_Silver_Jincl_P300_R9_*"
+        - "*Run2*3L_Silver_Jincl_P300_R6_*"
+        - "*Run2*3L_Silver_Jincl_P300_R7_*"
+        - "*Run2*3L_Silver_Jincl_P300_R8_*"
+        - "*Run2*3L_Silver_Jincl_P300_R9_*"
     exclude:
         - "*Btag*"
-  - name: "4L_Silver"
+  - name: "Run2_4L_Silver"
     include:
-        "*4L_Silver_*"
+        - "*Run2*4L_Silver_*"
     exclude:
         - "*Btag*"
-  - name: "Silver_Btag"
+  - name: "Run2_Silver_Btag"
     include:
-        "*Silver_*Btag"
+        "Run2*Silver_*Btag"
 
-  - name: "2L_Gold_0J_Low_PTISR_Lowest_RISR"
+  - name: "Run2_2L_Gold_0J_Low_PTISR_Lowest_RISR"
     include:
-        - "*2L_Gold_0J_P250_R6_*"
-        - "*2L_Gold_0J_P250_R65_*"
+        - "*Run2*2L_Gold_0J_P250_R6_*"
+        - "*Run2*2L_Gold_0J_P250_R65_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Gold_0J_Low_PTISR_Low_RISR"
+  - name: "Run2_2L_Gold_0J_Low_PTISR_Low_RISR"
     include:
-        - "*2L_Gold_0J_P250_R7_*"
-        - "*2L_Gold_0J_P250_R75_*"
+        - "*Run2*2L_Gold_0J_P250_R7_*"
+        - "*Run2*2L_Gold_0J_P250_R75_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Gold_0J_Low_PTISR_Mid_RISR"
+  - name: "Run2_2L_Gold_0J_Low_PTISR_Mid_RISR"
     include:
-        - "*2L_Gold_0J_P250_R8_*"
-        - "*2L_Gold_0J_P250_R85_*"
+        - "*Run2*2L_Gold_0J_P250_R8_*"
+        - "*Run2*2L_Gold_0J_P250_R85_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Gold_0J_Low_PTISR_High_RISR"
+  - name: "Run2_2L_Gold_0J_Low_PTISR_High_RISR"
     include:
-        - "*2L_Gold_0J_P250_R9_*"
-        - "*2L_Gold_0J_P250_R95_*"
+        - "*Run2*2L_Gold_0J_P250_R9_*"
+        - "*Run2*2L_Gold_0J_P250_R95_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Gold_1J_Low_PTISR_Lowest_RISR"
+  - name: "Run2_2L_Gold_1J_Low_PTISR_Lowest_RISR"
     include:
-        - "*2L_Gold_1J_P250_R6_*"
-        - "*2L_Gold_1J_P250_R65_*"
+        - "*Run2*2L_Gold_1J_P250_R6_*"
+        - "*Run2*2L_Gold_1J_P250_R65_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Gold_1J_Low_PTISR_Low_RISR"
+  - name: "Run2_2L_Gold_1J_Low_PTISR_Low_RISR"
     include:
-        - "*2L_Gold_1J_P250_R7_*"
-        - "*2L_Gold_1J_P250_R75_*"
+        - "*Run2*2L_Gold_1J_P250_R7_*"
+        - "*Run2*2L_Gold_1J_P250_R75_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Gold_1J_Low_PTISR_Mid_RISR"
+  - name: "Run2_2L_Gold_1J_Low_PTISR_Mid_RISR"
     include:
-        - "*2L_Gold_1J_P250_R8_*"
-        - "*2L_Gold_1J_P250_R85_*"
+        - "*Run2*2L_Gold_1J_P250_R8_*"
+        - "*Run2*2L_Gold_1J_P250_R85_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Gold_1J_Low_PTISR_High_RISR"
+  - name: "Run2_2L_Gold_1J_Low_PTISR_High_RISR"
     include:
-        - "*2L_Gold_1J_P250_R9_*"
-        - "*2L_Gold_1J_P250_R95_*"
+        - "*Run2*2L_Gold_1J_P250_R9_*"
+        - "*Run2*2L_Gold_1J_P250_R95_*"
     exclude:
         - "*Btag*"
-  - name: "3L_Gold_0J_Low_PTISR"
+  - name: "Run2_3L_Gold_0J_Low_PTISR"
     include:
-        - "*3L_Gold_0J_P200_R6_*"
-        - "*3L_Gold_0J_P200_R7_*"
-        - "*3L_Gold_0J_P200_R8_*"
-        - "*3L_Gold_0J_P200_R9_*"
+        - "*Run2*3L_Gold_0J_P200_R6_*"
+        - "*Run2*3L_Gold_0J_P200_R7_*"
+        - "*Run2*3L_Gold_0J_P200_R8_*"
+        - "*Run2*3L_Gold_0J_P200_R9_*"
     exclude:
         - "*Btag*"
-  - name: "3L_Gold_0J_High_PTISR"
+  - name: "Run2_3L_Gold_0J_High_PTISR"
     include:
-        - "*3L_Gold_0J_P300_R6_*"
-        - "*3L_Gold_0J_P300_R7_*"
-        - "*3L_Gold_0J_P300_R8_*"
-        - "*3L_Gold_0J_P300_R9_*"
+        - "*Run2*3L_Gold_0J_P300_R6_*"
+        - "*Run2*3L_Gold_0J_P300_R7_*"
+        - "*Run2*3L_Gold_0J_P300_R8_*"
+        - "*Run2*3L_Gold_0J_P300_R9_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Gold_0J_High_PTISR_Lowest_RISR"
+  - name: "Run2_2L_Gold_0J_High_PTISR_Lowest_RISR"
     include:
-        - "*2L_Gold_0J_P350_R6_*"
-        - "*2L_Gold_0J_P350_R65_*"
+        - "*Run2*2L_Gold_0J_P350_R6_*"
+        - "*Run2*2L_Gold_0J_P350_R65_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Gold_0J_High_PTISR_Low_RISR"
+  - name: "Run2_2L_Gold_0J_High_PTISR_Low_RISR"
     include:
-        - "*2L_Gold_0J_P350_R7_*"
-        - "*2L_Gold_0J_P350_R75_*"
+        - "*Run2*2L_Gold_0J_P350_R7_*"
+        - "*Run2*2L_Gold_0J_P350_R75_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Gold_0J_High_PTISR_Mid_RISR"
+  - name: "Run2_2L_Gold_0J_High_PTISR_Mid_RISR"
     include:
-        - "*2L_Gold_0J_P350_R8_*"
-        - "*2L_Gold_0J_P350_R85_*"
+        - "*Run2*2L_Gold_0J_P350_R8_*"
+        - "*Run2*2L_Gold_0J_P350_R85_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Gold_0J_High_PTISR_High_RISR"
+  - name: "Run2_2L_Gold_0J_High_PTISR_High_RISR"
     include:
-        - "*2L_Gold_0J_P350_R9_*"
-        - "*2L_Gold_0J_P350_R95_*"
+        - "*Run2*2L_Gold_0J_P350_R9_*"
+        - "*Run2*2L_Gold_0J_P350_R95_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Gold_1J_High_PTISR_Lowest_RISR"
+  - name: "Run2_2L_Gold_1J_High_PTISR_Lowest_RISR"
     include:
-        - "*2L_Gold_1J_P350_R6_*"
-        - "*2L_Gold_1J_P350_R65_*"
+        - "*Run2*2L_Gold_1J_P350_R6_*"
+        - "*Run2*2L_Gold_1J_P350_R65_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Gold_1J_High_PTISR_Low_RISR"
+  - name: "Run2_2L_Gold_1J_High_PTISR_Low_RISR"
     include:
-        - "*2L_Gold_1J_P350_R7_*"
-        - "*2L_Gold_1J_P350_R75_*"
+        - "*Run2*2L_Gold_1J_P350_R7_*"
+        - "*Run2*2L_Gold_1J_P350_R75_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Gold_1J_High_PTISR_Mid_RISR"
+  - name: "Run2_2L_Gold_1J_High_PTISR_Mid_RISR"
     include:
-        - "*2L_Gold_1J_P350_R8_*"
-        - "*2L_Gold_1J_P350_R85_*"
+        - "*Run2*2L_Gold_1J_P350_R8_*"
+        - "*Run2*2L_Gold_1J_P350_R85_*"
     exclude:
         - "*Btag*"
-  - name: "2L_Gold_1J_High_PTISR_High_RISR"
+  - name: "Run2_2L_Gold_1J_High_PTISR_High_RISR"
     include:
-        - "*2L_Gold_1J_P350_R9_*"
-        - "*2L_Gold_1J_P350_R95_*"
+        - "*Run2*2L_Gold_1J_P350_R9_*"
+        - "*Run2*2L_Gold_1J_P350_R95_*"
     exclude:
         - "*Btag*"
-  - name: "3L_Gold_1J_Low_PTISR"
+  - name: "Run2_3L_Gold_1J_Low_PTISR"
     include:
-        - "*3L_Gold_1J_P200_R6_*"
-        - "*3L_Gold_1J_P200_R7_*"
-        - "*3L_Gold_1J_P200_R8_*"
-        - "*3L_Gold_1J_P200_R9_*"
+        - "*Run2*3L_Gold_1J_P200_R6_*"
+        - "*Run2*3L_Gold_1J_P200_R7_*"
+        - "*Run2*3L_Gold_1J_P200_R8_*"
+        - "*Run2*3L_Gold_1J_P200_R9_*"
     exclude:
         - "*Btag*"
-  - name: "3L_Gold_1J_High_PTISR"
+  - name: "Run2_3L_Gold_1J_High_PTISR"
     include:
-        - "*3L_Gold_1J_P300_R6_*"
-        - "*3L_Gold_1J_P300_R7_*"
-        - "*3L_Gold_1J_P300_R8_*"
-        - "*3L_Gold_1J_P300_R9_*"
+        - "*Run2*3L_Gold_1J_P300_R6_*"
+        - "*Run2*3L_Gold_1J_P300_R7_*"
+        - "*Run2*3L_Gold_1J_P300_R8_*"
+        - "*Run2*3L_Gold_1J_P300_R9_*"
     exclude:
         - "*Btag*"
-  - name: "3L_Gold_Low_PTISR"
+  - name: "Run2_3L_Gold_Low_PTISR"
     include:
-        - "*3L_Gold_Jincl_P200_R6_*"
-        - "*3L_Gold_Jincl_P200_R7_*"
-        - "*3L_Gold_Jincl_P200_R8_*"
-        - "*3L_Gold_Jincl_P200_R9_*"
+        - "*Run2*3L_Gold_Jincl_P200_R6_*"
+        - "*Run2*3L_Gold_Jincl_P200_R7_*"
+        - "*Run2*3L_Gold_Jincl_P200_R8_*"
+        - "*Run2*3L_Gold_Jincl_P200_R9_*"
     exclude:
         - "*Btag*"
-  - name: "3L_Gold_High_PTISR"
+  - name: "Run2_3L_Gold_High_PTISR"
     include:
-        - "*3L_Gold_Jincl_P300_R6_*"
-        - "*3L_Gold_Jincl_P300_R7_*"
-        - "*3L_Gold_Jincl_P300_R8_*"
-        - "*3L_Gold_Jincl_P300_R9_*"
+        - "*Run2*3L_Gold_Jincl_P300_R6_*"
+        - "*Run2*3L_Gold_Jincl_P300_R7_*"
+        - "*Run2*3L_Gold_Jincl_P300_R8_*"
+        - "*Run2*3L_Gold_Jincl_P300_R9_*"
     exclude:
         - "*Btag*"
-  - name: "4L_Gold"
+  - name: "Run2_4L_Gold"
     include:
-        "*4L_Gold_*"
+        - "*Run2*4L_Gold_*"
     exclude:
         - "*Btag*"
-  - name: "Gold_Btag"
+  - name: "Run2_Gold_Btag"
     include:
-        "*Gold_*Btag"
+        "Run2*Gold_*Btag"
+
+  - name: "Run3_2L_Bronze_0J_Low_PTISR_Lowest_RISR"
+    include:
+        - "*Run3*2L_Bronze_0J_P250_R6_*"
+        - "*Run3*2L_Bronze_0J_P250_R65_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Bronze_0J_Low_PTISR_Low_RISR"
+    include:
+        - "*Run3*2L_Bronze_0J_P250_R7_*"
+        - "*Run3*2L_Bronze_0J_P250_R75_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Bronze_0J_Low_PTISR_Mid_RISR"
+    include:
+        - "*Run3*2L_Bronze_0J_P250_R8_*"
+        - "*Run3*2L_Bronze_0J_P250_R85_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Bronze_0J_Low_PTISR_High_RISR"
+    include:
+        - "*Run3*2L_Bronze_0J_P250_R9_*"
+        - "*Run3*2L_Bronze_0J_P250_R95_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Bronze_1J_Low_PTISR_Lowest_RISR"
+    include:
+        - "*Run3*2L_Bronze_1J_P250_R6_*"
+        - "*Run3*2L_Bronze_1J_P250_R65_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Bronze_1J_Low_PTISR_Low_RISR"
+    include:
+        - "*Run3*2L_Bronze_1J_P250_R7_*"
+        - "*Run3*2L_Bronze_1J_P250_R75_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Bronze_1J_Low_PTISR_Mid_RISR"
+    include:
+        - "*Run3*2L_Bronze_1J_P250_R8_*"
+        - "*Run3*2L_Bronze_1J_P250_R85_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Bronze_1J_Low_PTISR_High_RISR"
+    include:
+        - "*Run3*2L_Bronze_1J_P250_R9_*"
+        - "*Run3*2L_Bronze_1J_P250_R95_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_3L_Bronze_0J_Low_PTISR"
+    include:
+        - "*Run3*3L_Bronze_0J_P200_R6_*"
+        - "*Run3*3L_Bronze_0J_P200_R7_*"
+        - "*Run3*3L_Bronze_0J_P200_R8_*"
+        - "*Run3*3L_Bronze_0J_P200_R9_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_3L_Bronze_0J_High_PTISR"
+    include:
+        - "*Run3*3L_Bronze_0J_P300_R6_*"
+        - "*Run3*3L_Bronze_0J_P300_R7_*"
+        - "*Run3*3L_Bronze_0J_P300_R8_*"
+        - "*Run3*3L_Bronze_0J_P300_R9_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_3L_Bronze_Low_PTISR"
+    include:
+        - "*Run3*3L_Bronze_Jincl_P200_R6_*"
+        - "*Run3*3L_Bronze_Jincl_P200_R7_*"
+        - "*Run3*3L_Bronze_Jincl_P200_R8_*"
+        - "*Run3*3L_Bronze_Jincl_P200_R9_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_3L_Bronze_High_PTISR"
+    include:
+        - "*Run3*3L_Bronze_Jincl_P300_R6_*"
+        - "*Run3*3L_Bronze_Jincl_P300_R7_*"
+        - "*Run3*3L_Bronze_Jincl_P300_R8_*"
+        - "*Run3*3L_Bronze_Jincl_P300_R9_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Bronze_0J_High_PTISR_Lowest_RISR"
+    include:
+        - "*Run3*2L_Bronze_0J_P350_R6_*"
+        - "*Run3*2L_Bronze_0J_P350_R65_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Bronze_0J_High_PTISR_Low_RISR"
+    include:
+        - "*Run3*2L_Bronze_0J_P350_R7_*"
+        - "*Run3*2L_Bronze_0J_P350_R75_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Bronze_0J_High_PTISR_Mid_RISR"
+    include:
+        - "*Run3*2L_Bronze_0J_P350_R8_*"
+        - "*Run3*2L_Bronze_0J_P350_R85_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Bronze_0J_High_PTISR_High_RISR"
+    include:
+        - "*Run3*2L_Bronze_0J_P350_R9_*"
+        - "*Run3*2L_Bronze_0J_P350_R95_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Bronze_1J_High_PTISR_Lowest_RISR"
+    include:
+        - "*Run3*2L_Bronze_1J_P350_R6_*"
+        - "*Run3*2L_Bronze_1J_P350_R65_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Bronze_1J_High_PTISR_Low_RISR"
+    include:
+        - "*Run3*2L_Bronze_1J_P350_R7_*"
+        - "*Run3*2L_Bronze_1J_P350_R75_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Bronze_1J_High_PTISR_Mid_RISR"
+    include:
+        - "*Run3*2L_Bronze_1J_P350_R8_*"
+        - "*Run3*2L_Bronze_1J_P350_R85_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Bronze_1J_High_PTISR_High_RISR"
+    include:
+        - "*Run3*2L_Bronze_1J_P350_R9_*"
+        - "*Run3*2L_Bronze_1J_P350_R95_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_3L_Bronze_1J_Low_PTISR"
+    include:
+        - "*Run3*3L_Bronze_1J_P200_R6_*"
+        - "*Run3*3L_Bronze_1J_P200_R7_*"
+        - "*Run3*3L_Bronze_1J_P200_R8_*"
+        - "*Run3*3L_Bronze_1J_P200_R9_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_3L_Bronze_1J_High_PTISR"
+    include:
+        - "*Run3*3L_Bronze_1J_P300_R6_*"
+        - "*Run3*3L_Bronze_1J_P300_R7_*"
+        - "*Run3*3L_Bronze_1J_P300_R8_*"
+        - "*Run3*3L_Bronze_1J_P300_R9_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_4L_Bronze"
+    include:
+        - "*Run3*4L_Bronze_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_Bronze_Btag"
+    include:
+        "Run3*Bronze_*Btag"
+
+  - name: "Run3_2L_Silver_0J_Low_PTISR_Lowest_RISR"
+    include:
+        - "*Run3*2L_Silver_0J_P250_R6_*"
+        - "*Run3*2L_Silver_0J_P250_R65_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Silver_0J_Low_PTISR_Low_RISR"
+    include:
+        - "*Run3*2L_Silver_0J_P250_R7_*"
+        - "*Run3*2L_Silver_0J_P250_R75_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Silver_0J_Low_PTISR_Mid_RISR"
+    include:
+        - "*Run3*2L_Silver_0J_P250_R8_*"
+        - "*Run3*2L_Silver_0J_P250_R85_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Silver_0J_Low_PTISR_High_RISR"
+    include:
+        - "*Run3*2L_Silver_0J_P250_R9_*"
+        - "*Run3*2L_Silver_0J_P250_R95_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Silver_1J_Low_PTISR_Lowest_RISR"
+    include:
+        - "*Run3*2L_Silver_1J_P250_R6_*"
+        - "*Run3*2L_Silver_1J_P250_R65_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Silver_1J_Low_PTISR_Low_RISR"
+    include:
+        - "*Run3*2L_Silver_1J_P250_R7_*"
+        - "*Run3*2L_Silver_1J_P250_R75_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Silver_1J_Low_PTISR_Mid_RISR"
+    include:
+        - "*Run3*2L_Silver_1J_P250_R8_*"
+        - "*Run3*2L_Silver_1J_P250_R85_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Silver_1J_Low_PTISR_High_RISR"
+    include:
+        - "*Run3*2L_Silver_1J_P250_R9_*"
+        - "*Run3*2L_Silver_1J_P250_R95_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_3L_Silver_0J_Low_PTISR"
+    include:
+        - "*Run3*3L_Silver_0J_P200_R6_*"
+        - "*Run3*3L_Silver_0J_P200_R7_*"
+        - "*Run3*3L_Silver_0J_P200_R8_*"
+        - "*Run3*3L_Silver_0J_P200_R9_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_3L_Silver_0J_High_PTISR"
+    include:
+        - "*Run3*3L_Silver_0J_P300_R6_*"
+        - "*Run3*3L_Silver_0J_P300_R7_*"
+        - "*Run3*3L_Silver_0J_P300_R8_*"
+        - "*Run3*3L_Silver_0J_P300_R9_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Silver_0J_High_PTISR_Lowest_RISR"
+    include:
+        - "*Run3*2L_Silver_0J_P350_R6_*"
+        - "*Run3*2L_Silver_0J_P350_R65_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Silver_0J_High_PTISR_Low_RISR"
+    include:
+        - "*Run3*2L_Silver_0J_P350_R7_*"
+        - "*Run3*2L_Silver_0J_P350_R75_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Silver_0J_High_PTISR_Mid_RISR"
+    include:
+        - "*Run3*2L_Silver_0J_P350_R8_*"
+        - "*Run3*2L_Silver_0J_P350_R85_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Silver_0J_High_PTISR_High_RISR"
+    include:
+        - "*Run3*2L_Silver_0J_P350_R9_*"
+        - "*Run3*2L_Silver_0J_P350_R95_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Silver_1J_High_PTISR_Lowest_RISR"
+    include:
+        - "*Run3*2L_Silver_1J_P350_R6_*"
+        - "*Run3*2L_Silver_1J_P350_R65_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Silver_1J_High_PTISR_Low_RISR"
+    include:
+        - "*Run3*2L_Silver_1J_P350_R7_*"
+        - "*Run3*2L_Silver_1J_P350_R75_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Silver_1J_High_PTISR_Mid_RISR"
+    include:
+        - "*Run3*2L_Silver_1J_P350_R8_*"
+        - "*Run3*2L_Silver_1J_P350_R85_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Silver_1J_High_PTISR_High_RISR"
+    include:
+        - "*Run3*2L_Silver_1J_P350_R9_*"
+        - "*Run3*2L_Silver_1J_P350_R95_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_3L_Silver_1J_Low_PTISR"
+    include:
+        - "*Run3*3L_Silver_1J_P200_R6_*"
+        - "*Run3*3L_Silver_1J_P200_R7_*"
+        - "*Run3*3L_Silver_1J_P200_R8_*"
+        - "*Run3*3L_Silver_1J_P200_R9_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_3L_Silver_1J_High_PTISR"
+    include:
+        - "*Run3*3L_Silver_1J_P300_R6_*"
+        - "*Run3*3L_Silver_1J_P300_R7_*"
+        - "*Run3*3L_Silver_1J_P300_R8_*"
+        - "*Run3*3L_Silver_1J_P300_R9_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_3L_Silver_Low_PTISR"
+    include:
+        - "*Run3*3L_Silver_Jincl_P200_R6_*"
+        - "*Run3*3L_Silver_Jincl_P200_R7_*"
+        - "*Run3*3L_Silver_Jincl_P200_R8_*"
+        - "*Run3*3L_Silver_Jincl_P200_R9_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_3L_Silver_High_PTISR"
+    include:
+        - "*Run3*3L_Silver_Jincl_P300_R6_*"
+        - "*Run3*3L_Silver_Jincl_P300_R7_*"
+        - "*Run3*3L_Silver_Jincl_P300_R8_*"
+        - "*Run3*3L_Silver_Jincl_P300_R9_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_4L_Silver"
+    include:
+        - "*Run3*4L_Silver_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_Silver_Btag"
+    include:
+        "Run3*Silver_*Btag"
+
+  - name: "Run3_2L_Gold_0J_Low_PTISR_Lowest_RISR"
+    include:
+        - "*Run3*2L_Gold_0J_P250_R6_*"
+        - "*Run3*2L_Gold_0J_P250_R65_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Gold_0J_Low_PTISR_Low_RISR"
+    include:
+        - "*Run3*2L_Gold_0J_P250_R7_*"
+        - "*Run3*2L_Gold_0J_P250_R75_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Gold_0J_Low_PTISR_Mid_RISR"
+    include:
+        - "*Run3*2L_Gold_0J_P250_R8_*"
+        - "*Run3*2L_Gold_0J_P250_R85_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Gold_0J_Low_PTISR_High_RISR"
+    include:
+        - "*Run3*2L_Gold_0J_P250_R9_*"
+        - "*Run3*2L_Gold_0J_P250_R95_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Gold_1J_Low_PTISR_Lowest_RISR"
+    include:
+        - "*Run3*2L_Gold_1J_P250_R6_*"
+        - "*Run3*2L_Gold_1J_P250_R65_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Gold_1J_Low_PTISR_Low_RISR"
+    include:
+        - "*Run3*2L_Gold_1J_P250_R7_*"
+        - "*Run3*2L_Gold_1J_P250_R75_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Gold_1J_Low_PTISR_Mid_RISR"
+    include:
+        - "*Run3*2L_Gold_1J_P250_R8_*"
+        - "*Run3*2L_Gold_1J_P250_R85_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Gold_1J_Low_PTISR_High_RISR"
+    include:
+        - "*Run3*2L_Gold_1J_P250_R9_*"
+        - "*Run3*2L_Gold_1J_P250_R95_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_3L_Gold_0J_Low_PTISR"
+    include:
+        - "*Run3*3L_Gold_0J_P200_R6_*"
+        - "*Run3*3L_Gold_0J_P200_R7_*"
+        - "*Run3*3L_Gold_0J_P200_R8_*"
+        - "*Run3*3L_Gold_0J_P200_R9_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_3L_Gold_0J_High_PTISR"
+    include:
+        - "*Run3*3L_Gold_0J_P300_R6_*"
+        - "*Run3*3L_Gold_0J_P300_R7_*"
+        - "*Run3*3L_Gold_0J_P300_R8_*"
+        - "*Run3*3L_Gold_0J_P300_R9_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Gold_0J_High_PTISR_Lowest_RISR"
+    include:
+        - "*Run3*2L_Gold_0J_P350_R6_*"
+        - "*Run3*2L_Gold_0J_P350_R65_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Gold_0J_High_PTISR_Low_RISR"
+    include:
+        - "*Run3*2L_Gold_0J_P350_R7_*"
+        - "*Run3*2L_Gold_0J_P350_R75_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Gold_0J_High_PTISR_Mid_RISR"
+    include:
+        - "*Run3*2L_Gold_0J_P350_R8_*"
+        - "*Run3*2L_Gold_0J_P350_R85_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Gold_0J_High_PTISR_High_RISR"
+    include:
+        - "*Run3*2L_Gold_0J_P350_R9_*"
+        - "*Run3*2L_Gold_0J_P350_R95_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Gold_1J_High_PTISR_Lowest_RISR"
+    include:
+        - "*Run3*2L_Gold_1J_P350_R6_*"
+        - "*Run3*2L_Gold_1J_P350_R65_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Gold_1J_High_PTISR_Low_RISR"
+    include:
+        - "*Run3*2L_Gold_1J_P350_R7_*"
+        - "*Run3*2L_Gold_1J_P350_R75_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Gold_1J_High_PTISR_Mid_RISR"
+    include:
+        - "*Run3*2L_Gold_1J_P350_R8_*"
+        - "*Run3*2L_Gold_1J_P350_R85_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Gold_1J_High_PTISR_High_RISR"
+    include:
+        - "*Run3*2L_Gold_1J_P350_R9_*"
+        - "*Run3*2L_Gold_1J_P350_R95_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_3L_Gold_1J_Low_PTISR"
+    include:
+        - "*Run3*3L_Gold_1J_P200_R6_*"
+        - "*Run3*3L_Gold_1J_P200_R7_*"
+        - "*Run3*3L_Gold_1J_P200_R8_*"
+        - "*Run3*3L_Gold_1J_P200_R9_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_3L_Gold_1J_High_PTISR"
+    include:
+        - "*Run3*3L_Gold_1J_P300_R6_*"
+        - "*Run3*3L_Gold_1J_P300_R7_*"
+        - "*Run3*3L_Gold_1J_P300_R8_*"
+        - "*Run3*3L_Gold_1J_P300_R9_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_3L_Gold_Low_PTISR"
+    include:
+        - "*Run3*3L_Gold_Jincl_P200_R6_*"
+        - "*Run3*3L_Gold_Jincl_P200_R7_*"
+        - "*Run3*3L_Gold_Jincl_P200_R8_*"
+        - "*Run3*3L_Gold_Jincl_P200_R9_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_3L_Gold_High_PTISR"
+    include:
+        - "*Run3*3L_Gold_Jincl_P300_R6_*"
+        - "*Run3*3L_Gold_Jincl_P300_R7_*"
+        - "*Run3*3L_Gold_Jincl_P300_R8_*"
+        - "*Run3*3L_Gold_Jincl_P300_R9_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_4L_Gold"
+    include:
+        - "*Run3*4L_Gold_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_Gold_Btag"
+    include:
+        "Run3*Gold_*Btag"
 
 processes:
   merge:
-    - name: "V_FAKES"
-      include:
-        #- "Vfakeleps*FAKES*"
-        - "Vfakeleps*"
-      #exclude:
-      #  - "ST"
-    #- name: "Wjets"
-    #  include:
-    #    - "Wjet*"
 
-    #- name: "top_FAKES"
-    #  include:
-    #    - "top*FAKES*"
-
-    - name: "top"
+    - name: "top_Run2"
       include:
-        - "top*"
+        - "top*Run2*"
       exclude:
         - "*FAKE*"
 
-    #- name: "boson_FAKES"
-    #  include:
-    #    - "boson*FAKES*"
-
-    - name: "boson"
+    - name: "boson_Run2"
       include:
-        - "boson*"
+        - "boson*Run2*"
       exclude:
         - "*FAKE*"
         - "*diboson"
         - "*triboson"
 
-    - name: "diboson"
+    - name: "diboson_Run2"
       include:
-        - "diboson*"
+        - "diboson*Run2"
       exclude:
         - "*FAKE*"
 
-    - name: "triboson"
+    - name: "triboson_Run2"
       include:
-        - "triboson*"
+        - "triboson*Run2*"
       exclude:
         - "*FAKE*"
 
-    - name: "Fakes_el"
+    - name: "Fakes_muHF_Run2"
       include:
-        - "*FAKES_Elec"
+        - "Run2*FAKES_HFMuon"
 
-    - name: "Fakes_mu"
+    - name: "Fakes_muLF_Run2"
       include:
-        - "*FAKES_Muon"
+        - "Run2*FAKES_LFMuon"
 
-    - name: "Fakes_emu"
+    - name: "Fakes_elHF_Run2"
       include:
-        - "*FAKES_Both"
+        - "Run2*FAKES_HFElec"
 
-    - name: "Fakes_muHF"
+    - name: "Fakes_elLF_Run2"
       include:
-        - "*FAKES_HFMuon"
+        - "Run2*FAKES_LFElec"
 
-    - name: "Fakes_muLF"
+    - name: "top_Run3"
       include:
-        - "*FAKES_LFMuon"
+        - "top*Run3*"
+      exclude:
+        - "*FAKE*"
 
-    - name: "Fakes_elHF"
+    - name: "boson_Run3"
       include:
-        - "*FAKES_HFElec"
+        - "boson*Run3*"
+      exclude:
+        - "*FAKE*"
+        - "*diboson"
+        - "*triboson"
 
-    - name: "Fakes_elLF"
+    - name: "diboson_Run3"
       include:
-        - "*FAKES_LFElec"
+        - "diboson*Run3"
+      exclude:
+        - "*FAKE*"
+
+    - name: "triboson_Run3"
+      include:
+        - "triboson*Run3*"
+      exclude:
+        - "*FAKE*"
+
+    - name: "Fakes_muHF_Run3"
+      include:
+        - "Run3*FAKES_HFMuon"
+
+    - name: "Fakes_muLF_Run3"
+      include:
+        - "Run3*FAKES_LFMuon"
+
+    - name: "Fakes_elHF_Run3"
+      include:
+        - "Run3*FAKES_HFElec"
+
+    - name: "Fakes_elLF_Run3"
+      include:
+        - "Run3*FAKES_LFElec"
+
