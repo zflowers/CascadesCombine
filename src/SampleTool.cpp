@@ -50,8 +50,8 @@ SampleTool::SampleTool(){
   }
   double scale_run3 = RUN3_TOTAL_LUMI / run3_available_lumi;
   for (const auto& era : run3Eras) {
-      LumiDict.at(era) *= 1.; // 1 = turn off and use default scale (good for CR)
-      //LumiDict.at(era) *= scale_run3; // apply scaling for Run3 existing lumi to all lumi (good for Run3 sensitivity)
+      //LumiDict.at(era) *= 1.; // 1 = turn off and use default scale (good for CR)
+      LumiDict.at(era) *= scale_run3; // apply scaling for Run3 existing lumi to all lumi (good for Run3 sensitivity)
   }
 
   std::vector<std::string> run2Eras = {

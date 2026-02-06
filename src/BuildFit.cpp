@@ -590,7 +590,7 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
     cb.FilterProcs([](ch::Process const *p){ return p->rate() <= 0; });
 
     // 6) Add Systematics
-    //cb.cp().SetAutoMCStats(cb, 0.); // Turn on autoMCstats
+    cb.cp().SetAutoMCStats(cb, 0.); // Turn on autoMCstats
     AddFakeFamiliesAsSharedNorms(truebkgprocs, fakesprocs, "rateParam", 1.0);
     AddFloatingNormsGroupedByFakeType(fakesprocs, "lnN", 1.2);
     AddPTISRSys(kept_bins, bkgprocs);
