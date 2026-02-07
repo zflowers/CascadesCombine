@@ -1,5 +1,5 @@
-Bin_Run2_3L_Bronze_Jincl_P300_R9_M30_OSOFa:
-  cuts: "Nlep==3;PTISR_LEP>=300;RISR_LEP>=0.9;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP>=30;Nbjet==0;MET>=150;"
+Bin_Run2_3L_Bronze_Jincl_P200_R9_M30_OSOFa:
+  cuts: "Nlep==3;PTISR_LEP>=200;PTISR_LEP<300;RISR_LEP>=0.9;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP>=30;Nbjet==0;MET>=150;"
   lep-cuts: |
     >=1Gold;
     =1Bronze;
@@ -7,8 +7,8 @@ Bin_Run2_3L_Bronze_Jincl_P300_R9_M30_OSOFa:
     =1OSOF_a;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
   user-cuts: "minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"
-Bin_Run2_3L_Bronze_Jincl_P300_R9_M30_OSSFa:
-  cuts: "Nlep==3;PTISR_LEP>=300;RISR_LEP>=0.9;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP>=30;Nbjet==0;MET>=150;"
+Bin_Run2_3L_Bronze_Jincl_P200_R9_M30_OSSFa:
+  cuts: "Nlep==3;PTISR_LEP>=200;PTISR_LEP<300;RISR_LEP>=0.9;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP>=30;Nbjet==0;MET>=150;"
   lep-cuts: |
     >=1Gold;
     =1Bronze;
@@ -16,8 +16,8 @@ Bin_Run2_3L_Bronze_Jincl_P300_R9_M30_OSSFa:
     =1OSSF_a;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
   user-cuts: "minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"
-Bin_Run2_3L_Bronze_Jincl_P300_R9_M30_SSa:
-  cuts: "Nlep==3;PTISR_LEP>=300;RISR_LEP>=0.9;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP>=30;Nbjet==0;MET>=150;"
+Bin_Run2_3L_Bronze_Jincl_P200_R9_M30_SSa:
+  cuts: "Nlep==3;PTISR_LEP>=200;PTISR_LEP<300;RISR_LEP>=0.9;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP>=30;Nbjet==0;MET>=150;"
   lep-cuts: |
     >=1Gold;
     =1Bronze;
@@ -25,8 +25,8 @@ Bin_Run2_3L_Bronze_Jincl_P300_R9_M30_SSa:
     AllSS_a;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
   user-cuts: "minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"
-Bin_Run2_3L_Bronze_Jincl_P300_R9_Mlt30_OSOFa:
-  cuts: "Nlep==3;PTISR_LEP>=300;RISR_LEP>=0.9;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP<30;Nbjet==0;MET>=150;"
+Bin_Run2_3L_Bronze_Jincl_P200_R9_Mlt30_OSOFa:
+  cuts: "Nlep==3;PTISR_LEP>=200;PTISR_LEP<300;RISR_LEP>=0.9;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP<30;Nbjet==0;MET>=150;"
   lep-cuts: |
     >=1Gold;
     =1Bronze;
@@ -34,8 +34,8 @@ Bin_Run2_3L_Bronze_Jincl_P300_R9_Mlt30_OSOFa:
     =1OSOF_a;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
   user-cuts: "minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"
-Bin_Run2_3L_Bronze_Jincl_P300_R9_Mlt30_OSSFa:
-  cuts: "Nlep==3;PTISR_LEP>=300;RISR_LEP>=0.9;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP<30;Nbjet==0;MET>=150;"
+Bin_Run2_3L_Bronze_Jincl_P200_R9_Mlt30_OSSFa:
+  cuts: "Nlep==3;PTISR_LEP>=200;PTISR_LEP<300;RISR_LEP>=0.9;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP<30;Nbjet==0;MET>=150;"
   lep-cuts: |
     >=1Gold;
     =1Bronze;
@@ -43,8 +43,8 @@ Bin_Run2_3L_Bronze_Jincl_P300_R9_Mlt30_OSSFa:
     =1OSSF_a;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
   user-cuts: "minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"
-Bin_Run2_3L_Bronze_Jincl_P300_R9_Mlt30_SSa:
-  cuts: "Nlep==3;PTISR_LEP>=300;RISR_LEP>=0.9;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP<30;Nbjet==0;MET>=150;"
+Bin_Run2_3L_Bronze_Jincl_P200_R9_Mlt30_SSa:
+  cuts: "Nlep==3;PTISR_LEP>=200;PTISR_LEP<300;RISR_LEP>=0.9;RISR_LEP<=1.;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP<30;Nbjet==0;MET>=150;"
   lep-cuts: |
     >=1Gold;
     =1Bronze;
@@ -52,8 +52,8 @@ Bin_Run2_3L_Bronze_Jincl_P300_R9_Mlt30_SSa:
     AllSS_a;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
   user-cuts: "minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"
-Bin_Run2_3L_Bronze_Jincl_P300_R8_M35_OSOFa:
-  cuts: "Nlep==3;PTISR_LEP>=300;RISR_LEP>=0.8;RISR_LEP<0.9;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP>=35;Nbjet==0;MET>=150;"
+Bin_Run2_3L_Bronze_Jincl_P200_R8_M35_OSOFa:
+  cuts: "Nlep==3;PTISR_LEP>=200;PTISR_LEP<300;RISR_LEP>=0.8;RISR_LEP<0.9;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP>=35;Nbjet==0;MET>=150;"
   lep-cuts: |
     >=1Gold;
     =1Bronze;
@@ -61,8 +61,8 @@ Bin_Run2_3L_Bronze_Jincl_P300_R8_M35_OSOFa:
     =1OSOF_a;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
   user-cuts: "minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"
-Bin_Run2_3L_Bronze_Jincl_P300_R8_M35_OSSFa:
-  cuts: "Nlep==3;PTISR_LEP>=300;RISR_LEP>=0.8;RISR_LEP<0.9;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP>=35;Nbjet==0;MET>=150;"
+Bin_Run2_3L_Bronze_Jincl_P200_R8_M35_OSSFa:
+  cuts: "Nlep==3;PTISR_LEP>=200;PTISR_LEP<300;RISR_LEP>=0.8;RISR_LEP<0.9;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP>=35;Nbjet==0;MET>=150;"
   lep-cuts: |
     >=1Gold;
     =1Bronze;
@@ -70,8 +70,8 @@ Bin_Run2_3L_Bronze_Jincl_P300_R8_M35_OSSFa:
     =1OSSF_a;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
   user-cuts: "minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"
-Bin_Run2_3L_Bronze_Jincl_P300_R8_M35_SSa:
-  cuts: "Nlep==3;PTISR_LEP>=300;RISR_LEP>=0.8;RISR_LEP<0.9;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP>=35;Nbjet==0;MET>=150;"
+Bin_Run2_3L_Bronze_Jincl_P200_R8_M35_SSa:
+  cuts: "Nlep==3;PTISR_LEP>=200;PTISR_LEP<300;RISR_LEP>=0.8;RISR_LEP<0.9;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP>=35;Nbjet==0;MET>=150;"
   lep-cuts: |
     >=1Gold;
     =1Bronze;
@@ -79,8 +79,8 @@ Bin_Run2_3L_Bronze_Jincl_P300_R8_M35_SSa:
     AllSS_a;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
   user-cuts: "minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"
-Bin_Run2_3L_Bronze_Jincl_P300_R8_Mlt35_OSOFa:
-  cuts: "Nlep==3;PTISR_LEP>=300;RISR_LEP>=0.8;RISR_LEP<0.9;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP<35;Nbjet==0;MET>=150;"
+Bin_Run2_3L_Bronze_Jincl_P200_R8_Mlt35_OSOFa:
+  cuts: "Nlep==3;PTISR_LEP>=200;PTISR_LEP<300;RISR_LEP>=0.8;RISR_LEP<0.9;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP<35;Nbjet==0;MET>=150;"
   lep-cuts: |
     >=1Gold;
     =1Bronze;
@@ -88,8 +88,8 @@ Bin_Run2_3L_Bronze_Jincl_P300_R8_Mlt35_OSOFa:
     =1OSOF_a;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
   user-cuts: "minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"
-Bin_Run2_3L_Bronze_Jincl_P300_R8_Mlt35_OSSFa:
-  cuts: "Nlep==3;PTISR_LEP>=300;RISR_LEP>=0.8;RISR_LEP<0.9;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP<35;Nbjet==0;MET>=150;"
+Bin_Run2_3L_Bronze_Jincl_P200_R8_Mlt35_OSSFa:
+  cuts: "Nlep==3;PTISR_LEP>=200;PTISR_LEP<300;RISR_LEP>=0.8;RISR_LEP<0.9;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP<35;Nbjet==0;MET>=150;"
   lep-cuts: |
     >=1Gold;
     =1Bronze;
@@ -97,8 +97,8 @@ Bin_Run2_3L_Bronze_Jincl_P300_R8_Mlt35_OSSFa:
     =1OSSF_a;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
   user-cuts: "minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"
-Bin_Run2_3L_Bronze_Jincl_P300_R8_Mlt35_SSa:
-  cuts: "Nlep==3;PTISR_LEP>=300;RISR_LEP>=0.8;RISR_LEP<0.9;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP<35;Nbjet==0;MET>=150;"
+Bin_Run2_3L_Bronze_Jincl_P200_R8_Mlt35_SSa:
+  cuts: "Nlep==3;PTISR_LEP>=200;PTISR_LEP<300;RISR_LEP>=0.8;RISR_LEP<0.9;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP<35;Nbjet==0;MET>=150;"
   lep-cuts: |
     >=1Gold;
     =1Bronze;
@@ -106,8 +106,8 @@ Bin_Run2_3L_Bronze_Jincl_P300_R8_Mlt35_SSa:
     AllSS_a;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
   user-cuts: "minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"
-Bin_Run2_3L_Bronze_Jincl_P300_R7_M40_OSOFa:
-  cuts: "Nlep==3;PTISR_LEP>=300;RISR_LEP>=0.7;RISR_LEP<0.8;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP>=40;Nbjet==0;MET>=150;"
+Bin_Run2_3L_Bronze_Jincl_P200_R7_M40_OSOFa:
+  cuts: "Nlep==3;PTISR_LEP>=200;PTISR_LEP<300;RISR_LEP>=0.7;RISR_LEP<0.8;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP>=40;Nbjet==0;MET>=150;"
   lep-cuts: |
     >=1Gold;
     =1Bronze;
@@ -115,8 +115,8 @@ Bin_Run2_3L_Bronze_Jincl_P300_R7_M40_OSOFa:
     =1OSOF_a;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
   user-cuts: "minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"
-Bin_Run2_3L_Bronze_Jincl_P300_R7_M40_OSSFa:
-  cuts: "Nlep==3;PTISR_LEP>=300;RISR_LEP>=0.7;RISR_LEP<0.8;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP>=40;Nbjet==0;MET>=150;"
+Bin_Run2_3L_Bronze_Jincl_P200_R7_M40_OSSFa:
+  cuts: "Nlep==3;PTISR_LEP>=200;PTISR_LEP<300;RISR_LEP>=0.7;RISR_LEP<0.8;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP>=40;Nbjet==0;MET>=150;"
   lep-cuts: |
     >=1Gold;
     =1Bronze;
@@ -124,8 +124,8 @@ Bin_Run2_3L_Bronze_Jincl_P300_R7_M40_OSSFa:
     =1OSSF_a;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
   user-cuts: "minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"
-Bin_Run2_3L_Bronze_Jincl_P300_R7_M40_SSa:
-  cuts: "Nlep==3;PTISR_LEP>=300;RISR_LEP>=0.7;RISR_LEP<0.8;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP>=40;Nbjet==0;MET>=150;"
+Bin_Run2_3L_Bronze_Jincl_P200_R7_M40_SSa:
+  cuts: "Nlep==3;PTISR_LEP>=200;PTISR_LEP<300;RISR_LEP>=0.7;RISR_LEP<0.8;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP>=40;Nbjet==0;MET>=150;"
   lep-cuts: |
     >=1Gold;
     =1Bronze;
@@ -133,8 +133,8 @@ Bin_Run2_3L_Bronze_Jincl_P300_R7_M40_SSa:
     AllSS_a;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
   user-cuts: "minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"
-Bin_Run2_3L_Bronze_Jincl_P300_R7_Mlt40_OSOFa:
-  cuts: "Nlep==3;PTISR_LEP>=300;RISR_LEP>=0.7;RISR_LEP<0.8;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP<40;Nbjet==0;MET>=150;"
+Bin_Run2_3L_Bronze_Jincl_P200_R7_Mlt40_OSOFa:
+  cuts: "Nlep==3;PTISR_LEP>=200;PTISR_LEP<300;RISR_LEP>=0.7;RISR_LEP<0.8;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP<40;Nbjet==0;MET>=150;"
   lep-cuts: |
     >=1Gold;
     =1Bronze;
@@ -142,8 +142,8 @@ Bin_Run2_3L_Bronze_Jincl_P300_R7_Mlt40_OSOFa:
     =1OSOF_a;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
   user-cuts: "minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"
-Bin_Run2_3L_Bronze_Jincl_P300_R7_Mlt40_OSSFa:
-  cuts: "Nlep==3;PTISR_LEP>=300;RISR_LEP>=0.7;RISR_LEP<0.8;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP<40;Nbjet==0;MET>=150;"
+Bin_Run2_3L_Bronze_Jincl_P200_R7_Mlt40_OSSFa:
+  cuts: "Nlep==3;PTISR_LEP>=200;PTISR_LEP<300;RISR_LEP>=0.7;RISR_LEP<0.8;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP<40;Nbjet==0;MET>=150;"
   lep-cuts: |
     >=1Gold;
     =1Bronze;
@@ -151,8 +151,8 @@ Bin_Run2_3L_Bronze_Jincl_P300_R7_Mlt40_OSSFa:
     =1OSSF_a;
   predefined-cuts: "Cleaning_LEP;dphiMETV_LEP;"
   user-cuts: "minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"
-Bin_Run2_3L_Bronze_Jincl_P300_R7_Mlt40_SSa:
-  cuts: "Nlep==3;PTISR_LEP>=300;RISR_LEP>=0.7;RISR_LEP<0.8;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP<40;Nbjet==0;MET>=150;"
+Bin_Run2_3L_Bronze_Jincl_P200_R7_Mlt40_SSa:
+  cuts: "Nlep==3;PTISR_LEP>=200;PTISR_LEP<300;RISR_LEP>=0.7;RISR_LEP<0.8;METORtrigger==1;EventFilter==1;PassesJVM==1;MIN(abs(Eta_lep))<1.4442;Njet>0;Mperp_LEP<40;Nbjet==0;MET>=150;"
   lep-cuts: |
     >=1Gold;
     =1Bronze;

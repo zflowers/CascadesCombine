@@ -88,6 +88,14 @@ bool BuildFit::HasDataObs(JSONFactory* j) {
     return false;
 }
 
+bool BuildFit::IsRun2(const std::string& str) {
+    return str.find("Run2") != std::string::npos;
+}
+
+bool BuildFit::IsRun3(const std::string& str) {
+    return str.find("Run3") != std::string::npos;
+}
+
 bool BuildFit::HasProcFAKES(JSONFactory* j, const std::string& check_proc) {
     for (auto &bin : j->j.items()) {
         for (auto &proc : bin.value().items()) {
@@ -501,10 +509,8 @@ void BuildFit::AddPTISRSys(const stringlist& binset, const stringlist& procs){
         .AddSyst(cb, "PTISR_2L_0J", "lnN", SystMap<>::init(1.10));
     cb.cp().process(procs).bin({".*2L.*1J.*P350.*"})
         .AddSyst(cb, "PTISR_2L_1J", "lnN", SystMap<>::init(1.10));
-    cb.cp().process(procs).bin({".*3L.*0J.*P300.*"})
-        .AddSyst(cb, "PTISR_3L_0J", "lnN", SystMap<>::init(1.10));
-    cb.cp().process(procs).bin({".*3L.*1J.*P300.*"})
-        .AddSyst(cb, "PTISR_3L_1J", "lnN", SystMap<>::init(1.10));
+    cb.cp().process(procs).bin({".*3L.*P300.*"})
+        .AddSyst(cb, "PTISR_3L", "lnN", SystMap<>::init(1.10));
     cb.SetFlag("filters-use-regex", false);
 }
 
@@ -527,14 +533,6 @@ void BuildFit::AddBtagSys(const stringlist& binset, const stringlist& procs){
         .AddSyst(cb, "Btag_2L_1J_lPTISR", "lnN", SystMap<>::init(1.20));
     cb.cp().process(procs).bin({".*2L.*1J.*P350.*Btag.*"})
         .AddSyst(cb, "Btag_2L_1J_hPTISR", "lnN", SystMap<>::init(1.20));
-    //cb.cp().process(procs).bin({".*3L.*0J.*P200.*Btag.*"})
-    //    .AddSyst(cb, "Btag_3L_0J_lPTISR", "lnN", SystMap<>::init(1.20));
-    //cb.cp().process(procs).bin({".*3L.*0J.*P300.*Btag.*"})
-    //    .AddSyst(cb, "Btag_3L_0J_hPTISR", "lnN", SystMap<>::init(1.20));
-    //cb.cp().process(procs).bin({".*3L.*1J.*P200.*Btag.*"})
-    //    .AddSyst(cb, "Btag_3L_1J_lPTISR", "lnN", SystMap<>::init(1.20));
-    //cb.cp().process(procs).bin({".*3L.*1J.*P300.*Btag.*"})
-    //    .AddSyst(cb, "Btag_3L_1J_hPTISR", "lnN", SystMap<>::init(1.20));
     cb.cp().process(procs).bin({".*3L.*P200.*Btag.*"})
         .AddSyst(cb, "Btag_3L_lPTISR", "lnN", SystMap<>::init(1.20));
     cb.cp().process(procs).bin({".*3L.*P300.*Btag.*"})
@@ -571,14 +569,41 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
 
     // 2) Build CH categories from the kept bin list
     ch::Categories cats = BuildCatsFromList(kept_bins);
+    ch::Categories run2_cats, run3_cats;
+    for (auto const& c : cats) {
+        if (IsRun2(c.second)) run2_cats.push_back(c);
+        else if (IsRun3(c.second)) run3_cats.push_back(c);
+    }
+
+    stringlist bkg_run2, bkg_run3;
+    for (auto const& p : bkgprocs) {
+        if (IsRun2(p)) bkg_run2.push_back(p);
+        else if (IsRun3(p)) bkg_run3.push_back(p);
+    }
 
     // 3) Register observations/processes using cats
     //cb.SetVerbosity(3);
+    //cb.AddProcesses({"*"}, {signalDetails[0]}, {"13.6TeV"}, {signalDetails[1]}, bkgprocs, cats, false);
     cb.AddObservations({"*"}, {signalDetails[0]}, {"13.6TeV"}, {signalDetails[1]}, cats);
-    cb.AddProcesses({"*"}, {signalDetails[0]}, {"13.6TeV"}, {signalDetails[1]}, bkgprocs, cats, false);
+
+    if (!run2_cats.empty() && !bkg_run2.empty()) {
+        cb.AddProcesses({"*"}, {signalDetails[0]}, {"13.6TeV"}, {"Run2"},
+                        bkg_run2, run2_cats, false);
+    }
+    if (!run3_cats.empty() && !bkg_run3.empty()) {
+        cb.AddProcesses({"*"}, {signalDetails[0]}, {"13.6TeV"}, {"Run3"},
+                        bkg_run3, run3_cats, false);
+    }
+
     std::string sigProcPrefix = GetSignalProcName(signalPoint);
     std::string sigMass = GetSignalMass(signalPoint);
-    cb.AddProcesses({sigMass}, {signalDetails[0]}, {"13.6TeV"}, {signalDetails[1]}, {sigProcPrefix}, cats, true);
+    if (!run2_cats.empty())
+        cb.AddProcesses({sigMass}, {signalDetails[0]}, {"13.6TeV"}, {"Run2"},
+                        {sigProcPrefix}, run2_cats, true);
+    
+    if (!run3_cats.empty())
+        cb.AddProcesses({sigMass}, {signalDetails[0]}, {"13.6TeV"}, {"Run3"},
+                        {sigProcPrefix}, run3_cats, true);
 
     // 4) Register shape systematics only for kept bins
     AddShapeSystsFromJSON(j, kept_bins);
@@ -588,6 +613,14 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
     cb.cp().backgrounds().ExtractShapes(json_to_root_file, "$BIN__$PROCESS", "$BIN__$PROCESS__$SYSTEMATIC");
     cb.cp().signals().ExtractShapes(json_to_root_file, "$BIN__$PROCESS_$MASS", "$BIN__$PROCESS_$MASS__$SYSTEMATIC");
     cb.FilterProcs([](ch::Process const *p){ return p->rate() <= 0; });
+    if(!run2_cats.empty() || !run3_cats.empty()) {
+        cb.FilterProcs([&](ch::Process const* p) {
+            const auto& bin = p->bin();
+            const auto& proc = p->process();
+            return (IsRun2(bin) && IsRun2(proc)) ||
+                   (IsRun3(bin) && IsRun3(proc));
+        });
+    }
 
     // 6) Add Systematics
     cb.cp().SetAutoMCStats(cb, 0.); // Turn on autoMCstats
@@ -601,6 +634,8 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
     cb.FilterSysts([](ch::Systematic const *s){ return s->value_u() == 1.0 && s->value_d() == 1.0; });
     std::cout << "Added all systs\n";
     //std::cout << "Printing systematics..." << std::endl; cb.PrintSysts();
+    //cb.PrintObs();
+    //cb.PrintProcs();
     //cb.PrintAll();
 
     TFile* json_root_file = TFile::Open(json_to_root_file.c_str(), "UPDATE");

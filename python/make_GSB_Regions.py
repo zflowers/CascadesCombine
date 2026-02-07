@@ -71,16 +71,24 @@ REGIONS_USER_CUTS = "minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"
 # ----------------------------
 
 def detect_mult_from_key(key: str):
-    """Return '2L'|'3L'|'4L' or None."""
-    parts = key.split("_")
-    if parts and parts[0] == "Bin":
-        for p in parts[1:4]:  # era + mult usually live here
-            if p in ("2L", "3L", "4L"):
-                return p
-    # fallback: anywhere as a full token
-    for p in parts:
-        if p in ("2L", "3L", "4L"):
-            return p
+    """
+    Return '2L'|'3L'|'4L' or None.
+    Works with:
+      - Old: Bin2L_Gold_0J_...
+      - New: Bin_Run2_2L_Bronze_0J_...
+      - Sideband / PTISR variations
+    """
+    if not key.startswith("Bin"):
+        return None
+    tokens = key.split("_")  # split by underscores
+    # If format is Bin_RunX_2L_..., multiplicity is usually the second or third token
+    for t in tokens[1:4]:  # skip "Bin", look at next 3 tokens
+        if t in ("2L", "3L", "4L"):
+            return t
+    # fallback: anywhere in the key as a full token
+    for t in tokens:
+        if t in ("2L", "3L", "4L"):
+            return t
     return None
 
 def normalize_cuts_string(cuts_text: str):
@@ -190,16 +198,17 @@ def make_lptisr_doc_ruamel(doc):
     for key in list(doc.keys()):
         value = doc[key]
         entry = value.copy() if hasattr(value, "copy") else value
-        mult = None
-        if key.startswith("Bin2L_"):
-            mult = "2L"
-        elif key.startswith("Bin3L_"):
-            mult = "3L"
+
+        mult = detect_mult_from_key(key)  # robust 2L/3L/4L detection
+
         new_key = key
+        # rename _P350 -> _P250 for 2L and _P300 -> _P200 for 3L
         if mult == "2L" and "_P350" in key:
             new_key = key.replace("_P350", "_P250")
-        if mult == "3L" and "_P300" in key:
+        elif mult == "3L" and "_P300" in key:
             new_key = key.replace("_P300", "_P200")
+
+        # update cuts strings as before
         if isinstance(entry, dict) and "cuts" in entry:
             old_text = str(entry.get("cuts", ""))
             new_text = old_text
@@ -209,7 +218,7 @@ def make_lptisr_doc_ruamel(doc):
                 ).replace(
                     "PTISR_LEP>=350", "PTISR_LEP>=250;PTISR_LEP<350"
                 )
-            if mult == "3L":
+            elif mult == "3L":
                 new_text = new_text.replace(
                     "PTISR_LEP>=300;", "PTISR_LEP>=200;PTISR_LEP<300;"
                 ).replace(
@@ -217,6 +226,7 @@ def make_lptisr_doc_ruamel(doc):
                 )
             if new_text != old_text:
                 entry["cuts"] = new_text
+
         out[new_key] = entry
         try:
             out.ca.items[new_key] = doc.ca.items[key]

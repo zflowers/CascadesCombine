@@ -948,19 +948,19 @@ processes:
 
     - name: "Fakes_muHF_Run2"
       include:
-        - "Run2*FAKES_HFMuon"
+        - "*Run2*FAKES_HFMuon"
 
     - name: "Fakes_muLF_Run2"
       include:
-        - "Run2*FAKES_LFMuon"
+        - "*Run2*FAKES_LFMuon"
 
     - name: "Fakes_elHF_Run2"
       include:
-        - "Run2*FAKES_HFElec"
+        - "*Run2*FAKES_HFElec"
 
     - name: "Fakes_elLF_Run2"
       include:
-        - "Run2*FAKES_LFElec"
+        - "*Run2*FAKES_LFElec"
 
     - name: "top_Run3"
       include:
@@ -990,17 +990,17 @@ processes:
 
     - name: "Fakes_muHF_Run3"
       include:
-        - "Run3*FAKES_HFMuon"
+        - "*Run3*FAKES_HFMuon"
 
     - name: "Fakes_muLF_Run3"
       include:
-        - "Run3*FAKES_LFMuon"
+        - "*Run3*FAKES_LFMuon"
 
     - name: "Fakes_elHF_Run3"
       include:
-        - "Run3*FAKES_HFElec"
+        - "*Run3*FAKES_HFElec"
 
     - name: "Fakes_elLF_Run3"
       include:
-        - "Run3*FAKES_LFElec"
+        - "*Run3*FAKES_LFElec"
 
