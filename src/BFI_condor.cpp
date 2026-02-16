@@ -275,6 +275,43 @@ int main(int argc, char** argv) {
                          bool treeSystIsUp,
                          bool runFAKES // whether or not to use genmatching for adding FAKES procs
                         ) {
+        auto fillZeroJSONForBinProc = [&](const std::string &bin,
+                                          const std::string &proc_key,
+                                          const std::string &filePath,
+                                          bool isTreeSyst,
+                                          const std::string &treeSystTag,
+                                          bool treeSystIsUp)
+        {
+            FileYields fy;
+            // nominal always zero
+            fy.nominal = {0.0, 0.0, 0.0};
+            // internal SF systematics
+            if (!IsData && !isSignal && runInternalSystsOnNominal) {
+                for (const auto &s : activeSystematics.sf) {
+                    fy.systs[s.tag].up   = {0.0, 0.0, 0.0};
+                    fy.systs[s.tag].down = {0.0, 0.0, 0.0};
+                }
+            }
+            auto &entry = fileResultsByBin[bin][proc_key][filePath];
+            // tree systematic pass: only touch the variation
+            if (isTreeSyst && !treeSystTag.empty()) {
+                if (treeSystIsUp)
+                    entry.systs[treeSystTag].up = {0.0, 0.0, 0.0};
+                else
+                    entry.systs[treeSystTag].down = {0.0, 0.0, 0.0};
+            } else {
+                entry = fy;
+            }
+            // totals set to zero
+            auto &tot = totalsByBin[bin][proc_key];
+            tot.nominal = {0.0, 0.0, 0.0};
+            if (!IsData && !isSignal && runInternalSystsOnNominal) {
+                for (const auto &s : activeSystematics.sf) {
+                    tot.systs[s.tag].up   = {0.0, 0.0, 0.0};
+                    tot.systs[s.tag].down = {0.0, 0.0, 0.0};
+                }
+            }
+        };
     
         if(doHist) histFile->cd();
     
@@ -329,18 +366,48 @@ int main(int argc, char** argv) {
         map_key_to_process.insert({key_LFmuon, processName_LFmuon});
     
         for (const auto &bin : binNames) {
+            bool binEraMismatch = false;
             // Skip Run2 bins if rootFilePath doesn't contain 106X or 102X
             if (bin.find("Run2") != std::string::npos &&
                 rootFilePath.find("106X") == std::string::npos &&
                 rootFilePath.find("102X") == std::string::npos) {
-                continue;
+                binEraMismatch = true;
             }
 
             // Skip Run3 bins if rootFilePath doesn't contain 130X
             if (bin.find("Run3") != std::string::npos &&
                 rootFilePath.find("130X") == std::string::npos) {
+                binEraMismatch = true;
+            }
+            if (binEraMismatch) {
+                if(doJSON) {
+                    // Build the same proc_key list you normally would
+                    std::vector<std::string> proc_keys;
+                    if (!runFAKES) {
+                        proc_keys.push_back(key);
+                    } else {
+                        proc_keys = {
+                            key_HFelec, key_HFmuon,
+                            key_LFelec, key_LFmuon,
+                            key
+                        };
+                    }
+            
+                    for (const auto &proc_key : proc_keys) {
+                        fillZeroJSONForBinProc(
+                            bin,
+                            proc_key,
+                            rootFilePath,
+                            !treeSystTag.empty(),
+                            treeSystTag,
+                            treeSystIsUp
+                        );
+                    }
+                }
+                // skip JSON and HIST filling
                 continue;
             }
+
             if(ROOT::IsImplicitMTEnabled()) ROOT::DisableImplicitMT(); // disable MT for validation
             BaseNodeHandle bin_valHandle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi, IsData, year, validatedDerivedVars);
             ROOT::RDF::RNode bin_base_node_val = bin_valHandle.node; // RNode constructed under IMT OFF

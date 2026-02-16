@@ -10,30 +10,17 @@ echo "[launchCollectLimits] Using datacard directory: $dcdir"
 # -------------------
 
 shopt -s nullglob
-files=( "${dcdir}"/SMS_TChiWZ_SMS_*/higgsCombine*AsymptoticLimits*.root )
+files=( "${dcdir}"/*/higgsCombine*AsymptoticLimits*.root )
 shopt -u nullglob
 
 if (( ${#files[@]} )); then
     combineTool.py \
         -M CollectLimits \
-        -d "${dcdir}"/SMS_TChiWZ_SMS_*/higgsCombine*AsymptoticLimits*.root \
-        -o ${dcdir}_SMS_TChiWZ_SMS_Limits.json \
+        -d "${dcdir}"/*/higgsCombine*AsymptoticLimits*.root \
+        -o "${dcdir}"_Limits.json \
         --job-dir "${rundir}/combine"
 fi
 
-if (( ${#files[@]} >= 50 )); then
-    root -l -b -q "macro/PlotLimitJSON.C++(\"${dcdir}_SMS_TChiWZ_SMS_Limits.json\", false, kTChiWZ, \"${dcdir}_SMS_TChiWZ_SMS_Limits.root\")"
-fi
-
-shopt -s nullglob
-files=( "${dcdir}"/Cascades_*/higgsCombine*AsymptoticLimits*.root )
-shopt -u nullglob
-
-if (( ${#files[@]} )); then
-    combineTool.py \
-        -M CollectLimits \
-        -d "${dcdir}"/Cascades_*/higgsCombine*AsymptoticLimits*.root \
-        -o ${dcdir}_Cascades_Limits.json \
-        --job-dir "${rundir}/combine"
-fi
-
+#if (( ${#files[@]} >= 50 )); then
+#    root -l -b -q "macro/PlotLimitJSON.C++(\"${dcdir}_Limits.json\", false, kTChiWZ, \"${dcdir}_Limits.root\")"
+#fi

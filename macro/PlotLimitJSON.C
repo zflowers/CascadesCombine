@@ -944,19 +944,19 @@ hist->GetZaxis()->SetTitle("95% CL upper limit [fb]");
 
  // hist->GetZaxis()->SetTitle("95% C.L. #sigma #times BF U.L. [fb]");
   if(ptype == kTChiWZ){
-	hist->GetXaxis()->SetRangeUser(100.,430.);
+	hist->GetXaxis()->SetRangeUser(100.,500.);
 	hist->GetYaxis()->SetRangeUser(3.,150.);
 //	hist->SetMaximum(5000.);
   //      hist->SetMinimum(50.);
   }
   if(ptype == kHN2C1){
-	hist->GetXaxis()->SetRangeUser(100.,275);
+	hist->GetXaxis()->SetRangeUser(100.,300);
         hist->GetYaxis()->SetRangeUser(3.,140.);
   //      hist->SetMaximum(5000.);
         hist->SetMinimum(10.);
   }
   if(ptype == kTChiWW){
-	hist->GetXaxis()->SetRangeUser(100.,350.);
+	hist->GetXaxis()->SetRangeUser(100.,400.);
         hist->GetYaxis()->SetRangeUser(5.,150.);	 
 	hist->SetMinimum(9.); 
   }

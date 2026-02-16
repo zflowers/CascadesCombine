@@ -738,6 +738,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
     # canonical run directory / name
     run_dir = run_info.get("run_dir")
     run_name = run_info.get("run_name")
+    print(f"[run_combine] Running on host: {os.environ['HOSTNAME']}", flush=True)
     print(f"[run_combine] Using run directory: {run_dir}", flush=True)
 
     make_impacts = args.make_impacts

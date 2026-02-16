@@ -816,11 +816,11 @@ def main():
         hist_yaml_file=args.hist_yaml if args.hist_yaml else None,
     )
 
-    filtered_jobs = []
-    for job in jobs:
-        if job_is_compatible_with_bins(job, args.bin):
-            filtered_jobs.append(job)
-    jobs = filtered_jobs
+    #filtered_jobs = []
+    #for job in jobs:
+    #    if job_is_compatible_with_bins(job, args.bin):
+    #        filtered_jobs.append(job)
+    #jobs = filtered_jobs
 
     # If a hist YAML was provided, store it in each job (reference staged configs if available)
     if args.hist_yaml:

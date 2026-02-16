@@ -37,8 +37,8 @@ class BuildFit{
     stringlist GetFakesProcs(JSONFactory* j);
     bool HasDataObs(JSONFactory* j);
     bool HasProcFAKES(JSONFactory* j, const std::string& check_proc);
-    bool IsRun2(const std::string& str);
-    bool IsRun3(const std::string& str);
+    //bool IsRun2(const std::string& str);
+    //bool IsRun3(const std::string& str);
     std::string GetSignalMass(const std::string& sig);
     std::string GetSignalProcName(const std::string &proc);
     std::vector<std::string> ExtractSignalDetails( std::string signalPoint);
