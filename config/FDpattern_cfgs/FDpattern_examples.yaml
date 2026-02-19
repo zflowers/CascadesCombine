@@ -150,7 +150,7 @@ bins:
         - "*Btag*"
   - name: "Run2_Bronze_Btag"
     include:
-        "Run2*Bronze_*Btag"
+        "*Run2*Bronze_*Btag"
 
   - name: "Run2_2L_Silver_0J_Low_PTISR_Lowest_RISR"
     include:
@@ -303,7 +303,7 @@ bins:
         - "*Btag*"
   - name: "Run2_Silver_Btag"
     include:
-        "Run2*Silver_*Btag"
+        "*Run2*Silver_*Btag"
 
   - name: "Run2_2L_Gold_0J_Low_PTISR_Lowest_RISR"
     include:
@@ -456,7 +456,7 @@ bins:
         - "*Btag*"
   - name: "Run2_Gold_Btag"
     include:
-        "Run2*Gold_*Btag"
+        "*Run2*Gold_*Btag"
 
   - name: "Run3_2L_Bronze_0J_Low_PTISR_Lowest_RISR"
     include:
@@ -609,7 +609,7 @@ bins:
         - "*Btag*"
   - name: "Run3_Bronze_Btag"
     include:
-        "Run3*Bronze_*Btag"
+        "*Run3*Bronze_*Btag"
 
   - name: "Run3_2L_Silver_0J_Low_PTISR_Lowest_RISR"
     include:
@@ -762,7 +762,7 @@ bins:
         - "*Btag*"
   - name: "Run3_Silver_Btag"
     include:
-        "Run3*Silver_*Btag"
+        "*Run3*Silver_*Btag"
 
   - name: "Run3_2L_Gold_0J_Low_PTISR_Lowest_RISR"
     include:
@@ -915,7 +915,7 @@ bins:
         - "*Btag*"
   - name: "Run3_Gold_Btag"
     include:
-        "Run3*Gold_*Btag"
+        "*Run3*Gold_*Btag"
 
 processes:
   merge:

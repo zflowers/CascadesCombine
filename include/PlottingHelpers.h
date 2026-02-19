@@ -258,9 +258,6 @@ void loadFormatMaps(){
   m_Title["top"] = "t + X";
   m_Color["top"] = 7011;
 
-  m_Title["top_Run2"] = "t + X Run2";
-  m_Title["top_Run3"] = "t + X Run3";
-
   m_Title["Vfakeleps"] = "fake enriched";
   m_Color["Vfakeleps"] = 7001;
   //m_Color["Vfakeleps"] = 8001;
@@ -321,12 +318,23 @@ void loadFormatMaps(){
   m_Color["DY"] = 7021;
   //m_Color["DY"] = 8006;
 
-  m_Title["boson_Run2"] = "boson Run2";
-  m_Title["boson_Run3"] = "boson Run3";
-  m_Title["diboson_Run2"] = "diboson Run2";
-  m_Title["diboson_Run3"] = "diboson Run3";
-  m_Title["triboson_Run2"] = "triboson Run2";
-  m_Title["triboson_Run3"] = "triboson Run3";
+  m_Title["top_Run2"] = "t + X";
+  m_Title["top_Run3"] = "t + X";
+  m_Title["boson_Run2"] = "boson";
+  m_Title["boson_Run3"] = "boson";
+  m_Title["diboson_Run2"] = "diboson";
+  m_Title["diboson_Run3"] = "diboson";
+  m_Title["triboson_Run2"] = "triboson";
+  m_Title["triboson_Run3"] = "triboson";
+
+  m_Color["top_Run2"] = 7011;
+  m_Color["top_Run3"] = 7011;
+  m_Color["boson_Run2"] = 7001;
+  m_Color["boson_Run3"] = 7001;
+  m_Color["diboson_Run2"] = 7051;
+  m_Color["diboson_Run3"] = 7051;
+  m_Color["triboson_Run2"] = 7050;
+  m_Color["triboson_Run2"] = 7050;
 
   m_Title["HF_FAKES"] = "HF leptons";
   m_Color["HF_FAKES"] = 7022;
@@ -340,6 +348,30 @@ void loadFormatMaps(){
   m_Color["FAKES"] = 7021;
   //m_Color["FAKES"] = 8010;
   
+  m_Title["Fakes_elHF_Run2"] = "HF fake e^{#pm}";
+  m_Color["Fakes_elHF_Run2"] = 7021;
+
+  m_Title["Fakes_elLF_Run2"] = "LF fake e^{#pm}";
+  m_Color["Fakes_elLF_Run2"] = 7022;
+
+  m_Title["Fakes_muHF_Run2"] = "HF fake #mu^{#pm}";
+  m_Color["Fakes_muHF_Run2"] = 7023;
+
+  m_Title["Fakes_muLF_Run2"] = "LF fake #mu^{#pm}";
+  m_Color["Fakes_muLF_Run2"] = 7024;
+
+  m_Title["Fakes_elHF_Run3"] = "HF fake e^{#pm}";
+  m_Color["Fakes_elHF_Run3"] = 7021;
+
+  m_Title["Fakes_elLF_Run3"] = "LF fake e^{#pm}";
+  m_Color["Fakes_elLF_Run3"] = 7022;
+
+  m_Title["Fakes_muHF_Run3"] = "HF fake #mu^{#pm}";
+  m_Color["Fakes_muHF_Run3"] = 7023;
+
+  m_Title["Fakes_muLF_Run3"] = "LF fake #mu^{#pm}";
+  m_Color["Fakes_muLF_Run3"] = 7024;
+
   m_Title["Fakes_elHF"] = "HF fake e^{#pm}";
   m_Color["Fakes_elHF"] = 7021;
 

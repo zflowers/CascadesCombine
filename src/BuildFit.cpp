@@ -405,46 +405,98 @@ void BuildFit::AddSharedFloatingNorm(const stringlist& procs, const std::string&
     cb.SetFlag("filters-use-regex", false);
 }
 
-void BuildFit::AddFloatingNormsGroupedByFakeType(const stringlist& fakesprocs, const std::string& type, double val){
-    // Map suffix -> list of procs
+void BuildFit::AddFloatingNormsGroupedByFakeType(
+    const stringlist& fakesprocs,
+    const std::string& type,
+    double val)
+{
     std::map<std::string, stringlist> groups;
+    const std::regex re(R"((?:.*_)?(Run2|Run3)_FAKES_(.+)$)");
+    std::smatch m;
 
-    const std::string marker = "_FAKES_";
     for (const auto &fp : fakesprocs) {
-        auto pos = fp.find(marker);
-        if (pos == std::string::npos) continue; // not a fake-style name, skip
-        std::string suffix = fp.substr(pos + marker.size()); // e.g. "Elec" or "Muon"
-        groups[suffix].push_back(fp);
+        if (std::regex_search(fp, m, re)) {
+            std::string run_tag = m[1].str();   // "Run2" or "Run3"
+            std::string fake_type = m[2].str(); // "Elec" or "Muon" (or other)
+            std::string key = run_tag + "_" + fake_type;
+            groups[key].push_back(fp);
+        } else {
+            // fallback: if it has _FAKES_ but no Run tag, group under ALLRuns_<type>
+            const std::string marker = "_FAKES_";
+            auto pos = fp.find(marker);
+            if (pos != std::string::npos) {
+                std::string fake_type = fp.substr(pos + marker.size());
+                std::string key = std::string("ALLRuns_") + fake_type;
+                groups[key].push_back(fp);
+                std::cerr << "[BuildFit] Warning: process '" << fp
+                          << "' did not match Run2/Run3. grouped as '" << key << "'\n";
+            } else {
+                // completely malformed name -> warn and skip
+                std::cerr << "[BuildFit] Warning: skipping process with unexpected name: '"
+                          << fp << "' (no _FAKES_ token)\n";
+            }
+        }
     }
 
+    // Create nuisances for each (Run,FakeType) group
     for (const auto &kv : groups) {
-        const std::string &suffix = kv.first;
+        const std::string &key = kv.first;    // e.g. "Run2_Elec" or "ALLRuns_Muon"
         const stringlist &procs = kv.second;
         if (procs.empty()) continue;
 
-        // nuisance name e.g. "scale_FAKES_Elec"
-        std::string nuis_name = "scale_FAKES_" + suffix;
-
+        std::string nuis_name = "scale_FAKES_" + key; // e.g. scale_FAKES_Run2_Elec
         AddSharedFloatingNorm(procs, nuis_name, type, val);
     }
 }
 
-void BuildFit::AddFakeFamiliesAsSharedNorms(const std::vector<std::string>& truebkgprocs, const std::vector<std::string>& fakesprocs, const std::string& type, double val){
-    for (const auto& base : truebkgprocs) {
-        // Build the family starting with the base process
-        std::vector<std::string> family{ base };
-        // Attach all matching fake processes
+void BuildFit::AddFakeFamiliesAsSharedNorms(
+    const std::vector<std::string>& truebkgprocs,
+    const std::vector<std::string>& fakesprocs,
+    const std::string& type,
+    double val,
+    const std::string& match_token,
+    bool require_match)
+{
+    // Map stripped physics base -> full family (Run2 + Run3 + their fakes)
+    std::map<std::string, std::vector<std::string>> families;
+
+    for (const auto& base_full : truebkgprocs) {
+
+        // Strip "_Run2" / "_Run3"
+        std::string base = base_full;
+        size_t run_pos = base.find("_Run");
+        if (run_pos != std::string::npos)
+            base = base.substr(0, run_pos);
+
+        // Apply filtering logic on stripped physics name
+        if (!match_token.empty()) {
+            bool contains = (base.find(match_token) != std::string::npos);
+
+            if (require_match && !contains) continue;
+            if (!require_match && contains) continue;
+        }
+
+        // Add true background process (Run2 or Run3)
+        families[base].push_back(base_full);
+
+        // Attach matching fake processes for THIS run-specific base
         for (const auto& fp : fakesprocs) {
-            // Prefix match: base + "_FAKES"
-            if (fp.rfind(base + "_FAKES", 0) == 0) {
-                family.push_back(fp);
+            if (fp.rfind(base_full + "_FAKES", 0) == 0) {
+                families[base].push_back(fp);
             }
         }
-        // Only add a shared nuisance if base has >=1 fake processes
-        if (family.size() > 1) {
-            const std::string nuis_name = "scale_" + base;
-            AddSharedFloatingNorm(family, nuis_name, type, val);
-        }
+    }
+
+    // Now create one nuisance per physics base
+    for (const auto& kv : families) {
+
+        const std::string& base = kv.first;
+        const std::vector<std::string>& family = kv.second;
+
+        if (family.empty()) continue;
+
+        const std::string nuis_name = "scale_" + base;
+        AddSharedFloatingNorm(family, nuis_name, type, val);
     }
 }
 
@@ -497,14 +549,25 @@ void BuildFit::AddRaSys(const stringlist& binset, const stringlist& procs){
 
 void BuildFit::AddPTISRSys(const stringlist& binset, const stringlist& procs){
     cb.SetFlag("filters-use-regex", true);
-    cb.cp().process(procs).bin({".*2L.*0J.*P350.*"})
-        .AddSyst(cb, "PTISR_2L_0J", "lnN", SystMap<>::init(1.10));
-    cb.cp().process(procs).bin({".*2L.*1J.*P350.*"})
-        .AddSyst(cb, "PTISR_2L_1J", "lnN", SystMap<>::init(1.10));
-    cb.cp().process(procs).bin({".*3L.*0J.*P300.*"})
-        .AddSyst(cb, "PTISR_3L_0J", "lnN", SystMap<>::init(1.10));
-    cb.cp().process(procs).bin({".*3L.*1J.*P300.*"})
-        .AddSyst(cb, "PTISR_3L_1J", "lnN", SystMap<>::init(1.10));
+
+    cb.cp().process(procs).bin({".*Run2.*2L.*0J.*P350.*"})
+        .AddSyst(cb, "Run2_PTISR_2L_0J", "lnN", SystMap<>::init(1.10));
+    cb.cp().process(procs).bin({".*Run2.*2L.*1J.*P350.*"})
+        .AddSyst(cb, "Run2_PTISR_2L_1J", "lnN", SystMap<>::init(1.10));
+    cb.cp().process(procs).bin({".*Run2.*3L.*0J.*P300.*"})
+        .AddSyst(cb, "Run2_PTISR_3L_0J", "lnN", SystMap<>::init(1.10));
+    cb.cp().process(procs).bin({".*Run2.*3L.*1J.*P300.*"})
+        .AddSyst(cb, "Run2_PTISR_3L_1J", "lnN", SystMap<>::init(1.10));
+
+    cb.cp().process(procs).bin({".*Run3.*2L.*0J.*P350.*"})
+        .AddSyst(cb, "Run3_PTISR_2L_0J", "lnN", SystMap<>::init(1.10));
+    cb.cp().process(procs).bin({".*Run3.*2L.*1J.*P350.*"})
+        .AddSyst(cb, "Run3_PTISR_2L_1J", "lnN", SystMap<>::init(1.10));
+    cb.cp().process(procs).bin({".*Run3.*3L.*0J.*P300.*"})
+        .AddSyst(cb, "Run3_PTISR_3L_0J", "lnN", SystMap<>::init(1.10));
+    cb.cp().process(procs).bin({".*Run3.*3L.*1J.*P300.*"})
+        .AddSyst(cb, "Run3_PTISR_3L_1J", "lnN", SystMap<>::init(1.10));
+
     cb.SetFlag("filters-use-regex", false);
 }
 
@@ -519,28 +582,35 @@ void BuildFit::AddSameSignSys(const stringlist& binset, const stringlist& procs)
 
 void BuildFit::AddBtagSys(const stringlist& binset, const stringlist& procs){
     cb.SetFlag("filters-use-regex", true);
-    cb.cp().process(procs).bin({".*2L.*0J.*P250.*Btag.*"})
-        .AddSyst(cb, "Btag_2L_0J_lPTISR", "lnN", SystMap<>::init(1.20));
-    cb.cp().process(procs).bin({".*2L.*0J.*P350.*Btag.*"})
-        .AddSyst(cb, "Btag_2L_0J_hPTISR", "lnN", SystMap<>::init(1.20));
-    cb.cp().process(procs).bin({".*2L.*1J.*P250.*Btag.*"})
-        .AddSyst(cb, "Btag_2L_1J_lPTISR", "lnN", SystMap<>::init(1.20));
-    cb.cp().process(procs).bin({".*2L.*1J.*P350.*Btag.*"})
-        .AddSyst(cb, "Btag_2L_1J_hPTISR", "lnN", SystMap<>::init(1.20));
-    //cb.cp().process(procs).bin({".*3L.*0J.*P200.*Btag.*"})
-    //    .AddSyst(cb, "Btag_3L_0J_lPTISR", "lnN", SystMap<>::init(1.20));
-    //cb.cp().process(procs).bin({".*3L.*0J.*P300.*Btag.*"})
-    //    .AddSyst(cb, "Btag_3L_0J_hPTISR", "lnN", SystMap<>::init(1.20));
-    //cb.cp().process(procs).bin({".*3L.*1J.*P200.*Btag.*"})
-    //    .AddSyst(cb, "Btag_3L_1J_lPTISR", "lnN", SystMap<>::init(1.20));
-    //cb.cp().process(procs).bin({".*3L.*1J.*P300.*Btag.*"})
-    //    .AddSyst(cb, "Btag_3L_1J_hPTISR", "lnN", SystMap<>::init(1.20));
-    cb.cp().process(procs).bin({".*3L.*P200.*Btag.*"})
-        .AddSyst(cb, "Btag_3L_lPTISR", "lnN", SystMap<>::init(1.20));
-    cb.cp().process(procs).bin({".*3L.*P300.*Btag.*"})
-        .AddSyst(cb, "Btag_3L_hPTISR", "lnN", SystMap<>::init(1.20));
-    cb.cp().process(procs).bin({".*4L.*Btag.*"})
-        .AddSyst(cb, "Btag_4L", "lnN", SystMap<>::init(1.20));
+    cb.cp().process(procs).bin({".*Run2.*2L.*0J.*P250.*Btag.*"})
+        .AddSyst(cb, "Run2_Btag_2L_0J_lPTISR", "lnN", SystMap<>::init(1.20));
+    cb.cp().process(procs).bin({".*Run2.*2L.*0J.*P350.*Btag.*"})
+        .AddSyst(cb, "Run2_Btag_2L_0J_hPTISR", "lnN", SystMap<>::init(1.20));
+    cb.cp().process(procs).bin({".*Run2.*2L.*1J.*P250.*Btag.*"})
+        .AddSyst(cb, "Run2_Btag_2L_1J_lPTISR", "lnN", SystMap<>::init(1.20));
+    cb.cp().process(procs).bin({".*Run2.*2L.*1J.*P350.*Btag.*"})
+        .AddSyst(cb, "Run2_Btag_2L_1J_hPTISR", "lnN", SystMap<>::init(1.20));
+    cb.cp().process(procs).bin({".*Run2.*3L.*P200.*Btag.*"})
+        .AddSyst(cb, "Run2_Btag_3L_lPTISR", "lnN", SystMap<>::init(1.20));
+    cb.cp().process(procs).bin({".*Run2.*3L.*P300.*Btag.*"})
+        .AddSyst(cb, "Run2_Btag_3L_hPTISR", "lnN", SystMap<>::init(1.20));
+    cb.cp().process(procs).bin({".*Run2.*4L.*Btag.*"})
+        .AddSyst(cb, "Run2_Btag_4L", "lnN", SystMap<>::init(1.20));
+
+    cb.cp().process(procs).bin({".*Run3.*2L.*0J.*P250.*Btag.*"})
+        .AddSyst(cb, "Run3_Btag_2L_0J_lPTISR", "lnN", SystMap<>::init(1.20));
+    cb.cp().process(procs).bin({".*Run3.*2L.*0J.*P350.*Btag.*"})
+        .AddSyst(cb, "Run3_Btag_2L_0J_hPTISR", "lnN", SystMap<>::init(1.20));
+    cb.cp().process(procs).bin({".*Run3.*2L.*1J.*P250.*Btag.*"})
+        .AddSyst(cb, "Run3_Btag_2L_1J_lPTISR", "lnN", SystMap<>::init(1.20));
+    cb.cp().process(procs).bin({".*Run3.*2L.*1J.*P350.*Btag.*"})
+        .AddSyst(cb, "Run3_Btag_2L_1J_hPTISR", "lnN", SystMap<>::init(1.20));
+    cb.cp().process(procs).bin({".*Run3.*3L.*P200.*Btag.*"})
+        .AddSyst(cb, "Run3_Btag_3L_lPTISR", "lnN", SystMap<>::init(1.20));
+    cb.cp().process(procs).bin({".*Run3.*3L.*P300.*Btag.*"})
+        .AddSyst(cb, "Run3_Btag_3L_hPTISR", "lnN", SystMap<>::init(1.20));
+    cb.cp().process(procs).bin({".*Run3.*4L.*Btag.*"})
+        .AddSyst(cb, "Run3_Btag_4L", "lnN", SystMap<>::init(1.20));
     cb.SetFlag("filters-use-regex", false);
 }
 
@@ -591,7 +661,25 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
 
     // 6) Add Systematics
     //cb.cp().SetAutoMCStats(cb, 0.); // Turn on autoMCstats
-    AddFakeFamiliesAsSharedNorms(truebkgprocs, fakesprocs, "rateParam", 1.0);
+    // All non-triboson processes -> rateParam
+    AddFakeFamiliesAsSharedNorms(
+        truebkgprocs,
+        fakesprocs,
+        "rateParam",
+        1.0,
+        "triboson",
+        false   // exclude triboson
+    );
+    
+    // Only triboson processes -> lnN 1.4
+    AddFakeFamiliesAsSharedNorms(
+        truebkgprocs,
+        fakesprocs,
+        "lnN",
+        1.4,
+        "triboson",
+        true    // include only triboson
+    );
     AddFloatingNormsGroupedByFakeType(fakesprocs, "lnN", 1.2);
     AddPTISRSys(kept_bins, bkgprocs);
     AddSameSignSys(kept_bins, bkgprocs);
