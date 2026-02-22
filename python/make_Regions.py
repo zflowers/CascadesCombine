@@ -506,12 +506,53 @@ def build_bins_btag_sideband(era):
                 ptcut = f"PTISR_LEP>={ptlo};"
                 pname = f"P{ptlo}"
 
-            for r in RISR_SB:
+            # -------------------------------------------------
+            # 4L: inclusive jets + single RISR bin 0.7->1.0
+            # -------------------------------------------------
+            if nlep == 4:
+                risr_cond = "RISR_LEP>=0.7;RISR_LEP<=1.;"
+                raw_key = f"Bin4L_Gold_{pname}_R7_Btag"
+                key = era_bin_name(era, raw_key)
+
+                cuts = DoubleQuotedScalarString(
+                    assemble_cuts_string(
+                        4,
+                        COMMON_BASE_TOKENS + ["MET>=150;", "Njet>0;"],
+                        ptcut,
+                        risr_cond,
+                        "Njet_S==0;",
+                        None,
+                        extra_tokens=["Nbjet>=1;"],
+                    )
+                )
+
+                out[key] = {
+                    "cuts": cuts,
+                    "lep-cuts": make_lep_cuts_block(COMMON_LEP, []),
+                    "predefined-cuts": DoubleQuotedScalarString("Cleaning_LEP;dphiMETV_LEP;"),
+                    "user-cuts": DoubleQuotedScalarString("minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"),
+                }
+
+                continue
+
+            # -------------------------------------------------
+            # 3L: inclusive jets, keep RISR_SB bins
+            # -------------------------------------------------
+            if nlep == 3:
+                jet_iter = [("Jincl", {"njet_cond": None})]
+                risr_iter = RISR_SB
+            else:
+                # 2L unchanged
+                jet_iter = JET_CONFIGS.items()
+                risr_iter = RISR_SB
+
+            for r in risr_iter:
                 risr_cond = format_rISR_condition(r)
 
-                for jtag, jconf in JET_CONFIGS.items():
+                for jtag, jconf in jet_iter:
                     raw_key = f"Bin{nlep}L_Gold_{jtag}_{pname}_{r['name']}_Btag"
                     key = era_bin_name(era, raw_key)
+
                     cuts = DoubleQuotedScalarString(
                         assemble_cuts_string(
                             nlep,
@@ -530,7 +571,6 @@ def build_bins_btag_sideband(era):
                         "predefined-cuts": DoubleQuotedScalarString("Cleaning_LEP;dphiMETV_LEP;"),
                         "user-cuts": DoubleQuotedScalarString("minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"),
                     }
-
     return out
 
 # ---------------- file writing helper ----------------

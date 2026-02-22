@@ -660,7 +660,7 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
     cb.FilterProcs([](ch::Process const *p){ return p->rate() <= 0; });
 
     // 6) Add Systematics
-    //cb.cp().SetAutoMCStats(cb, 0.); // Turn on autoMCstats
+    cb.cp().SetAutoMCStats(cb, 0.); // Turn on autoMCstats
     // All non-triboson processes -> rateParam
     AddFakeFamiliesAsSharedNorms(
         truebkgprocs,
