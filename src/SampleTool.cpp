@@ -19,7 +19,7 @@ SampleTool::SampleTool(){
   LumiDict["Summer23BPix_130X"] = 9.451;
   LumiDict["Summer24_130X"] = 108.95;
   LumiDict["Summer25_130X"] = 110.73;
-  LumiDict["Summer26_130X"] = 40.;
+  LumiDict["Summer26_130X"] = 50.;
 
   double RUN2_TOTAL_LUMI = 0.;
   RUN2_TOTAL_LUMI += LumiDict["Summer20UL16APV_106X"];
@@ -1928,13 +1928,9 @@ SampleTool::SampleTool(){
     }
   );
 
-  MasterDict["bkg_2016"] = mergeEntriesList( // used for histogram plots
+  MasterDict["bkg_2016APV"] = mergeEntriesList(
     MasterDict,
     {
-      "top_2016",
-      "boson_2016",
-      "DB_2016",
-      "TB_2016",
       "top_2016APV",
       "boson_2016APV",
       "DB_2016APV",
@@ -1942,7 +1938,17 @@ SampleTool::SampleTool(){
     }
   );
 
-  MasterDict["bkg_2017"] = mergeEntriesList( // used for histogram plots
+  MasterDict["bkg_2016"] = mergeEntriesList(
+    MasterDict,
+    {
+      "top_2016",
+      "boson_2016",
+      "DB_2016",
+      "TB_2016",
+    }
+  );
+
+  MasterDict["bkg_2017"] = mergeEntriesList(
     MasterDict,
     {
       "top_2017",
@@ -1952,7 +1958,7 @@ SampleTool::SampleTool(){
     }
   );
 
-  MasterDict["bkg_2018"] = mergeEntriesList( // used for histogram plots
+  MasterDict["bkg_2018"] = mergeEntriesList(
     MasterDict,
     {
       "top_2018",
@@ -1962,7 +1968,57 @@ SampleTool::SampleTool(){
     }
   );
 
-  MasterDict["bkg_Run2"] = mergeEntriesList( // used for histogram plots
+  MasterDict["bkg_2022"] = mergeEntriesList(
+    MasterDict,
+    {
+      "top_2022",
+      "boson_2022",
+      "DB_2022",
+      "TB_2022",
+    }
+  );
+
+  MasterDict["bkg_2022EE"] = mergeEntriesList(
+    MasterDict,
+    {
+      "top_2022EE",
+      "boson_2022EE",
+      "DB_2022EE",
+      "TB_2022EE",
+    }
+  );
+
+  MasterDict["bkg_2023"] = mergeEntriesList(
+    MasterDict,
+    {
+      "top_2023",
+      "boson_2023",
+      "DB_2023",
+      "TB_2023",
+    }
+  );
+
+  MasterDict["bkg_2023BPix"] = mergeEntriesList(
+    MasterDict,
+    {
+      "top_2023BPix",
+      "boson_2023BPix",
+      "DB_2023BPix",
+      "TB_2023BPix",
+    }
+  );
+
+  MasterDict["bkg_2024"] = mergeEntriesList(
+    MasterDict,
+    {
+      "top_2024",
+      "boson_2024",
+      "DB_2024",
+      "TB_2024",
+    }
+  );
+
+  MasterDict["bkg_Run2"] = mergeEntriesList(
     MasterDict,
     {
       "top_Run2",
@@ -1972,7 +2028,7 @@ SampleTool::SampleTool(){
     }
   );
 
-  MasterDict["bkg_Run3"] = mergeEntriesList( // used for histogram plots
+  MasterDict["bkg_Run3"] = mergeEntriesList(
     MasterDict,
     {
       "top_Run3",
@@ -1982,7 +2038,7 @@ SampleTool::SampleTool(){
     }
   );
 
-  MasterDict["bkg"] = mergeEntriesList( // used for histogram plots
+  MasterDict["bkg"] = mergeEntriesList(
     MasterDict,
     {
       "top",

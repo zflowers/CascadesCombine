@@ -35,6 +35,9 @@ python3 python/make_Regions.py
 
 # All Regions
 rm -f config/bin_cfgs/Regions.yaml # Clean up yaml
+rm -f config/bin_cfgs/Regions_Run2.yaml # Clean up yaml
+rm -f config/bin_cfgs/Regions_Run3.yaml # Clean up yaml
+
 cat config/bin_cfgs/Regions_Run2_2L_0J_lPTISR_Gold.yaml >> config/bin_cfgs/Regions_Run2.yaml
 cat config/bin_cfgs/Regions_Run2_2L_0J_lPTISR_Silver.yaml >> config/bin_cfgs/Regions_Run2.yaml
 cat config/bin_cfgs/Regions_Run2_2L_0J_lPTISR_Bronze.yaml >> config/bin_cfgs/Regions_Run2.yaml
@@ -101,8 +104,8 @@ BINS_PER_JOB=$(awk -v n="$BIN_COUNT" 'BEGIN { printf "%d\n", n*0.025 + 0.25 }')
 #sleep ${SLEEP}
 
 # Run2 Only Sensitivity
-run_all --make-json --skip-compile --processes-cfg config/process_cfgs/processes_Run2.yaml --bins-cfg config/bin_cfgs/Regions_Run2.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_Regions_234L_Run2_${VERSION}
-sleep ${SLEEP}
+#run_all --make-json --skip-compile --processes-cfg config/process_cfgs/processes_Run2.yaml --bins-cfg config/bin_cfgs/Regions_Run2.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_Regions_234L_Run2_${VERSION}
+#sleep ${SLEEP}
 
 # all TChiWZ Run2 only
 #run_all --skip-compile --skip-plot-yields --make-json --bins-cfg config/bin_cfgs/Regions_Run2.yaml --bins-per-job ${BINS_PER_JOB} --processes-cfg config/process_cfgs/processes_allTChiWZ_Run2.yaml --run-name Cascades_Regions_234L_allTChiWZ_Run2_${VERSION}
