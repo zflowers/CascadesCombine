@@ -115,7 +115,6 @@ def draw_plot(gr, labels, params, outbase, title="", ytitle="postfit value #pm e
     h.GetXaxis().SetLabelSize(0.035)
     h.GetXaxis().SetTitle("")
 
-
     # Find y-range from graph
     # we can compute min and max from data
     ys = [compute_values(p)[0] for p in params]
@@ -146,11 +145,11 @@ def draw_plot(gr, labels, params, outbase, title="", ytitle="postfit value #pm e
         l1.Draw("same")
 
     # legend (optional)
-    leg = TLegend(0.78, 0.7, 0.95, 0.88)
-    leg.SetFillStyle(0)
-    leg.SetBorderSize(0)
-    leg.AddEntry(gr, "postfit value #pm error", "p")
-    leg.Draw("same")
+    #leg = TLegend(0.78, 0.7, 0.95, 0.88)
+    #leg.SetFillStyle(0)
+    #leg.SetBorderSize(0)
+    #leg.AddEntry(gr, "postfit value #pm error", "p")
+    #leg.Draw("same")
 
     # CMS label / info
     l = TLatex()
@@ -158,9 +157,6 @@ def draw_plot(gr, labels, params, outbase, title="", ytitle="postfit value #pm e
     l.SetTextFont(42)
     l.SetTextSize(0.035)
     l.DrawLatex(0.14, 0.96, "#bf{#it{CMS}} work-in-progress")
-    if title:
-        l.SetTextSize(0.032)
-        l.DrawLatex(0.14, 0.92, title)
 
     cv.Update()
     # Save
@@ -169,7 +165,6 @@ def draw_plot(gr, labels, params, outbase, title="", ytitle="postfit value #pm e
     cv.Print(pdfname)
     cv.Print(rootname)
     print("Saved:", pdfname, rootname)
-
 
 def main():
     parser = argparse.ArgumentParser(description="Clean ROOT impacts plotter")
