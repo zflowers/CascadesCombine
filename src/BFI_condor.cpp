@@ -123,6 +123,9 @@ int main(int argc, char** argv) {
     else if (rootFilePath.find("Summer22EE_130X") != std::string::npos) year = 2022;
     else if (rootFilePath.find("Summer23_130X") != std::string::npos) year = 2023;
     else if (rootFilePath.find("Summer23BPix_130X") != std::string::npos) year = 2023;
+    else if (rootFilePath.find("Summer24_130X") != std::string::npos) year = 2024;
+    else if (rootFilePath.find("Summer25_130X") != std::string::npos) year = 2025;
+    else if (rootFilePath.find("Summer26_130X") != std::string::npos) year = 2026;
     if (Lumi <= 0.) Lumi = GetLumiFromKey(rootFilePath); // get lumi from ST for file
     if (sampleName.empty()) sampleName = GetSampleNameFromKey(rootFilePath);
     if (binArg.empty() || rootFilePath.empty() || (!doHist && !doJSON)) { usage(argv[0]); return 1; }

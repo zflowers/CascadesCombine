@@ -15,7 +15,6 @@ processes:
     - SMS_TChiWZpreUL
 
 sms_filters:
-  - SMS_300_295
   - SMS_300_290
   - SMS_300_280
   - SMS_300_270
