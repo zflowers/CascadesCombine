@@ -273,7 +273,7 @@ when_to_transfer_output = ON_EXIT
 request_cpus            = {cpus}
 request_memory          = {memory}
 
-max_materialize         = 100
+max_materialize         = 50
 
 # Release jobs automatically from hold for common conditions
 periodic_release = (HoldReasonCode == 12 && HoldReasonSubCode == 256) || \
