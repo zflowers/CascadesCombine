@@ -411,7 +411,7 @@ void BuildFit::AddFloatingNormsGroupedByFakeType(
     double val)
 {
     std::map<std::string, stringlist> groups;
-    const std::regex re(R"((?:.*_)?(Run2|Run3)_FAKES_(.+)$)");
+    const std::regex re(R"((?:.*_)?(Run2|Run3)[^_]*_FAKES_(.+)$)");
     std::smatch m;
 
     for (const auto &fp : fakesprocs) {

@@ -9,7 +9,6 @@ import ROOT as rt
 from ROOT import TMath as tm
 import csv
 
-
 def getStatus(df,countThreshold,n_nuisances):
 	totalMCpre=0
 	totalMCpost=0
@@ -22,48 +21,48 @@ def getStatus(df,countThreshold,n_nuisances):
 	print('{0: <12}'.format("Postfit"),'{0: <12}'.format(round(totalMCpost)), '{0: <12}'.format(totalD),'{0: <12}'.format(round(totalD-totalMCpost)), '{0: <12}'.format(n_nuisances))
     
 def getChisq(df, countThreshold,n_nuisances):
-	chidf = pd.DataFrame()
-	chidf['observed'] = df['data']
-	chidf['expected_pre'] = df['bprefit']
-	chidf['expected_post'] = df['bpostfit']
-	chidf['variance_pre'] = df['bprefit_err']
-	chidf['variance_post'] = df['bpostfit_err']
-	chidf['variance_pre'] = chidf['variance_pre'].apply(lambda x:x*x)
-	chidf['variance_post'] = chidf['variance_post'].apply(lambda x:x*x)
-
-	chidf = chidf.loc[ chidf['expected_pre'] > (10e-5) ]
-	TotalBins = chidf.shape[0]
-	chipre = chidf.loc[ chidf['expected_pre'] > countThreshold]
-	chipost = chidf.loc[ chidf['expected_post'] > countThreshold]
-	SelectedBins_pre = chipre.shape[0]
-	SelectedBins_post = chipost.shape[0]
+    chidf = pd.DataFrame()
+    chidf['observed'] = df['data']
+    chidf['expected_pre'] = df['bprefit']
+    chidf['expected_post'] = df['bpostfit']
+    chidf['variance_pre'] = df['bprefit_err']
+    chidf['variance_post'] = df['bpostfit_err']
+    chidf['variance_pre'] = chidf['variance_pre'].apply(lambda x:x*x)
+    chidf['variance_post'] = chidf['variance_post'].apply(lambda x:x*x)
+    
+    chidf = chidf.loc[ chidf['expected_pre'] > (10e-5) ]
+    TotalBins = chidf.shape[0]
+    chipre = chidf.loc[chidf['expected_pre'] > countThreshold].copy()
+    chipost = chidf.loc[chidf['expected_post'] > countThreshold].copy()
+    SelectedBins_pre = chipre.shape[0]
+    SelectedBins_post = chipost.shape[0]
     
     #calculate columns for pre chisq
-	chipre['diff'] = chipre['observed'] - chipre['expected_pre']
-	#chipre['sqdiff'] = chipre.apply(lambda x:(x*x))
-	chipre['sqdiff'] = chipre['diff']*chipre['diff']
-	#chipre['ratio'] = chipre['sqdiff']/chipre['variance_pre']
-	chipre['ratio'] = chipre['sqdiff']/chipre['expected_pre']
-	chi2pre = chipre['ratio'].sum()
-	chi2preNDF = chi2pre/(float(SelectedBins_pre-n_nuisances))
-	pvalue_pre = 1- stats.chi2.cdf(chi2pre,SelectedBins_pre)
+    chipre['diff'] = chipre['observed'] - chipre['expected_pre']
+    #chipre['sqdiff'] = chipre.apply(lambda x:(x*x))
+    chipre['sqdiff'] = chipre['diff']*chipre['diff']
+    #chipre['ratio'] = chipre['sqdiff']/chipre['variance_pre']
+    chipre['ratio'] = chipre['sqdiff']/chipre['expected_pre']
+    chi2pre = chipre['ratio'].sum()
+    chi2preNDF = chi2pre/(float(SelectedBins_pre-n_nuisances))
+    pvalue_pre = 1- stats.chi2.cdf(chi2pre,SelectedBins_pre)
     
     #calculate columns for post chisq
-	chipost['diff'] = chipost['observed'] - chipost['expected_post']
-	#chipost['sqdiff'] = chipost.apply(lambda x:(x*x))
-	chipost['sqdiff'] = chipost['diff']*chipost['diff']
-	#chipost['ratio'] = chipost['sqdiff']/(chidf['expected_post'] - chidf['variance_post'] )
-	chipost['ratio'] = chipost['sqdiff']/chipost['expected_post']
-	#chipost['ratio'] = chipost['sqdiff']/chidf['variance_post']
-	chi2post = chipost['ratio'].sum()
-	chi2postNDF = chi2post/(float(SelectedBins_post-n_nuisances))
-	pvalue_post = 1- stats.chi2.cdf(chi2post,SelectedBins_post)
+    chipost['diff'] = chipost['observed'] - chipost['expected_post']
+    #chipost['sqdiff'] = chipost.apply(lambda x:(x*x))
+    chipost['sqdiff'] = chipost['diff']*chipost['diff']
+    #chipost['ratio'] = chipost['sqdiff']/(chidf['expected_post'] - chidf['variance_post'] )
+    chipost['ratio'] = chipost['sqdiff']/chipost['expected_post']
+    #chipost['ratio'] = chipost['sqdiff']/chidf['variance_post']
+    chi2post = chipost['ratio'].sum()
+    chi2postNDF = chi2post/(float(SelectedBins_post-n_nuisances))
+    pvalue_post = 1- stats.chi2.cdf(chi2post,SelectedBins_post)
     
-	print("Chi2  (O-E)^2 / E")
-	print('{0: <12}'.format(" "),'{0: <12}'.format("Chisq"), '{0: <12}'.format("Chisq/NDF"), '{0: <12}'.format("P-val"),end='')
-	print('{0: <12}'.format("Selected Bins"), '{0: <12}'.format("Total Bins"), '{0: <12}'.format("Threshold"))
-	print('{0: <12}'.format("Prefit"),'{0: <12}'.format(round(chi2pre,1)), '{0: <12}'.format(round(chi2preNDF,1)), '{0: <12}'.format(round(pvalue_pre,2)), '{0: <12}'.format(SelectedBins_pre), '{0: <12}'.format(TotalBins), '{0: <12}'.format(countThreshold))
-	print('{0: <12}'.format("Postfit"),'{0: <12}'.format(round(chi2post,1)), '{0: <12}'.format(round(chi2postNDF,1)), '{0: <12}'.format(round(pvalue_post,2)), '{0: <12}'.format(SelectedBins_post), '{0: <12}'.format(TotalBins), '{0: <12}'.format(countThreshold))
+    print("Chi2  (O-E)^2 / E")
+    print('{0: <12}'.format(" "),'{0: <12}'.format("Chisq"), '{0: <12}'.format("Chisq/NDF"), '{0: <12}'.format("P-val"),end='')
+    print('{0: <12}'.format("Selected Bins"), '{0: <12}'.format("Total Bins"), '{0: <12}'.format("Threshold"))
+    print('{0: <12}'.format("Prefit"),'{0: <12}'.format(round(chi2pre,1)), '{0: <12}'.format(round(chi2preNDF,1)), '{0: <12}'.format(round(pvalue_pre,2)), '{0: <12}'.format(SelectedBins_pre), '{0: <12}'.format(TotalBins), '{0: <12}'.format(countThreshold))
+    print('{0: <12}'.format("Postfit"),'{0: <12}'.format(round(chi2post,1)), '{0: <12}'.format(round(chi2postNDF,1)), '{0: <12}'.format(round(pvalue_post,2)), '{0: <12}'.format(SelectedBins_post), '{0: <12}'.format(TotalBins), '{0: <12}'.format(countThreshold))
 
 def getMyChisq(df, countThreshold,n_nuisances):
     chidf = pd.DataFrame()
@@ -243,9 +242,9 @@ def getPull(df, DO_POISSON):
     
 def getPlots(df,tfile,tag,DO_POISSON):
 	rt.gStyle.SetOptFit(1)
-	hpre = rt.TH1D("hpre"+tag, "Prefit Pull; O-E/#sqrt{E};N bins",40,-10,10)
-	hpost = rt.TH1D("hpost"+tag, "Postfit Pull; O-E/#sqrt{E+VF};N bins",40, -10,10)
-	hpoisson = rt.TH1D("hpois"+tag," Postfit Poisson Pull; P;N bins",40,-10,10)
+	hpre = rt.TH1D("hpre"+tag, "Prefit Pull; O-E/#sqrt{E};N bins",40,-5,5)
+	hpost = rt.TH1D("hpost"+tag, "Postfit Pull; O-E/#sqrt{E+VF};N bins",40, -5,5)
+	hpoisson = rt.TH1D("hpois"+tag," Postfit Poisson Pull; P;N bins",40,-5,5)
 	
 	
 	res = df	

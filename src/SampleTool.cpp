@@ -1523,6 +1523,10 @@ SampleTool::SampleTool(){
     pathPrefix + "Summer22_130X_SMS/SMS-TChiWZ_mC1-295_mN2-300_mN1-290_NanoAODv12_JustinPrivateMC_Summer22_130X_SMS_Summer22_130X.root"
   };
 
+  MasterDict["SMS_TSlepSlep_TEST"] = {
+    pathPrefix + "Summer22_130X_SMS/TSlepSlep_MSlep250_MLSP245_TuneCP5_13p6TeV-madgraph-pythia8_Summer22_130X.root"
+  };
+
   MasterDict["Data_2016APV"] = {
     pathPrefix + "Summer20UL16APV_106X_Data/MET_Run2016B-ver2_HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16APV_106X_Data_Summer20UL16APV_106X.root",
     pathPrefix + "Summer20UL16APV_106X_Data/MET_Run2016C-HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16APV_106X_Data_Summer20UL16APV_106X.root",
@@ -2454,6 +2458,9 @@ SampleTool::SampleTool(){
       "SMS_TChiWZ_2022EE",
       "SMS_TChiWZ_2023",
       "SMS_TChiWZ_2023BPix",
+      "SMS_TChiWZ_2024",
+      "SMS_TChiWZ_2025",
+      "SMS_TChiWZ_2026",
     }
   );
   MasterDict["SMS_TChiWZpreUL"] = mergeEntriesList(
@@ -2466,6 +2473,24 @@ SampleTool::SampleTool(){
       "SMS_TChiWZpreUL_2022EE",
       "SMS_TChiWZpreUL_2023",
       "SMS_TChiWZpreUL_2023BPix",
+      "SMS_TChiWZpreUL_2024",
+      "SMS_TChiWZpreUL_2025",
+      "SMS_TChiWZpreUL_2026",
+    }
+  );
+  MasterDict["SMS_TSlepSleppreUL"] = mergeEntriesList(
+    MasterDict,
+    {
+      "SMS_TSlepSleppreUL_2016",
+      "SMS_TSlepSleppreUL_2017",
+      "SMS_TSlepSleppreUL_2018",
+      "SMS_TSlepSleppreUL_2022",
+      "SMS_TSlepSleppreUL_2022EE",
+      "SMS_TSlepSleppreUL_2023",
+      "SMS_TSlepSleppreUL_2023BPix",
+      "SMS_TSlepSleppreUL_2024",
+      "SMS_TSlepSleppreUL_2025",
+      "SMS_TSlepSleppreUL_2026",
     }
   );
 

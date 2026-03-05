@@ -129,6 +129,7 @@ int main(int argc, char** argv) {
     if (Lumi <= 0.) Lumi = GetLumiFromKey(rootFilePath); // get lumi from ST for file
     if (sampleName.empty()) sampleName = GetSampleNameFromKey(rootFilePath);
     if (binArg.empty() || rootFilePath.empty() || (!doHist && !doJSON)) { usage(argv[0]); return 1; }
+    if (rootFilePath.find("TSlepSlep_MSlep250_MLSP245") != std::string::npos) Lumi = 470.*1.07; // placeholder
     std::cout << "Using Lumi: " << Lumi << std::endl;
 
     // split semicolon-separated bin list

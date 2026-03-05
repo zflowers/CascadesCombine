@@ -22,7 +22,7 @@ run_all() {
     fi
 }
 SLEEP=70
-VERSION="v386"
+VERSION="v387"
 make clean
 make all -j 8
 echo "Submitting Regions..."
@@ -96,11 +96,7 @@ BIN_COUNT=$(grep -c 'Bin' config/bin_cfgs/Regions.yaml)
 BINS_PER_JOB=$(awk -v n="$BIN_COUNT" 'BEGIN { printf "%d\n", n*0.025 + 0.25 }')
 
 # Run2+Run3 Sensitivity
-run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_Regions_234L_Run2Run3_${VERSION}
-sleep ${SLEEP}
-
-# all TChiWZ Run2+Run3
-#run_all --skip-compile --skip-plot-yields --make-json --bins-cfg config/bin_cfgs/Regions.yaml --bins-per-job ${BINS_PER_JOB} --processes-cfg config/process_cfgs/processes_allTChiWZ.yaml --run-name Cascades_Regions_234L_allTChiWZ_${VERSION}
+#run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_Regions_234L_Run2Run3_${VERSION}
 #sleep ${SLEEP}
 
 # Run2 Only Sensitivity
@@ -114,6 +110,18 @@ sleep ${SLEEP}
 # all preUL TChiWZ Run2 only
 #run_all --skip-compile --skip-plot-yields --make-json --bins-cfg config/bin_cfgs/Regions_Run2.yaml --bins-per-job ${BINS_PER_JOB} --processes-cfg config/process_cfgs/processes_allpreULTChiWZ_Run2.yaml --run-name Cascades_Regions_234L_allpreULTChiWZ_Run2_${VERSION}
 #sleep ${SLEEP}
+
+# all TChiWZ Run2+Run3
+run_all --skip-compile --skip-plot-yields --make-json --bins-cfg config/bin_cfgs/Regions.yaml --bins-per-job ${BINS_PER_JOB} --processes-cfg config/process_cfgs/processes_allTChiWZ.yaml --run-name Cascades_Regions_234L_Run2_Run3_allTChiWZ_${VERSION}
+sleep ${SLEEP}
+
+# all preULTChiWZ Run2+Run3
+run_all --skip-compile --skip-plot-yields --make-json --bins-cfg config/bin_cfgs/Regions.yaml --bins-per-job ${BINS_PER_JOB} --processes-cfg config/process_cfgs/processes_allpreULTChiWZ.yaml --run-name Cascades_Regions_234L_Run2_Run3_allpreULTChiWZ_${VERSION}
+sleep ${SLEEP}
+
+# all preULTSlepSlep Run2+Run3
+run_all --skip-compile --skip-plot-yields --make-json --bins-cfg config/bin_cfgs/Regions.yaml --bins-per-job ${BINS_PER_JOB} --processes-cfg config/process_cfgs/processes_allpreULTSlepSlep.yaml --run-name Cascades_Regions_234L_Run2_Run3_allpreULTSlepSlep_${VERSION}
+sleep ${SLEEP}
 
 # CR Fit
 rm -f config/bin_cfgs/Regions_CR.yaml # Clean up yaml
@@ -148,8 +156,8 @@ cat config/bin_cfgs/Regions_Run3_4L_Bronze.yaml >> config/bin_cfgs/Regions_CR.ya
 cat config/bin_cfgs/Regions_Run3_top_sideband_Bronze.yaml >> config/bin_cfgs/Regions_CR.yaml
 cat config/bin_cfgs/Regions_Run3_top_sideband_Silver.yaml >> config/bin_cfgs/Regions_CR.yaml
 
-run_all --skip-plot-yields --make-impacts --make-FD --processes-cfg config/process_cfgs/data_processes.yaml --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_CR.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_CRFit_Impacts_FD_234L_Run2Run3_${VERSION}
-sleep ${SLEEP}
+#run_all --skip-plot-yields --make-impacts --make-FD --processes-cfg config/process_cfgs/data_processes.yaml --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_CR.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_CRFit_Impacts_FD_234L_Run2Run3_${VERSION}
+#sleep ${SLEEP}
 
 sleep 30 # final sleep just to hold user from accidentally submitting something before last sub is out the door
 echo "Submitted Regions!"
