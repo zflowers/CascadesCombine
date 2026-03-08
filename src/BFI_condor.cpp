@@ -326,20 +326,30 @@ int main(int argc, char** argv) {
         }
     
         std::vector<DerivedVar> validatedDerivedVars;
-        // --- Base node to be copied per-bin ---
-        if(ROOT::IsImplicitMTEnabled()) ROOT::DisableImplicitMT(); // disable MT for validation
-        BaseNodeHandle valHandle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi, IsData, year, validatedDerivedVars);
-        ROOT::RDF::RNode base_node_val = valHandle.node; // RNode constructed under IMT OFF
+
+        // --- VALIDATION BASE NODE (MT OFF) ---
+        if(ROOT::IsImplicitMTEnabled()) ROOT::DisableImplicitMT();
+        BaseNodeHandle valHandle =
+            MakeBaseNode(tree_name, rootFilePath, BFI, Lumi, IsData, year, derivedVars);
+        ROOT::RDF::RNode base_node_val = valHandle.node;
     
+        // --- Load all user cuts with base_node_val ---
+        std::map<std::string, CutDef> allUserCuts;
+        base_node_val = BuildFitInput::loadCutsUser(base_node_val, allUserCuts, true);
+        
         // --- Validate derived variables (on base node) ---
         for (const auto &dv : derivedVars) {
             if(ValidateDerivedVarNode(base_node_val, dv))
                 validatedDerivedVars.push_back(dv);
         }
-    
-        // --- Load all user cuts with base_node_val ---
-        std::map<std::string, CutDef> allUserCuts;
-        base_node_val = BuildFitInput::loadCutsUser(base_node_val, allUserCuts, true);
+
+        // --- FILL BASE NODE (MT ON) ---
+        if(!ROOT::IsImplicitMTEnabled()) ROOT::EnableImplicitMT();
+        BaseNodeHandle fillHandle =
+            MakeBaseNode(tree_name, rootFilePath, BFI, Lumi, IsData, year, validatedDerivedVars);
+        ROOT::RDF::RNode base_node_fill = fillHandle.node;
+        
+        //base_node_fill = BuildFitInput::loadCutsUser(base_node_fill, allUserCuts, false);
     
         // precompute fake-key variants
         //std::string key_elec = key + "_FAKES_Elec";
@@ -413,10 +423,11 @@ int main(int argc, char** argv) {
             }
 
             if(ROOT::IsImplicitMTEnabled()) ROOT::DisableImplicitMT(); // disable MT for validation
-            BaseNodeHandle bin_valHandle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi, IsData, year, validatedDerivedVars);
-            ROOT::RDF::RNode bin_base_node_val = bin_valHandle.node; // RNode constructed under IMT OFF
-    
-            bin_base_node_val = BuildFitInput::loadCutsUser(bin_base_node_val, allUserCuts, false);
+            //BaseNodeHandle bin_valHandle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi, IsData, year, validatedDerivedVars);
+            //ROOT::RDF::RNode bin_base_node_val = bin_valHandle.node; // RNode constructed under IMT OFF
+            //bin_base_node_val = BuildFitInput::loadCutsUser(bin_base_node_val, allUserCuts, false);
+            ROOT::RDF::RNode node = base_node_val;
+            //node = BuildFitInput::loadCutsUser(node, allUserCuts, false);
     
             // Retrieve the already-expanded bin-specific cuts
             const auto &finalCutsExpanded = finalCutsExpandedMap.at(bin);
@@ -440,7 +451,7 @@ int main(int argc, char** argv) {
             }
     
             // 'node' for validation context (MT OFF)
-            ROOT::RDF::RNode node = bin_base_node_val;
+            //ROOT::RDF::RNode node = bin_base_node_val;
     
             // --- Histograms / CutFlow per-bin ---
             if(doHist){
@@ -563,9 +574,7 @@ int main(int argc, char** argv) {
                     keep[i] = ok ? 1 : 0;
                 }
     
-                //
                 // --- FILL CUTFLOW per-process (MT OFF definitions, evaluate now) ---
-                //
                 // create separate cutflows per FAKE-split process. Use node (MT OFF) as base.
                 std::vector<std::pair<std::string, ROOT::RDF::RNode>> proc_nodes_val;
                 if (!runFAKES) {
@@ -670,11 +679,14 @@ int main(int argc, char** argv) {
                 } // end proc_nodes_val loop
     
                 // --- FILL PASS (MT ON) per-bin ---
-                if(!ROOT::IsImplicitMTEnabled()) ROOT::EnableImplicitMT(); // turn on multi-threading for filling
-                BaseNodeHandle fillHandle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi, IsData, year, validatedDerivedVars);
-                ROOT::RDF::RNode base_node_fill = fillHandle.node; // RNode constructed under IMT ON
-                base_node_fill = BuildFitInput::loadCutsUser(base_node_fill, allUserCuts, false);
-                base_node_fill = loadHistogramsUserCols(base_node_fill);
+                //if(!ROOT::IsImplicitMTEnabled()) ROOT::EnableImplicitMT(); // turn on multi-threading for filling
+                //BaseNodeHandle fillHandle = MakeBaseNode(tree_name, rootFilePath, BFI, Lumi, IsData, year, validatedDerivedVars);
+                //ROOT::RDF::RNode base_node_fill = fillHandle.node; // RNode constructed under IMT ON
+                //base_node_fill = BuildFitInput::loadCutsUser(base_node_fill, allUserCuts, false);
+                //base_node_fill = loadHistogramsUserCols(base_node_fill);
+                ROOT::RDF::RNode fill_node = base_node_fill;
+                fill_node = BuildFitInput::loadCutsUser(fill_node, allUserCuts, false);
+                fill_node = loadHistogramsUserCols(fill_node);
     
                 std::cout << "[BFI_condor] Filling histograms (bin=" << bin << ")\n";
     
@@ -686,23 +698,23 @@ int main(int argc, char** argv) {
                     // Build list of proc-specific nodes for MT ON fill stage
                     std::vector<std::pair<std::string, ROOT::RDF::RNode>> proc_nodes_fill;
                     if (!runFAKES) {
-                        proc_nodes_fill.emplace_back(key, base_node_fill);
+                        proc_nodes_fill.emplace_back(key, fill_node);
                     } else {
-                        //auto node_elec = base_node_fill.Filter("hasFakeElectron");
-                        //auto node_muon = base_node_fill.Filter("hasFakeMuon");
-                        //auto node_both = base_node_fill.Filter("hasFakeBoth");
-                        //auto node_clean = base_node_fill.Filter("hasNoFake");
+                        //auto node_elec = fill_node.Filter("hasFakeElectron");
+                        //auto node_muon = fill_node.Filter("hasFakeMuon");
+                        //auto node_both = fill_node.Filter("hasFakeBoth");
+                        //auto node_clean = fill_node.Filter("hasNoFake");
     
                         //proc_nodes_fill.emplace_back(key_elec, node_elec);
                         //proc_nodes_fill.emplace_back(key_muon, node_muon);
                         //proc_nodes_fill.emplace_back(key_both, node_both);
                         //proc_nodes_fill.emplace_back(key, node_clean);
 
-                        auto node_HFelec = base_node_fill.Filter("isHFFakeElectron");
-                        auto node_HFmuon = base_node_fill.Filter("isHFFakeMuon");
-                        auto node_LFelec = base_node_fill.Filter("isLFFakeElectron");
-                        auto node_LFmuon = base_node_fill.Filter("isLFFakeMuon");
-                        auto node_clean = base_node_fill.Filter("hasNoFake");
+                        auto node_HFelec = fill_node.Filter("isHFFakeElectron");
+                        auto node_HFmuon = fill_node.Filter("isHFFakeMuon");
+                        auto node_LFelec = fill_node.Filter("isLFFakeElectron");
+                        auto node_LFmuon = fill_node.Filter("isLFFakeMuon");
+                        auto node_clean = fill_node.Filter("hasNoFake");
     
                         proc_nodes_fill.emplace_back(key_HFelec, node_HFelec);
                         proc_nodes_fill.emplace_back(key_HFmuon, node_HFmuon);
