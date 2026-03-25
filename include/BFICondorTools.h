@@ -97,7 +97,8 @@ inline std::string GetProcessNameFromKey(const std::string &keyOrPath,
             const auto &entries = getExpandedEntries(pref);
             for (const auto &entry : entries) {
                 std::string p = getPrefix(entry);
-                if (!p.empty() && keyBase.rfind(p, 0) == 0) {
+                //if (!p.empty() && keyBase.rfind(p, 0) == 0) {
+                if (keyBase == fs::path(entry).filename().string()) {
                     return pref;
                 }
             }
@@ -109,7 +110,8 @@ inline std::string GetProcessNameFromKey(const std::string &keyOrPath,
             const auto &entries = getExpandedEntries(group);
             for (const auto &entry : entries) {
                 std::string p = getPrefix(entry);
-                if (!p.empty() && keyBase.rfind(p, 0) == 0) {
+                //if (!p.empty() && keyBase.rfind(p, 0) == 0) {
+                if (keyBase == fs::path(entry).filename().string()) {
                     return group;
                 }
             }

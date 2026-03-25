@@ -554,19 +554,15 @@ void BuildFit::AddPTISRSys(const stringlist& binset, const stringlist& procs){
         .AddSyst(cb, "Run2_PTISR_2L_0J", "lnN", SystMap<>::init(1.10));
     cb.cp().process(procs).bin({".*Run2.*2L.*1J.*P350.*"})
         .AddSyst(cb, "Run2_PTISR_2L_1J", "lnN", SystMap<>::init(1.10));
-    cb.cp().process(procs).bin({".*Run2.*3L.*0J.*P300.*"})
-        .AddSyst(cb, "Run2_PTISR_3L_0J", "lnN", SystMap<>::init(1.10));
-    cb.cp().process(procs).bin({".*Run2.*3L.*1J.*P300.*"})
-        .AddSyst(cb, "Run2_PTISR_3L_1J", "lnN", SystMap<>::init(1.10));
+    cb.cp().process(procs).bin({".*Run2.*3L.*P300.*"})
+        .AddSyst(cb, "Run2_PTISR_3L", "lnN", SystMap<>::init(1.10));
 
     cb.cp().process(procs).bin({".*Run3.*2L.*0J.*P350.*"})
         .AddSyst(cb, "Run3_PTISR_2L_0J", "lnN", SystMap<>::init(1.10));
     cb.cp().process(procs).bin({".*Run3.*2L.*1J.*P350.*"})
         .AddSyst(cb, "Run3_PTISR_2L_1J", "lnN", SystMap<>::init(1.10));
-    cb.cp().process(procs).bin({".*Run3.*3L.*0J.*P300.*"})
-        .AddSyst(cb, "Run3_PTISR_3L_0J", "lnN", SystMap<>::init(1.10));
-    cb.cp().process(procs).bin({".*Run3.*3L.*1J.*P300.*"})
-        .AddSyst(cb, "Run3_PTISR_3L_1J", "lnN", SystMap<>::init(1.10));
+    cb.cp().process(procs).bin({".*Run3.*3L.*P300.*"})
+        .AddSyst(cb, "Run3_PTISR_3L", "lnN", SystMap<>::init(1.10));
 
     cb.SetFlag("filters-use-regex", false);
 }
@@ -660,7 +656,7 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
     cb.FilterProcs([](ch::Process const *p){ return p->rate() <= 0; });
 
     // 6) Add Systematics
-    cb.cp().SetAutoMCStats(cb, 0.); // Turn on autoMCstats
+    //cb.cp().SetAutoMCStats(cb, 0.); // Turn on autoMCstats
     // All non-triboson processes -> rateParam
     AddFakeFamiliesAsSharedNorms(
         truebkgprocs,
