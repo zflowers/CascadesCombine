@@ -931,18 +931,18 @@ processes:
         - "boson*Run2*"
       exclude:
         - "*FAKE*"
-        - "*diboson"
-        - "*triboson"
+        - "*diboson*"
+        - "*triboson*"
 
     - name: "diboson_Run2"
       include:
-        - "diboson*Run2"
+        - "*diboson*Run2*"
       exclude:
         - "*FAKE*"
 
     - name: "triboson_Run2"
       include:
-        - "triboson*Run2*"
+        - "*triboson*Run2*"
       exclude:
         - "*FAKE*"
 
@@ -973,18 +973,18 @@ processes:
         - "boson*Run3*"
       exclude:
         - "*FAKE*"
-        - "*diboson"
-        - "*triboson"
+        - "*diboson*"
+        - "*triboson*"
 
     - name: "diboson_Run3"
       include:
-        - "diboson*Run3"
+        - "*diboson*Run3*"
       exclude:
         - "*FAKE*"
 
     - name: "triboson_Run3"
       include:
-        - "triboson*Run3*"
+        - "*triboson*Run3*"
       exclude:
         - "*FAKE*"
 

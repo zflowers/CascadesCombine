@@ -48,6 +48,7 @@ static std::vector<std::string> splitTopLevel(const std::string& s) {
 // Parse YAML histograms
 static std::vector<HistDef> loadHistogramsYAML(const std::string &yamlPath, BuildFitInput* BFI) {
     std::vector<HistDef> hists;
+    if(yamlPath.length() == 0) return hists;
     YAML::Node root = YAML::LoadFile(yamlPath);
     for (const auto &hnode : root["histograms"]) {
         HistDef h;

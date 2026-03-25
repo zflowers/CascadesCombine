@@ -234,12 +234,13 @@ std::string makeSMSChiTitle(const std::string& key) {
     // Handle Sandwich models
     bool isSandwich = key.find("Sandwich") != std::string::npos;
     int m2 = (isSandwich && model != "TChipmWW") ? (m1 + m3) / 2 : m1;
-    std::string preUL = "";
-    if(key.find("preUL") != std::string::npos) preUL = "preUL ";
+    std::string extra = "";
+    if(key.find("preUL") != std::string::npos) extra += "preUL ";
+    if(key.find("TEST") != std::string::npos) extra += "TEST ";
 
     // Compose final title
     std::ostringstream title;
-    title << preUL << particles << " " << m1 << ", " << m2 << ", " << m3;
+    title << extra << particles << " " << m1 << ", " << m2 << ", " << m3;
     return title.str();
 }
 
@@ -334,7 +335,7 @@ void loadFormatMaps(){
   m_Color["diboson_Run2"] = 7051;
   m_Color["diboson_Run3"] = 7051;
   m_Color["triboson_Run2"] = 7050;
-  m_Color["triboson_Run2"] = 7050;
+  m_Color["triboson_Run3"] = 7050;
 
   m_Title["HF_FAKES"] = "HF leptons";
   m_Color["HF_FAKES"] = 7022;
@@ -647,6 +648,45 @@ static std::string WildcardToRegex(const std::string& pat)
     return r;
 }
 
+double ExtractRISR(const std::string& bin)
+{
+    std::smatch m;
+    // R7 -> 0.70
+    if (std::regex_search(bin, m, std::regex("R(\\d+)(?!\\d)"))) {
+        int v = std::stoi(m[1]);
+        return v / 10.0;
+    }
+    // R75 -> 0.75
+    if (std::regex_search(bin, m, std::regex("R(\\d{2})"))) {
+        int v = std::stoi(m[1]);
+        return v / 100.0;
+    }
+    return 999;
+}
+
+double ExtractMperp(const std::string& bin)
+{
+    std::smatch m;
+    if (std::regex_search(bin, m, std::regex("Mlt(\\d+)")))
+        return 0.0; // lowest bin
+    if (std::regex_search(bin, m, std::regex("M(\\d+)")))
+        return std::stod(m[1]);
+    return 999;
+}
+
+bool BinSort(const std::string& a, const std::string& b)
+{
+    double rA = ExtractRISR(a);
+    double rB = ExtractRISR(b);
+
+    if (rA != rB)
+        return rA < rB;
+
+    double mA = ExtractMperp(a);
+    double mB = ExtractMperp(b);
+
+    return mA < mB;
+}
 
 std::vector<MergedBinGroup>
 BuildMergedBinGroupsFromYaml(const std::vector<std::string>& allBins,
@@ -677,8 +717,10 @@ BuildMergedBinGroupsFromYaml(const std::vector<std::string>& allBins,
             if (!excluded)
                 g.bin_names.push_back(bin);
         }
-        if (!g.bin_names.empty())
+        if (!g.bin_names.empty()){
+            std::sort(g.bin_names.begin(), g.bin_names.end(), BinSort);
             out.push_back(g);
+        }
     }
     return out;
 }

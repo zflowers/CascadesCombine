@@ -52,11 +52,20 @@ bool TryValidateType(ROOT::RDF::RNode node,
                      unsigned nCheck = 50,
                      unsigned maxCheck = 50000) {
     try {
-        auto subset = node.Range(0, static_cast<long>(nCheck));
-        auto vals = subset.Take<T>(dv.name + "_test").GetValue();
+
+        auto subset = node.Filter(
+            [nCheck](ULong64_t e){ return e < nCheck; },
+            {"rdfentry_"}
+        );
+
+        auto vals = subset.template Take<T>(dv.name + "_test").GetValue();
 
         if constexpr (std::is_floating_point_v<T>) {
-            bool anyFinite = std::any_of(vals.begin(), vals.end(), [](auto v){ return std::isfinite(v); });
+
+            bool anyFinite =
+                std::any_of(vals.begin(), vals.end(),
+                            [](auto v){ return std::isfinite(v); });
+
             if (!anyFinite) {
                 if (nCheck < maxCheck) {
                     unsigned next = std::min(nCheck * 2u, maxCheck);
@@ -64,47 +73,66 @@ bool TryValidateType(ROOT::RDF::RNode node,
                 } else {
                     std::cerr << "[ValidationTools] WARNING: '" << dv.name
                               << "' evaluated as " << typeid(T).name()
-                              << " but produced no finite values in first " << maxCheck << " events.\n";
+                              << " but produced no finite values in first "
+                              << maxCheck << " events.\n";
                 }
             }
             return true;
         }
+
         else if constexpr (has_value_type<T>::value) {
+
             using Inner = typename T::value_type;
+
             if constexpr (std::is_floating_point_v<Inner>) {
+
                 bool anyFiniteInner = false;
+
                 for (const auto &container : vals) {
                     for (const auto &inner : container) {
-                        if (std::isfinite(inner)) { anyFiniteInner = true; break; }
+                        if (std::isfinite(inner)) {
+                            anyFiniteInner = true;
+                            break;
+                        }
                     }
                     if (anyFiniteInner) break;
                 }
+
                 if (!anyFiniteInner) {
                     if (nCheck < maxCheck) {
                         unsigned next = std::min(nCheck * 2u, maxCheck);
                         return TryValidateType<T>(node, dv, next, maxCheck);
                     } else {
                         std::cerr << "[ValidationTools] WARNING: '" << dv.name
-                                  << "' evaluated as container of " << typeid(Inner).name()
+                                  << "' evaluated as container of "
+                                  << typeid(Inner).name()
                                   << " but produced no finite inner values.\n";
                     }
                 }
+
                 return true;
-            } else {
+            }
+
+            else {
+
                 if (vals.empty()) {
                     if (nCheck < maxCheck) {
                         unsigned next = std::min(nCheck * 2u, maxCheck);
                         return TryValidateType<T>(node, dv, next, maxCheck);
                     } else {
                         std::cerr << "[ValidationTools] WARNING: '" << dv.name
-                                  << "' evaluated as container type " << typeid(T).name()
+                                  << "' evaluated as container type "
+                                  << typeid(T).name()
                                   << " but returned empty sequence.\n";
                     }
                 }
+
                 return true;
             }
         }
+
         else {
+
             if (vals.empty()) {
                 if (nCheck < maxCheck) {
                     unsigned next = std::min(nCheck * 2u, maxCheck);
@@ -115,8 +143,10 @@ bool TryValidateType(ROOT::RDF::RNode node,
                               << " but returned empty vector.\n";
                 }
             }
+
             return true;
         }
+
     } catch (...) {
         return false;
     }
@@ -166,23 +196,20 @@ inline bool ValidateDerivedVar(ROOT::RDF::RNode node,
     }
 }
 
-// ==================================================
-// ValidateUserCut (from ValidateCuts.cpp)
-// ==================================================
 inline bool ValidateUserCut(ROOT::RDF::RNode node,
                             const CutDef &cut,
-                            unsigned nCheck = 50,
-                            unsigned maxCheck = 50000) {
+                            unsigned maxCheck = 50000)
+{
     try {
-        auto subset = node.Range(0, static_cast<long>(nCheck));
-        auto count = subset.Filter(cut.expression, cut.name).Count().GetValue();
+        auto subset = node.Filter(
+            [maxCheck](ULong64_t e){ return e < maxCheck; },
+            {"rdfentry_"}
+        );
 
-        if (count == 0 && nCheck < maxCheck) {
-            unsigned next = std::min(nCheck * 2u, maxCheck);
-            return ValidateUserCut(node, cut, next, maxCheck);
-        }
+        subset.Filter(cut.expression, cut.name).Count().GetValue();
         return true;
-    } catch (const std::exception &e) {
+    }
+    catch (const std::exception &e) {
         std::cerr << "[ValidationTools] ERROR: Cut '" << cut.name
                   << "' with expression '" << cut.expression
                   << "' is invalid: " << e.what() << "\n";
@@ -196,11 +223,10 @@ inline bool ValidateUserCut(ROOT::RDF::RNode node,
 inline std::map<std::string, CutDef>
 ValidateCuts(ROOT::RDF::RNode node,
              const std::map<std::string, CutDef>& cuts,
-             unsigned nCheck = 50,
              unsigned maxCheck = 50000) {
     std::map<std::string, CutDef> valid;
     for (const auto &[name, cut] : cuts) {
-        if (ValidateUserCut(node, cut, nCheck, maxCheck)) {
+        if (ValidateUserCut(node, cut, maxCheck)) {
             valid[name] = cut;
         } else {
             std::cerr << "[ValidationTools] Skipping invalid cut '" << name << "'\n";
