@@ -4,11 +4,13 @@ import subprocess
 
 # ======== CONFIG ========
 BASE = "root://cmseos.fnal.gov//store/user/lpcsusylep/NTUPLES_Cascades_v8"
-SOURCE_DIR = "Summer23BPix_130X_SMS"
-DEST_DIR   = "Summer26_130X_SMS"
+#SOURCE_DIR = "Summer22_130X_SMS"
+#DEST_DIR   = "Summer20UL16APV_106X_SMS"
 
-OLD_SUFFIX = "Summer23BPix_130X"
+OLD_SUFFIX = "Summer22_130X"
 NEW_SUFFIX = "Summer26_130X"
+SOURCE_DIR = OLD_SUFFIX + "_SMS"
+DEST_DIR = NEW_SUFFIX + "_SMS"
 # ========================
 
 if len(sys.argv) != 2:
