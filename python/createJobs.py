@@ -273,7 +273,7 @@ when_to_transfer_output = ON_EXIT
 request_cpus            = {cpus}
 request_memory          = {memory}
 
-max_materialize         = 50
+max_materialize         = {max_materialize}
 
 # Release jobs automatically from hold for common conditions
 periodic_release = (HoldReasonCode == 12 && HoldReasonSubCode == 256) || \
@@ -352,6 +352,7 @@ def write_submit_file(
     jobs,
     condor_base_dir: Path,
     cpus="1",
+    max_materialize="100",
     memory="1 GB",
     lumi=1,
     make_json=True,
@@ -403,7 +404,7 @@ def write_submit_file(
     submit_path = bin_dir / f"{bin_safe}.sub"
 
     # Header
-    header = CONDOR_HEADER.format(cpus=cpus, memory=memory)
+    header = CONDOR_HEADER.format(cpus=cpus, memory=memory, max_materialize=max_materialize)
     submit_lines = [header]
 
     # Logs
@@ -751,6 +752,7 @@ def main():
     parser.add_argument("--user-cuts", default="")
     parser.add_argument("--cpus", default="1")
     parser.add_argument("--memory", default="1 GB")
+    parser.add_argument("--max-materialize", default="100")
     parser.add_argument("--lumi", type=float, default=1.)
     parser.add_argument("--make-json", action="store_true", help="Enable JSON output")
     parser.add_argument("--make-root", action="store_true", help="Enable ROOT/histogram output")
@@ -833,6 +835,7 @@ def main():
         condor_base_dir=condor_base,
         cpus=args.cpus,
         memory=args.memory,
+        max_materialize=args.max_materialize,
         lumi=args.lumi,
         make_json=args.make_json,
         make_root=args.make_root,

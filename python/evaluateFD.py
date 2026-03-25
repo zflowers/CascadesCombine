@@ -37,8 +37,8 @@ rt.gStyle.SetOptFit(1)
 print("------------------Evaluating all bins------------------")
 ft.analyzedf(df,countThreshold,n_nuisances, histFile, "allJ", DO_POISSON, False)
 
-print("------------------Evaluating all bins------------------")
-ft.analyzedf(df,countThreshold,n_nuisances, histFile, "allZ", DO_POISSON, True)
+#print("------------------Evaluating all bins------------------")
+#ft.analyzedf(df,countThreshold,n_nuisances, histFile, "allZ", DO_POISSON, True)
 
 Run2 = df.loc[ df['Run'] == 'Run2' ]
 print("------------------Evaluating all Run2 bins------------------")

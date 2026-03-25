@@ -49,7 +49,7 @@ def check_job_ok(base_dir: str, job: str, check_json: bool, check_root: bool) ->
     err_ok = os.path.exists(err_path) and os.path.getsize(err_path) <= 1
     if not err_ok and os.path.exists(err_path):
         # Use grep to check if err file is empty excluding common ignores
-        bash = f"grep -v -e 'Implicit multi-threading is already disabled' -e 'nvidia-drivers' -e 'CUDA_COMPATIBILITY' {err_path}"
+        bash = f"grep -v -e 'Implicit multi-threading is already disabled' -e 'Socket' -e 'nvidia-drivers' -e 'CUDA_COMPATIBILITY' {err_path}"
         try:
             output = subprocess.check_output(['bash','-c',bash]).decode().splitlines()
             err_ok = len(output) == 0

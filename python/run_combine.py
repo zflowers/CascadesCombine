@@ -43,6 +43,8 @@ def parse_args():
                    help="Stop after getting yields")
     p.add_argument("--bins-per-job", type=int, default=10,
                    help="Number of bins to group per job")
+    p.add_argument("--max-materialize", type=str, default="100",
+                   help="max number of jobs per cluster to condor")
     return p.parse_args()
 
 def early_setup(run_name, existing_BFI_name: Optional[str]=None, existing_BF_name: Optional[str]=None):
@@ -380,14 +382,14 @@ def build_binaries():
         raise
     print("[run_combine] Build finished.", flush=True)
 
-def submit_jobs(config, processes, hist, make_json=False, make_root=False, lumi="1.", run_dir=None, bins_per_job=1):
+def submit_jobs(config, processes, hist, make_json=False, make_root=False, lumi="1.", run_dir=None, bins_per_job=1, max_materialize="100"):
     """
     Runs submitJobs.py to generate Condor scripts.
     """
     if not run_dir:
         print("[run_combine] submit_jobs needs a run directory!", flush=True)
         sys.exit(0)
-    cmd = ["python3", "python/submitJobs.py", "--bins-cfg", config, "--processes-cfg", processes, "--lumi", lumi, "--run-dir", run_dir, "--bins-per-job", str(bins_per_job)]
+    cmd = ["python3", "python/submitJobs.py", "--bins-cfg", config, "--processes-cfg", processes, "--lumi", lumi, "--run-dir", run_dir, "--bins-per-job", str(bins_per_job), "--max-materialize", max_materialize]
 
     if make_json:
         cmd.append("--make-json")
@@ -820,6 +822,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                             print(f"[run_combine] Warning: failed copying datacard files for {rel}: {e}", file=sys.stderr, flush=True)
                     else:
                         # skip if the two required files are not both present
+                        print(f"[run_combine] Warning: no datacard or shapes file for {base}", file=sys.stderr, flush=True)
                         pass
                 print(f"[run_combine] Copied datacard and shapes from {src_datacards}", flush=True)
             else:
@@ -923,7 +926,8 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             make_root=make_root,
             lumi=lumi,
             run_dir=condor_dir,
-            bins_per_job=args.bins_per_job
+            bins_per_job=args.bins_per_job,
+            max_materialize=args.max_materialize
         )
 
         # Create merge scripts (master merge should live in the run condor dir)
@@ -1150,40 +1154,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                 print("[run_combine] Running T2W with command:", " ".join(T2W_cmd), flush=True)
                 subprocess.run(T2W_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
-            # FitDiagnostics
-            if make_FD:
-                # local
-                FD_cmd = [
-                    "bash",
-                    macro_dir+"/launchFitDiagnostics.sh",
-                    output_dir,
-                    run_dir
-                ]
-                print("[run_combine] Running FitDiagnostics with command:", " ".join(FD_cmd), flush=True)
-                subprocess.run(FD_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
-                # Plot FD
-                FD_output_name = 'fitDiagnostics.Test.root'
-                FD_files = [os.path.abspath(f) for f in glob.glob(os.path.join(output_dir, '**', FD_output_name), recursive=True)]
-                for FD_file in FD_files:
-                    FD_plot_cmd_prefit = [
-                        "./"+exe_dir+"/PlotFitDiagnostics.x",
-                        "-i", FD_file,
-                        "-o", plots_dir,
-                        "-t", "shapes_prefit",
-                        "--config", FDpattern_cfg
-                    ]
-                    print("[run_combine] Running prefit FitDiagnostics plotter with command:", " ".join(FD_plot_cmd_prefit), flush=True)
-                    subprocess.run(FD_plot_cmd_prefit, check=True, stdout=sys.stdout, stderr=sys.stderr)
-                    FD_plot_cmd_postfit = [
-                        "./"+exe_dir+"/PlotFitDiagnostics.x",
-                        "-i", FD_file,
-                        "-o", plots_dir,
-                        "-t", "shapes_fit_b",
-                        "--config", FDpattern_cfg
-                    ]
-                    print("[run_combine] Running postfit FitDiagnostics plotter with command:", " ".join(FD_plot_cmd_postfit), flush=True)
-                subprocess.run(FD_plot_cmd_postfit, check=True, stdout=sys.stdout, stderr=sys.stderr)
-
+            # Impacts
             if make_impacts:
                 # Impacts
                 impacts_cmd = [
@@ -1217,6 +1188,49 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                             _copy_file(impacts_alpha_pdf, dst_file)
                         except Exception as e:
                             print(f"[run_combine] Warning: failed to copy {impacts_alpha_pdf}: {e}", flush=True)
+
+            # FitDiagnostics
+            if make_FD:
+                # local
+                FD_cmd = [
+                    "bash",
+                    macro_dir+"/launchFitDiagnostics.sh",
+                    output_dir,
+                    run_dir
+                ]
+                print("[run_combine] Running FitDiagnostics with command:", " ".join(FD_cmd), flush=True)
+                subprocess.run(FD_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
+                # Plot FD
+                FD_output_name = 'fitDiagnostics.Test.root'
+                FD_files = [os.path.abspath(f) for f in glob.glob(os.path.join(output_dir, '**', FD_output_name), recursive=True)]
+                for FD_file in FD_files:
+                    FD_plot_cmd_prefit = [
+                        "./"+exe_dir+"/PlotFitDiagnostics.x",
+                        "-i", FD_file,
+                        "-o", plots_dir,
+                        "-t", "shapes_prefit",
+                        "--config", FDpattern_cfg
+                    ]
+                    print("[run_combine] Running prefit FitDiagnostics plotter with command:", " ".join(FD_plot_cmd_prefit), flush=True)
+                    subprocess.run(FD_plot_cmd_prefit, check=True, stdout=sys.stdout, stderr=sys.stderr)
+                    FD_plot_cmd_postfit = [
+                        "./"+exe_dir+"/PlotFitDiagnostics.x",
+                        "-i", FD_file,
+                        "-o", plots_dir,
+                        "-t", "shapes_fit_b",
+                        "--config", FDpattern_cfg
+                    ]
+                    print("[run_combine] Running postfit FitDiagnostics plotter with command:", " ".join(FD_plot_cmd_postfit), flush=True)
+                    subprocess.run(FD_plot_cmd_postfit, check=True, stdout=sys.stdout, stderr=sys.stderr)
+                    # make CSV
+                    FD_CSV_cmd = [
+                        "root",
+                        "-l",
+                        "-b",
+                        f'macro/CreatePrePostCSV.C("{FD_file}","{FD_file.replace(".Test.root","CSV.csv")}")'
+                    ]
+                    subprocess.run(FD_CSV_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
+
 
     # Clean up tar
     if not args.only_yields and make_json:

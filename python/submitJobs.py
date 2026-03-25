@@ -40,7 +40,7 @@ def _sanitize_for_condor_dir(s: str) -> str:
 
 def build_command(bin_name, cfg, bkg_processes, sig_processes, data_processes, sms_filters,
                   make_json, make_root, hist_yaml, lumi, run_dir,
-                  bins_cfg_path):
+                  bins_cfg_path, max_materialize):
     """
     bins_cfg_path: path to the per-group JSON file that contains bin->cfg mapping.
                    This file will be passed to createJobs.py as --bins-cfg so that
@@ -59,6 +59,7 @@ def build_command(bin_name, cfg, bkg_processes, sig_processes, data_processes, s
         "--user-cuts", cfg.get("user-cuts","").replace('\n',''),
         "--cpus", cpus,
         "--memory", memory,
+        "--max-materialize", max_materialize,
         "--lumi", lumi,
         "--run-dir", run_dir
     ]
@@ -100,11 +101,13 @@ def main():
     parser.add_argument("--run-dir", type=str, default="condor", help="directory for holding condor info")
     parser.add_argument("--bins-per-job", type=int, default=1,
                         help="Number of bins to pass to each createJobs invocation (grouped as semicolon-separated list). Default: 1")
+    parser.add_argument("--max-materialize", type=str, default="100", help="max materialize jobs to condor")
     args = parser.parse_args()
 
     # Default behavior: make JSON if neither specified
     make_json = args.make_json
     make_root = args.make_root
+    max_materialize = args.max_materialize
     if not (make_json or make_root):
         make_json = True
     if make_root: # extra resources for histograms
@@ -187,7 +190,7 @@ def main():
 
         # Build command that points createJobs at the group JSON (not the full master YAML)
         cmd = build_command(combined_bin_arg, first_cfg, bkg_processes, sig_processes, data_processes, sms_filters,
-                            make_json, make_root, args.hist_yaml, lumi, run_dir, group_json_path)
+                            make_json, make_root, args.hist_yaml, lumi, run_dir, group_json_path, max_materialize)
         jobs.append(cmd)
 
     # Write a bins_list file so downstream tools know the exact condor work dirs created.
