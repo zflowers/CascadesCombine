@@ -21,6 +21,6 @@ if (( ${#files[@]} )); then
         --job-dir "${rundir}/combine"
 fi
 
-#if (( ${#files[@]} >= 50 )); then
-#    root -l -b -q "macro/PlotLimitJSON.C++(\"${dcdir}_Limits.json\", false, kTChiWZ, \"${dcdir}_Limits.root\")"
-#fi
+if (( ${#files[@]} >= 50 )); then
+    root -l -b -q "macro/PlotLimitJSON.C++(\"${dcdir}_Limits.json\", false, kTChiWZ, \"${dcdir}_Limits.root\")"
+fi
