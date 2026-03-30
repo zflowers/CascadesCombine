@@ -1386,6 +1386,7 @@ bool HistsCompatible(TH1* num, const TH1* den, double tol=1e-1) {
             }
             // Otherwise, clamp numerator to denominator
             num->SetBinContent(i, d);
+            num->SetBinError(i, den->GetBinError(i));
         }
         if (d > 0) hasNonZeroBin = true;
     }

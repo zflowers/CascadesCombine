@@ -2380,6 +2380,13 @@ SampleTool::SampleTool(){
     }
   );
 
+  MasterDict["top_2022_Run3"] = mergeEntriesList(
+    MasterDict,
+    {
+      "ttbar_2022",
+    }
+  );
+
   MasterDict["top_Run3CR"] = mergeEntriesList(
     MasterDict,
     {
@@ -2574,6 +2581,20 @@ SampleTool::SampleTool(){
     }
   );
 
+  MasterDict["bkg_2016Comb"] = mergeEntriesList(
+    MasterDict,
+    {
+      "top_2016APV",
+      "boson_2016APV",
+      "DB_2016APV",
+      "TB_2016APV",
+      "top_2016",
+      "boson_2016",
+      "DB_2016",
+      "TB_2016",
+    }
+  );
+
   MasterDict["bkg_2017"] = mergeEntriesList(
     MasterDict,
     {
@@ -2614,6 +2635,20 @@ SampleTool::SampleTool(){
     }
   );
 
+  MasterDict["bkg_2022Comb"] = mergeEntriesList(
+    MasterDict,
+    {
+      "top_2022",
+      "boson_2022",
+      "DB_2022",
+      "TB_2022",
+      "top_2022EE",
+      "boson_2022EE",
+      "DB_2022EE",
+      "TB_2022EE",
+    }
+  );
+
   MasterDict["bkg_2023"] = mergeEntriesList(
     MasterDict,
     {
@@ -2627,6 +2662,20 @@ SampleTool::SampleTool(){
   MasterDict["bkg_2023BPix"] = mergeEntriesList(
     MasterDict,
     {
+      "top_2023BPix",
+      "boson_2023BPix",
+      "DB_2023BPix",
+      "TB_2023BPix",
+    }
+  );
+
+  MasterDict["bkg_2023Comb"] = mergeEntriesList(
+    MasterDict,
+    {
+      "top_2023",
+      "boson_2023",
+      "DB_2023",
+      "TB_2023",
       "top_2023BPix",
       "boson_2023BPix",
       "DB_2023BPix",
@@ -2706,6 +2755,54 @@ SampleTool::SampleTool(){
       "Data_2023",
       "Data_2023BPix",
       "Data_2024",
+    }
+  );
+
+  MasterDict["Data_Electron_2016Comb"] = mergeEntriesList(
+    MasterDict,
+    {
+      "Data_Electron_2016APV",
+      "Data_Electron_2016",
+    }
+  );
+
+  MasterDict["Data_Electron_2022Comb"] = mergeEntriesList(
+    MasterDict,
+    {
+      "Data_Electron_2022",
+      "Data_Electron_2022EE",
+    }
+  );
+
+  MasterDict["Data_Electron_2023Comb"] = mergeEntriesList(
+    MasterDict,
+    {
+      "Data_Electron_2023",
+      "Data_Electron_2023BPix",
+    }
+  );
+
+  MasterDict["Data_Muon_2016Comb"] = mergeEntriesList(
+    MasterDict,
+    {
+      "Data_Muon_2016APV",
+      "Data_Muon_2016",
+    }
+  );
+
+  MasterDict["Data_Muon_2022Comb"] = mergeEntriesList(
+    MasterDict,
+    {
+      "Data_Muon_2022",
+      "Data_Muon_2022EE",
+    }
+  );
+
+  MasterDict["Data_Muon_2023Comb"] = mergeEntriesList(
+    MasterDict,
+    {
+      "Data_Muon_2023",
+      "Data_Muon_2023BPix",
     }
   );
 

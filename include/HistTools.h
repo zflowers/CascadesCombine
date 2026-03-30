@@ -22,6 +22,8 @@ struct HistDef {
     int nbins=0, nybins=0;
     double xmin=0, xmax=0, ymin=0, ymax=0;
     std::vector<std::string> cuts, lepCuts, predefCuts, userCuts;
+    std::vector<double> x_bins;
+    std::vector<double> y_bins;
 };
 
 // Helper to split strings by ';' or ','
@@ -55,16 +57,20 @@ static std::vector<HistDef> loadHistogramsYAML(const std::string &yamlPath, Buil
         h.name = hnode["name"].as<std::string>();
         h.expr = hnode["expr"].as<std::string>();
         h.type = hnode["type"].as<std::string>();
-        h.nbins = hnode["nbins"].as<int>();
-        h.xmin = hnode["xmin"].as<double>();
-        h.xmax = hnode["xmax"].as<double>();
+        if(hnode["nbins"] && hnode["xmin"] && hnode["xmax"]) {
+            h.nbins = hnode["nbins"].as<int>();
+            h.xmin = hnode["xmin"].as<double>();
+            h.xmax = hnode["xmax"].as<double>();
+        }
         h.x_title = hnode["x_title"].as<std::string>();
         if (h.type == "2D") {
             h.y_title = hnode["y_title"].as<std::string>();
             h.yexpr = hnode["yexpr"].as<std::string>();
-            h.nybins = hnode["nybins"].as<int>();
-            h.ymin = hnode["ymin"].as<double>();
-            h.ymax = hnode["ymax"].as<double>();
+            if(hnode["nybins"] && hnode["ymin"] && hnode["ymax"]) {
+                h.nybins = hnode["nybins"].as<int>();
+                h.ymin = hnode["ymin"].as<double>();
+                h.ymax = hnode["ymax"].as<double>();
+            }
         }
         if (hnode["cuts"]) h.cuts = splitTopLevel(hnode["cuts"].as<std::string>());
         if (hnode["lep-cuts"]) {
@@ -82,6 +88,16 @@ static std::vector<HistDef> loadHistogramsYAML(const std::string &yamlPath, Buil
             }
         }
         if (hnode["user-cuts"]) h.userCuts = splitTopLevel(hnode["user-cuts"].as<std::string>());
+        if (hnode["x_bins"]) {
+            h.x_bins = hnode["x_bins"].as<std::vector<double>>();
+            h.nbins = h.x_bins.size() - 1; // optional but useful
+        }
+        if (h.type == "2D") {
+            if (hnode["y_bins"]) {
+                h.y_bins = hnode["y_bins"].as<std::vector<double>>();
+                h.nybins = h.y_bins.size() - 1;
+            }
+        }
         hists.push_back(h);
     }
     return hists;
@@ -128,13 +144,49 @@ void FillHistFromPlan(const ROOT::RDF::RNode &node,
     for (const auto &uci : plan.appliedUserCuts) hnode = hnode.Filter(uci.expr);
 
     if (h.type == "1D") {
-        auto hist = hnode.Histo1D({hname.c_str(), hname.c_str(), h.nbins, h.xmin, h.xmax}, h.expr, "weight_scaled");
+        ROOT::RDF::RResultPtr<TH1D> hist;
+        if (!h.x_bins.empty()) {
+            hist = hnode.Histo1D(
+                {hname.c_str(), hname.c_str(),
+                 static_cast<int>(h.x_bins.size() - 1),
+                 h.x_bins.data()},
+                h.expr, "weight_scaled");
+        } else {
+            hist = hnode.Histo1D(
+                {hname.c_str(), hname.c_str(),
+                 h.nbins, h.xmin, h.xmax},
+                h.expr, "weight_scaled");
+        }
         hist->GetXaxis()->SetTitle(h.x_title.c_str());
         hist->GetYaxis()->SetTitle(h.y_title.empty() ? "Events" : h.y_title.c_str());
         if (hist->Write() == 0) std::cerr << "error writing: " << hname << std::endl;
     } else if (h.type == "2D") {
-        auto hist = hnode.Histo2D({hname.c_str(), hname.c_str(), h.nbins, h.xmin, h.xmax, h.nybins, h.ymin, h.ymax},
-                                  h.expr, h.yexpr, "weight_scaled");
+        ROOT::RDF::RResultPtr<TH2D> hist;
+        if (!h.x_bins.empty() && !h.y_bins.empty()) {
+            hist = hnode.Histo2D(
+                {hname.c_str(), hname.c_str(),
+                 static_cast<int>(h.x_bins.size() - 1), h.x_bins.data(),
+                 static_cast<int>(h.y_bins.size() - 1), h.y_bins.data()},
+                h.expr, h.yexpr, "weight_scaled");
+        } else if (!h.x_bins.empty()) {
+            hist = hnode.Histo2D(
+                {hname.c_str(), hname.c_str(),
+                 static_cast<int>(h.x_bins.size() - 1), h.x_bins.data(),
+                 h.nybins, h.ymin, h.ymax},
+                h.expr, h.yexpr, "weight_scaled");
+        } else if (!h.y_bins.empty()) {
+            hist = hnode.Histo2D(
+                {hname.c_str(), hname.c_str(),
+                 h.nbins, h.xmin, h.xmax,
+                 static_cast<int>(h.y_bins.size() - 1), h.y_bins.data()},
+                h.expr, h.yexpr, "weight_scaled");
+        } else {
+            hist = hnode.Histo2D(
+                {hname.c_str(), hname.c_str(),
+                 h.nbins, h.xmin, h.xmax,
+                 h.nybins, h.ymin, h.ymax},
+                h.expr, h.yexpr, "weight_scaled");
+        }
         hist->GetXaxis()->SetTitle(h.x_title.c_str());
         hist->GetYaxis()->SetTitle(h.y_title.empty() ? "Events" : h.y_title.c_str());
         if (hist->Write() == 0) std::cerr << "error writing: " << hname << std::endl;

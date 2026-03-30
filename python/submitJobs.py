@@ -112,8 +112,8 @@ def main():
         make_json = True
     if make_root: # extra resources for histograms
         global memory, cpus
-        memory = "2 GB"
-        cpus = "2"
+        memory = "1 GB"
+        cpus = "1"
 
     dryrun = args.dryrun
     lumi = args.lumi

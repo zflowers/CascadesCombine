@@ -138,6 +138,7 @@ cat config/bin_cfgs/Regions_Run2_3L_Jincl_lPTISR_Bronze.yaml >> config/bin_cfgs/
 cat config/bin_cfgs/Regions_Run2_3L_Jincl_hPTISR_Silver.yaml >> config/bin_cfgs/Regions_CR.yaml
 cat config/bin_cfgs/Regions_Run2_3L_Jincl_hPTISR_Bronze.yaml >> config/bin_cfgs/Regions_CR.yaml
 cat config/bin_cfgs/Regions_Run2_4L_Bronze.yaml >> config/bin_cfgs/Regions_CR.yaml
+cat config/bin_cfgs/Regions_Run2_4L_Silver.yaml >> config/bin_cfgs/Regions_CR.yaml
 cat config/bin_cfgs/Regions_Run2_top_sideband_Bronze.yaml >> config/bin_cfgs/Regions_CR.yaml
 cat config/bin_cfgs/Regions_Run2_top_sideband_Silver.yaml >> config/bin_cfgs/Regions_CR.yaml
 cat config/bin_cfgs/Regions_Run3_2L_0J_lPTISR_Bronze.yaml >> config/bin_cfgs/Regions_CR.yaml
@@ -153,6 +154,7 @@ cat config/bin_cfgs/Regions_Run3_3L_Jincl_lPTISR_Bronze.yaml >> config/bin_cfgs/
 cat config/bin_cfgs/Regions_Run3_3L_Jincl_hPTISR_Silver.yaml >> config/bin_cfgs/Regions_CR.yaml
 cat config/bin_cfgs/Regions_Run3_3L_Jincl_hPTISR_Bronze.yaml >> config/bin_cfgs/Regions_CR.yaml
 cat config/bin_cfgs/Regions_Run3_4L_Bronze.yaml >> config/bin_cfgs/Regions_CR.yaml
+cat config/bin_cfgs/Regions_Run3_4L_Silver.yaml >> config/bin_cfgs/Regions_CR.yaml
 cat config/bin_cfgs/Regions_Run3_top_sideband_Bronze.yaml >> config/bin_cfgs/Regions_CR.yaml
 cat config/bin_cfgs/Regions_Run3_top_sideband_Silver.yaml >> config/bin_cfgs/Regions_CR.yaml
 

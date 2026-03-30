@@ -389,7 +389,7 @@ int main(int argc, char** argv) {
             }
             
             // Skip running if tree has zero events or bin era mismatch
-            if (binEraMismatch || nEntries == 0) {
+            if (binEraMismatch || nEntries <= 1) {
                 if(doJSON) {
                     // Build the same proc_key list
                     std::vector<std::string> proc_keys;
@@ -442,8 +442,6 @@ int main(int argc, char** argv) {
     
             // --- Histograms / CutFlow per-bin ---
             if(doHist){
-                if(histFile) histFile->cd();
-    
                 // --- Build ordered cuts list (bin-specific final cuts + user cuts)
                 // Ensure every cutsOrdered entry has a corresponding human-readable label
                 std::vector<std::string> cutsOrdered;

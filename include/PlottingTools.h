@@ -181,6 +181,7 @@ void Plot_Eff(TEfficiency* e){
     l.SetTextSize(0.035); l.DrawLatex(0.65,0.943,proc_title.c_str());
     l.SetTextSize(0.04); l.DrawLatex(0.01,0.943,"#bf{CMS} Simulation Preliminary");
     l.SetTextSize(0.045); l.DrawLatex(0.7,0.04,ExtractBinName(title).c_str());
+    gSystem->mkdir(Form("%spdfs/%s/", outputDir.c_str(), ExtractBinName(title).c_str()));
     TString pdfName = Form("%spdfs/%s/%s.pdf", outputDir.c_str(), ExtractBinName(title).c_str(), title.c_str());
     gErrorIgnoreLevel = 1001;
     can->SaveAs(pdfName);
@@ -1112,13 +1113,19 @@ void RunRatios(const std::vector<RatioDef>& ratioDefs,
                     TH1* hnum = nullptr;
                     TH1* hden = nullptr;
                     auto it_proc_num = it_group->second.find(proc);
-                    if(it_proc_num != it_group->second.end()) hnum = it_proc_num->second;
+                    if(it_proc_num != it_group->second.end()){
+                        hnum = (TH1*)it_proc_num->second->Clone();
+                        hnum->SetDirectory(nullptr);
+                    }
                     // denominator group might be same (bin + denominator_var)
                     std::string gk_den = MakeGroupKeyForVar(bin, r.denominator_var);
                     auto it_group_den = groups.find(gk_den);
                     if(it_group_den != groups.end()){
                         auto it_proc_den = it_group_den->second.find(proc);
-                        if(it_proc_den != it_group_den->second.end()) hden = it_proc_den->second;
+                        if(it_proc_den != it_group_den->second.end()){
+                            hden = (TH1*)it_proc_den->second->Clone();
+                            hden->SetDirectory(nullptr);
+                        }
                     }
                     // If either missing -> warn then skip
                     if(!hnum || !hden){

@@ -119,7 +119,16 @@ int main(int argc, char* argv[]) {
     TString outRootName=Form("%soutput_%s.root",outputDir.c_str(),baseName.Data());
     outFile=new TFile(outRootName,"RECREATE");
 
-    // maps for TEff inputs
+    // Ratios 
+    vector<RatioDef> ratioDefs;
+    std::map<std::string, std::vector<TEfficiency*>> effsByBin;
+    std::map<std::string, std::vector<TEfficiency*>> effsByProcess;
+    if(!ratiosYaml.empty()){
+        cout << "[PlotHistograms] Loading ratios from " << ratiosYaml << endl;
+        ratioDefs = LoadRatioYAML(ratiosYaml);
+        RunRatios(ratioDefs, groups, uniqueBinNames, outputDir, effsByBin, effsByProcess);
+    }
+
     // Main plotting loop
     for(auto &gpair : groups){
         string groupKey = gpair.first;
@@ -210,15 +219,6 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // Ratios 
-    vector<RatioDef> ratioDefs;
-    std::map<std::string, std::vector<TEfficiency*>> effsByBin;
-    std::map<std::string, std::vector<TEfficiency*>> effsByProcess;
-    if(!ratiosYaml.empty()){
-        cout << "[PlotHistograms] Loading ratios from " << ratiosYaml << endl;
-        ratioDefs = LoadRatioYAML(ratiosYaml);
-        RunRatios(ratioDefs, groups, uniqueBinNames, outputDir, effsByBin, effsByProcess);
-    }
     for(const auto& pair : effsByBin)
         Plot_Eff_Multi(pair.first, pair.second, "Bin");
     for(const auto& pair : effsByProcess)

@@ -53,6 +53,11 @@ bool TryValidateType(ROOT::RDF::RNode node,
                      unsigned maxCheck = 50000) {
     try {
 
+        auto cnt = node.Count();
+        if (cnt.GetValue() == 0) {
+            return true;
+        }
+
         auto subset = node.Filter(
             [nCheck](ULong64_t e){ return e < nCheck; },
             {"rdfentry_"}

@@ -58,3 +58,11 @@ std::string BuildFitInput::GetMinLEPMassCut() {
           "|| (Nlep == 2 && (MVa_LEP > 1.5))"
           ")";
 }
+
+//REGISTER_CUT(BuildFitInput, GetMinLEPMassCut, "EleTrigCut");
+//std::string BuildFitInput::GetEleTrigCut() {
+//    return "SingleElectrontrigger==1"
+//           "|| DoubleElectrontrigger==1"
+//           "|| TripleElectrontrigger==1"
+//           ;
+//}
