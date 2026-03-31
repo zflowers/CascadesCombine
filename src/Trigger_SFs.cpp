@@ -25,96 +25,6 @@
 #include "nlohmann/json.hpp"
 #include "Trigger_Fitter_Helpers.h"
 
-using namespace std;
-using json = nlohmann::json;
-
-// -----------------------------------------------------------------------
-// JSON parameter I/O
-// -----------------------------------------------------------------------
-
-const string JSON_NAME = "Fit_Parameters.json";
-
-json Load_JSON(const string& path)
-{
-    json j;
-    if (!fileExists(path)) return j;
-    ifstream f(path);
-    f >> j;
-    return j;
-}
-
-void Save_JSON(const json& j, const string& path)
-{
-    ofstream f(path);
-    f << j.dump(4) << endl;
-}
-
-void Write_Fit_Params_JSON(const string& key, const string& json_path,
-                            double norm, double mean, double sigma,
-                            double scale, double weight)
-{
-    json j = Load_JSON(json_path);
-    j[key]["fit"]["norm"]   = norm;
-    j[key]["fit"]["mean"]   = mean;
-    j[key]["fit"]["sigma"]  = sigma;
-    j[key]["fit"]["scale"]  = scale;
-    j[key]["fit"]["weight"] = weight;
-    Save_JSON(j, json_path);
-}
-
-void Write_Band_Params_JSON(const string& key, const string& json_path,
-                             double a1, double a2,
-                             double b1, double b2,
-                             double c1, double c2)
-{
-    json j = Load_JSON(json_path);
-    j[key]["bands"]["a1"] = a1;
-    j[key]["bands"]["a2"] = a2;
-    j[key]["bands"]["b1"] = b1;
-    j[key]["bands"]["b2"] = b2;
-    j[key]["bands"]["c1"] = c1;
-    j[key]["bands"]["c2"] = c2;
-    Save_JSON(j, json_path);
-}
-
-bool Read_Fit_Params_JSON(const string& key, const string& json_path,
-                           double& norm, double& mean, double& sigma,
-                           double& scale, double& weight)
-{
-    json j = Load_JSON(json_path);
-    if (!j.contains(key) || !j[key].contains("fit")) {
-        cout << "WARNING: No fit params in JSON for key: " << key << endl;
-        return false;
-    }
-    auto& f = j[key]["fit"];
-    norm   = f.value("norm",   1.0);
-    mean   = f.value("mean",   200.0);
-    sigma  = f.value("sigma",  40.0);
-    scale  = f.value("scale",  0.0);
-    weight = f.value("weight", 0.0);
-    return true;
-}
-
-bool Read_Band_Params_JSON(const string& key, const string& json_path,
-                            double& a1, double& a2,
-                            double& b1, double& b2,
-                            double& c1, double& c2)
-{
-    json j = Load_JSON(json_path);
-    if (!j.contains(key) || !j[key].contains("bands")) {
-        cout << "WARNING: No band params in JSON for key: " << key << endl;
-        return false;
-    }
-    auto& b = j[key]["bands"];
-    a1 = b.value("a1",  .4e-5);
-    a2 = b.value("a2", -.6e-5);
-    b1 = b.value("b1", 220.0);
-    b2 = b.value("b2", 220.0);
-    c1 = b.value("c1", 1.004);
-    c2 = b.value("c2", 0.996);
-    return true;
-}
-
 // -----------------------------------------------------------------------
 // Discover configs from canvas names in the root file.
 //
@@ -360,7 +270,7 @@ void Fit_And_Save(const string& fname,
     funcs.push_back(f_dgauss);
 
     // We intercept after the fact to pull params and write to JSON.
-    Get_Fit(gr, funcs, fit_colors, outdir+"output_Fits.root", jsonKey);
+    Get_Fit(gr, funcs, fit_colors, outdir+"output_Fits.root", jsonKey, outdir);
 
     // After fitting, read back best-fit parameters from whichever function
     // converged better (lower chi2/NDF), then persist to JSON.
@@ -489,7 +399,8 @@ void Make_SF_Plot(const string& fname, const TriggerConfig& cfg, const vector<in
     mg_res->Draw("AP");
     Format_Graph_res(mg_res);
     mg_res->GetXaxis()->SetLimits(x_min, x_max);
-    mg_res->GetYaxis()->SetRangeUser(0.75, 1.25);
+    mg_res->GetXaxis()->SetRangeUser(150.0, 500.0);
+    mg_res->GetYaxis()->SetRangeUser(0.5, 1.15);
     mg_res->GetYaxis()->SetTitle("Data/MC Bkg");
     mg_res->GetXaxis()->SetTitle("MET [GeV]");
     pad_res->Modified(); pad_res->Update();
@@ -520,6 +431,7 @@ void Make_SF_Plot(const string& fname, const TriggerConfig& cfg, const vector<in
     Format_Graph(gr_bands);
     gr_bands->SetTitle("");
     gr_bands->GetXaxis()->SetLimits(x_min, x_max);
+    gr_bands->GetXaxis()->SetRangeUser(150.0, 500.0);
     gr_bands->GetYaxis()->SetRangeUser(0.15, 1.05);
     gr_bands->GetYaxis()->SetTitle("Efficiency");
     gr_bkg->Draw("P");
@@ -591,11 +503,11 @@ int main(int argc, char* argv[])
 
     for (int i = 1; i < argc; i++) {
         string arg(argv[i]);
-        if (arg.rfind("-f=",0)==0) fname = arg.substr(3);
+        if (arg.rfind("-f",0)==0) { fname = string(argv[i+1]); break; }
     }
 
     if (fname.empty()) {
-        cout << "Usage: ./Trigger_SFs.x -f=<input_root_file>" << endl;
+        cout << "Usage: ./Trigger_SFs.x -f <input_root_file>" << endl;
         return 1;
     }
 

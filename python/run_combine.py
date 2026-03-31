@@ -27,6 +27,8 @@ def parse_args():
                    help="Generate Impacts")
     p.add_argument("--make-FD", action="store_true",
                    help="Generate FitDiagnostics")
+    p.add_argument("--make-trig-fit", action="store_true",
+                   help="Generate trigger fit outputs")
     p.add_argument("--lumi", dest="lumi", type=str, default="-1",
                    help="Lumi to scale everything to overriding SampleTool values")
     p.add_argument("--run-name", dest="run_name", type=str, default=None,
@@ -1000,6 +1002,13 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             ]
             print("[run_combine] Plotting histograms with command:", " ".join(plot_cmd), flush=True)
             subprocess.run(plot_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
+            if args.make_trig_fit:
+                trig_fit_cmd = [
+                    "./"+exe_dir+"/Trigger_SFs.x",
+                    "-f", plots_dir+"/output_final_hadded.root",
+                ]
+                print("[run_combine] Fitting trigger turn-ons with command:", " ".join(trig_fit_cmd), flush=True)
+                subprocess.run(trig_fit_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
     idle_time_seconds_BF = 0
 

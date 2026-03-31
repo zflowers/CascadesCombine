@@ -22,11 +22,11 @@ run_all() {
     fi
 }
 SLEEP=70
-VERSION="v0"
+VERSION="v1"
 make clean
 make all -j 8
 
-run_all --skip-compile --make-root --processes-cfg config/process_cfgs/trigger_processes/processes_TriggerStudies.yaml  --hist-cfg config/hist_cfgs/hist_TriggerStudies.yaml --bins-cfg config/bin_cfgs/trigger_bins/Trigger.yaml --bins-per-job 50 --max-materialize 300 --run-name TriggerStudies_${VERSION}
+run_all --skip-compile --make-root --processes-cfg config/process_cfgs/trigger_processes/processes_TriggerStudies.yaml  --hist-cfg config/hist_cfgs/hist_TriggerStudies.yaml --bins-cfg config/bin_cfgs/trigger_bins/Trigger.yaml --bins-per-job 50 --max-materialize 300 --make-trig-fit --run-name TriggerStudies_${VERSION}
 sleep ${SLEEP}
 
 sleep 30 # sleep just to hold user from accidentally submitting something before sub is out the door
