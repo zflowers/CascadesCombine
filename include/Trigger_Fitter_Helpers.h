@@ -488,7 +488,7 @@ TGraph* Get_Fit_Ratio(double x_min, double x_max, TF1* Bkg_Nominal, TF1* Data_No
 }
 
 // -----------------------------------------------------------------------
-// Core fitting routine  — outdir added so output files land in trigger_sf/
+// Core fitting routine -> outdir added so output files land in trigger_sf/
 // -----------------------------------------------------------------------
 void Fit_Graph_With_Funcs(TCanvas*& canv, TGraphAsymmErrors*& gr_given,
                            vector<TF1*> funcs, const vector<int>& colors,
@@ -558,7 +558,7 @@ void Fit_Graph_With_Funcs(TCanvas*& canv, TGraphAsymmErrors*& gr_given,
 
         pad_gr->Clear(); pad_gr->Update(); canv->Update();
 
-        // Write fit results to JSON instead of CSV
+        // Write fit results to JSON
         Output_Fit_ToJSON(funcs[i], name, string(status_func), result,
                           outdir + "Fit_Parameters.json");
     }
@@ -629,4 +629,238 @@ void Get_Fit(TGraphAsymmErrors*& gr, vector<TF1*> funcs, vector<int> colors,
     output->Close();
     delete can;
     delete output;
+}
+
+// -----------------------------------------------------------------------
+// Config struct
+// -----------------------------------------------------------------------
+struct TriggerConfig {
+    string electronBin;
+    string year;
+    string process;   // "bkg" or "data"
+    string data_sample;
+    string bkg_sample;
+    map<string, string> systs; // label -> sample
+};
+
+string JSON_Key(const string& electronBin, const string& sample)
+{
+    return electronBin + "__" + sample;
+}
+
+int Parse_Electron_N(const string& electronBin)
+{
+    return stoi(electronBin.substr(string("Electron").size()));
+}
+
+string Make_Canvas_Name(const string& electronBin, const string& sample)
+{
+    return "can_eff_MET_trigger_eff__TriggerBin_"
+           + electronBin + "__" + sample;
+}
+
+string Make_Syst_Canvas_Name(const string& electronBin,
+                              const string& systLabel,
+                              const string& sample)
+{
+    return "can_eff_MET_trigger_eff__TriggerSystBin_"
+           + electronBin + "_" + systLabel
+           + "__" + sample;
+}
+
+string Make_Nominal_Canvas_Name(const string& electronBin, const string& sample)
+{
+    return "can_eff_MET_trigger_eff__TriggerBin_"
+           + electronBin + "__" + sample;
+}
+
+struct SampleGroup {
+    set<string> nominal_samples;
+    map<string, set<string>> syst_samples; // systLabel -> samples
+};
+
+// -----------------------------------------------------------------------
+// Discover configs from canvas names in the root file
+// -----------------------------------------------------------------------
+// Replace the Discover_Configs parsing block with this corrected version
+
+vector<TriggerConfig> Discover_Configs(const string& fname)
+{
+    TFile* f = TFile::Open(fname.c_str(), "READ");
+    if (!f || f->IsZombie()) {
+        cout << "Cannot open " << fname << " for config discovery." << endl;
+        return {};
+    }
+
+    const string PREFIX = "can_eff_MET_trigger_eff__";
+
+    // (electronBin, year) -> {nominal samples, syst label -> samples}
+    struct BinGroup {
+        set<string>              nominal_samples;
+        map<string, set<string>> syst_samples; // systLabel -> {samples}
+    };
+    map<pair<string,string>, BinGroup> found;
+
+    TIter next(f->GetListOfKeys());
+    TKey* key = nullptr;
+    while ((key = (TKey*)next())) {
+        string cname = key->GetName();
+        if (cname.find(PREFIX) == string::npos) continue;
+        if (string(key->GetClassName()) != "TCanvas") continue;
+
+        // Strip prefix: "TriggerBin_Electron0__bkg_2018"
+        //            or "TriggerSystBin_Electron0_Gold__bkg_2018"
+        string rest = cname.substr(PREFIX.length());
+
+        string electronBin, sample, systLabel;
+        bool isSyst = false;
+
+        if (rest.rfind("TriggerBin_", 0) == 0) {
+            // Nominal: TriggerBin_{electronBin}__{sample}
+            rest = rest.substr(string("TriggerBin_").length());
+            size_t sep = rest.find("__");
+            if (sep == string::npos) continue;
+            electronBin = rest.substr(0, sep);  // "Electron0"
+            sample      = rest.substr(sep + 2); // "bkg_2018"
+
+        } else if (rest.rfind("TriggerSystBin_", 0) == 0) {
+            // Syst: TriggerSystBin_{electronBin}_{systLabel}__{sample}
+            rest = rest.substr(string("TriggerSystBin_").length());
+            size_t sep = rest.find("__");
+            if (sep == string::npos) continue;
+            string binAndLabel = rest.substr(0, sep); // "Electron0_Gold"
+            sample             = rest.substr(sep + 2); // "bkg_2018"
+
+            // Split "Electron0_Gold" -> electronBin="Electron0", systLabel="Gold"
+            size_t us = binAndLabel.find('_');
+            if (us == string::npos) continue;
+            electronBin = binAndLabel.substr(0, us);
+            systLabel   = binAndLabel.substr(us + 1);
+            isSyst      = true;
+        } else {
+            continue;
+        }
+
+        // Extract year from end of sample string
+        size_t last_us = sample.rfind('_');
+        if (last_us == string::npos) continue;
+        string year = sample.substr(last_us + 1);
+        if (year.size() < 4 || !isdigit(year[0])) continue;
+
+        auto& group = found[{electronBin, year}];
+        if (isSyst) {
+            group.syst_samples[systLabel].insert(sample);
+        } else {
+            group.nominal_samples.insert(sample);
+        }
+    }
+    f->Close(); delete f;
+
+    // Build TriggerConfig -> one per (electronBin, year, nominal_sample)
+    // with the full syst map attached
+    vector<TriggerConfig> configs;
+    for (auto& [key_pair, group] : found) {
+        const string& electronBin = key_pair.first;
+        const string& year        = key_pair.second;
+
+        int nElec = Parse_Electron_N(electronBin);
+        string data_type = (nElec == 0) ? "Muon" : "Electron";
+
+        string bkg_sample  = "";
+        string data_sample = "";
+        for (const auto& s : group.nominal_samples) {
+            if (s.find("bkg")          != string::npos) bkg_sample  = s;
+            if (s.find("Data_"+data_type) != string::npos) data_sample = s;
+        }
+
+        if (bkg_sample.empty() || data_sample.empty()) {
+            cout << "WARNING: Incomplete nominal samples for "
+                 << electronBin << " " << year << " -- skipping." << endl;
+            continue;
+        }
+
+        // Collect syst labels
+        map<string,string> systs; // label -> sample (same sample suffix as nominal)
+        for (auto& [lbl, samples] : group.syst_samples) {
+            // We just store the label; the sample name is reconstructed in Make_Syst_Canvas_Name
+            systs[lbl] = lbl; // placeholder -> actual sample looked up by label+electronBin+year
+        }
+
+        configs.push_back({electronBin, year, "", data_sample, bkg_sample, systs});
+
+        cout << "Discovered: " << electronBin << " " << year
+             << " bkg=" << bkg_sample
+             << " data=" << data_sample
+             << " systs=[";
+        for (auto& [l,_] : systs) cout << l << " ";
+        cout << "]" << endl;
+    }
+
+    sort(configs.begin(), configs.end(), [](const TriggerConfig& a, const TriggerConfig& b){
+        if (a.year != b.year) return a.year < b.year;
+        return a.electronBin < b.electronBin;
+    });
+    return configs;
+}
+
+// -----------------------------------------------------------------------
+// Extract TGraphAsymmErrors from a stored TCanvas via TEfficiency
+// -----------------------------------------------------------------------
+TGraphAsymmErrors* Get_Graph_From_Canvas(const string& fname,
+                                          const string& canvasName,
+                                          int color,
+                                          TLegend*& leg,
+                                          const string& legLabel)
+{
+    TFile* f = TFile::Open(fname.c_str(), "READ");
+    if (!f || f->IsZombie()) {
+        cout << "Cannot open " << fname << endl;
+        return nullptr;
+    }
+
+    TCanvas* src = nullptr;
+    f->GetObject(canvasName.c_str(), src);
+    if (!src) {
+        cout << "Cannot find canvas: " << canvasName << endl;
+        f->Close(); delete f;
+        return nullptr;
+    }
+
+    TEfficiency* eff = nullptr;
+    TIter next(src->GetListOfPrimitives());
+    TObject* obj = nullptr;
+    while ((obj = next())) {
+        if (obj->InheritsFrom(TEfficiency::Class())) {
+            eff = (TEfficiency*)obj;
+            break;
+        }
+    }
+
+    if (!eff) {
+        cout << "No TEfficiency found in canvas: " << canvasName << endl;
+        f->Close(); delete f;
+        return nullptr;
+    }
+
+    TCanvas* tmp = new TCanvas("tmp_paint","tmp_paint",10,10);
+    tmp->cd();
+    eff->Draw("AP");
+    tmp->Update();
+
+    TGraphAsymmErrors* painted = eff->GetPaintedGraph();
+    if (!painted) {
+        cout << "GetPaintedGraph() returned null for: " << canvasName << endl;
+        delete tmp; f->Close(); delete f;
+        return nullptr;
+    }
+
+    TGraphAsymmErrors* gr = (TGraphAsymmErrors*)painted->Clone();
+    delete tmp;
+    f->Close(); delete f;
+
+    gr->SetMarkerStyle(20);
+    gr->SetMarkerColor(color);
+    gr->SetLineColor(color);
+    leg->AddEntry(gr, legLabel.c_str(), "PL");
+    return gr;
 }

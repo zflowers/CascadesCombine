@@ -6,7 +6,8 @@
 #include <set>
 #include <map>
 #include <tuple>
-#include <TTree.h>
+#include <functional>
+#include <filesystem>
 #include <TGraphAsymmErrors.h>
 #include <TMultiGraph.h>
 #include <TAxis.h>
@@ -20,224 +21,18 @@
 #include <TMinuit.h>
 #include <TKey.h>
 #include <Math/ProbFunc.h>
-#include <sys/stat.h>
-#include <filesystem>
 #include "nlohmann/json.hpp"
 #include "Trigger_Fitter_Helpers.h"
 
 // -----------------------------------------------------------------------
-// Discover configs from canvas names in the root file.
-//
-// Canvas naming convention:
-//   can_eff_MET_trigger_eff_{electronBin}__TriggerBin_{electronBin}__{sample}
-//
-// We scan all TCanvas keys whose name contains "can_eff_MET_trigger_eff",
-// then parse out the electronBin and sample. From the sample we extract
-// the year (last 4 chars) and whether it's data or bkg, and what lepton
-// type (Muon/Electron).
-//
-// Returns a list of unique (electronBin, bkg_sample, data_sample) triples,
-// one per (electronBin, year) combination found, where:
-//   - Electron0 -> paired with Data_Muon_{year}   (>=2 leptons, 0 electrons)
-//   - Electron1 -> paired with Data_Electron_{year}
-//   - Electron2 -> paired with Data_Electron_{year}
-// -----------------------------------------------------------------------
-
-struct TriggerConfig {
-    string electronBin;  // e.g. "Electron0"
-    string bkg_sample;   // e.g. "bkg_2018"
-    string data_sample;  // e.g. "Data_Muon_2018"
-    string year;         // e.g. "2018"
-};
-
-string JSON_Key(const string& electronBin, const string& sample)
-{
-    return electronBin + "__" + sample;
-}
-
-// Parse "Electron0" -> 0, "Electron1" -> 1, etc.
-int Parse_Electron_N(const string& electronBin)
-{
-    string s = electronBin.substr(string("Electron").size());
-    return stoi(s);
-}
-
-vector<TriggerConfig> Discover_Configs(const string& fname)
-{
-    TFile* f = TFile::Open(fname.c_str(), "READ");
-    if (!f || f->IsZombie()) {
-        cout << "Cannot open " << fname << " for config discovery." << endl;
-        return {};
-    }
-
-    // Collect all canvas names matching our prefix
-    const string PREFIX = "can_eff_MET_trigger_eff";
-
-    // Use sets to track what (electronBin, year) combinations exist
-    // and which samples are present for each.
-    // map: (electronBin, year) -> set of samples found
-    map<pair<string,string>, set<string>> found;
-
-    TIter next(f->GetListOfKeys());
-    TKey* key = nullptr;
-    while ((key = (TKey*)next())) {
-        string cname = key->GetName();
-        if (cname.find(PREFIX) == string::npos) continue;
-        if (string(key->GetClassName()) != "TCanvas") continue;
-
-        // Format: can_eff_MET_trigger_eff_{eBin}__TriggerBin_{eBin}__{sample}
-        // Strip the prefix + "_"
-        string rest = cname.substr(PREFIX.length() + 1); // e.g. "Electron0__TriggerBin_Electron0__bkg_2018"
-
-        // electronBin is everything before the first "__"
-        size_t sep1 = rest.find("__");
-        if (sep1 == string::npos) continue;
-        string electronBin = rest.substr(0, sep1); // "Electron0"
-
-        // sample is everything after "__TriggerBin_{electronBin}__"
-        string triggerTag = "TriggerBin_" + electronBin + "__";
-        size_t sep2 = rest.find(triggerTag);
-        if (sep2 == string::npos) continue;
-        string sample = rest.substr(sep2 + triggerTag.length()); // e.g. "bkg_2018" or "Data_Muon_2018"
-
-        // Extract year: last 4 characters of sample
-        if (sample.length() < 4) continue;
-        string year = sample.substr(sample.length() - 4);
-        if (year.find_first_not_of("0123456789") != string::npos) continue;
-
-        found[{electronBin, year}].insert(sample);
-    }
-    f->Close(); delete f;
-
-    // Build configs: for each (electronBin, year), pair bkg with the
-    // appropriate data sample based on electron count.
-    vector<TriggerConfig> configs;
-    for (auto& [key_pair, samples] : found) {
-        const string& electronBin = key_pair.first;
-        const string& year        = key_pair.second;
-
-        int nElectrons = Parse_Electron_N(electronBin);
-
-        // Find bkg sample
-        string bkg_sample = "";
-        for (auto& s : samples)
-            if (s.find("bkg") != string::npos) { bkg_sample = s; break; }
-
-        // Find data sample based on lepton content:
-        // Electron0: >=2 leptons, 0 electrons -> Muon data
-        // Electron1+: at least 1 electron -> Electron data
-        string data_sample = "";
-        string data_type = (nElectrons == 0) ? "Muon" : "Electron";
-        for (auto& s : samples)
-            if (s.find("Data_"+data_type) != string::npos) { data_sample = s; break; }
-
-        if (bkg_sample.empty() || data_sample.empty()) {
-            cout << "WARNING: Incomplete sample set for " << electronBin
-                 << " year " << year
-                 << " (bkg='" << bkg_sample
-                 << "' data='" << data_sample << "') -- skipping." << endl;
-            continue;
-        }
-
-        configs.push_back({electronBin, bkg_sample, data_sample, year});
-        cout << "Discovered config: " << electronBin
-             << "  bkg=" << bkg_sample
-             << "  data=" << data_sample
-             << "  year=" << year << endl;
-    }
-
-    // Sort for deterministic ordering
-    sort(configs.begin(), configs.end(), [](const TriggerConfig& a, const TriggerConfig& b){
-        if (a.year != b.year) return a.year < b.year;
-        return a.electronBin < b.electronBin;
-    });
-
-    return configs;
-}
-
-TGraphAsymmErrors* Get_Graph_From_Canvas(const string& fname,
-                                          const string& canvasName,
-                                          int color,
-                                          TLegend*& leg,
-                                          const string& legLabel)
-{
-    TFile* f = TFile::Open(fname.c_str(), "READ");
-    if (!f || f->IsZombie()) {
-        cout << "Cannot open " << fname << endl;
-        return nullptr;
-    }
-
-    TCanvas* src = nullptr;
-    f->GetObject(canvasName.c_str(), src);
-    if (!src) {
-        cout << "Cannot find canvas: " << canvasName << endl;
-        f->Close(); delete f;
-        return nullptr;
-    }
-
-    // Find the TEfficiency in the canvas primitives
-    TEfficiency* eff = nullptr;
-    TIter next(src->GetListOfPrimitives());
-    TObject* obj = nullptr;
-    while ((obj = next())) {
-        if (obj->InheritsFrom(TEfficiency::Class())) {
-            eff = (TEfficiency*)obj;
-            break;
-        }
-    }
-
-    if (!eff) {
-        cout << "No TEfficiency found in canvas: " << canvasName << endl;
-        f->Close(); delete f;
-        return nullptr;
-    }
-
-    // Need to draw into a temporary canvas to populate the painted graph
-    TCanvas* tmp = new TCanvas("tmp_paint","tmp_paint",10,10);
-    tmp->cd();
-    eff->Draw("AP");
-    tmp->Update();
-
-    TGraphAsymmErrors* painted = eff->GetPaintedGraph();
-    if (!painted) {
-        cout << "GetPaintedGraph() returned null for: " << canvasName << endl;
-        delete tmp;
-        f->Close(); delete f;
-        return nullptr;
-    }
-
-    // Clone before closing the file and deleting the temp canvas
-    TGraphAsymmErrors* gr = (TGraphAsymmErrors*)painted->Clone();
-    delete tmp;
-    f->Close(); delete f;
-
-    gr->SetMarkerStyle(20);
-    gr->SetMarkerColor(color);
-    gr->SetLineColor(color);
-    leg->AddEntry(gr, legLabel.c_str(), "PL");
-    return gr;
-}
-
-// -----------------------------------------------------------------------
-// Build the canvas key name from parts
-// -----------------------------------------------------------------------
-string Make_Canvas_Name(const string& electronBin, const string& sample)
-{
-    return "can_eff_MET_trigger_eff_" + electronBin
-           + "__TriggerBin_" + electronBin
-           + "__" + sample;
-}
-
-// -----------------------------------------------------------------------
-// Fit one efficiency graph, write params to JSON
+// Fit one efficiency graph, write fit params + seed band params to JSON
 // -----------------------------------------------------------------------
 void Fit_And_Save(const string& fname,
                   const string& canvasName,
                   const string& jsonKey,
                   int color,
                   const vector<int>& fit_colors,
-                  const string& outdir
-                 )
+                  const string& outdir)
 {
     TLegend* dummy_leg = new TLegend(0,0,1,1);
     TGraphAsymmErrors* gr = Get_Graph_From_Canvas(fname, canvasName, color, dummy_leg, "");
@@ -247,9 +42,8 @@ void Fit_And_Save(const string& fname,
     double x_min = gr->GetXaxis()->GetXmin();
     double x_max = gr->GetXaxis()->GetXmax();
 
-    // Zero out X errors for fitting
     for (int j = 0; j < gr->GetN(); j++) {
-        gr->SetPointEXlow(j, 0.);
+        gr->SetPointEXlow(j,  0.);
         gr->SetPointEXhigh(j, 0.);
     }
 
@@ -269,23 +63,40 @@ void Fit_And_Save(const string& fname,
     f_dgauss->SetParameter(4, 0.5);   f_dgauss->SetParName(4,"Weight");
     funcs.push_back(f_dgauss);
 
-    // We intercept after the fact to pull params and write to JSON.
     Get_Fit(gr, funcs, fit_colors, outdir+"output_Fits.root", jsonKey, outdir);
 
-    // After fitting, read back best-fit parameters from whichever function
-    // converged better (lower chi2/NDF), then persist to JSON.
+    // Pick best fit by chi2/NDF, write chosen params to JSON under the
+    // standard "fit" key that Make_SF_Plot will read back
     TF1* best = f_gauss;
-    double chi2_gauss  = (f_gauss->GetNDF()  > 0) ? f_gauss->GetChisquare()  / f_gauss->GetNDF()  : 1e9;
-    double chi2_dgauss = (f_dgauss->GetNDF() > 0) ? f_dgauss->GetChisquare() / f_dgauss->GetNDF() : 1e9;
-    if (chi2_dgauss < chi2_gauss) best = f_dgauss;
+    double chi2_g  = (f_gauss->GetNDF()  > 0) ? f_gauss->GetChisquare()  / f_gauss->GetNDF()  : 1e9;
+    double chi2_dg = (f_dgauss->GetNDF() > 0) ? f_dgauss->GetChisquare() / f_dgauss->GetNDF() : 1e9;
+    if (chi2_dg < chi2_g) best = f_dgauss;
 
-    double norm   = best->GetParameter(0);
-    double mean   = best->GetParameter(1);
-    double sigma  = best->GetParameter(2);
-    double scale  = (best->GetNpar() > 3) ? best->GetParameter(3) : 0.;
-    double weight = (best->GetNpar() > 4) ? best->GetParameter(4) : 0.;
+    cout << "  -> Best fit for " << jsonKey << ": " << best->GetName()
+         << "  chi2/NDF=" << Round(min(chi2_g,chi2_dg)) << endl;
 
-    Write_Fit_Params_JSON(jsonKey, outdir+JSON_NAME, norm, mean, sigma, scale, weight);
+    Write_Fit_Params_JSON(jsonKey, outdir+"Fit_Parameters.json",
+                          best->GetParameter(0),
+                          best->GetParameter(1),
+                          best->GetParameter(2),
+                          (best->GetNpar() > 3) ? best->GetParameter(3) : 0.,
+                          (best->GetNpar() > 4) ? best->GetParameter(4) : 0.);
+
+    // Seed band params with conservative defaults only if not already set
+    // this preserves any values the user has dialled in by hand
+    string json_path = outdir + "Fit_Parameters.json";
+    json j = Load_JSON(json_path);
+    if ((!j.contains(jsonKey) || !j[jsonKey].contains("bands")) && jsonKey.find("Data")==std::string::npos) {
+        cout << "  -> Seeding default band params for " << jsonKey
+             << " (edit JSON to tune)" << endl;
+        Write_Band_Params_JSON(jsonKey, json_path,
+                               /*a1*/  .4e-5,  /*a2*/ -.6e-5,
+                               /*b1*/ 220.,    /*b2*/  220.,
+                               /*c1*/  1.01,   /*c2*/    0.99);
+    } else {
+        cout << "  -> Band params already set for " << jsonKey
+             << ", leaving unchanged." << endl;
+    }
 
     delete gr;
 }
@@ -293,10 +104,10 @@ void Fit_And_Save(const string& fname,
 // -----------------------------------------------------------------------
 // Build a TF1 from JSON-stored fit parameters
 // -----------------------------------------------------------------------
-TF1* Make_TF1_From_JSON(const string& tfname, const string& json_path, const string& jsonKey,
+TF1* Make_TF1_From_JSON(const string& tfname, const string& jsonKey,
+                         const string& json_path,
                          double x_min, double x_max)
 {
-    
     double norm=1., mean=200., sigma=40., scale=0., weight=0.;
     Read_Fit_Params_JSON(jsonKey, json_path, norm, mean, sigma, scale, weight);
 
@@ -318,9 +129,10 @@ TF1* Make_TF1_From_JSON(const string& tfname, const string& json_path, const str
 // -----------------------------------------------------------------------
 // Plot Data vs MC efficiency + Data/MC ratio for one config
 // -----------------------------------------------------------------------
-void Make_SF_Plot(const string& fname, const TriggerConfig& cfg, const vector<int>& colors, const string& outdir)
+void Make_SF_Plot(const string& fname, const TriggerConfig& cfg,
+                  const vector<int>& colors, const string& outdir)
 {
-    string json_path = outdir + JSON_NAME;
+    string json_path   = outdir + "Fit_Parameters.json";
     string bkg_canvas  = Make_Canvas_Name(cfg.electronBin, cfg.bkg_sample);
     string data_canvas = Make_Canvas_Name(cfg.electronBin, cfg.data_sample);
     string json_bkg    = JSON_Key(cfg.electronBin, cfg.bkg_sample);
@@ -328,13 +140,10 @@ void Make_SF_Plot(const string& fname, const TriggerConfig& cfg, const vector<in
     string plot_name   = "SF_" + cfg.electronBin + "_" + cfg.data_sample;
 
     TLegend* leg = new TLegend(0.65, 0.05, 0.85, 0.3);
-    leg->SetTextFont(132);
-    leg->SetTextSize(0.045);
+    leg->SetTextFont(132); leg->SetTextSize(0.045);
     if (invert_colors) {
-        leg->SetTextColor(kWhite);
-        leg->SetFillColor(kBlack);
-        leg->SetLineColor(kBlack);
-        leg->SetShadowColor(kBlack);
+        leg->SetTextColor(kWhite); leg->SetFillColor(kBlack);
+        leg->SetLineColor(kBlack); leg->SetShadowColor(kBlack);
     }
 
     TGraphAsymmErrors* gr_bkg  = Get_Graph_From_Canvas(fname, bkg_canvas,  colors[0], leg, cfg.bkg_sample);
@@ -343,21 +152,29 @@ void Make_SF_Plot(const string& fname, const TriggerConfig& cfg, const vector<in
     if (!gr_bkg || !gr_data) {
         cout << "Failed to get graphs for " << cfg.electronBin
              << " " << cfg.data_sample << endl;
-        delete leg;
-        return;
+        delete leg; return;
     }
 
     double x_min = gr_bkg->GetXaxis()->GetXmin();
     double x_max = gr_bkg->GetXaxis()->GetXmax();
 
-    TF1* Bkg_Nominal  = Make_TF1_From_JSON("Bkg_Nominal",  json_path, json_bkg,  x_min, x_max);
-    TF1* Data_Nominal = Make_TF1_From_JSON("Data_Nominal", json_path, json_data, x_min, x_max);
+    TF1* Bkg_Nominal  = Make_TF1_From_JSON("Bkg_Nominal",  json_bkg,  json_path, x_min, x_max);
+    TF1* Data_Nominal = Make_TF1_From_JSON("Data_Nominal", json_data, json_path, x_min, x_max);
     Bkg_Nominal->SetLineColor(kGreen);
     Data_Nominal->SetLineColor(kAzure+10);
 
-    // Band parameters from JSON (or defaults if not yet tuned)
-    double a1=.4e-5, a2=-.6e-5, b1=220., b2=220., c1=1.004, c2=0.996;
-    Read_Band_Params_JSON(json_data, json_path, a1, a2, b1, b2, c1, c2);
+    // Read band params -> these are what the user tunes by hand in the JSON
+    double a1, a2, b1, b2, c1, c2;
+    if (!Read_Band_Params_JSON(json_bkg, json_path, a1, a2, b1, b2, c1, c2)) {
+        cout << "WARNING: using hardcoded band defaults for " << json_bkg << endl;
+        a1=.4e-5; a2=-.6e-5; b1=220.; b2=220.; c1=1.01; c2=0.99;
+    }
+
+    // Print what's being used so it's easy to see in the log while tuning
+    cout << "\nBand params for " << json_bkg << ":" << endl;
+    cout << "  a1=" << a1 << "  a2=" << a2 << endl;
+    cout << "  b1=" << b1 << "  b2=" << b2 << endl;
+    cout << "  c1=" << c1 << "  c2=" << c2 << endl;
 
     if (invert_colors) {
         gStyle->SetFrameFillColor(kBlack);
@@ -399,10 +216,10 @@ void Make_SF_Plot(const string& fname, const TriggerConfig& cfg, const vector<in
     mg_res->Draw("AP");
     Format_Graph_res(mg_res);
     mg_res->GetXaxis()->SetLimits(x_min, x_max);
-    mg_res->GetXaxis()->SetRangeUser(150.0, 500.0);
+    mg_res->GetXaxis()->SetRangeUser(150., 500.);
     mg_res->GetYaxis()->SetRangeUser(0.5, 1.15);
     mg_res->GetYaxis()->SetTitle("Data/MC Bkg");
-    mg_res->GetXaxis()->SetTitle("MET [GeV]");
+    //mg_res->GetXaxis()->SetTitle("MET [GeV]");
     pad_res->Modified(); pad_res->Update();
     gr_bands_ratio->Draw("30");
     Fit_Ratio->Draw("C");
@@ -431,7 +248,7 @@ void Make_SF_Plot(const string& fname, const TriggerConfig& cfg, const vector<in
     Format_Graph(gr_bands);
     gr_bands->SetTitle("");
     gr_bands->GetXaxis()->SetLimits(x_min, x_max);
-    gr_bands->GetXaxis()->SetRangeUser(150.0, 500.0);
+    gr_bands->GetXaxis()->SetRangeUser(150., 500.);
     gr_bands->GetYaxis()->SetRangeUser(0.15, 1.05);
     gr_bands->GetYaxis()->SetTitle("Efficiency");
     gr_bkg->Draw("P");
@@ -460,57 +277,328 @@ void Make_SF_Plot(const string& fname, const TriggerConfig& cfg, const vector<in
 }
 
 // -----------------------------------------------------------------------
+// Colors for syst labels -> consistent across all plots
+// -----------------------------------------------------------------------
+int Syst_Color(const string& systLabel)
+{
+    if (systLabel == "Gold")   return kOrange+1;
+    if (systLabel == "Silver") return kGray+2;
+    if (systLabel == "Bronze") return kRed+1;
+    // Fallback for unknown labels
+    static map<string,int> extra;
+    static int idx = 0;
+    static const vector<int> pool = {kViolet+2, kGreen+3, kCyan+2, kMagenta+2};
+    if (!extra.count(systLabel)) extra[systLabel] = pool[(idx++) % pool.size()];
+    return extra[systLabel];
+}
+
+// -----------------------------------------------------------------------
+// Plot nominal + all syst overlays for one (electronBin, sample) pair.
+// Top pad:    nominal efficiency + each syst efficiency
+// Bottom pad: syst/nominal ratio + systematic band from JSON
+// One plot for bkg, one for data, called separately.
+// -----------------------------------------------------------------------
+void Make_Syst_Plot(const string& fname,
+                    const string& electronBin,
+                    const string& nominalSample,   // e.g. "bkg_2018" or "Data_Muon_2018"
+                    const vector<string>& systLabels, // e.g. {"Gold","Silver","Bronze"}
+                    const string& year,
+                    const string& outdir)
+{
+    string json_path  = outdir + "Fit_Parameters.json";
+    string json_nom   = JSON_Key(electronBin, nominalSample);
+    string plot_name  = "SystPlot_" + electronBin + "_" + nominalSample;
+
+    // ---- Fetch nominal graph ----
+    string nom_canvas = Make_Canvas_Name(electronBin, nominalSample);
+    TLegend* leg = new TLegend(0.62, 0.05, 0.88, 0.08 + 0.06*(1+systLabels.size()));
+    leg->SetTextFont(132); leg->SetTextSize(0.042);
+    leg->SetBorderSize(0);
+    if (invert_colors) {
+        leg->SetTextColor(kWhite); leg->SetFillColor(kBlack);
+        leg->SetLineColor(kBlack); leg->SetShadowColor(kBlack);
+    }
+
+    TGraphAsymmErrors* gr_nom = Get_Graph_From_Canvas(
+        fname, nom_canvas, kBlack, leg, ("Nominal: "+nominalSample).c_str());
+    if (!gr_nom) {
+        cout << "Make_Syst_Plot: missing nominal for " << nom_canvas << endl;
+        delete leg; return;
+    }
+    gr_nom->SetMarkerStyle(20);
+    gr_nom->SetMarkerSize(1.1);
+
+    double x_min = 150.; //gr_nom->GetXaxis()->GetXmin();
+    double x_max = 500.; //gr_nom->GetXaxis()->GetXmax();
+
+    // Nominal fit curve from JSON
+    TF1* Nom_Fit = Make_TF1_From_JSON("Nom_Fit", json_nom, json_path, x_min, x_max);
+    Nom_Fit->SetLineColor(kBlack);
+    Nom_Fit->SetLineStyle(2);
+
+    // Band params from JSON (keyed to the nominal sample)
+    double a1, a2, b1, b2, c1, c2;
+    if (!Read_Band_Params_JSON(json_nom, json_path, a1, a2, b1, b2, c1, c2)) {
+        a1=.4e-5; a2=-.6e-5; b1=220.; b2=220.; c1=1.01; c2=0.99;
+    }
+
+    // ---- Fetch syst graphs ----
+    vector<TGraphAsymmErrors*> gr_systs;
+    vector<string>             syst_labels_found;
+
+    for (const auto& lbl : systLabels) {
+        string sc = Make_Syst_Canvas_Name(electronBin, lbl, nominalSample);
+        int col   = Syst_Color(lbl);
+        TGraphAsymmErrors* gs = Get_Graph_From_Canvas(fname, sc, col, leg, lbl.c_str());
+        if (!gs) {
+            cout << "Make_Syst_Plot: missing syst canvas " << sc << " -- skipping" << endl;
+            continue;
+        }
+        gs->SetMarkerStyle(24); // open circle to distinguish from nominal
+        gs->SetMarkerSize(0.9);
+        gr_systs.push_back(gs);
+        syst_labels_found.push_back(lbl);
+    }
+
+    if (gr_systs.empty()) {
+        cout << "Make_Syst_Plot: no syst graphs found for " << nominalSample << endl;
+        delete leg; delete gr_nom; return;
+    }
+
+    // ---- Build ratio graphs: syst / nominal ----
+    // TGAE_Ratio(bkg, data) computes data/bkg, so pass nominal as "bkg"
+    vector<TGraphAsymmErrors*> gr_ratios;
+    for (auto* gs : gr_systs) {
+        TGraphAsymmErrors* r = TGAE_Ratio(gr_nom, gs);
+        if (!r) {
+            cout << "Make_Syst_Plot: TGAE_Ratio failed (point count mismatch?)" << endl;
+            gr_ratios.push_back(nullptr);
+        } else {
+            gr_ratios.push_back(r);
+        }
+    }
+
+    // ---- Systematic band in ratio — same params as SF plot ----
+    // The band here represents the same uncertainty envelope but
+    // centred on 1 (i.e. relative to nominal), so we use a flat
+    // TF1=1 for both "Bkg" and "Data" in Get_Bands_Ratio
+    TF1* unity = new TF1("unity","1.0", x_min, x_max);
+    TGraphErrors* gr_band_ratio = Get_Bands_Ratio(
+        x_min, x_max, gr_nom, unity, unity, a1, a2, b1, b2, c1, c2);
+    gr_band_ratio->SetFillColor(kCyan+2);
+    gr_band_ratio->SetFillStyle(3003);
+    gr_band_ratio->SetMarkerSize(0);
+
+    // Upper efficiency band around nominal fit
+    TGraphErrors* gr_band_eff = Get_Bands(
+        x_min, x_max, Nom_Fit, 1000, a1, a2, b1, b2, c1, c2);
+    gr_band_eff->SetFillColor(kCyan+2);
+    gr_band_eff->SetFillStyle(3003);
+    gr_band_eff->SetMarkerSize(0);
+    leg->AddEntry(gr_band_eff, "Syst. band", "F");
+
+    // ---- Canvas layout ----
+    if (invert_colors) {
+        gStyle->SetFrameFillColor(kBlack);
+        gStyle->SetFrameLineColor(kWhite);
+    }
+    TCanvas* can = new TCanvas(plot_name.c_str(), "", 864, 468);
+    can->SetGridx(); can->SetGridy(); can->Draw(); can->cd();
+    if (invert_colors) can->SetFillColor(kBlack);
+
+    // ---- Lower ratio pad ----
+    TPad* pad_res = new TPad("pad_res","pad_res",0,0.03,1,0.349);
+    pad_res->SetGridx(); pad_res->SetGridy();
+    pad_res->SetTopMargin(0.1); pad_res->SetBottomMargin(0.2);
+    pad_res->Draw(); pad_res->cd(); pad_res->Update(); can->Update();
+    if (invert_colors) pad_res->SetFillColor(kBlack);
+
+    TMultiGraph* mg_res = new TMultiGraph();
+    for (int i = 0; i < int(gr_ratios.size()); i++) {
+        if (!gr_ratios[i]) continue;
+        gr_ratios[i]->SetMarkerColor(Syst_Color(syst_labels_found[i]));
+        gr_ratios[i]->SetLineColor(Syst_Color(syst_labels_found[i]));
+        gr_ratios[i]->SetMarkerStyle(24);
+        gr_ratios[i]->SetMarkerSize(0.9);
+        mg_res->Add(gr_ratios[i]);
+    }
+    mg_res->Draw("AP");
+    Format_Graph_res(mg_res);
+    mg_res->GetXaxis()->SetLimits(x_min, x_max);
+    mg_res->GetYaxis()->SetRangeUser(0.85, 1.15);
+    mg_res->GetYaxis()->SetTitle("Syst / Nominal");
+    pad_res->Modified(); pad_res->Update();
+
+    // Draw band first so points sit on top
+    gr_band_ratio->Draw("30");
+
+    // Reference line at 1
+    TLine* line = new TLine(x_min, 1., x_max, 1.);
+    line->SetLineColor(kBlack); line->SetLineStyle(2); line->SetLineWidth(1);
+    line->Draw("SAME");
+
+    for (auto* r : gr_ratios)
+        if (r) r->Draw("P");
+    pad_res->Modified(); pad_res->Update();
+    can->Modified(); can->Update();
+
+    // ---- Upper efficiency pad ----
+    can->cd();
+    TPad* pad_gr = new TPad("pad_gr","pad_gr",0,0.35,1.,1.);
+    pad_gr->SetGridx(); pad_gr->SetGridy();
+    pad_gr->SetBottomMargin(0.01);
+    pad_gr->Draw(); pad_gr->cd(); can->Update();
+    if (invert_colors) pad_gr->SetFillColor(kBlack);
+
+    // Draw band, then fits, then points on top
+    gr_band_eff->Draw("A3");
+    Format_Graph(gr_band_eff);
+    gr_band_eff->SetTitle("");
+    gr_band_eff->GetXaxis()->SetLimits(x_min, x_max);
+    gr_band_eff->GetXaxis()->SetRangeUser(150., 500.);
+    gr_band_eff->GetYaxis()->SetRangeUser(0.0, 1.05);
+    gr_band_eff->GetYaxis()->SetTitle("Efficiency");
+
+    Nom_Fit->Draw("SAME");
+    gr_nom->Draw("P");
+    for (auto* gs : gr_systs) gs->Draw("P");
+
+    pad_gr->Modified(); pad_gr->Update();
+    can->Modified(); can->Update();
+
+    leg->Draw("SAME");
+
+    TLatex l;
+    if (invert_colors) l.SetTextColor(kWhite);
+    l.SetTextFont(42); l.SetNDC(); l.SetTextSize(0.06);
+    bool is_data = (nominalSample.find("Data") != string::npos);
+    string typeLabel = is_data ? "Data" : "MC Bkg";
+    l.DrawLatex(0.55, 0.93, (electronBin + " " + year + " " + typeLabel).c_str());
+    l.DrawLatex(0.10, 0.93, "#bf{#it{CMS}} Preliminary");
+
+    pad_gr->Update(); can->Update(); can->cd();
+
+    can->SaveAs((outdir+"SystPlot_"+electronBin+"_"+nominalSample+".pdf").c_str());
+    TFile* fout = TFile::Open((outdir+"output_Scale.root").c_str(),"UPDATE");
+    can->Write();
+    fout->Close();
+    delete fout;
+    delete leg; delete can; delete unity;
+}
+
+// -----------------------------------------------------------------------
 // Top-level
 // -----------------------------------------------------------------------
-void Run_All(const string& fname)
+void Run_Fits(const string& fname, const string& outdir)
 {
-    string outdir = Derive_Output_Dir(fname);
-    vector<int> colors     = {kGreen+2, kAzure-2, kYellow, kViolet+2, kAzure+7, kPink};
+    vector<int> colors     = {kGreen+2, kAzure-2};
     vector<int> fit_colors = {kRed, kBlue};
 
-    // Discover what's in the file rather than hard-coding
     vector<TriggerConfig> configs = Discover_Configs(fname);
-    if (configs.empty()) {
-        cout << "No valid configs found in " << fname << endl;
+    if (configs.empty()) { cout << "No configs found." << endl; return; }
+
+    // Only wipe the JSON on a fresh fit run so band edits survive
+    // a --plot-only rerun but a full --fit wipes stale params.
+    string json_path = outdir + "Fit_Parameters.json";
+    if (fileExists(json_path)) {
+        cout << "Removing existing " << json_path << " for fresh fit run." << endl;
+        remove(json_path.c_str());
+    }
+
+    for (auto& cfg : configs) {
+        cout << "\n=== Fitting: " << cfg.electronBin << " " << cfg.year << " ===" << endl;
+        Fit_And_Save(fname, Make_Canvas_Name(cfg.electronBin, cfg.bkg_sample),
+                     JSON_Key(cfg.electronBin, cfg.bkg_sample),
+                     kGreen+2, fit_colors, outdir);
+        Fit_And_Save(fname, Make_Canvas_Name(cfg.electronBin, cfg.data_sample),
+                     JSON_Key(cfg.electronBin, cfg.data_sample),
+                     kAzure-2, fit_colors, outdir);
+    }
+
+    cout << "\nFit params and seed band params written to: " << json_path << endl;
+    cout << "Edit the \"bands\" blocks in that file to tune systematics," << endl;
+    cout << "then rerun with --plot to regenerate SF plots." << endl;
+}
+
+void Run_Plots(const string& fname, const string& outdir)
+{
+    vector<int> colors = {kGreen+2, kAzure-2};
+
+    string json_path = outdir + "Fit_Parameters.json";
+    if (!fileExists(json_path)) {
+        cout << "ERROR: " << json_path << " not found. Run with --fit first." << endl;
         return;
     }
 
-    // Step 1: fit each efficiency curve and persist params to JSON
-    string json_path = outdir + JSON_NAME;
-    if (fileExists(json_path)) remove(json_path.c_str());
+    vector<TriggerConfig> configs = Discover_Configs(fname);
+    if (configs.empty()) { cout << "No configs found." << endl; return; }
 
-    for (auto& cfg : configs) {
-        string bkg_canvas  = Make_Canvas_Name(cfg.electronBin, cfg.bkg_sample);
-        string data_canvas = Make_Canvas_Name(cfg.electronBin, cfg.data_sample);
-        string json_bkg    = JSON_Key(cfg.electronBin, cfg.bkg_sample);
-        string json_data   = JSON_Key(cfg.electronBin, cfg.data_sample);
-
-        cout << "\nFitting bkg:  " << json_bkg  << endl;
-        Fit_And_Save(fname, bkg_canvas,  json_bkg,  colors[0], fit_colors, outdir);
-
-        cout << "\nFitting data: " << json_data << endl;
-        Fit_And_Save(fname, data_canvas, json_data, colors[1], fit_colors, outdir);
-    }
-
-    // Step 2: make SF plots using fitted parameters from JSON
     for (auto& cfg : configs)
         Make_SF_Plot(fname, cfg, colors, outdir);
 }
 
+void Run_Syst_Plots(const string& fname, const string& outdir)
+{
+    string json_path = outdir + "Fit_Parameters.json";
+    if (!fileExists(json_path)) {
+        cout << "ERROR: " << json_path << " not found. Run with --fit first." << endl;
+        return;
+    }
+
+    vector<TriggerConfig> configs = Discover_Configs(fname);
+    if (configs.empty()) { cout << "No configs found." << endl; return; }
+
+    for (auto& cfg : configs) {
+        vector<string> syst_labels;
+        for (auto& [lbl, _] : cfg.systs) syst_labels.push_back(lbl);
+        if (syst_labels.empty()) {
+            cout << "No syst labels for " << cfg.electronBin << " " << cfg.year << endl;
+            continue;
+        }
+
+        // One plot per sample type (bkg and data separately)
+        cout << "\n=== Syst plot: " << cfg.electronBin
+             << " " << cfg.year << " bkg ===" << endl;
+        Make_Syst_Plot(fname, cfg.electronBin, cfg.bkg_sample,
+                       syst_labels, cfg.year, outdir);
+
+        //cout << "\n=== Syst plot: " << cfg.electronBin
+        //     << " " << cfg.year << " data ===" << endl;
+        //Make_Syst_Plot(fname, cfg.electronBin, cfg.data_sample,
+        //               syst_labels, cfg.year, outdir);
+    }
+}
+
+// In main(), add --syst flag:
 int main(int argc, char* argv[])
 {
-    string fname = "";
+    string fname  = "";
+    bool do_fit   = false;
+    bool do_plot  = false;
+    bool do_syst  = false;
 
     for (int i = 1; i < argc; i++) {
         string arg(argv[i]);
-        if (arg.rfind("-f",0)==0) { fname = string(argv[i+1]); break; }
+        if (arg.rfind("-f",0)==0) { fname = string(argv[i+1]); i++; }
+        if (arg == "--fit")  do_fit  = true;
+        if (arg == "--plot") do_plot = true;
+        if (arg == "--syst") do_syst = true;
     }
 
     if (fname.empty()) {
-        cout << "Usage: ./Trigger_SFs.x -f <input_root_file>" << endl;
+        cout << "Usage: ./Trigger_SFs.x -f <input.root> [--fit] [--plot] [--syst]" << endl;
+        cout << "  --fit   run fits, seed JSON with band params" << endl;
+        cout << "  --plot  make Data/MC SF plots using JSON" << endl;
+        cout << "  --syst  make nominal+syst overlay plots" << endl;
         return 1;
     }
 
-    Run_All(fname);
+    if (!do_fit && !do_plot && !do_syst) { do_fit = true; do_plot = true; do_syst = true; }
+
+    string outdir = Derive_Output_Dir(fname);
+    if (do_fit)  Run_Fits(fname, outdir);
+    if (do_plot) Run_Plots(fname, outdir);
+    if (do_syst) Run_Syst_Plots(fname, outdir);
+
     return 0;
 }

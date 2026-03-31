@@ -1078,92 +1078,121 @@ void RunRatios(const std::vector<RatioDef>& ratioDefs,
             continue; // process next RatioDef
         }
 
-        // --- Implicit mode (numerator_var/denominator_var + processes/bins) ---
+        // --- Implicit efficiency mode ---
         if(!r.numerator_var.empty() && !r.denominator_var.empty() && r.kind == RatioKind::Efficiency){
-            // Determine bins to loop
+        
+            // Determine bins to loop — empty bins list means use all discovered bins
             std::vector<std::string> binsToUse;
-            if(!r.bins.empty()) binsToUse = r.bins;
-            else {
-                // use all known bins
+            if(!r.bins.empty()){
+                binsToUse = r.bins;
+            } else {
                 binsToUse.assign(uniqueBinNames.begin(), uniqueBinNames.end());
-                // if none, also consider var-only groups (binless)
                 if(binsToUse.empty()) binsToUse.push_back("");
             }
-
-            // For each bin, find groupKey and iterate processes
-            for(const auto &bin : binsToUse){
-                std::string gk = MakeGroupKeyForVar(bin, r.numerator_var);
-                auto it_group = groups.find(gk);
-                if(it_group == groups.end()){
-                    // nothing to do for this bin/var
+        
+            for(const auto& bin : binsToUse){
+        
+                // Find the numerator group for this bin
+                std::string gk_num = MakeGroupKeyForVar(bin, r.numerator_var);
+                std::string gk_den = MakeGroupKeyForVar(bin, r.denominator_var);
+        
+                auto it_num = groups.find(gk_num);
+                auto it_den = groups.find(gk_den);
+        
+                if(it_num == groups.end()){
+                    std::cerr << "[RunRatios] No numerator group found for bin='"
+                              << bin << "' var='" << r.numerator_var << "'" << std::endl;
                     continue;
                 }
-
-                // determine processes to loop over
+                if(it_den == groups.end()){
+                    std::cerr << "[RunRatios] No denominator group found for bin='"
+                              << bin << "' var='" << r.denominator_var << "'" << std::endl;
+                    continue;
+                }
+        
+                // Determine processes — empty means all processes present in numerator group
                 std::vector<std::string> procsToUse;
                 if(!r.processes.empty()){
                     procsToUse = r.processes;
                 } else {
-                    // wildcard -> all processes present in this group
-                    for(const auto &pp : it_group->second) procsToUse.push_back(pp.first);
+                    for(const auto& pp : it_num->second)
+                        procsToUse.push_back(pp.first);
                 }
-
-                for(const auto &proc : procsToUse){
-                    // Find numerator and denominator hist in this (bin,var) group
-                    TH1* hnum = nullptr;
-                    TH1* hden = nullptr;
-                    auto it_proc_num = it_group->second.find(proc);
-                    if(it_proc_num != it_group->second.end()){
-                        hnum = (TH1*)it_proc_num->second->Clone();
-                        hnum->SetDirectory(nullptr);
-                    }
-                    // denominator group might be same (bin + denominator_var)
-                    std::string gk_den = MakeGroupKeyForVar(bin, r.denominator_var);
-                    auto it_group_den = groups.find(gk_den);
-                    if(it_group_den != groups.end()){
-                        auto it_proc_den = it_group_den->second.find(proc);
-                        if(it_proc_den != it_group_den->second.end()){
-                            hden = (TH1*)it_proc_den->second->Clone();
-                            hden->SetDirectory(nullptr);
-                        }
-                    }
-                    // If either missing -> warn then skip
-                    if(!hnum || !hden){
-                        std::cerr << "[RunRatios] Missing hist for efficiency " << r.name
-                                  << " bin="<<bin<<" proc="<<proc
-                                  << " num="<<(hnum? "ok":"MISSING")<<" den="<<(hden? "ok":"MISSING")<<std::endl;
+        
+                for(const auto& proc : procsToUse){
+        
+                    // Strict same-bin same-process lookup — no cross matching
+                    auto it_hnum = it_num->second.find(proc);
+                    auto it_hden = it_den->second.find(proc);
+        
+                    if(it_hnum == it_num->second.end()){
+                        std::cerr << "[RunRatios] Numerator missing for efficiency '" << r.name
+                                  << "' bin='" << bin << "' proc='" << proc << "'" << std::endl;
                         continue;
                     }
+                    if(it_hden == it_den->second.end()){
+                        std::cerr << "[RunRatios] Denominator missing for efficiency '" << r.name
+                                  << "' bin='" << bin << "' proc='" << proc << "'" << std::endl;
+                        continue;
+                    }
+        
+                    TH1* hnum = it_hnum->second;
+                    TH1* hden = it_hden->second;
+        
+                    if(!hnum || !hden) continue;
+        
                     if(!HistsCompatible(hnum, hden)){
-                        std::cerr << "[RunRatios] Hists incompatible for TEff: " << r.name 
-                                  << " bin="<<bin<<" proc="<<proc<<std::endl;
+                        std::cerr << "[RunRatios] Incompatible hists for efficiency '" << r.name
+                                  << "' bin='" << bin << "' proc='" << proc << "'" << std::endl;
                         continue;
                     }
-                    // Build TEff
-                    TEfficiency* eff = nullptr;
-                    gErrorIgnoreLevel = 1001;
-                    eff = new TEfficiency(*dynamic_cast<TH1*>(hnum), *dynamic_cast<TH1*>(hden));
-                    gErrorIgnoreLevel = 0;
-
-                    // Create descriptive name and title
-                    std::string effName = r.name + "__" + (bin.empty() ? "inclusive" : bin) + "__" + proc;
+        
+                    // Build TEfficiency — numerator must be subset of denominator,
+                    // ROOT will warn but we suppress and check manually
+                    gErrorIgnoreLevel = kWarning;
+                    TEfficiency* eff = new TEfficiency(
+                        *dynamic_cast<TH1*>(hnum),
+                        *dynamic_cast<TH1*>(hden)
+                    );
+                    gErrorIgnoreLevel = kPrint;
+        
+                    if(!eff){
+                        std::cerr << "[RunRatios] TEfficiency construction failed for '"
+                                  << r.name << "' bin='" << bin << "' proc='" << proc << "'" << std::endl;
+                        continue;
+                    }
+        
+                    // Name mirrors the canvas naming convention used by Trigger_SFs
+                    // so downstream code can discover these by scanning the root file:
+                    // {ratio_name}__{bin}__{proc}
+                    std::string effName = r.name
+                                        + "__" + (bin.empty() ? "inclusive" : bin)
+                                        + "__" + proc;
                     eff->SetName(effName.c_str());
                     eff->SetTitle(effName.c_str());
-
-                    // Paint once to fix axes
-                    gErrorIgnoreLevel = 3001;
-                    TCanvas* dum_canv = new TCanvas("dum_canv", "dum_canv", 750, 500);
-                    dum_canv->cd();
-                    eff->Draw();
-                    dum_canv->Update();
-                    eff->GetPaintedGraph()->GetYaxis()->SetTitle(hnum->GetYaxis()->GetTitle());
-                    delete dum_canv;
-                    gErrorIgnoreLevel = 0;
-
-                    // Store and plot
+        
+                    // Paint once into a temporary canvas to populate GetPaintedGraph()
+                    // and set axis titles from the numerator histogram
+                    {
+                        gErrorIgnoreLevel = kError;
+                        TCanvas* tmp = new TCanvas("tmp_eff_paint","tmp_eff_paint",750,500);
+                        tmp->cd();
+                        eff->Draw("AP");
+                        tmp->Update();
+                        if(eff->GetPaintedGraph()){
+                            eff->GetPaintedGraph()->GetXaxis()->SetTitle(
+                                hnum->GetXaxis()->GetTitle());
+                            eff->GetPaintedGraph()->GetYaxis()->SetTitle(
+                                hnum->GetYaxis()->GetTitle());
+                        }
+                        delete tmp;
+                        gErrorIgnoreLevel = kPrint;
+                    }
+        
                     effsByBin[bin].push_back(eff);
                     effsByProcess[proc].push_back(eff);
                     Plot_Eff(eff);
+        
                 } // end proc loop
             } // end bin loop
             continue;
