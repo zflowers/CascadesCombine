@@ -63,6 +63,7 @@ int main(int argc, char* argv[]) {
     bool hasData = false;
     // Make map from JSON yields
     std::map<std::string, std::map<std::string, TH1*>> cutflowMap;
+    std::map<std::string, std::map<std::string, TH1*>> cutflowMap_raw;
     for (auto& [binName, procMap] : j.items()) {
         // Loop over processes
         for (auto& [procName, values] : procMap.items()) {
@@ -80,6 +81,7 @@ int main(int argc, char* argv[]) {
                 continue;
             }
             
+            double raw      = nom[0].get<double>();
             double weighted = nom[1].get<double>(); // sumW
             double err      = nom[2].get<double>(); // stat error
 
@@ -88,10 +90,15 @@ int main(int argc, char* argv[]) {
             h->SetBinContent(1, weighted);
             h->SetBinError(1, err);
             cutflowMap[binName][procName] = h;
+            TH1F* h_raw = new TH1F(Form("%s__%s_raw", binName.c_str(), procName.c_str()), Form("%s__%s_raw", binName.c_str(), procName.c_str()), 1, 0, 1);
+            h_raw->SetBinContent(1, raw);
+            h_raw->SetBinError(1, err);
+            cutflowMap_raw[binName][procName] = h_raw;
         }
     }
     
     auto mergedCutflows = BuildMergedJsonCutflow(cutflowMap, groups, cfg);
+    auto mergedCutflows_raw = BuildMergedJsonCutflow(cutflowMap_raw, groups, cfg);
     for (const auto &pair : mergedCutflows) {
         const std::string &grpName = pair.first;
         const auto &groupCutflowMap = pair.second; // map<binName, map<proc,TH1*>>
@@ -102,6 +109,11 @@ int main(int argc, char* argv[]) {
         MakeAndPlotCutflow2D(groupCutflowMap, grpName, "effective", 1.0);
         if (!hasData)
             MakeAndPlotCutflow2D(groupCutflowMap, grpName, "Zbi", 3.0); // 3% systematic
+    }
+    for (const auto &pair : mergedCutflows_raw) {
+        const std::string &grpName = pair.first;
+        const auto &groupCutflowMap_raw = pair.second; // map<binName, map<proc,TH1*>>
+        MakeAndPlotCutflow2D(groupCutflowMap_raw, grpName, "raw", 1.0);
     }
 
     outFile->Close();

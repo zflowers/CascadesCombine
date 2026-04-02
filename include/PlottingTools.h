@@ -1293,7 +1293,7 @@ void Plot_EventCount2D(TH2* h, const std::string &mode,
     can->SetBottomMargin(0.17);
     can->SetTopMargin(0.06);
     can->SetGridx(); can->SetGridy();
-    if(mode=="yield" || mode=="effective") can->SetLogz(); // <--- enable log for effective as well
+    if(mode=="raw" || mode=="yield" || mode=="effective") can->SetLogz(); // <--- enable log for effective as well
 
     // Draw histogram COLZ
     h->Draw("COLZ");
@@ -1319,7 +1319,7 @@ void Plot_EventCount2D(TH2* h, const std::string &mode,
         double yup  = h->GetYaxis()->GetBinUpEdge(iy);
         double xc = 0.5*(xlow+xup);
         double yc = 0.5*(ylow+yup);
-        if(val < 1.e-5 && mode != "yield")
+        if(val < 1.e-5 && (mode != "yield" || mode != "raw"))
             val = 0.;
         TString label = "";
         if(val < 1)
@@ -1372,6 +1372,8 @@ void Plot_EventCount2D(TH2* h, const std::string &mode,
     // Z-axis title
     if(mode == "yield")
       h->GetZaxis()->SetTitle(("N_{events} passing category scaled to "+std::to_string(lumi)+" fb^{-1}").c_str());
+    else if(mode == "raw")
+      h->GetZaxis()->SetTitle("N_{events} passing category");
     else if(mode == "SoB")
       h->GetZaxis()->SetTitle(("#frac{N_{events}}{N_{TOT BKG}} for process in category scaled to "+std::to_string(lumi)+" fb^{-1}").c_str());
     else if(mode == "SoverSqrtB")
@@ -1389,6 +1391,7 @@ void Plot_EventCount2D(TH2* h, const std::string &mode,
 
     // Save canvas
     TString pdfName = Form("%s/pdfs/%s.pdf", outputDir.c_str(), h->GetName());
+    can->Write();
     gErrorIgnoreLevel = 1001; can->SaveAs(pdfName); gErrorIgnoreLevel = 0;
 
     delete can;
@@ -1581,7 +1584,7 @@ void MakeAndPlotCutflow2D(
                 double pY = (yields.count(procName) ? yields[procName][oldBin] : 0.0);
                 double pErr = (yields_err.count(procName) ? yields_err[procName][oldBin] : 0.0);
                 if(procName == "Total Bkg") {
-                    if(mode == "yield") val = B;
+                    if(mode == "yield" || mode == "raw") val = B;
                     else if(mode == "SoB") val = (B > 0.0 ? 1.0 : 0.0);
                     else if(mode == "SoverSqrtB") val = (sqrtB > 0.0 ? sqrtB : 0.0);
                     else if(mode == "effective") {
@@ -1599,7 +1602,7 @@ void MakeAndPlotCutflow2D(
                             val = 0.0;
                     } else val = pY;
                 } else {
-                    if(mode == "yield") val = pY;
+                    if(mode == "yield" || mode == "raw") val = pY;
                     else if(mode == "SoB") val = (B > 0.0 ? pY / B : 0.0);
                     else if(mode == "SoverSqrtB") val = (sqrtB > 0.0 ? pY / sqrtB : 0.0);
                     else if(mode == "effective") {

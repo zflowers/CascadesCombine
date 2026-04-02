@@ -1361,7 +1361,7 @@ T* GetHistClone(TFile *f, const string &name) {
     return clone;
 }
 
-bool HistsCompatible(TH1* num, const TH1* den, double tol=1e-1) {
+bool HistsCompatible(TH1* num, const TH1* den, double tol=1) {
     if (!num || !den) return false;
     int nbins = num->GetNbinsX();
     if (nbins != den->GetNbinsX()) return false;
