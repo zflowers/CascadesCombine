@@ -107,10 +107,6 @@ SampleTool::SampleTool(){
   LumiDict["Summer22_130X_Cascades"] = RUN2_TOTAL_LUMI + RUN3_TOTAL_LUMI;
   LumiDict["Summer23BPix_130X_Cascades"] = RUN2_TOTAL_LUMI + RUN3_TOTAL_LUMI;
 
-  MasterDict["ttbar_2022_Run3_TEST"] = {
-    pathPrefix + "Summer22_130X/TTto2L2Nu-3Jets_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer22_130X.root",
-  };
-
   MasterDict["ttbar_2026"] = {
     pathPrefix + "Summer26_130X/TTG-1Jets_PTG-100to200_TuneCP5_13p6TeV_amcatnloFXFXold-pythia8_Summer23BPix_Summer26_130X.root",
     pathPrefix + "Summer26_130X/TTG-1Jets_PTG-10to100_TuneCP5_13p6TeV_amcatnloFXFXold-pythia8_Summer23BPix_Summer26_130X.root",

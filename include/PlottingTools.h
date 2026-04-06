@@ -571,9 +571,10 @@ void Plot_Overlay(const std::string& hname,
 
         h->SetLineColor(color);
         h->SetLineWidth(3);
+        h->SetFillColorAlpha(color, 0.35);
         if(!sigHists.empty()) h->SetLineStyle(7);
         else h->SetLineStyle(0);
-        h->SetFillStyle(0);
+        h->SetFillStyle(3003);
         if(do_LogScale) DrawLogSmart(h, "SAME HIST");
         else h->Draw("SAME HIST");
     }
@@ -599,6 +600,8 @@ void Plot_Overlay(const std::string& hname,
         //if(bkgHists.size() != 0) h->SetLineWidth(4);
         //else h->SetLineWidth(3);
         h->SetLineWidth(3);
+        h->SetFillColorAlpha(color, 0.35);
+        h->SetFillStyle(3003);
         if(do_LogScale) DrawLogSmart(h, "SAME HIST");
         else h->Draw("SAME HIST");
     }
@@ -663,6 +666,7 @@ void Plot_Overlay(const std::string& hname,
                        outputDir.c_str(),
                        BinName.c_str(),
                        SanitizeString(canvas_name).c_str());
+    if(do_LogScale) pdf += "_log";
 
     gErrorIgnoreLevel = 1001;
     can->SaveAs(pdf);
