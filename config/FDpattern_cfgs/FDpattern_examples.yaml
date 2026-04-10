@@ -200,6 +200,31 @@ bins:
         - "*Run2*2L_Silver_1J_P250_R95_*"
     exclude:
         - "*Btag*"
+
+  - name: "Run2_2L_Silver_Low_PTISR_Lowest_RISR"
+    include:
+        - "*Run2*2L_Silver_P250_R6_*"
+        - "*Run2*2L_Silver_P250_R65_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run2_2L_Silver_Low_PTISR_Low_RISR"
+    include:
+        - "*Run2*2L_Silver_P250_R7_*"
+        - "*Run2*2L_Silver_P250_R75_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run2_2L_Silver_Low_PTISR_Mid_RISR"
+    include:
+        - "*Run2*2L_Silver_P250_R8_*"
+        - "*Run2*2L_Silver_P250_R85_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run2_2L_Silver_Low_PTISR_High_RISR"
+    include:
+        - "*Run2*2L_Silver_P250_R9_*"
+        - "*Run2*2L_Silver_P250_R95_*"
+    exclude:
+        - "*Btag*"
   - name: "Run2_3L_Silver_0J_Low_PTISR"
     include:
         - "*Run2*3L_Silver_0J_P200_R6_*"
@@ -216,6 +241,7 @@ bins:
         - "*Run2*3L_Silver_0J_P300_R9_*"
     exclude:
         - "*Btag*"
+
   - name: "Run2_2L_Silver_0J_High_PTISR_Lowest_RISR"
     include:
         - "*Run2*2L_Silver_0J_P350_R6_*"
@@ -262,6 +288,30 @@ bins:
     include:
         - "*Run2*2L_Silver_1J_P350_R9_*"
         - "*Run2*2L_Silver_1J_P350_R95_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run2_2L_Silver_High_PTISR_Lowest_RISR"
+    include:
+        - "*Run2*2L_Silver_P350_R6_*"
+        - "*Run2*2L_Silver_P350_R65_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run2_2L_Silver_High_PTISR_Low_RISR"
+    include:
+        - "*Run2*2L_Silver_P350_R7_*"
+        - "*Run2*2L_Silver_P350_R75_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run2_2L_Silver_High_PTISR_Mid_RISR"
+    include:
+        - "*Run2*2L_Silver_P350_R8_*"
+        - "*Run2*2L_Silver_P350_R85_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run2_2L_Silver_High_PTISR_High_RISR"
+    include:
+        - "*Run2*2L_Silver_P350_R9_*"
+        - "*Run2*2L_Silver_P350_R95_*"
     exclude:
         - "*Btag*"
   - name: "Run2_3L_Silver_1J_Low_PTISR"
@@ -721,6 +771,54 @@ bins:
     include:
         - "*Run3*2L_Silver_1J_P350_R9_*"
         - "*Run3*2L_Silver_1J_P350_R95_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Silver_High_PTISR_Lowest_RISR"
+    include:
+        - "*Run3*2L_Silver_P350_R6_*"
+        - "*Run3*2L_Silver_P350_R65_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Silver_High_PTISR_Low_RISR"
+    include:
+        - "*Run3*2L_Silver_P350_R7_*"
+        - "*Run3*2L_Silver_P350_R75_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Silver_High_PTISR_Mid_RISR"
+    include:
+        - "*Run3*2L_Silver_P350_R8_*"
+        - "*Run3*2L_Silver_P350_R85_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Silver_High_PTISR_High_RISR"
+    include:
+        - "*Run3*2L_Silver_P350_R9_*"
+        - "*Run3*2L_Silver_P350_R95_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Silver_Low_PTISR_Lowest_RISR"
+    include:
+        - "*Run3*2L_Silver_P250_R6_*"
+        - "*Run3*2L_Silver_P250_R65_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Silver_Low_PTISR_Low_RISR"
+    include:
+        - "*Run3*2L_Silver_P250_R7_*"
+        - "*Run3*2L_Silver_P250_R75_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Silver_Low_PTISR_Mid_RISR"
+    include:
+        - "*Run3*2L_Silver_P250_R8_*"
+        - "*Run3*2L_Silver_P250_R85_*"
+    exclude:
+        - "*Btag*"
+  - name: "Run3_2L_Silver_Low_PTISR_High_RISR"
+    include:
+        - "*Run3*2L_Silver_P250_R9_*"
+        - "*Run3*2L_Silver_P250_R95_*"
     exclude:
         - "*Btag*"
   - name: "Run3_3L_Silver_1J_Low_PTISR"

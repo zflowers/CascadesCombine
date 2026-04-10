@@ -27,6 +27,7 @@ import sys
 import re
 from ruamel.yaml import YAML
 from ruamel.yaml.scalarstring import PreservedScalarString
+from ruamel.yaml.comments import CommentedMap
 
 # ----------------------------
 # User-tunable defaults below
@@ -69,6 +70,107 @@ REGIONS_USER_CUTS = "minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"
 # ----------------------------
 # Helper functions
 # ----------------------------
+
+# ----------------------------
+# New helper for 2L Silver consolidation
+# ----------------------------
+
+NJET_S_PATTERNS = re.compile(r'Njet_S[^;]*;')
+
+def strip_njet_s_from_cuts(cuts_str: str) -> str:
+    """Remove any Njet_S==N; or Njet_S>=N; token from a cuts string."""
+    if not cuts_str:
+        return cuts_str
+    result = NJET_S_PATTERNS.sub('', str(cuts_str))
+    # clean up any double semicolons left behind
+    while ';;' in result:
+        result = result.replace(';;', ';')
+    return result
+
+def strip_jet_tag_from_key(key: str) -> str:
+    """
+    Remove _0J_ or _1J_ token from a bin key.
+    e.g. Bin_Run2_2L_Silver_0J_P350_... -> Bin_Run2_2L_Silver_P350_...
+    """
+    return re.sub(r'_(0J|1J)_', '_', key)
+
+def make_2l_silver_consolidated(doc_0j, doc_1j):
+    """
+    Merge two 2L Gold docs (0J and 1J) into a single Silver doc:
+    - rename Gold->Silver in keys
+    - strip _0J_/_1J_ from keys
+    - strip Njet_S cuts
+    - lep-cuts transformed for Silver
+    - deduplicate (0J and 1J should produce identical bins after stripping)
+    """
+    out = CommentedMap()
+
+    for src_doc in (doc_0j, doc_1j):
+        for key in list(src_doc.keys()):
+            value = src_doc[key]
+            # rename Gold->Silver, strip jet tag
+            new_key = key.replace("Gold", "Silver")
+            new_key = strip_jet_tag_from_key(new_key)
+
+            # skip if already written (0J and 1J should be identical post-strip)
+            if new_key in out:
+                continue
+
+            entry = value.copy() if hasattr(value, "copy") else value
+            multiplicity = detect_mult_from_key(key)
+
+            # transform lep-cuts
+            if isinstance(entry, dict) and multiplicity is not None and "lep-cuts" in entry:
+                entry["lep-cuts"] = transform_lep_cuts_ruamel(
+                    entry.get("lep-cuts"), multiplicity, "Silver"
+                )
+
+            # strip Njet_S from cuts
+            if isinstance(entry, dict) and "cuts" in entry:
+                entry["cuts"] = strip_njet_s_from_cuts(str(entry["cuts"]))
+
+            out[new_key] = entry
+
+    return out
+
+def make_2l_silver_consolidated_single_doc(doc):
+    """
+    For a single Gold doc that contains mixed 2L _0J_ and _1J_ bin keys
+    (e.g. top sideband), produce a Silver doc where:
+    - 2L bins have _0J_/_1J_ stripped from their key names
+    - Njet_S cuts removed from their cuts strings
+    - lep-cuts transformed for Silver
+    - duplicates (0J vs 1J producing identical keys) are deduplicated (first wins)
+    Non-2L bins are transformed normally via process_ruamel_doc_for_tier.
+    """
+    out = CommentedMap()
+
+    for key in list(doc.keys()):
+        value = doc[key]
+        multiplicity = detect_mult_from_key(key)
+        entry = value.copy() if hasattr(value, "copy") else value
+
+        # transform lep-cuts for Silver
+        if isinstance(entry, dict) and multiplicity is not None and "lep-cuts" in entry:
+            entry["lep-cuts"] = transform_lep_cuts_ruamel(
+                entry.get("lep-cuts"), multiplicity, "Silver"
+            )
+
+        new_key = key.replace("Gold", "Silver")
+
+        if multiplicity == "2L":
+            # strip jet tag from key and Njet_S from cuts
+            new_key = strip_jet_tag_from_key(new_key)
+            if isinstance(entry, dict) and "cuts" in entry:
+                entry["cuts"] = strip_njet_s_from_cuts(str(entry["cuts"]))
+
+        # deduplicate: first occurrence wins (0J comes before 1J in sorted order)
+        if new_key in out:
+            continue
+
+        out[new_key] = entry
+
+    return out
 
 def detect_mult_from_key(key: str):
     """
@@ -238,7 +340,6 @@ def process_ruamel_doc_for_tier(doc, tier):
     """
     Return a new ruamel mapping with Gold->tier in keys and lep-cuts transformed.
     """
-    from ruamel.yaml.comments import CommentedMap
     out = CommentedMap()
     for key in list(doc.keys()):
         value = doc[key]
@@ -279,18 +380,20 @@ def main(indir="config/bin_cfgs", outdir=None, dry_run=False,
         print("No *_Gold.yaml files found in", indir)
         return 0
 
+    # ------------------------------------------------------------------
+    # Pass 1: load and pre-process all Gold docs into a dict keyed by
+    # filename stem, so we can pair up 2L _0J_ / _1J_ files later.
+    # ------------------------------------------------------------------
+    loaded = {}  # fname -> (path, doc)
     for gf in gold_files:
-        print("Processing Gold file:", gf.name)
+        print("Loading Gold file:", gf.name)
         with gf.open("r", encoding="utf-8") as f:
             doc = yaml.load(f)
 
-        # If Regions* file, enforce the predefined/user cuts on the Gold doc immediately and write Gold back
         if gf.name.lower().startswith("regions"):
             enforce_common_cuts(doc)
 
-        # Ensure baseline preselection and/or removal operate on the *in-memory* doc BEFORE any writes
-        added_count = 0
-        removed_count = 0
+        added_count = removed_count = 0
         if apply_preselection:
             for key, entry in doc.items():
                 if isinstance(entry, dict):
@@ -302,10 +405,9 @@ def main(indir="config/bin_cfgs", outdir=None, dry_run=False,
                     if remove_cuts_from_entry(entry, remove_list):
                         removed_count += 1
 
-        if (apply_preselection and added_count > 0) or (remove_list and removed_count > 0):
-            print(f"  -> modified Gold in-memory cuts: +{added_count} bins had preselection added, -{removed_count} bins had removals")
+        if (apply_preselection and added_count) or (remove_list and removed_count):
+            print(f"  -> modified Gold in-memory cuts: +{added_count} added, -{removed_count} removed")
 
-        # If Regions* file, write updated Gold to disk so on-disk Gold is normalized
         if gf.name.lower().startswith("regions"):
             if not dry_run:
                 with gf.open("w", encoding="utf-8") as f:
@@ -314,24 +416,38 @@ def main(indir="config/bin_cfgs", outdir=None, dry_run=False,
             else:
                 print(f"  [dry-run] would write updated Gold: {gf}")
 
-        # build list for later tier generation
-        process_list = [(doc, gf.name)]
+        loaded[gf.name] = (gf, doc)
 
-        # handle hPTISR -> lPTISR generation (use already-modified doc)
-        fname_lower = gf.name.lower()
-        is_hpt = ("_hptisr" in fname_lower)
-        is_2l = ("2l" in fname_lower)
-        is_3l = ("3l" in fname_lower)
+    # ------------------------------------------------------------------
+    # Pass 2: build process_list entries.
+    # Each entry: (doc, base_name, is_2l_jet_file)
+    # For 2L _0J_ files we pair with _1J_ and handle Silver specially.
+    # ------------------------------------------------------------------
+    process_list = []   # (doc, base_name)
+    skip_names = set()  # _1J_ files consumed by pairing
+
+    for fname, (gf, doc) in loaded.items():
+        if fname in skip_names:
+            continue
+
+        fname_lower = fname.lower()
+        is_hpt  = "_hptisr" in fname_lower
+        is_2l   = "2l"      in fname_lower
+        is_3l   = "3l"      in fname_lower
+        is_0j   = "_0j_"    in fname_lower
+        is_1j   = "_1j_"    in fname_lower
+
+        # --- handle hPTISR -> lPTISR generation (unchanged logic) ---
+        extra_entries = []
         if is_hpt and (is_2l or is_3l):
-            if "hPTISR" in gf.name:
-                l_name = gf.name.replace("hPTISR", "lPTISR")
-            elif "HPTISR" in gf.name:
-                l_name = gf.name.replace("HPTISR", "lPTISR")
+            if "hPTISR" in fname:
+                l_name = fname.replace("hPTISR", "lPTISR")
+            elif "HPTISR" in fname:
+                l_name = fname.replace("HPTISR", "lPTISR")
             else:
-                l_name = gf.name.replace("_hptisr", "_lptisr")
-            # create l_doc from the already-modified Gold doc
+                l_name = fname.replace("_hptisr", "_lptisr")
+
             l_doc = make_lptisr_doc_ruamel(doc)
-            # ensure preselection/removal on generated l_doc as well
             added_l = removed_l = 0
             if apply_preselection:
                 for key, entry in l_doc.items():
@@ -352,13 +468,31 @@ def main(indir="config/bin_cfgs", outdir=None, dry_run=False,
                     yaml.dump(l_doc, f)
                 print("  wrote lPTISR Gold:", l_path)
 
-            process_list.append((l_doc, l_name))
+            extra_entries.append((l_doc, l_name))
 
-        # Now produce Silver and Bronze for each doc in process_list
-        for dobj, base_name in process_list:
-            for tier in ("Silver", "Bronze"):
-                newdoc = process_ruamel_doc_for_tier(dobj, tier)
-                # Apply preselection/removal and Regions predef/user to the tier docs before writing
+        process_list.append((doc, fname))
+        process_list.extend(extra_entries)
+
+        # Mark paired _1J_ file as consumed so we don't process it standalone
+        if is_2l and is_0j:
+            j1_name = fname.replace("_0J_", "_1J_")
+            if j1_name in loaded:
+                skip_names.add(j1_name)
+
+    # ------------------------------------------------------------------
+    # Pass 3: produce Silver and Bronze for each doc in process_list.
+    # ------------------------------------------------------------------
+    for dobj, base_name in process_list:
+        fname_lower = base_name.lower()
+        is_2l = "2l" in fname_lower
+        is_0j = "_0j_" in fname_lower
+
+        for tier in ("Silver", "Bronze"):
+
+            # --- sideband: single file with mixed 2L _0J_/_1J_ bin keys ---
+            is_sideband = "sideband" in base_name.lower() or "btag" in base_name.lower()
+            if tier == "Silver" and is_sideband:
+                newdoc = make_2l_silver_consolidated_single_doc(dobj)
                 added_t = removed_t = 0
                 if apply_preselection:
                     for key, entry in newdoc.items():
@@ -371,15 +505,45 @@ def main(indir="config/bin_cfgs", outdir=None, dry_run=False,
                 if base_name.lower().startswith("regions"):
                     enforce_common_cuts(newdoc)
                 if added_t or removed_t:
-                    print(f"  -> modified {base_name.replace('Gold', tier)} in-memory cuts: +{added_t} added, -{removed_t} removed")
-                outname = base_name.replace("Gold", tier)
+                    print(f"  -> modified {base_name.replace('Gold', 'Silver')} (sideband consolidated) cuts: +{added_t} added, -{removed_t} removed")
+                outname = base_name.replace("Gold", "Silver")
                 outpath = outdir / outname
                 if dry_run:
-                    print(f"  [dry-run] would write {outpath}")
+                    print(f"  [dry-run] would write consolidated sideband Silver: {outpath}")
                 else:
                     with outpath.open("w", encoding="utf-8") as f:
                         yaml.dump(newdoc, f)
-                    print("  wrote", outpath)
+                    print("  wrote consolidated sideband Silver:", outpath)
+                continue
+
+            # --- 2L Silver: consolidate 0J+1J into a single jet-inclusive file ---
+            if tier == "Silver" and is_2l and is_0j:
+                continue
+
+            # --- normal path for everything else ---
+            newdoc = process_ruamel_doc_for_tier(dobj, tier)
+            added_t = removed_t = 0
+            if apply_preselection:
+                for key, entry in newdoc.items():
+                    if isinstance(entry, dict) and ensure_preselection_on_entry(entry, CUTS_PRESELECTION):
+                        added_t += 1
+            if remove_list:
+                for key, entry in newdoc.items():
+                    if isinstance(entry, dict) and remove_cuts_from_entry(entry, remove_list):
+                        removed_t += 1
+            if base_name.lower().startswith("regions"):
+                enforce_common_cuts(newdoc)
+            if added_t or removed_t:
+                print(f"  -> modified {base_name.replace('Gold', tier)} cuts: +{added_t} added, -{removed_t} removed")
+
+            outname = base_name.replace("Gold", tier)
+            outpath = outdir / outname
+            if dry_run:
+                print(f"  [dry-run] would write {outpath}")
+            else:
+                with outpath.open("w", encoding="utf-8") as f:
+                    yaml.dump(newdoc, f)
+                print("  wrote", outpath)
 
     return 0
 

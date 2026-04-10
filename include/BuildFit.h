@@ -57,7 +57,7 @@ class BuildFit{
     void AddZSys(const stringlist& binset, const stringlist& procs);
     void AddBtagSys(const stringlist& binset, const stringlist& procs);
     void AddShapeSystsFromJSON(JSONFactory* j, const std::vector<std::string>& kept_bins);
-    //void AddShapeSystsFromJSON(JSONFactory* j, const std::vector<std::string>& kept_bins, const ProcMap& written_procs);
+    void AddFAKETransferSys(const stringlist& binset, const stringlist& procs);
     std::string GetMatchingBin(const std::string& bin, const std::string& token, const std::string& match_token);
     std::vector<std::string> sigkeys = { "Cascades", "SMS" };
 

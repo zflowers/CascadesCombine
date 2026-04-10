@@ -1021,10 +1021,10 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
 
     idle_time_seconds_BF = 0
 
+    plot_yields_proc = None
     if make_json:
         flattened_json = get_flattened_json_path(run_dir=run_dir)
         if not args.existing_BFI_dir and not args.existing_BF_dir and not args.skip_plot_yields:
-            # Plot Yields
             plot_cmd = [
                 "./"+exe_dir+"/PlotYields.x",
                 "-i", flattened_json,
@@ -1033,15 +1033,17 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                 "--config", FDpattern_cfg,
             ]
             print("[run_combine] Plotting yields with command:", " ".join(plot_cmd), flush=True)
-            subprocess.run(plot_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
+            plot_yields_proc = subprocess.Popen(
+                plot_cmd,
+                stdout=sys.stdout,
+                stderr=sys.stderr,
+                start_new_session=True  # recommended for long jobs
+            )
         if not args.only_yields:
             signals = extract_signals(flattened_json)
             if not args.existing_BF_dir:
                 condor_time_start_BF = time.time()
                 for sig in signals:
-                    # local BF
-                    #BF_condor_cmd = ["./"+exe_dir+"/BF.x", flattened_json, output_dir, sig]
-                    # condor BF
                     BF_condor_cmd = [
                         "python3", "python/submitBFJobs.py",
                         "--output-dir", output_dir,
@@ -1255,9 +1257,15 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
         cmssw_tarball = condor_BF + '/../cmssw_runtime.tgz'
         if os.path.exists(cmssw_tarball):
             os.remove(cmssw_tarball)
+
+    if plot_yields_proc is not None:
+        print("[run_combine] Waiting for PlotYields to finish...", flush=True)
+        ret = plot_yields_proc.wait()
+        if ret != 0:
+            print("[run_combine] PlotYields failed with return code", ret, file=sys.stderr)
+            sys.exit(1)
     print("[run_combine] All steps completed.", flush=True)
     end_time = time.time()
-
     # total time
     total_time_seconds = end_time - start_time
     if not args.existing_BFI_dir and not args.existing_BF_dir:
