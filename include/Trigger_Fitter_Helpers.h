@@ -682,8 +682,6 @@ struct SampleGroup {
 // -----------------------------------------------------------------------
 // Discover configs from canvas names in the root file
 // -----------------------------------------------------------------------
-// Replace the Discover_Configs parsing block with this corrected version
-
 vector<TriggerConfig> Discover_Configs(const string& fname)
 {
     TFile* f = TFile::Open(fname.c_str(), "READ");
@@ -763,6 +761,7 @@ vector<TriggerConfig> Discover_Configs(const string& fname)
         const string& electronBin = key_pair.first;
         const string& year        = key_pair.second;
 
+        if (electronBin.rfind("Electron", 0) != 0) continue;
         int nElec = Parse_Electron_N(electronBin);
         string data_type = (nElec == 0) ? "Muon" : "Electron";
 

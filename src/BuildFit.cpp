@@ -573,34 +573,88 @@ void BuildFit::AddPTISRSys(const stringlist& binset, const stringlist& procs){
     cb.SetFlag("filters-use-regex", false);
 }
 
-void BuildFit::AddFAKETransferSys(const stringlist& binset, const stringlist& procs){
+void BuildFit::AddFAKETransferSys(const stringlist& binset){
     cb.SetFlag("filters-use-regex", true);
 
-    cb.cp().bin({".*Bronze.*"}).process({".*FAKES.*LFMuon.*"})
-       .AddSyst(cb, "IDISO_LFMuon", "lnN", SystMap<>::init(1.20));
+    cb.cp().bin({".*Run2.*Bronze.*"}).process({".*FAKES.*LFMuon.*"})
+       .AddSyst(cb, "Run2_IDISO_LFMuon", "lnN", SystMap<>::init(1.20));
    
-    cb.cp().bin({".*Bronze.*"}).process({".*FAKES.*HFMuon.*"})
-       .AddSyst(cb, "IDISO_HFMuon", "lnN", SystMap<>::init(1.20));
+    cb.cp().bin({".*Run2.*Bronze.*"}).process({".*FAKES.*HFMuon.*"})
+       .AddSyst(cb, "Run2_IDISO_HFMuon", "lnN", SystMap<>::init(1.20));
    
-    cb.cp().bin({".*Bronze.*"}).process({".*FAKES.*LFElec.*"})
-       .AddSyst(cb, "IDISO_LFElec", "lnN", SystMap<>::init(1.20));
+    cb.cp().bin({".*Run2.*Bronze.*"}).process({".*FAKES.*LFElec.*"})
+       .AddSyst(cb, "Run2_IDISO_LFElec", "lnN", SystMap<>::init(1.20));
    
-    cb.cp().bin({".*Bronze.*"}).process({".*FAKES.*HFElec.*"})
-       .AddSyst(cb, "IDISO_HFElec", "lnN", SystMap<>::init(1.20));
+    cb.cp().bin({".*Run2.*Bronze.*"}).process({".*FAKES.*HFElec.*"})
+       .AddSyst(cb, "Run2_IDISO_HFElec", "lnN", SystMap<>::init(1.20));
    
-     cb.cp().bin({".*Silver.*"}).process({".*FAKES.*LFMuon.*"})
-       .AddSyst(cb, "SIP3D_LFMuon", "lnN", SystMap<>::init(1.20));
+     cb.cp().bin({".*Run2.*Silver.*"}).process({".*FAKES.*LFMuon.*"})
+       .AddSyst(cb, "Run2_SIP3D_LFMuon", "lnN", SystMap<>::init(1.20));
    
-     cb.cp().bin({".*Silver.*"}).process({".*FAKES.*HFMuon.*"})
-       .AddSyst(cb, "SIP3D_HFMuon", "lnN", SystMap<>::init(1.20));
+     cb.cp().bin({".*Run2.*Silver.*"}).process({".*FAKES.*HFMuon.*"})
+       .AddSyst(cb, "Run2_SIP3D_HFMuon", "lnN", SystMap<>::init(1.20));
    
-     cb.cp().bin({".*Silver.*"}).process({".*FAKES.*LFElec.*"})
-       .AddSyst(cb, "SIP3D_LFElec", "lnN", SystMap<>::init(1.20));
+     cb.cp().bin({".*Run2.*Silver.*"}).process({".*FAKES.*LFElec.*"})
+       .AddSyst(cb, "Run2_SIP3D_LFElec", "lnN", SystMap<>::init(1.20));
    
-     cb.cp().bin({".*Silver.*"}).process({".*FAKES.*HFElec.*"})
-       .AddSyst(cb, "SIP3D_HFElec", "lnN", SystMap<>::init(1.20));
+     cb.cp().bin({".*Run2.*Silver.*"}).process({".*FAKES.*HFElec.*"})
+       .AddSyst(cb, "Run2_SIP3D_HFElec", "lnN", SystMap<>::init(1.20));
 
-    cb.SetFlag("filters-use-regex", false);
+    cb.cp().bin({".*Run3.*Bronze.*"}).process({".*FAKES.*LFMuon.*"})
+       .AddSyst(cb, "Run3_IDISO_LFMuon", "lnN", SystMap<>::init(1.20));
+   
+    cb.cp().bin({".*Run3.*Bronze.*"}).process({".*FAKES.*HFMuon.*"})
+       .AddSyst(cb, "Run3_IDISO_HFMuon", "lnN", SystMap<>::init(1.20));
+   
+    cb.cp().bin({".*Run3.*Bronze.*"}).process({".*FAKES.*LFElec.*"})
+       .AddSyst(cb, "Run3_IDISO_LFElec", "lnN", SystMap<>::init(1.20));
+   
+    cb.cp().bin({".*Run3.*Bronze.*"}).process({".*FAKES.*HFElec.*"})
+       .AddSyst(cb, "Run3_IDISO_HFElec", "lnN", SystMap<>::init(1.20));
+   
+     cb.cp().bin({".*Run3.*Silver.*"}).process({".*FAKES.*LFMuon.*"})
+       .AddSyst(cb, "Run3_SIP3D_LFMuon", "lnN", SystMap<>::init(1.20));
+   
+     cb.cp().bin({".*Run3.*Silver.*"}).process({".*FAKES.*HFMuon.*"})
+       .AddSyst(cb, "Run3_SIP3D_HFMuon", "lnN", SystMap<>::init(1.20));
+   
+     cb.cp().bin({".*Run3.*Silver.*"}).process({".*FAKES.*LFElec.*"})
+       .AddSyst(cb, "Run3_SIP3D_LFElec", "lnN", SystMap<>::init(1.20));
+   
+     cb.cp().bin({".*Run3.*Silver.*"}).process({".*FAKES.*HFElec.*"})
+       .AddSyst(cb, "Run3_SIP3D_HFElec", "lnN", SystMap<>::init(1.20));
+
+     cb.SetFlag("filters-use-regex", false);
+}
+
+void BuildFit::AddSilverBronzeGlobal(const stringlist& procs){
+     cb.SetFlag("filters-use-regex", true);
+
+     cb.cp().bin({".*Run2.*Bronze.*e.*"}).process(procs)
+       .AddSyst(cb, "Run2_nonfake_Bronze_el", "lnN", SystMap<>::init(1.1));
+
+     cb.cp().bin({".*Run2.*Bronze.*mu.*"}).process(procs)
+       .AddSyst(cb, "Run2_nonfake_Bronze_mu", "lnN", SystMap<>::init(1.1));
+
+     cb.cp().bin({".*Run2.*Silver.*e.*"}).process(procs)
+       .AddSyst(cb, "Run2_nonfake_Silver_el", "lnN", SystMap<>::init(1.1));
+
+     cb.cp().bin({".*Run2.*Silver.*mu.*"}).process(procs)
+       .AddSyst(cb, "Run2_nonfake_Silver_mu", "lnN", SystMap<>::init(1.1));
+
+     cb.cp().bin({".*Run3.*Bronze.*e.*"}).process(procs)
+       .AddSyst(cb, "Run3_nonfake_Bronze_el", "lnN", SystMap<>::init(1.1));
+
+     cb.cp().bin({".*Run3.*Bronze.*mu.*"}).process(procs)
+       .AddSyst(cb, "Run3_nonfake_Bronze_mu", "lnN", SystMap<>::init(1.1));
+
+     cb.cp().bin({".*Run3.*Silver.*e.*"}).process(procs)
+       .AddSyst(cb, "Run3_nonfake_Silver_el", "lnN", SystMap<>::init(1.1));
+
+     cb.cp().bin({".*Run3.*Silver.*mu.*"}).process(procs)
+       .AddSyst(cb, "Run3_nonfake_Silver_mu", "lnN", SystMap<>::init(1.1));
+    
+     cb.SetFlag("filters-use-regex", false);
 }
 
 void BuildFit::AddSameSignSys(const stringlist& binset, const stringlist& procs){
@@ -722,6 +776,8 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
     );
     //AddFloatingNormsGroupedByFakeType(fakesprocs, "lnN", 1.2);
     AddFloatingNormsGroupedByFakeType(fakesprocs, "rateParam", 1.0);
+    AddFAKETransferSys(kept_bins);
+    AddSilverBronzeGlobal(truebkgprocs);
     AddPTISRSys(kept_bins, bkgprocs);
     AddSameSignSys(kept_bins, bkgprocs);
     AddRaSys(kept_bins, bkgprocs);

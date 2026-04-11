@@ -378,7 +378,7 @@ void Make_Syst_Plot(const string& fname,
         }
     }
 
-    // ---- Systematic band in ratio — same params as SF plot ----
+    // ---- Systematic band in ratio same params as SF plot ----
     // The band here represents the same uncertainty envelope but
     // centred on 1 (i.e. relative to nominal), so we use a flat
     // TF1=1 for both "Bkg" and "Data" in Get_Bands_Ratio
@@ -487,6 +487,129 @@ void Make_Syst_Plot(const string& fname,
 }
 
 // -----------------------------------------------------------------------
+// Overlay SF ratio curves for all electron bins in one year
+// -----------------------------------------------------------------------
+void Make_Comparison_Plot(const vector<TriggerConfig>& configs_for_year,
+                           const string& year,
+                           const string& outdir)
+{
+    string json_path = outdir + "Fit_Parameters.json";
+
+    // Pick a range consistent with the SF plots
+    double x_min = 150.;
+    double x_max = 500.;
+
+    // Colors per electron bin
+    auto bin_color = [](const string& electronBin) -> int {
+        if (electronBin == "Electron0") return kAzure-2;
+        if (electronBin == "Electron1") return kGreen+2;
+        if (electronBin == "Electron2") return kOrange+1;
+        static map<string,int> extra;
+        static int idx = 0;
+        static const vector<int> pool = {kViolet+2, kRed+1, kCyan+2};
+        if (!extra.count(electronBin)) extra[electronBin] = pool[(idx++) % pool.size()];
+        return extra[electronBin];
+    };
+
+    string plot_name = "SFComparison_" + year;
+
+    TLegend* leg = new TLegend(0.65, 0.15, 0.88, 0.15 + 0.07*configs_for_year.size());
+    leg->SetTextFont(132);
+    leg->SetTextSize(0.05);
+    leg->SetBorderSize(0);
+    if (invert_colors) {
+        leg->SetTextColor(kWhite); leg->SetFillColor(kBlack);
+        leg->SetLineColor(kBlack); leg->SetShadowColor(kBlack);
+    }
+
+    if (invert_colors) {
+        gStyle->SetFrameFillColor(kBlack);
+        gStyle->SetFrameLineColor(kWhite);
+    }
+
+    TCanvas* can = new TCanvas(plot_name.c_str(), "", 864, 468);
+    can->SetGridx(); can->SetGridy(); can->Draw(); can->cd();
+    if (invert_colors) can->SetFillColor(kBlack);
+
+    TMultiGraph* mg = new TMultiGraph();
+
+    // Reference line at 1
+    TLine* line = new TLine(x_min, 1., x_max, 1.);
+    line->SetLineColor(kBlack); line->SetLineStyle(2); line->SetLineWidth(1);
+
+    vector<TGraph*> ratio_curves;
+    for (const auto& cfg : configs_for_year) {
+        int col = bin_color(cfg.electronBin);
+
+        string json_bkg  = JSON_Key(cfg.electronBin, cfg.bkg_sample);
+        string json_data = JSON_Key(cfg.electronBin, cfg.data_sample);
+
+        // Check both keys exist before trying to plot
+        double norm, mean, sigma, scale, weight;
+        if (!Read_Fit_Params_JSON(json_bkg,  json_path, norm, mean, sigma, scale, weight) ||
+            !Read_Fit_Params_JSON(json_data, json_path, norm, mean, sigma, scale, weight)) {
+            cout << "Make_Comparison_Plot: missing JSON params for "
+                 << cfg.electronBin << " " << year << " -- skipping." << endl;
+            continue;
+        }
+
+        TF1* Bkg_Fit  = Make_TF1_From_JSON("Bkg_"  + cfg.electronBin, json_bkg,
+                                             json_path, x_min, x_max);
+        TF1* Data_Fit = Make_TF1_From_JSON("Data_" + cfg.electronBin, json_data,
+                                             json_path, x_min, x_max);
+
+        TGraph* ratio = Get_Fit_Ratio(x_min, x_max, Bkg_Fit, Data_Fit);
+        ratio->SetLineColor(col);
+        ratio->SetLineWidth(2);
+        ratio->SetName(("ratio_"+cfg.electronBin).c_str());
+        ratio_curves.push_back(ratio);
+
+        mg->Add(ratio, "L");
+        leg->AddEntry(ratio, cfg.electronBin.c_str(), "L");
+
+        delete Bkg_Fit;
+        delete Data_Fit;
+    }
+
+    if (ratio_curves.empty()) {
+        cout << "Make_Comparison_Plot: no curves for year " << year << endl;
+        delete can; delete leg; delete mg; delete line;
+        return;
+    }
+
+    mg->Draw("A");
+    mg->GetXaxis()->SetLimits(x_min, x_max);
+    mg->GetXaxis()->SetRangeUser(x_min, x_max);
+    mg->GetYaxis()->SetRangeUser(0.3, 1.05);
+    mg->GetXaxis()->SetTitle("MET [GeV]");
+    mg->GetYaxis()->SetTitle("Data/MC SF");
+    mg->SetTitle("");
+    Format_Graph(mg);
+    // Re-enable x-axis labels since this is a standalone plot (no ratio pad below)
+    mg->GetXaxis()->SetLabelSize(0.05);
+    mg->GetXaxis()->SetLabelOffset(1.15);
+
+    line->Draw("SAME");
+    leg->Draw("SAME");
+
+    TLatex l;
+    if (invert_colors) l.SetTextColor(kWhite);
+    l.SetTextFont(42); l.SetNDC(); l.SetTextSize(0.05);
+    l.DrawLatex(0.65, 0.93, year.c_str());
+    l.DrawLatex(0.10, 0.93, "#bf{#it{CMS}} Preliminary");
+
+    can->Modified(); can->Update();
+
+    can->SaveAs((outdir + "SFComparison_" + year + ".pdf").c_str());
+    TFile* fout = TFile::Open((outdir + "output_Scale.root").c_str(), "UPDATE");
+    can->Write();
+    fout->Close();
+    delete fout;
+    delete leg; delete can; delete mg; delete line;
+}
+
+
+// -----------------------------------------------------------------------
 // Top-level
 // -----------------------------------------------------------------------
 void Run_Fits(const string& fname, const string& outdir)
@@ -533,8 +656,19 @@ void Run_Plots(const string& fname, const string& outdir)
     vector<TriggerConfig> configs = Discover_Configs(fname);
     if (configs.empty()) { cout << "No configs found." << endl; return; }
 
+    // Existing per-config SF plots
     for (auto& cfg : configs)
         Make_SF_Plot(fname, cfg, colors, outdir);
+
+    // Group by year and make one comparison plot per year
+    map<string, vector<TriggerConfig>> by_year;
+    for (auto& cfg : configs)
+        by_year[cfg.year].push_back(cfg);
+
+    for (auto& [yr, cfgs] : by_year) {
+        cout << "\n=== Comparison plot: " << yr << " ===" << endl;
+        Make_Comparison_Plot(cfgs, yr, outdir);
+    }
 }
 
 void Run_Syst_Plots(const string& fname, const string& outdir)
@@ -569,7 +703,6 @@ void Run_Syst_Plots(const string& fname, const string& outdir)
     }
 }
 
-// In main(), add --syst flag:
 int main(int argc, char* argv[])
 {
     string fname  = "";
@@ -596,9 +729,9 @@ int main(int argc, char* argv[])
     if (!do_fit && !do_plot && !do_syst) { do_fit = true; do_plot = true; do_syst = true; }
 
     string outdir = Derive_Output_Dir(fname);
-    if (do_fit)  Run_Fits(fname, outdir);
-    if (do_plot) Run_Plots(fname, outdir);
-    if (do_syst) Run_Syst_Plots(fname, outdir);
+    if (do_fit)  { std::cout << "Running Fit" << std::endl; Run_Fits(fname, outdir); }
+    if (do_plot) { std::cout << "Running Plot" << std::endl; Run_Plots(fname, outdir); }
+    if (do_syst) { std::cout << "Running Syst" << std::endl; Run_Syst_Plots(fname, outdir); }
 
     return 0;
 }
