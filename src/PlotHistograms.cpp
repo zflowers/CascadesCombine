@@ -37,6 +37,7 @@ int main(int argc, char* argv[]) {
     map<string,map<string,TH1*>> groups;
     vector<TH1*> all_clones;
     set<string> uniqueBinNames;
+    map<string, map<string, TH2*>> h2ByVarProcToBin;
 
     TIter next(inFile->GetListOfKeys());
     TKey* key;
@@ -53,6 +54,10 @@ int main(int argc, char* argv[]) {
         TH1* clone = (TH1*)hIn->Clone();
         if(!clone) continue;
         clone->SetDirectory(0);
+        if (clone->InheritsFrom(TH2::Class()) && !id.var.empty() && !id.proc.empty() && !id.bin.empty()) {
+            std::string key = id.var + "__" + id.proc;   // fixed var+proc, vary bin
+            h2ByVarProcToBin[key][id.bin] = dynamic_cast<TH2*>(clone);
+        }
         all_clones.push_back(clone);
 
         // Determine group key:
@@ -177,15 +182,65 @@ int main(int argc, char* argv[]) {
         SortByYield(bkgHists, bkgProcs);
         SortByYield(bkgHists_Run2, bkgProcs_Run2);
         SortByYield(bkgHists_Run3, bkgProcs_Run3);
+
+        for (const auto& kv : h2ByVarProcToBin) {
+            const std::string& varProcKey = kv.first;
+            const auto& binMap = kv.second;
+        
+            std::vector<TH2*> bkg2D, sig2D, sms2D;
+            for (const auto& bp : binMap) {
+                TH2* h = bp.second;
+                if (!h) continue;
+        
+                std::string proc = ExtractProcName(h->GetName());
+                if (tool.BkgDict.count(proc)) {
+                    bkg2D.push_back(h);
+                } else if (find(tool.SignalKeys.begin(), tool.SignalKeys.end(), proc) != tool.SignalKeys.end()
+                           || proc.find("SMS") != std::string::npos
+                           || proc.find("Cascades") != std::string::npos) {
+                    sig2D.push_back(h);
+                }
+                if (proc.find("SMS") != std::string::npos) sms2D.push_back(h);
+            }
+        
+            if (!bkg2D.empty() || !sig2D.empty()) {
+                Plot_Hist2DScatter(varProcKey + "_byBin_combined", bkg2D, sig2D);
+                Plot_Hist2DScatter(varProcKey + "_byBin_bkg", bkg2D, {});
+                Plot_Hist2DScatter(varProcKey + "_byBin_sig", {}, sig2D);
+                if(!sms2D.empty()) Plot_Hist2DScatter(varProcKey + "_byBin_sms", {}, sms2D);
+            }
+        }
         
         if(!isCutFlow){
             // Individual plots for 1D/2D histograms
             for(auto &pp : procmap){
                 TH1* h = pp.second; if(!h) continue;
                 if(h->InheritsFrom(TH2::Class())) Plot_Hist2D(dynamic_cast<TH2*>(h));
-                //else Plot_Hist1D(h); // turn off individual 2D hists for now
+                //else Plot_Hist1D(h);
             }
-        
+            // 2D scatter overlays for this bin+var group
+            std::vector<TH2*> bkg2D, sig2D, sms2D;
+            for (auto &pp : procmap) {
+                TH1* h = pp.second;
+                if (!h || !h->InheritsFrom(TH2::Class())) continue;
+            
+                if (tool.BkgDict.count(pp.first)) {
+                    bkg2D.push_back(dynamic_cast<TH2*>(h));
+                } else if (find(tool.SignalKeys.begin(), tool.SignalKeys.end(), pp.first) != tool.SignalKeys.end()
+                           || pp.first.find("SMS") != std::string::npos
+                           || pp.first.find("Cascades") != std::string::npos) {
+                    sig2D.push_back(dynamic_cast<TH2*>(h));
+                }
+                if (pp.first.find("SMS") != std::string::npos) sms2D.push_back(dynamic_cast<TH2*>(h));
+            }
+            // keep these before Plot_Stack / Plot_Overlay, since those mutate hists
+            if (!bkg2D.empty() || !sig2D.empty()) {
+                Plot_Hist2DScatter(groupKey + "_scatter_combined", bkg2D, sig2D);
+                Plot_Hist2DScatter(groupKey + "_scatter_bkg", bkg2D, {});
+                Plot_Hist2DScatter(groupKey + "_scatter_sig", {}, sig2D);
+                if(!sms2D.empty()) Plot_Hist2DScatter(groupKey + "_scatter_sms", {}, sms2D);
+            }       
+ 
             // Plot stack
             if(!bkgHists.empty() || !sigHists.empty() || dataHist){
                 if(bkgHists.size() > 0) { if(bkgHists[0]->InheritsFrom(TH2::Class())) continue; } // don't stack TH2s

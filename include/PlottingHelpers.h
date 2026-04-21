@@ -522,6 +522,32 @@ TH1D* TGraphToTH1(TGraphAsymmErrors* g, const std::string& name) {
     return h;
 }
 
+// ----------------------
+// TH2 -> scatter graph
+// one point per occupied bin
+// ----------------------
+TGraph* TH2ToScatterGraph(const TH2* h, const std::string& name)
+{
+    if (!h) return nullptr;
+
+    auto* g = new TGraph();
+    g->SetName(name.c_str());
+
+    int ip = 0;
+    for (int ix = 1; ix <= h->GetNbinsX(); ++ix) {
+        for (int iy = 1; iy <= h->GetNbinsY(); ++iy) {
+            const double c = h->GetBinContent(ix, iy);
+            if (c <= 0.) continue;
+
+            const double x = h->GetXaxis()->GetBinCenter(ix);
+            const double y = h->GetYaxis()->GetBinCenter(iy);
+            g->SetPoint(ip++, x, y);
+        }
+    }
+
+    return g;
+}
+
 struct MergedBinGroup {
     std::string group_name;
     std::vector<std::string> bin_names;

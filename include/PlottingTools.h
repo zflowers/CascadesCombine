@@ -1004,6 +1004,133 @@ void Plot_Eff_Multi(const std::string& groupName,
     delete can;
 }
 
+// ----------------------
+// Plot 2D scatter overlay
+// ----------------------
+void Plot_Hist2DScatter(const std::string& hname,
+                        const std::vector<TH2*>& bkgHists,
+                        const std::vector<TH2*>& sigHists)
+{
+    if (bkgHists.empty() && sigHists.empty()) return;
+
+    TH2* axisHist = !bkgHists.empty() ? bkgHists.front()
+                   : !sigHists.empty() ? sigHists.front()
+                   : nullptr;
+    if (!axisHist) return;
+
+    std::string canvas_name = "can_scatter_" + hname;
+    TCanvas* can = new TCanvas(canvas_name.c_str(), canvas_name.c_str(), 1200, 700);
+    can->SetLeftMargin(hlo);
+    can->SetRightMargin(hhi);
+    can->SetBottomMargin(hbo);
+    can->SetTopMargin(hto);
+    can->SetGridx();
+    can->SetGridy();
+    can->cd();
+
+    // Axis frame
+    axisHist->SetStats(0);
+    axisHist->Draw("AXIS");
+    axisHist->GetXaxis()->CenterTitle();
+    axisHist->GetYaxis()->CenterTitle();
+    axisHist->GetXaxis()->SetTitleOffset(1.05);
+    axisHist->GetYaxis()->SetTitleOffset(1.05);
+
+    // Infer a sensible range from all points
+    double xmin = axisHist->GetXaxis()->GetXmin();
+    double xmax = axisHist->GetXaxis()->GetXmax();
+    double ymin = axisHist->GetYaxis()->GetXmin();
+    double ymax = axisHist->GetYaxis()->GetXmax();
+
+    auto updateRange = [&](const TH2* h) {
+        if (!h) return;
+        xmin = std::min(xmin, h->GetXaxis()->GetXmin());
+        xmax = std::max(xmax, h->GetXaxis()->GetXmax());
+        ymin = std::min(ymin, h->GetYaxis()->GetXmin());
+        ymax = std::max(ymax, h->GetYaxis()->GetXmax());
+    };
+    for (auto* h : bkgHists) updateRange(h);
+    for (auto* h : sigHists) updateRange(h);
+
+    axisHist->GetXaxis()->SetRangeUser(xmin, xmax);
+    axisHist->GetYaxis()->SetRangeUser(ymin, ymax);
+    axisHist->GetZaxis()->SetTitle(("N_{events} / " + std::to_string(int(lumi)) + " fb^{-1}").c_str());
+
+    TLegend* leg = new TLegend(1.-hhi+0.01, 1.- (bkgHists.size()+sigHists.size()+2)*(1.-0.49)/9., 0.98, 1.-hto-0.005);
+    leg->SetTextFont(132);
+    leg->SetTextSize(0.038);
+    leg->SetFillColor(kWhite);
+    leg->SetLineColor(kWhite);
+    leg->SetShadowColor(kWhite);
+
+    std::vector<TGraph*> ownedGraphs;
+
+    auto drawOne = [&](TH2* h, bool isSignal) {
+        if (!h) return;
+
+        std::string proc = ExtractProcName(h->GetName());
+        int color = kBlack;
+        auto it = m_Color.find(proc);
+        if (it != m_Color.end()) color = it->second;
+        else {
+            color = fallbackColors[fallbackIndex % fallbackColors.size()];
+            m_Color[proc] = color;
+            fallbackIndex++;
+        }
+
+        TGraph* g = TH2ToScatterGraph(h, std::string(h->GetName()) + "_gr");
+        if (!g || g->GetN() == 0) {
+            delete g;
+            return;
+        }
+
+        g->SetMarkerColor(color);
+        g->SetLineColor(color);
+        g->SetMarkerSize(0.9);
+        g->SetMarkerStyle(isSignal ? 20 : 22);  // dots for sig, squares for bkg
+
+        g->Draw("P SAME");
+        ownedGraphs.push_back(g);
+
+        std::string label = m_Title.count(proc) ? m_Title[proc] : proc;
+        if (proc.find("TChiWZ") != std::string::npos)
+            label = makeSMSChiTitle(proc);
+
+        leg->AddEntry(g, label.c_str(), "P");
+    };
+
+    for (auto* h : bkgHists) drawOne(h, false);
+    for (auto* h : sigHists) drawOne(h, true);
+
+    leg->Draw();
+
+    TLatex l;
+    l.SetNDC();
+    l.SetTextFont(42);
+    l.SetTextSize(0.04);
+    l.DrawLatex(0.12, 0.943, "#bf{CMS} Simulation Preliminary");
+
+    l.SetTextSize(0.045);
+    l.DrawLatex(0.69, 0.943, ExtractBinName(axisHist->GetName()).c_str());
+
+    if (outFile) {
+        outFile->cd();
+        can->Write(0, TObject::kWriteDelete);
+    }
+
+    TString pdfName = Form("%spdfs/%s/%s.pdf",
+                           outputDir.c_str(),
+                           ExtractBinName(axisHist->GetName()).c_str(),
+                           SanitizeString(canvas_name).c_str());
+    gErrorIgnoreLevel = 1001;
+    can->SaveAs(pdfName);
+    gErrorIgnoreLevel = 0;
+
+    for (auto* g : ownedGraphs) delete g;
+    delete leg;
+    delete can;
+}
+
 // RunRatios: create TEfficiencies for efficiency-style ratios and queue generic ratios.
 // This function fills effsByBin and effsByProcess with created TEff objects.
 // For generic (non-efficiency) ratios it calls Plot_Ratio

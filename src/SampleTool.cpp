@@ -48,7 +48,7 @@ SampleTool::SampleTool(){
   for (const auto& era : run3Eras) {
       run3_available_lumi += LumiDict.at(era);
   }
-  double scale_run3 = RUN3_TOTAL_LUMI / run3_available_lumi;
+  //double scale_run3 = RUN3_TOTAL_LUMI / run3_available_lumi;
   for (const auto& era : run3Eras) {
       LumiDict.at(era) *= 1.; // 1 = turn off and use default scale (good for CR)
       //LumiDict.at(era) *= scale_run3; // apply scaling for Run3 existing lumi to all lumi (good for Run3 sensitivity)
@@ -65,7 +65,7 @@ SampleTool::SampleTool(){
   for (const auto& era : run2Eras) {
       run2_available_lumi += LumiDict.at(era);
   }
-  double scale_run2 = (RUN2_TOTAL_LUMI + RUN3_TOTAL_LUMI) / run2_available_lumi;
+  //double scale_run2 = (RUN2_TOTAL_LUMI + RUN3_TOTAL_LUMI) / run2_available_lumi;
   for (const auto& era : run2Eras) {
       LumiDict.at(era) *= 1.; // 1 = turn off and use default scale 
       //LumiDict.at(era) *= scale_run2; // apply scaling for Run3+Run2 lumi to all Run2 eras
@@ -81,7 +81,7 @@ SampleTool::SampleTool(){
   for (const auto& era : preUL_run2Eras) {
       preUL_run2_available_lumi += LumiDict.at(era);
   }
-  double scale_preULrun2 = (RUN2_TOTAL_LUMI + RUN3_TOTAL_LUMI) / preUL_run2_available_lumi;
+  //double scale_preULrun2 = (RUN2_TOTAL_LUMI + RUN3_TOTAL_LUMI) / preUL_run2_available_lumi;
   for (const auto& era : preUL_run2Eras) {
       LumiDict.at(era) *= 1.; // 1 = turn off and use default scale 
       //LumiDict.at(era) *= scale_preULrun2; // apply scaling for Run3+Run2 lumi to all Run2 eras
@@ -1660,7 +1660,30 @@ SampleTool::SampleTool(){
     pathPrefix + "Summer24_130X_Data/JetMET1_Run2024I-MINIv6NANOv15_v2-v2_Summer24_130X_Data_Summer24_130X.root",
   };
 
-  MasterDict["Data_Electron_2016APV"] = {
+  MasterDict["Data_DoubleElectron_2016APV"] = {
+    pathPrefix + "Summer20UL16APV_106X_Data/DoubleEG_Run2016B-ver1_HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16APV_106X_Data_Summer20UL16APV_106X.root",
+    pathPrefix + "Summer20UL16APV_106X_Data/DoubleEG_Run2016B-ver2_HIPM_UL2016_MiniAODv2_NanoAODv9-v3_Summer20UL16APV_106X_Data_Summer20UL16APV_106X.root",
+    pathPrefix + "Summer20UL16APV_106X_Data/DoubleEG_Run2016C-HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16APV_106X_Data_Summer20UL16APV_106X.root",
+    pathPrefix + "Summer20UL16APV_106X_Data/DoubleEG_Run2016D-HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16APV_106X_Data_Summer20UL16APV_106X.root",
+    pathPrefix + "Summer20UL16APV_106X_Data/DoubleEG_Run2016E-HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16APV_106X_Data_Summer20UL16APV_106X.root",
+    pathPrefix + "Summer20UL16APV_106X_Data/DoubleEG_Run2016F-HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16APV_106X_Data_Summer20UL16APV_106X.root",
+  };
+
+  MasterDict["Data_DoubleElectron_2016"] = {
+    pathPrefix + "Summer20UL16_106X_Data/DoubleEG_Run2016F-UL2016_MiniAODv2_NanoAODv9-v1_Summer20UL16_106X_Data_Summer20UL16_106X.root",
+    pathPrefix + "Summer20UL16_106X_Data/DoubleEG_Run2016G-UL2016_MiniAODv2_NanoAODv9-v1_Summer20UL16_106X_Data_Summer20UL16_106X.root",
+    pathPrefix + "Summer20UL16_106X_Data/DoubleEG_Run2016H-UL2016_MiniAODv2_NanoAODv9-v1_Summer20UL16_106X_Data_Summer20UL16_106X.root",
+  };
+
+  MasterDict["Data_DoubleElectron_2017"] = {
+    pathPrefix + "Summer20UL17_106X_Data/DoubleEG_Run2017B-UL2017_MiniAODv2_NanoAODv9-v1_Summer20UL17_106X_Data_Summer20UL17_106X.root",
+    pathPrefix + "Summer20UL17_106X_Data/DoubleEG_Run2017C-UL2017_MiniAODv2_NanoAODv9-v1_Summer20UL17_106X_Data_Summer20UL17_106X.root",
+    pathPrefix + "Summer20UL17_106X_Data/DoubleEG_Run2017D-UL2017_MiniAODv2_NanoAODv9-v1_Summer20UL17_106X_Data_Summer20UL17_106X.root",
+    pathPrefix + "Summer20UL17_106X_Data/DoubleEG_Run2017E-UL2017_MiniAODv2_NanoAODv9-v1_Summer20UL17_106X_Data_Summer20UL17_106X.root",
+    pathPrefix + "Summer20UL17_106X_Data/DoubleEG_Run2017F-UL2017_MiniAODv2_NanoAODv9-v1_Summer20UL17_106X_Data_Summer20UL17_106X.root",
+  };
+
+  MasterDict["Data_SingleElectron_2016APV"] = {
     pathPrefix + "Summer20UL16APV_106X_Data/SingleElectron_Run2016B-ver1_HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16APV_106X_Data_Summer20UL16APV_106X.root",
     pathPrefix + "Summer20UL16APV_106X_Data/SingleElectron_Run2016B-ver2_HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16APV_106X_Data_Summer20UL16APV_106X.root",
     pathPrefix + "Summer20UL16APV_106X_Data/SingleElectron_Run2016C-HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16APV_106X_Data_Summer20UL16APV_106X.root",
@@ -1669,13 +1692,13 @@ SampleTool::SampleTool(){
     pathPrefix + "Summer20UL16APV_106X_Data/SingleElectron_Run2016F-HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16APV_106X_Data_Summer20UL16APV_106X.root",
   };
 
-  MasterDict["Data_Electron_2016"] = {
+  MasterDict["Data_SingleElectron_2016"] = {
     pathPrefix + "Summer20UL16_106X_Data/SingleElectron_Run2016F-UL2016_MiniAODv2_NanoAODv9-v1_Summer20UL16_106X_Data_Summer20UL16_106X.root",
     pathPrefix + "Summer20UL16_106X_Data/SingleElectron_Run2016G-UL2016_MiniAODv2_NanoAODv9-v1_Summer20UL16_106X_Data_Summer20UL16_106X.root",
     pathPrefix + "Summer20UL16_106X_Data/SingleElectron_Run2016H-UL2016_MiniAODv2_NanoAODv9-v1_Summer20UL16_106X_Data_Summer20UL16_106X.root",
   };
 
-  MasterDict["Data_Electron_2017"] = {
+  MasterDict["Data_SingleElectron_2017"] = {
     pathPrefix + "Summer20UL17_106X_Data/SingleElectron_Run2017B-UL2017_MiniAODv2_NanoAODv9-v1_Summer20UL17_106X_Data_Summer20UL17_106X.root",
     pathPrefix + "Summer20UL17_106X_Data/SingleElectron_Run2017C-UL2017_MiniAODv2_NanoAODv9-v1_Summer20UL17_106X_Data_Summer20UL17_106X.root",
     pathPrefix + "Summer20UL17_106X_Data/SingleElectron_Run2017D-UL2017_MiniAODv2_NanoAODv9-v1_Summer20UL17_106X_Data_Summer20UL17_106X.root",
@@ -1683,35 +1706,84 @@ SampleTool::SampleTool(){
     pathPrefix + "Summer20UL17_106X_Data/SingleElectron_Run2017F-UL2017_MiniAODv2_NanoAODv9-v1_Summer20UL17_106X_Data_Summer20UL17_106X.root",
   };
 
-  MasterDict["Data_Electron_2018"] = {
+  MasterDict["Data_SingleElectron_2018"] = {
     pathPrefix + "Summer20UL18_106X_Data/EGamma_Run2018A-UL2018_MiniAODv2_NanoAODv9-v1_Summer20UL18_106X_Data_Summer20UL18_106X.root",
     pathPrefix + "Summer20UL18_106X_Data/EGamma_Run2018B-UL2018_MiniAODv2_NanoAODv9-v1_Summer20UL18_106X_Data_Summer20UL18_106X.root",
     pathPrefix + "Summer20UL18_106X_Data/EGamma_Run2018C-UL2018_MiniAODv2_NanoAODv9-v1_Summer20UL18_106X_Data_Summer20UL18_106X.root",
     pathPrefix + "Summer20UL18_106X_Data/EGamma_Run2018D-UL2018_MiniAODv2_NanoAODv9-v3_Summer20UL18_106X_Data_Summer20UL18_106X.root",
   };
 
-  MasterDict["Data_Electron_2022"] = {
+  MasterDict["Data_SingleElectron_2022"] = {
     pathPrefix + "Summer22_130X_Data/EGamma_Run2022C-NanoAODv15-v1_Summer22_130X_Data_Summer22_130X.root",
     pathPrefix + "Summer22_130X_Data/EGamma_Run2022D-NanoAODv15-v1_Summer22_130X_Data_Summer22_130X.root",
   };
 
-  MasterDict["Data_Electron_2022EE"] = {
+  MasterDict["Data_SingleElectron_2022EE"] = {
     pathPrefix + "Summer22EE_130X_Data/EGamma_Run2022E-NanoAODv15-v1_Summer22EE_130X_Data_Summer22EE_130X.root",
     pathPrefix + "Summer22EE_130X_Data/EGamma_Run2022F-NanoAODv15-v1_Summer22EE_130X_Data_Summer22EE_130X.root",
     pathPrefix + "Summer22EE_130X_Data/EGamma_Run2022G-NanoAODv15-v1_Summer22EE_130X_Data_Summer22EE_130X.root",
   };
 
-  MasterDict["Data_Electron_2023"] = {
+  MasterDict["Data_SingleElectron_2023"] = {
     pathPrefix + "Summer23_130X_Data/EGamma0_Run2023C-NanoAODv15_v4-v1_Summer23_130X_Data_Summer23_130X.root",
     pathPrefix + "Summer23_130X_Data/EGamma1_Run2023C-NanoAODv15_v4-v1_Summer23_130X_Data_Summer23_130X.root",
   };
 
-  MasterDict["Data_Electron_2023BPix"] = {
+  MasterDict["Data_SingleElectron_2023BPix"] = {
     pathPrefix + "Summer23BPix_130X_Data/EGamma0_Run2023D-NanoAODv15_v2-v1_Summer23BPix_130X_Data_Summer23BPix_130X.root",
     pathPrefix + "Summer23BPix_130X_Data/EGamma1_Run2023D-NanoAODv15_v2-v1_Summer23BPix_130X_Data_Summer23BPix_130X.root",
   };
 
-  MasterDict["Data_Muon_2016APV"] = {
+  MasterDict["Data_MuonEG_2016APV"] = {
+    pathPrefix + "Summer20UL16APV_106X_Data/MuonEG_Run2016B-ver1_HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16APV_106X_Data_Summer20UL16APV_106X.root",
+    pathPrefix + "Summer20UL16APV_106X_Data/MuonEG_Run2016B-ver2_HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16APV_106X_Data_Summer20UL16APV_106X.root",
+    pathPrefix + "Summer20UL16APV_106X_Data/MuonEG_Run2016C-HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16APV_106X_Data_Summer20UL16APV_106X.root",
+    pathPrefix + "Summer20UL16APV_106X_Data/MuonEG_Run2016D-HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16APV_106X_Data_Summer20UL16APV_106X.root",
+    pathPrefix + "Summer20UL16APV_106X_Data/MuonEG_Run2016E-HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16APV_106X_Data_Summer20UL16APV_106X.root",
+    pathPrefix + "Summer20UL16APV_106X_Data/MuonEG_Run2016F-HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16APV_106X_Data_Summer20UL16APV_106X.root",
+  };
+
+  MasterDict["Data_MuonEG_2016"] = {
+    pathPrefix + "Summer20UL16_106X_Data/MuonEG_Run2016F-UL2016_MiniAODv2_NanoAODv9-v1_Summer20UL16_106X_Data_Summer20UL16_106X.root",
+    pathPrefix + "Summer20UL16_106X_Data/MuonEG_Run2016G-UL2016_MiniAODv2_NanoAODv9-v1_Summer20UL16_106X_Data_Summer20UL16_106X.root",
+    pathPrefix + "Summer20UL16_106X_Data/MuonEG_Run2016H-UL2016_MiniAODv2_NanoAODv9-v1_Summer20UL16_106X_Data_Summer20UL16_106X.root",
+  };
+
+  MasterDict["Data_MuonEG_2017"] = {
+    pathPrefix + "Summer20UL17_106X_Data/MuonEG_Run2017B-UL2017_MiniAODv2_NanoAODv9-v1_Summer20UL17_106X_Data_Summer20UL17_106X.root",
+    pathPrefix + "Summer20UL17_106X_Data/MuonEG_Run2017C-UL2017_MiniAODv2_NanoAODv9-v1_Summer20UL17_106X_Data_Summer20UL17_106X.root",
+    pathPrefix + "Summer20UL17_106X_Data/MuonEG_Run2017D-UL2017_MiniAODv2_NanoAODv9-v1_Summer20UL17_106X_Data_Summer20UL17_106X.root",
+    pathPrefix + "Summer20UL17_106X_Data/MuonEG_Run2017E-UL2017_MiniAODv2_NanoAODv9-v1_Summer20UL17_106X_Data_Summer20UL17_106X.root",
+    pathPrefix + "Summer20UL17_106X_Data/MuonEG_Run2017F-UL2017_MiniAODv2_NanoAODv9-v1_Summer20UL17_106X_Data_Summer20UL17_106X.root",
+  };
+
+  MasterDict["Data_MuonEG_2018"] = {
+    pathPrefix + "Summer20UL18_106X_Data/MuonEG_Run2018A-UL2018_MiniAODv2_NanoAODv9-v1_Summer20UL18_106X_Data_Summer20UL18_106X.root",
+    pathPrefix + "Summer20UL18_106X_Data/MuonEG_Run2018B-UL2018_MiniAODv2_NanoAODv9-v1_Summer20UL18_106X_Data_Summer20UL18_106X.root",
+    pathPrefix + "Summer20UL18_106X_Data/MuonEG_Run2018C-UL2018_MiniAODv2_NanoAODv9-v1_Summer20UL18_106X_Data_Summer20UL18_106X.root",
+    pathPrefix + "Summer20UL18_106X_Data/MuonEG_Run2018D-UL2018_MiniAODv2_NanoAODv9-v1_Summer20UL18_106X_Data_Summer20UL18_106X.root",
+  };
+
+  MasterDict["Data_MuonEG_2022"] = {
+    pathPrefix + "Summer22_130X_Data/MuonEG_Run2022C-NanoAODv15-v1_Summer22_130X_Data_Summer22_130X.root",
+    pathPrefix + "Summer22_130X_Data/MuonEG_Run2022D-NanoAODv15-v1_Summer22_130X_Data_Summer22_130X.root",
+  };
+
+  MasterDict["Data_MuonEG_2022EE"] = {
+    pathPrefix + "Summer22EE_130X_Data/MuonEG_Run2022E-NanoAODv15-v1_Summer22EE_130X_Data_Summer22EE_130X.root",
+    pathPrefix + "Summer22EE_130X_Data/MuonEG_Run2022F-NanoAODv15-v1_Summer22EE_130X_Data_Summer22EE_130X.root",
+    pathPrefix + "Summer22EE_130X_Data/MuonEG_Run2022G-NanoAODv15-v1_Summer22EE_130X_Data_Summer22EE_130X.root",
+  };
+
+  MasterDict["Data_MuonEG_2023"] = {
+    pathPrefix + "Summer23_130X_Data/MuonEG_Run2023C-NanoAODv15_v4-v1_Summer23_130X_Data_Summer23_130X.root",
+  };
+
+  MasterDict["Data_MuonEG_2023BPix"] = {
+    pathPrefix + "Summer23BPix_130X_Data/MuonEG_Run2023D-NanoAODv15_v2-v1_Summer23BPix_130X_Data_Summer23BPix_130X.root",
+  };
+
+  MasterDict["Data_SingleMuon_2016APV"] = {
     pathPrefix + "Summer20UL16APV_106X_Data/SingleMuon_Run2016B-ver1_HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16APV_106X_Data_Summer20UL16APV_106X.root",
     pathPrefix + "Summer20UL16APV_106X_Data/SingleMuon_Run2016B-ver2_HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16APV_106X_Data_Summer20UL16APV_106X.root",
     pathPrefix + "Summer20UL16APV_106X_Data/SingleMuon_Run2016C-HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16APV_106X_Data_Summer20UL16APV_106X.root",
@@ -1720,13 +1792,13 @@ SampleTool::SampleTool(){
     pathPrefix + "Summer20UL16APV_106X_Data/SingleMuon_Run2016F-HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16APV_106X_Data_Summer20UL16APV_106X.root",
   };
 
-  MasterDict["Data_Muon_2016"] = {
+  MasterDict["Data_SingleMuon_2016"] = {
     pathPrefix + "Summer20UL16_106X_Data/SingleMuon_Run2016F-UL2016_MiniAODv2_NanoAODv9-v1_Summer20UL16_106X_Data_Summer20UL16_106X.root",
     pathPrefix + "Summer20UL16_106X_Data/SingleMuon_Run2016G-UL2016_MiniAODv2_NanoAODv9-v1_Summer20UL16_106X_Data_Summer20UL16_106X.root",
     pathPrefix + "Summer20UL16_106X_Data/SingleMuon_Run2016H-UL2016_MiniAODv2_NanoAODv9-v1_Summer20UL16_106X_Data_Summer20UL16_106X.root",
   };
 
-  MasterDict["Data_Muon_2017"] = {
+  MasterDict["Data_SingleMuon_2017"] = {
     pathPrefix + "Summer20UL17_106X_Data/SingleMuon_Run2017B-UL2017_MiniAODv2_NanoAODv9-v1_Summer20UL17_106X_Data_Summer20UL17_106X.root",
     pathPrefix + "Summer20UL17_106X_Data/SingleMuon_Run2017C-UL2017_MiniAODv2_NanoAODv9-v1_Summer20UL17_106X_Data_Summer20UL17_106X.root",
     pathPrefix + "Summer20UL17_106X_Data/SingleMuon_Run2017D-UL2017_MiniAODv2_NanoAODv9-v1_Summer20UL17_106X_Data_Summer20UL17_106X.root",
@@ -1734,32 +1806,62 @@ SampleTool::SampleTool(){
     pathPrefix + "Summer20UL17_106X_Data/SingleMuon_Run2017F-UL2017_MiniAODv2_NanoAODv9-v1_Summer20UL17_106X_Data_Summer20UL17_106X.root",
   };
 
-  MasterDict["Data_Muon_2018"] = {
+  MasterDict["Data_SingleMuon_2018"] = {
     pathPrefix + "Summer20UL18_106X_Data/SingleMuon_Run2018A-UL2018_MiniAODv2_NanoAODv9-v2_Summer20UL18_106X_Data_Summer20UL18_106X.root",
     pathPrefix + "Summer20UL18_106X_Data/SingleMuon_Run2018B-UL2018_MiniAODv2_NanoAODv9-v2_Summer20UL18_106X_Data_Summer20UL18_106X.root",
     pathPrefix + "Summer20UL18_106X_Data/SingleMuon_Run2018C-UL2018_MiniAODv2_NanoAODv9-v2_Summer20UL18_106X_Data_Summer20UL18_106X.root",
     pathPrefix + "Summer20UL18_106X_Data/SingleMuon_Run2018D-UL2018_MiniAODv2_NanoAODv9-v1_Summer20UL18_106X_Data_Summer20UL18_106X.root",
   };
 
-  MasterDict["Data_Muon_2022"] = {
+  MasterDict["Data_SingleMuon_2022"] = {
     pathPrefix + "Summer22_130X_Data/Muon_Run2022C-NanoAODv15-v1_Summer22_130X_Data_Summer22_130X.root",
     pathPrefix + "Summer22_130X_Data/Muon_Run2022D-NanoAODv15-v1_Summer22_130X_Data_Summer22_130X.root",
   };
 
-  MasterDict["Data_Muon_2022EE"] = {
+  MasterDict["Data_SingleMuon_2022EE"] = {
     pathPrefix + "Summer22EE_130X_Data/Muon_Run2022E-NanoAODv15-v1_Summer22EE_130X_Data_Summer22EE_130X.root",
     pathPrefix + "Summer22EE_130X_Data/Muon_Run2022F-NanoAODv15-v1_Summer22EE_130X_Data_Summer22EE_130X.root",
     pathPrefix + "Summer22EE_130X_Data/Muon_Run2022G-NanoAODv15-v1_Summer22EE_130X_Data_Summer22EE_130X.root",
   };
 
-  MasterDict["Data_Muon_2023"] = {
+  MasterDict["Data_SingleMuon_2023"] = {
     pathPrefix + "Summer23_130X_Data/Muon0_Run2023C-NanoAODv15_v4-v1_Summer23_130X_Data_Summer23_130X.root",
     pathPrefix + "Summer23_130X_Data/Muon1_Run2023C-NanoAODv15_v4-v1_Summer23_130X_Data_Summer23_130X.root",
   };
 
-  MasterDict["Data_Muon_2023BPix"] = {
+  MasterDict["Data_SingleMuon_2023BPix"] = {
     pathPrefix + "Summer23BPix_130X_Data/Muon0_Run2023D-NanoAODv15_v2-v1_Summer23BPix_130X_Data_Summer23BPix_130X.root",
     pathPrefix + "Summer23BPix_130X_Data/Muon1_Run2023D-NanoAODv15_v2-v1_Summer23BPix_130X_Data_Summer23BPix_130X.root",
+  };
+
+  MasterDict["Data_DoubleMuon_2016APV"] = {
+    pathPrefix + "Summer20UL16APV_106X_Data/DoubleMuon_Run2016B-ver1_HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16APV_106X_Data_Summer20UL16APV_106X.root",
+    pathPrefix + "Summer20UL16APV_106X_Data/DoubleMuon_Run2016B-ver2_HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16APV_106X_Data_Summer20UL16APV_106X.root",
+    pathPrefix + "Summer20UL16APV_106X_Data/DoubleMuon_Run2016C-HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16APV_106X_Data_Summer20UL16APV_106X.root",
+    pathPrefix + "Summer20UL16APV_106X_Data/DoubleMuon_Run2016D-HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16APV_106X_Data_Summer20UL16APV_106X.root",
+    pathPrefix + "Summer20UL16APV_106X_Data/DoubleMuon_Run2016E-HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16APV_106X_Data_Summer20UL16APV_106X.root",
+    pathPrefix + "Summer20UL16APV_106X_Data/DoubleMuon_Run2016F-HIPM_UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16APV_106X_Data_Summer20UL16APV_106X.root",
+  };
+
+  MasterDict["Data_DoubleMuon_2016"] = {
+    pathPrefix + "Summer20UL16_106X_Data/DoubleMuon_Run2016F-UL2016_MiniAODv2_NanoAODv9-v1_Summer20UL16_106X_Data_Summer20UL16_106X.root",
+    pathPrefix + "Summer20UL16_106X_Data/DoubleMuon_Run2016G-UL2016_MiniAODv2_NanoAODv9-v2_Summer20UL16_106X_Data_Summer20UL16_106X.root",
+    pathPrefix + "Summer20UL16_106X_Data/DoubleMuon_Run2016H-UL2016_MiniAODv2_NanoAODv9-v1_Summer20UL16_106X_Data_Summer20UL16_106X.root",
+  };
+
+  MasterDict["Data_DoubleMuon_2017"] = {
+    pathPrefix + "Summer20UL17_106X_Data/DoubleMuon_Run2017B-UL2017_MiniAODv2_NanoAODv9-v1_Summer20UL17_106X_Data_Summer20UL17_106X.root",
+    pathPrefix + "Summer20UL17_106X_Data/DoubleMuon_Run2017C-UL2017_MiniAODv2_NanoAODv9-v1_Summer20UL17_106X_Data_Summer20UL17_106X.root",
+    pathPrefix + "Summer20UL17_106X_Data/DoubleMuon_Run2017D-UL2017_MiniAODv2_NanoAODv9-v1_Summer20UL17_106X_Data_Summer20UL17_106X.root",
+    pathPrefix + "Summer20UL17_106X_Data/DoubleMuon_Run2017E-UL2017_MiniAODv2_NanoAODv9-v1_Summer20UL17_106X_Data_Summer20UL17_106X.root",
+    pathPrefix + "Summer20UL17_106X_Data/DoubleMuon_Run2017F-UL2017_MiniAODv2_NanoAODv9-v1_Summer20UL17_106X_Data_Summer20UL17_106X.root",
+  };
+
+  MasterDict["Data_DoubleMuon_2018"] = {
+    pathPrefix + "Summer20UL18_106X_Data/DoubleMuon_Run2018A-UL2018_MiniAODv2_NanoAODv9-v1_Summer20UL18_106X_Data_Summer20UL18_106X.root",
+    pathPrefix + "Summer20UL18_106X_Data/DoubleMuon_Run2018B-UL2018_MiniAODv2_NanoAODv9-v1_Summer20UL18_106X_Data_Summer20UL18_106X.root",
+    pathPrefix + "Summer20UL18_106X_Data/DoubleMuon_Run2018C-UL2018_MiniAODv2_NanoAODv9-v1_Summer20UL18_106X_Data_Summer20UL18_106X.root",
+    pathPrefix + "Summer20UL18_106X_Data/DoubleMuon_Run2018D-UL2018_MiniAODv2_NanoAODv9-v2_Summer20UL18_106X_Data_Summer20UL18_106X.root",
   };
 
   MasterDict["DBTB_2023BPix"] = mergeEntriesList(
@@ -2759,79 +2861,79 @@ SampleTool::SampleTool(){
     }
   );
 
-  MasterDict["Data_Electron_2016Comb"] = mergeEntriesList(
+  MasterDict["Data_SingleElectron_2016Comb"] = mergeEntriesList(
     MasterDict,
     {
-      "Data_Electron_2016APV",
-      "Data_Electron_2016",
+      "Data_SingleElectron_2016APV",
+      "Data_SingleElectron_2016",
     }
   );
 
-  MasterDict["Data_Electron_2022Comb"] = mergeEntriesList(
+  MasterDict["Data_SingleElectron_2022Comb"] = mergeEntriesList(
     MasterDict,
     {
-      "Data_Electron_2022",
-      "Data_Electron_2022EE",
+      "Data_SingleElectron_2022",
+      "Data_SingleElectron_2022EE",
     }
   );
 
-  MasterDict["Data_Electron_2023Comb"] = mergeEntriesList(
+  MasterDict["Data_SingleElectron_2023Comb"] = mergeEntriesList(
     MasterDict,
     {
-      "Data_Electron_2023",
-      "Data_Electron_2023BPix",
+      "Data_SingleElectron_2023",
+      "Data_SingleElectron_2023BPix",
     }
   );
 
-  MasterDict["Data_Muon_2016Comb"] = mergeEntriesList(
+  MasterDict["Data_SingleMuon_2016Comb"] = mergeEntriesList(
     MasterDict,
     {
-      "Data_Muon_2016APV",
-      "Data_Muon_2016",
+      "Data_SingleMuon_2016APV",
+      "Data_SingleMuon_2016",
     }
   );
 
-  MasterDict["Data_Muon_2022Comb"] = mergeEntriesList(
+  MasterDict["Data_SingleMuon_2022Comb"] = mergeEntriesList(
     MasterDict,
     {
-      "Data_Muon_2022",
-      "Data_Muon_2022EE",
+      "Data_SingleMuon_2022",
+      "Data_SingleMuon_2022EE",
     }
   );
 
-  MasterDict["Data_Muon_2023Comb"] = mergeEntriesList(
+  MasterDict["Data_SingleMuon_2023Comb"] = mergeEntriesList(
     MasterDict,
     {
-      "Data_Muon_2023",
-      "Data_Muon_2023BPix",
+      "Data_SingleMuon_2023",
+      "Data_SingleMuon_2023BPix",
     }
   );
 
-  MasterDict["Data_Electron"] = mergeEntriesList(
+  MasterDict["Data_SingleElectron"] = mergeEntriesList(
     MasterDict,
     {
-      "Data_Electron_2016APV",
-      "Data_Electron_2016",
-      "Data_Electron_2017",
-      "Data_Electron_2018",
-      "Data_Electron_2022",
-      "Data_Electron_2022EE",
-      "Data_Electron_2023",
-      "Data_Electron_2023BPix",
+      "Data_SingleElectron_2016APV",
+      "Data_SingleElectron_2016",
+      "Data_SingleElectron_2017",
+      "Data_SingleElectron_2018",
+      "Data_SingleElectron_2022",
+      "Data_SingleElectron_2022EE",
+      "Data_SingleElectron_2023",
+      "Data_SingleElectron_2023BPix",
     }
   );
 
-  MasterDict["Data_Muon"] = mergeEntriesList(
+  MasterDict["Data_SingleMuon"] = mergeEntriesList(
     MasterDict,
     {
-      "Data_Muon_2016APV",
-      "Data_Muon_2016",
-      "Data_Muon_2017",
-      "Data_Muon_2018",
-      "Data_Muon_2022",
-      "Data_Muon_2022EE",
-      "Data_Muon_2023",
-      "Data_Muon_2023BPix",
+      "Data_SingleMuon_2016APV",
+      "Data_SingleMuon_2016",
+      "Data_SingleMuon_2017",
+      "Data_SingleMuon_2018",
+      "Data_SingleMuon_2022",
+      "Data_SingleMuon_2022EE",
+      "Data_SingleMuon_2023",
+      "Data_SingleMuon_2023BPix",
     }
   );
 

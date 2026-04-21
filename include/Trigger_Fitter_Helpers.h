@@ -635,7 +635,7 @@ void Get_Fit(TGraphAsymmErrors*& gr, vector<TF1*> funcs, vector<int> colors,
 // Config struct
 // -----------------------------------------------------------------------
 struct TriggerConfig {
-    string electronBin;
+    string bin;
     string year;
     string process;   // "bkg" or "data"
     string data_sample;
@@ -643,35 +643,39 @@ struct TriggerConfig {
     map<string, string> systs; // label -> sample
 };
 
-string JSON_Key(const string& electronBin, const string& sample)
+string JSON_Key(const string& bin, const string& sample)
 {
-    return electronBin + "__" + sample;
+    return bin + "__" + sample;
 }
 
-int Parse_Electron_N(const string& electronBin)
+int Parse_Bin_N(const string& bin)
 {
-    return stoi(electronBin.substr(string("Electron").size()));
+    for (const string& prefix : std::vector<std::string>{"Electron", "Muon"}) {
+        if (bin.rfind(prefix, 0) == 0)
+            return stoi(bin.substr(prefix.size()));
+    }
+    return -1;
 }
 
-string Make_Canvas_Name(const string& electronBin, const string& sample)
+string Make_Canvas_Name(const string& bin, const string& sample)
 {
     return "can_eff_MET_trigger_eff__TriggerBin_"
-           + electronBin + "__" + sample;
+           + bin + "__" + sample;
 }
 
-string Make_Syst_Canvas_Name(const string& electronBin,
+string Make_Syst_Canvas_Name(const string& bin,
                               const string& systLabel,
                               const string& sample)
 {
     return "can_eff_MET_trigger_eff__TriggerSystBin_"
-           + electronBin + "_" + systLabel
+           + bin + "_" + systLabel
            + "__" + sample;
 }
 
-string Make_Nominal_Canvas_Name(const string& electronBin, const string& sample)
+string Make_Nominal_Canvas_Name(const string& bin, const string& sample)
 {
     return "can_eff_MET_trigger_eff__TriggerBin_"
-           + electronBin + "__" + sample;
+           + bin + "__" + sample;
 }
 
 struct SampleGroup {
@@ -692,7 +696,7 @@ vector<TriggerConfig> Discover_Configs(const string& fname)
 
     const string PREFIX = "can_eff_MET_trigger_eff__";
 
-    // (electronBin, year) -> {nominal samples, syst label -> samples}
+    // (bin, year) -> {nominal samples, syst label -> samples}
     struct BinGroup {
         set<string>              nominal_samples;
         map<string, set<string>> syst_samples; // systLabel -> {samples}
@@ -710,29 +714,29 @@ vector<TriggerConfig> Discover_Configs(const string& fname)
         //            or "TriggerSystBin_Electron0_Gold__bkg_2018"
         string rest = cname.substr(PREFIX.length());
 
-        string electronBin, sample, systLabel;
+        string bin, sample, systLabel;
         bool isSyst = false;
 
         if (rest.rfind("TriggerBin_", 0) == 0) {
-            // Nominal: TriggerBin_{electronBin}__{sample}
+            // Nominal: TriggerBin_{bin}__{sample}
             rest = rest.substr(string("TriggerBin_").length());
             size_t sep = rest.find("__");
             if (sep == string::npos) continue;
-            electronBin = rest.substr(0, sep);  // "Electron0"
+            bin = rest.substr(0, sep);  // "Electron0"
             sample      = rest.substr(sep + 2); // "bkg_2018"
 
         } else if (rest.rfind("TriggerSystBin_", 0) == 0) {
-            // Syst: TriggerSystBin_{electronBin}_{systLabel}__{sample}
+            // Syst: TriggerSystBin_{bin}_{systLabel}__{sample}
             rest = rest.substr(string("TriggerSystBin_").length());
             size_t sep = rest.find("__");
             if (sep == string::npos) continue;
             string binAndLabel = rest.substr(0, sep); // "Electron0_Gold"
             sample             = rest.substr(sep + 2); // "bkg_2018"
 
-            // Split "Electron0_Gold" -> electronBin="Electron0", systLabel="Gold"
+            // Split "Electron0_Gold" -> bin="Electron0", systLabel="Gold"
             size_t us = binAndLabel.find('_');
             if (us == string::npos) continue;
-            electronBin = binAndLabel.substr(0, us);
+            bin = binAndLabel.substr(0, us);
             systLabel   = binAndLabel.substr(us + 1);
             isSyst      = true;
         } else {
@@ -745,7 +749,7 @@ vector<TriggerConfig> Discover_Configs(const string& fname)
         string year = sample.substr(last_us + 1);
         if (year.size() < 4 || !isdigit(year[0])) continue;
 
-        auto& group = found[{electronBin, year}];
+        auto& group = found[{bin, year}];
         if (isSyst) {
             group.syst_samples[systLabel].insert(sample);
         } else {
@@ -754,16 +758,22 @@ vector<TriggerConfig> Discover_Configs(const string& fname)
     }
     f->Close(); delete f;
 
-    // Build TriggerConfig -> one per (electronBin, year, nominal_sample)
+    // Build TriggerConfig -> one per (bin, year, nominal_sample)
     // with the full syst map attached
     vector<TriggerConfig> configs;
     for (auto& [key_pair, group] : found) {
-        const string& electronBin = key_pair.first;
+        const string& bin = key_pair.first;
         const string& year        = key_pair.second;
 
-        if (electronBin.rfind("Electron", 0) != 0) continue;
-        int nElec = Parse_Electron_N(electronBin);
-        string data_type = (nElec == 0) ? "Muon" : "Electron";
+        if (bin.rfind("Electron", 0) != 0 &&
+            bin.rfind("Muon",     0) != 0) continue;
+        string data_type = "";
+        if (bin.rfind("Electron", 0) == 0)      data_type = "Electron";
+        else if (bin.rfind("Muon", 0) == 0)      data_type = "Muon";
+        else {
+            cout << "WARNING: Unknown bin prefix for " << bin << " -- skipping." << endl;
+            continue;
+        }
 
         string bkg_sample  = "";
         string data_sample = "";
@@ -774,7 +784,7 @@ vector<TriggerConfig> Discover_Configs(const string& fname)
 
         if (bkg_sample.empty() || data_sample.empty()) {
             cout << "WARNING: Incomplete nominal samples for "
-                 << electronBin << " " << year << " -- skipping." << endl;
+                 << bin << " " << year << " -- skipping." << endl;
             continue;
         }
 
@@ -782,12 +792,12 @@ vector<TriggerConfig> Discover_Configs(const string& fname)
         map<string,string> systs; // label -> sample (same sample suffix as nominal)
         for (auto& [lbl, samples] : group.syst_samples) {
             // We just store the label; the sample name is reconstructed in Make_Syst_Canvas_Name
-            systs[lbl] = lbl; // placeholder -> actual sample looked up by label+electronBin+year
+            systs[lbl] = lbl; // placeholder -> actual sample looked up by label+bin+year
         }
 
-        configs.push_back({electronBin, year, "", data_sample, bkg_sample, systs});
+        configs.push_back({bin, year, "", data_sample, bkg_sample, systs});
 
-        cout << "Discovered: " << electronBin << " " << year
+        cout << "Discovered: " << bin << " " << year
              << " bkg=" << bkg_sample
              << " data=" << data_sample
              << " systs=[";
@@ -797,7 +807,7 @@ vector<TriggerConfig> Discover_Configs(const string& fname)
 
     sort(configs.begin(), configs.end(), [](const TriggerConfig& a, const TriggerConfig& b){
         if (a.year != b.year) return a.year < b.year;
-        return a.electronBin < b.electronBin;
+        return a.bin < b.bin;
     });
     return configs;
 }

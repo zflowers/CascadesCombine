@@ -133,11 +133,11 @@ void Make_SF_Plot(const string& fname, const TriggerConfig& cfg,
                   const vector<int>& colors, const string& outdir)
 {
     string json_path   = outdir + "Fit_Parameters.json";
-    string bkg_canvas  = Make_Canvas_Name(cfg.electronBin, cfg.bkg_sample);
-    string data_canvas = Make_Canvas_Name(cfg.electronBin, cfg.data_sample);
-    string json_bkg    = JSON_Key(cfg.electronBin, cfg.bkg_sample);
-    string json_data   = JSON_Key(cfg.electronBin, cfg.data_sample);
-    string plot_name   = "SF_" + cfg.electronBin + "_" + cfg.data_sample;
+    string bkg_canvas  = Make_Canvas_Name(cfg.bin, cfg.bkg_sample);
+    string data_canvas = Make_Canvas_Name(cfg.bin, cfg.data_sample);
+    string json_bkg    = JSON_Key(cfg.bin, cfg.bkg_sample);
+    string json_data   = JSON_Key(cfg.bin, cfg.data_sample);
+    string plot_name   = "SF_" + cfg.bin + "_" + cfg.data_sample;
 
     TLegend* leg = new TLegend(0.65, 0.05, 0.85, 0.3);
     leg->SetTextFont(132); leg->SetTextSize(0.045);
@@ -150,7 +150,7 @@ void Make_SF_Plot(const string& fname, const TriggerConfig& cfg,
     TGraphAsymmErrors* gr_data = Get_Graph_From_Canvas(fname, data_canvas, colors[1], leg, cfg.data_sample);
 
     if (!gr_bkg || !gr_data) {
-        cout << "Failed to get graphs for " << cfg.electronBin
+        cout << "Failed to get graphs for " << cfg.bin
              << " " << cfg.data_sample << endl;
         delete leg; return;
     }
@@ -264,11 +264,11 @@ void Make_SF_Plot(const string& fname, const TriggerConfig& cfg,
     TLatex l;
     if (invert_colors) l.SetTextColor(kWhite);
     l.SetTextFont(42); l.SetNDC(); l.SetTextSize(0.06);
-    l.DrawLatex(0.65, 0.93, (cfg.electronBin + " " + cfg.year).c_str());
+    l.DrawLatex(0.65, 0.93, (cfg.bin + " " + cfg.year).c_str());
     l.DrawLatex(0.10, 0.93, "#bf{#it{CMS}} Preliminary");
     pad_gr->Update(); can->Update(); can->cd();
 
-    can->SaveAs((outdir+"SF_Plot_"+cfg.electronBin+"_"+cfg.data_sample+".pdf").c_str());
+    can->SaveAs((outdir+"SF_Plot_"+cfg.bin+"_"+cfg.data_sample+".pdf").c_str());
     TFile* fout = TFile::Open((outdir+"output_Scale.root").c_str(),"UPDATE");
     can->Write();
     fout->Close();
@@ -293,24 +293,24 @@ int Syst_Color(const string& systLabel)
 }
 
 // -----------------------------------------------------------------------
-// Plot nominal + all syst overlays for one (electronBin, sample) pair.
+// Plot nominal + all syst overlays for one (bin, sample) pair.
 // Top pad:    nominal efficiency + each syst efficiency
 // Bottom pad: syst/nominal ratio + systematic band from JSON
 // One plot for bkg, one for data, called separately.
 // -----------------------------------------------------------------------
 void Make_Syst_Plot(const string& fname,
-                    const string& electronBin,
+                    const string& bin,
                     const string& nominalSample,   // e.g. "bkg_2018" or "Data_Muon_2018"
                     const vector<string>& systLabels, // e.g. {"Gold","Silver","Bronze"}
                     const string& year,
                     const string& outdir)
 {
     string json_path  = outdir + "Fit_Parameters.json";
-    string json_nom   = JSON_Key(electronBin, nominalSample);
-    string plot_name  = "SystPlot_" + electronBin + "_" + nominalSample;
+    string json_nom   = JSON_Key(bin, nominalSample);
+    string plot_name  = "SystPlot_" + bin + "_" + nominalSample;
 
     // ---- Fetch nominal graph ----
-    string nom_canvas = Make_Canvas_Name(electronBin, nominalSample);
+    string nom_canvas = Make_Canvas_Name(bin, nominalSample);
     TLegend* leg = new TLegend(0.62, 0.05, 0.88, 0.08 + 0.06*(1+systLabels.size()));
     leg->SetTextFont(132); leg->SetTextSize(0.042);
     leg->SetBorderSize(0);
@@ -347,7 +347,7 @@ void Make_Syst_Plot(const string& fname,
     vector<string>             syst_labels_found;
 
     for (const auto& lbl : systLabels) {
-        string sc = Make_Syst_Canvas_Name(electronBin, lbl, nominalSample);
+        string sc = Make_Syst_Canvas_Name(bin, lbl, nominalSample);
         int col   = Syst_Color(lbl);
         TGraphAsymmErrors* gs = Get_Graph_From_Canvas(fname, sc, col, leg, lbl.c_str());
         if (!gs) {
@@ -473,12 +473,12 @@ void Make_Syst_Plot(const string& fname,
     l.SetTextFont(42); l.SetNDC(); l.SetTextSize(0.06);
     bool is_data = (nominalSample.find("Data") != string::npos);
     string typeLabel = is_data ? "Data" : "MC Bkg";
-    l.DrawLatex(0.55, 0.93, (electronBin + " " + year + " " + typeLabel).c_str());
+    l.DrawLatex(0.55, 0.93, (bin + " " + year + " " + typeLabel).c_str());
     l.DrawLatex(0.10, 0.93, "#bf{#it{CMS}} Preliminary");
 
     pad_gr->Update(); can->Update(); can->cd();
 
-    can->SaveAs((outdir+"SystPlot_"+electronBin+"_"+nominalSample+".pdf").c_str());
+    can->SaveAs((outdir+"SystPlot_"+bin+"_"+nominalSample+".pdf").c_str());
     TFile* fout = TFile::Open((outdir+"output_Scale.root").c_str(),"UPDATE");
     can->Write();
     fout->Close();
@@ -500,15 +500,18 @@ void Make_Comparison_Plot(const vector<TriggerConfig>& configs_for_year,
     double x_max = 500.;
 
     // Colors per electron bin
-    auto bin_color = [](const string& electronBin) -> int {
-        if (electronBin == "Electron0") return kAzure-2;
-        if (electronBin == "Electron1") return kGreen+2;
-        if (electronBin == "Electron2") return kOrange+1;
+    auto bin_color = [](const string& bin) -> int {
+        if (bin == "Electron0") return kAzure-2;
+        if (bin == "Electron1") return kGreen+2;
+        if (bin == "Electron2") return kOrange+1;
+        if (bin == "Muon0")     return kViolet+2;
+        if (bin == "Muon1")     return kRed+1;
+        if (bin == "Muon2")     return kCyan+2;
         static map<string,int> extra;
         static int idx = 0;
         static const vector<int> pool = {kViolet+2, kRed+1, kCyan+2};
-        if (!extra.count(electronBin)) extra[electronBin] = pool[(idx++) % pool.size()];
-        return extra[electronBin];
+        if (!extra.count(bin)) extra[bin] = pool[(idx++) % pool.size()];
+        return extra[bin];
     };
 
     string plot_name = "SFComparison_" + year;
@@ -539,33 +542,33 @@ void Make_Comparison_Plot(const vector<TriggerConfig>& configs_for_year,
 
     vector<TGraph*> ratio_curves;
     for (const auto& cfg : configs_for_year) {
-        int col = bin_color(cfg.electronBin);
+        int col = bin_color(cfg.bin);
 
-        string json_bkg  = JSON_Key(cfg.electronBin, cfg.bkg_sample);
-        string json_data = JSON_Key(cfg.electronBin, cfg.data_sample);
+        string json_bkg  = JSON_Key(cfg.bin, cfg.bkg_sample);
+        string json_data = JSON_Key(cfg.bin, cfg.data_sample);
 
         // Check both keys exist before trying to plot
         double norm, mean, sigma, scale, weight;
         if (!Read_Fit_Params_JSON(json_bkg,  json_path, norm, mean, sigma, scale, weight) ||
             !Read_Fit_Params_JSON(json_data, json_path, norm, mean, sigma, scale, weight)) {
             cout << "Make_Comparison_Plot: missing JSON params for "
-                 << cfg.electronBin << " " << year << " -- skipping." << endl;
+                 << cfg.bin << " " << year << " -- skipping." << endl;
             continue;
         }
 
-        TF1* Bkg_Fit  = Make_TF1_From_JSON("Bkg_"  + cfg.electronBin, json_bkg,
+        TF1* Bkg_Fit  = Make_TF1_From_JSON("Bkg_"  + cfg.bin, json_bkg,
                                              json_path, x_min, x_max);
-        TF1* Data_Fit = Make_TF1_From_JSON("Data_" + cfg.electronBin, json_data,
+        TF1* Data_Fit = Make_TF1_From_JSON("Data_" + cfg.bin, json_data,
                                              json_path, x_min, x_max);
 
         TGraph* ratio = Get_Fit_Ratio(x_min, x_max, Bkg_Fit, Data_Fit);
         ratio->SetLineColor(col);
         ratio->SetLineWidth(2);
-        ratio->SetName(("ratio_"+cfg.electronBin).c_str());
+        ratio->SetName(("ratio_"+cfg.bin).c_str());
         ratio_curves.push_back(ratio);
 
         mg->Add(ratio, "L");
-        leg->AddEntry(ratio, cfg.electronBin.c_str(), "L");
+        leg->AddEntry(ratio, cfg.bin.c_str(), "L");
 
         delete Bkg_Fit;
         delete Data_Fit;
@@ -629,12 +632,12 @@ void Run_Fits(const string& fname, const string& outdir)
     }
 
     for (auto& cfg : configs) {
-        cout << "\n=== Fitting: " << cfg.electronBin << " " << cfg.year << " ===" << endl;
-        Fit_And_Save(fname, Make_Canvas_Name(cfg.electronBin, cfg.bkg_sample),
-                     JSON_Key(cfg.electronBin, cfg.bkg_sample),
+        cout << "\n=== Fitting: " << cfg.bin << " " << cfg.year << " ===" << endl;
+        Fit_And_Save(fname, Make_Canvas_Name(cfg.bin, cfg.bkg_sample),
+                     JSON_Key(cfg.bin, cfg.bkg_sample),
                      kGreen+2, fit_colors, outdir);
-        Fit_And_Save(fname, Make_Canvas_Name(cfg.electronBin, cfg.data_sample),
-                     JSON_Key(cfg.electronBin, cfg.data_sample),
+        Fit_And_Save(fname, Make_Canvas_Name(cfg.bin, cfg.data_sample),
+                     JSON_Key(cfg.bin, cfg.data_sample),
                      kAzure-2, fit_colors, outdir);
     }
 
@@ -686,19 +689,19 @@ void Run_Syst_Plots(const string& fname, const string& outdir)
         vector<string> syst_labels;
         for (auto& [lbl, _] : cfg.systs) syst_labels.push_back(lbl);
         if (syst_labels.empty()) {
-            cout << "No syst labels for " << cfg.electronBin << " " << cfg.year << endl;
+            cout << "No syst labels for " << cfg.bin << " " << cfg.year << endl;
             continue;
         }
 
         // One plot per sample type (bkg and data separately)
-        cout << "\n=== Syst plot: " << cfg.electronBin
+        cout << "\n=== Syst plot: " << cfg.bin
              << " " << cfg.year << " bkg ===" << endl;
-        Make_Syst_Plot(fname, cfg.electronBin, cfg.bkg_sample,
+        Make_Syst_Plot(fname, cfg.bin, cfg.bkg_sample,
                        syst_labels, cfg.year, outdir);
 
-        //cout << "\n=== Syst plot: " << cfg.electronBin
+        //cout << "\n=== Syst plot: " << cfg.bin
         //     << " " << cfg.year << " data ===" << endl;
-        //Make_Syst_Plot(fname, cfg.electronBin, cfg.data_sample,
+        //Make_Syst_Plot(fname, cfg.bin, cfg.data_sample,
         //               syst_labels, cfg.year, outdir);
     }
 }
