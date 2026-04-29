@@ -2775,14 +2775,8 @@ SampleTool::SampleTool(){
   MasterDict["bkg_2023Comb"] = mergeEntriesList(
     MasterDict,
     {
-      "top_2023",
-      "boson_2023",
-      "DB_2023",
-      "TB_2023",
-      "top_2023BPix",
-      "boson_2023BPix",
-      "DB_2023BPix",
-      "TB_2023BPix",
+      "bkg_2023",
+      "bkg_2023BPix",
     }
   );
 
@@ -2861,6 +2855,22 @@ SampleTool::SampleTool(){
     }
   );
 
+  MasterDict["Data_DoubleElectron_2016Comb"] = mergeEntriesList(
+    MasterDict,
+    {
+      "Data_DoubleElectron_2016APV",
+      "Data_DoubleElectron_2016",
+    }
+  );
+
+  MasterDict["Data_DoubleMuon_2016Comb"] = mergeEntriesList(
+    MasterDict,
+    {
+      "Data_DoubleMuon_2016APV",
+      "Data_DoubleMuon_2016",
+    }
+  );
+
   MasterDict["Data_SingleElectron_2016Comb"] = mergeEntriesList(
     MasterDict,
     {
@@ -2906,6 +2916,30 @@ SampleTool::SampleTool(){
     {
       "Data_SingleMuon_2023",
       "Data_SingleMuon_2023BPix",
+    }
+  );
+
+  MasterDict["Data_MuonEG_2016Comb"] = mergeEntriesList(
+    MasterDict,
+    {
+      "Data_MuonEG_2016APV",
+      "Data_MuonEG_2016",
+    }
+  );
+
+  MasterDict["Data_MuonEG_2022Comb"] = mergeEntriesList(
+    MasterDict,
+    {
+      "Data_MuonEG_2022",
+      "Data_MuonEG_2022EE",
+    }
+  );
+
+  MasterDict["Data_MuonEG_2023Comb"] = mergeEntriesList(
+    MasterDict,
+    {
+      "Data_MuonEG_2023",
+      "Data_MuonEG_2023BPix",
     }
   );
 

@@ -25,6 +25,7 @@ static void usage(const char* me) {
     std::cerr << "  --lep-cuts         Semicolon-separated list of lepton cuts for BuildLeptonCut\n";
     std::cerr << "  --predefined-cuts  Semicolon-separated list of predefined cuts\n";
     std::cerr << "  --user-cuts        Semicolon-separated list of user cuts\n";
+    std::cerr << "  --proc-name        Set process name\n";
     std::cerr << "  --hist             Fill histograms\n";
     std::cerr << "  --hist-yaml        YAML file defining histogram expressions\n";
     std::cerr << "  --proc-yaml        YAML file containg processes inputted for ST lookup\n";
@@ -43,7 +44,7 @@ static void usage(const char* me) {
 // ----------------------
 int main(int argc, char** argv) {
     RegisterSafeHelpers();
-    std::string binArg, cutsStr, lepCutsStr, predefCutsStr, userCutsStr, rootFilePath, outputJsonPathBase, sampleName, histOutputPath, cutsMultiStr, lepCutsMultiStr, predefCutsMultiStr, userCutsMultiStr, binsCfgName;
+    std::string binArg, cutsStr, lepCutsStr, predefCutsStr, userCutsStr, rootFilePath, outputJsonPathBase, processName, sampleName, histOutputPath, cutsMultiStr, lepCutsMultiStr, predefCutsMultiStr, userCutsMultiStr, binsCfgName;
     std::vector<std::string> smsFilters;
     std::vector<std::string> systematicNames;
     bool isSignal=false, doHist=false, doJSON=false;
@@ -63,6 +64,7 @@ int main(int argc, char** argv) {
         {"lumi", required_argument, 0, 'S'},
         {"sample-name", required_argument, 0, 'n'},
         {"sms-filters", required_argument, 0, 'm'},
+        {"proc-name", required_argument, 0, 'N'},
         {"hist", no_argument, 0, 'H'},
         {"hist-yaml", required_argument, 0, 'y'},
         {"proc-yaml", required_argument, 0, 'd'},
@@ -93,6 +95,7 @@ int main(int argc, char** argv) {
             case 'S': Lumi=atof(optarg); break;
             case 'n': sampleName=optarg; break;
             case 'm': smsFilters=BFTool::SplitString(optarg,","); break;
+            case 'N': processName = optarg; break;
             case 'H': doHist=true; break;
             case 'y': histYamlPath=optarg; break;
             case 'd': procYamlPath=optarg; break;
@@ -242,14 +245,15 @@ int main(int argc, char** argv) {
     std::map<std::string, std::map<std::string, std::map<std::string, FileYields>>> fileResultsByBin;
     std::map<std::string, std::map<std::string, ProcTotals>> totalsByBin;
 
-    std::string processName = "";
     auto preferredGroups = ST.loadPreferredGroupsFromYaml(procYamlPath);
-    if(isSignal && sigType == "cascades")
-        processName = BFTool::GetSignalTokensCascades(rootFilePath);
-    else if(isSignal && sigType == "sms")
-        processName = GetProcessNameFromKey(rootFilePath, preferredGroups) + "_" + BFTool::GetFilterSignalsSMS()[0];
-    else
-        processName = GetProcessNameFromKey(rootFilePath, preferredGroups);
+    if (processName.empty()) {
+        if (isSignal && sigType == "cascades")
+            processName = BFTool::GetSignalTokensCascades(rootFilePath);
+        else if (isSignal && sigType == "sms")
+            processName = GetProcessNameFromKey(rootFilePath, preferredGroups) + "_" + BFTool::GetFilterSignalsSMS()[0];
+        else
+            processName = GetProcessNameFromKey(rootFilePath, preferredGroups);
+    }
     bool doFAKES = isProcFAKES(procYamlPath, processName);
 
     // --- Build active systematics config ---

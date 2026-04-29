@@ -571,6 +571,7 @@ def write_submit_file(
         if sms_filters:
             joined = ",".join(sms_filters)
             args_list.extend(["--sms-filters", joined])
+        args_list.append(f"--proc-name {ds}")
 
         args_str = " ".join(a for a in args_list if a and not a.isspace())
         job["args_str"] = args_str

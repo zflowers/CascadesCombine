@@ -21,12 +21,10 @@ run_all() {
         echo "[run_all] Warning: Debug log does not exist yet at $DEBUG_LOG"
     fi
 }
-SLEEP=70
-VERSION="v10"
+SLEEP=90
+VERSION="v16"
 make clean
 make all -j 8
 
-run_all --skip-compile --make-root --processes-cfg config/process_cfgs/trigger_processes/processes_TriggerStudies.yaml  --hist-cfg config/hist_cfgs/hist_TriggerStudies.yaml --bins-cfg config/bin_cfgs/trigger_bins/Trigger.yaml --bins-per-job 50 --max-materialize 400 --make-trig-fit --run-name TriggerStudies_${VERSION}
+run_all --skip-compile --make-root --processes-cfg config/process_cfgs/trigger_processes/processes_TriggerStudies.yaml  --hist-cfg config/hist_cfgs/hist_TriggerStudies.yaml --bins-cfg config/bin_cfgs/trigger_bins/Trigger.yaml --bins-per-job 10 --max-materialize 400 --make-trig-fit --run-name TriggerStudies_${VERSION}
 sleep ${SLEEP}
-
-sleep 30 # sleep just to hold user from accidentally submitting something before sub is out the door

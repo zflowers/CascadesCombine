@@ -47,6 +47,14 @@ void Fit_And_Save(const string& fname,
         gr->SetPointEXhigh(j, 0.);
     }
 
+    // Guard: ensure the graph has enough points to fit
+    if (!gr || gr->GetN() < 3) {
+        cerr << "[Trigger_SFs]  Skip " << jsonKey << ": graph has "
+             << (gr ? gr->GetN() : 0) << " point(s) -> too few to fit.\n";
+        delete gr;
+        return;
+    }
+
     vector<TF1*> funcs;
 
     TF1* f_gauss = new TF1(("fGauss_"+jsonKey).c_str(), Gaussian_CDF_Func, x_min, x_max, 3);
@@ -89,10 +97,9 @@ void Fit_And_Save(const string& fname,
     if ((!j.contains(jsonKey) || !j[jsonKey].contains("bands")) && jsonKey.find("Data")==std::string::npos) {
         cout << "  -> Seeding default band params for " << jsonKey
              << " (edit JSON to tune)" << endl;
+        auto bp = Auto_Scale_Bands(gr, best, x_min, x_max);
         Write_Band_Params_JSON(jsonKey, json_path,
-                               /*a1*/  .4e-5,  /*a2*/ -.6e-5,
-                               /*b1*/ 220.,    /*b2*/  220.,
-                               /*c1*/  1.01,   /*c2*/    0.99);
+                       bp.a1, bp.a2, bp.b1, bp.b2, bp.c1, bp.c2);
     } else {
         cout << "  -> Band params already set for " << jsonKey
              << ", leaving unchanged." << endl;
@@ -219,7 +226,7 @@ void Make_SF_Plot(const string& fname, const TriggerConfig& cfg,
     mg_res->GetXaxis()->SetRangeUser(150., 500.);
     mg_res->GetYaxis()->SetRangeUser(0.5, 1.15);
     mg_res->GetYaxis()->SetTitle("Data/MC Bkg");
-    //mg_res->GetXaxis()->SetTitle("MET [GeV]");
+    mg_res->GetXaxis()->SetTitle("MET [GeV]");
     pad_res->Modified(); pad_res->Update();
     gr_bands_ratio->Draw("30");
     Fit_Ratio->Draw("C");
@@ -516,7 +523,7 @@ void Make_Comparison_Plot(const vector<TriggerConfig>& configs_for_year,
 
     string plot_name = "SFComparison_" + year;
 
-    TLegend* leg = new TLegend(0.65, 0.15, 0.88, 0.15 + 0.07*configs_for_year.size());
+    TLegend* leg = new TLegend(0.65, 0.17, 0.88, 0.17 + 0.07*configs_for_year.size());
     leg->SetTextFont(132);
     leg->SetTextSize(0.05);
     leg->SetBorderSize(0);
@@ -532,6 +539,7 @@ void Make_Comparison_Plot(const vector<TriggerConfig>& configs_for_year,
 
     TCanvas* can = new TCanvas(plot_name.c_str(), "", 864, 468);
     can->SetGridx(); can->SetGridy(); can->Draw(); can->cd();
+    can->SetBottomMargin(0.14);
     if (invert_colors) can->SetFillColor(kBlack);
 
     TMultiGraph* mg = new TMultiGraph();
@@ -583,14 +591,16 @@ void Make_Comparison_Plot(const vector<TriggerConfig>& configs_for_year,
     mg->Draw("A");
     mg->GetXaxis()->SetLimits(x_min, x_max);
     mg->GetXaxis()->SetRangeUser(x_min, x_max);
-    mg->GetYaxis()->SetRangeUser(0.3, 1.05);
+    mg->GetYaxis()->SetRangeUser(0.6, 1.05);
     mg->GetXaxis()->SetTitle("MET [GeV]");
     mg->GetYaxis()->SetTitle("Data/MC SF");
     mg->SetTitle("");
     Format_Graph(mg);
     // Re-enable x-axis labels since this is a standalone plot (no ratio pad below)
     mg->GetXaxis()->SetLabelSize(0.05);
-    mg->GetXaxis()->SetLabelOffset(1.15);
+    mg->GetXaxis()->SetLabelOffset(0.015);
+    mg->GetXaxis()->SetTitleOffset(1.02);
+    mg->GetYaxis()->SetTitleOffset(0.75);
 
     line->Draw("SAME");
     leg->Draw("SAME");

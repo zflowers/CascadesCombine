@@ -203,12 +203,16 @@ int main(int argc, char* argv[]) {
                 if (proc.find("SMS") != std::string::npos) sms2D.push_back(h);
             }
         
-            if (!bkg2D.empty() || !sig2D.empty()) {
-                Plot_Hist2DScatter(varProcKey + "_byBin_combined", bkg2D, sig2D);
-                Plot_Hist2DScatter(varProcKey + "_byBin_bkg", bkg2D, {});
-                Plot_Hist2DScatter(varProcKey + "_byBin_sig", {}, sig2D);
-                if(!sms2D.empty()) Plot_Hist2DScatter(varProcKey + "_byBin_sms", {}, sms2D);
-            }
+            //if (!bkg2D.empty() || !sig2D.empty()) {
+            //    Plot_Hist2DScatter(varProcKey + "_byBin_combined", bkg2D, sig2D);
+            //    Plot_Hist2DScatter(varProcKey + "_byBin_bkg", bkg2D, {});
+            //    Plot_Hist2DScatter(varProcKey + "_byBin_sig", {}, sig2D);
+            //    if(!sms2D.empty()) Plot_Hist2DScatter(varProcKey + "_byBin_sms", {}, sms2D);
+            //    Plot_Hist2DContour(varProcKey + "_byBin_combined", bkg2D, sig2D);
+            //    Plot_Hist2DContour(varProcKey + "_byBin_bkg", bkg2D, {});
+            //    Plot_Hist2DContour(varProcKey + "_byBin_sig", {}, sig2D);
+            //    if(!sms2D.empty()) Plot_Hist2DContour(varProcKey + "_byBin_sms", {}, sms2D);
+            //}
         }
         
         if(!isCutFlow){
@@ -234,12 +238,16 @@ int main(int argc, char* argv[]) {
                 if (pp.first.find("SMS") != std::string::npos) sms2D.push_back(dynamic_cast<TH2*>(h));
             }
             // keep these before Plot_Stack / Plot_Overlay, since those mutate hists
-            if (!bkg2D.empty() || !sig2D.empty()) {
-                Plot_Hist2DScatter(groupKey + "_scatter_combined", bkg2D, sig2D);
-                Plot_Hist2DScatter(groupKey + "_scatter_bkg", bkg2D, {});
-                Plot_Hist2DScatter(groupKey + "_scatter_sig", {}, sig2D);
-                if(!sms2D.empty()) Plot_Hist2DScatter(groupKey + "_scatter_sms", {}, sms2D);
-            }       
+            //if (!bkg2D.empty() || !sig2D.empty()) {
+            //    Plot_Hist2DScatter(groupKey + "_scatter_combined", bkg2D, sig2D);
+            //    Plot_Hist2DScatter(groupKey + "_scatter_bkg", bkg2D, {});
+            //    Plot_Hist2DScatter(groupKey + "_scatter_sig", {}, sig2D);
+            //    if(!sms2D.empty()) Plot_Hist2DScatter(groupKey + "_scatter_sms", {}, sms2D);
+            //    Plot_Hist2DContour(groupKey + "_contour_combined", bkg2D, sig2D);
+            //    Plot_Hist2DContour(groupKey + "_contour_bkg", bkg2D, {});
+            //    Plot_Hist2DContour(groupKey + "_contour_sig", {}, sig2D);
+            //    if(!sms2D.empty()) Plot_Hist2DContour(groupKey + "_contour_sms", {}, sms2D);
+            //}       
  
             // Plot stack
             if(!bkgHists.empty() || !sigHists.empty() || dataHist){

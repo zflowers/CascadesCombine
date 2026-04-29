@@ -163,6 +163,105 @@ bool Read_Band_Params_JSON(const string& key, const string& json_path,
     return true;
 }
 
+struct BandParams { double a1,a2,b1,b2,c1,c2; };
+BandParams Auto_Scale_Bands(TGraphAsymmErrors* gr,
+                             TF1* fit,
+                             double x_min, double x_max,
+                             double quantile  = 0.80,   // coverage fraction
+                             double max_width = 0.10,   // hard cap: ±10% max
+                             double min_width = 0.005)  // floor so band is always visible
+{
+    // ---- 1. Collect fractional residuals in the turn-on region ----
+    // Only use points where the fit is between 5% and 95% efficiency
+    // (plateau points add no info about the turn-on shape)
+    struct Point { double x, resid_up, resid_dn; double w; };
+    vector<Point> pts;
+
+    int N = gr->GetN();
+    for (int i = 0; i < N; i++) {
+        double x, y;
+        gr->GetPoint(i, x, y);
+        if (x < x_min || x > x_max) continue;
+        double fval = fit->Eval(x);
+        if (fval < 0.05 || fval > 0.95) continue;
+
+        // Fractional residual -> use error bar extents for the bound direction
+        double err_hi = gr->GetErrorYhigh(i);
+        double err_lo = gr->GetErrorYlow(i);
+        // Upward deviation: point center + upper error bar
+        double resid_up = (fval > 0.) ? ((y + err_hi) / fval - 1.0) : 0.;
+        // Downward deviation: point center - lower error bar  
+        double resid_dn = (fval > 0.) ? ((y - err_lo) / fval - 1.0) : 0.;
+
+        // Weight by 1/fval so turn-on points (low efficiency, high scatter)
+        // don't dominate over the shoulder -> want even coverage, not
+        // a band that only chases the noisiest low-MET points
+        double w = 1.0 / (fval * (1.0 - fval) + 1e-6);  // variance-like weight
+        pts.push_back({x, resid_up, resid_dn, w});
+    }
+
+    if (pts.empty()) {
+        cout << "  Auto_Scale_Bands: no turn-on points found, using defaults" << endl;
+        return {4e-6, -6e-6, 220., 220., 1.01, 0.99};
+    }
+
+    // ---- 2. Weighted quantile of the residual magnitudes ----
+    // Sort by upward residual, find the quantile-th weighted percentile
+    // This is the "how wide does the band need to be" answer, ignoring outliers
+    auto weighted_quantile = [](vector<pair<double,double>> vals_weights,
+                                 double q) -> double {
+        sort(vals_weights.begin(), vals_weights.end());
+        double total_w = 0.;
+        for (auto& [v,w] : vals_weights) total_w += w;
+        double cumul = 0.;
+        for (auto& [v,w] : vals_weights) {
+            cumul += w;
+            if (cumul >= q * total_w) return v;
+        }
+        return vals_weights.back().first;
+    };
+
+    vector<pair<double,double>> up_vals, dn_vals;
+    for (auto& p : pts) {
+        up_vals.push_back({ p.resid_up,  p.w});
+        dn_vals.push_back({-p.resid_dn,  p.w});  // flip sign so both are positive magnitudes
+    }
+
+    double target_up = weighted_quantile(up_vals, quantile);
+    double target_dn = weighted_quantile(dn_vals, quantile);
+
+    // ---- 3. Hard caps ----
+    target_up = std::clamp(target_up, min_width, max_width);
+    target_dn = std::clamp(target_dn, min_width, max_width);
+
+    // ---- 4. Vertex position: weighted mean x of turn-on points ----
+    // Better than using fit Mean directly -> the Mean is where the CDF
+    // is at 50% which can be outside the plot range. The weighted mean
+    // of the actual turn-on points is where we have data and where
+    // the band needs to be most accurate.
+    double sum_wx = 0., sum_w = 0.;
+    for (auto& p : pts) { sum_wx += p.w * p.x; sum_w += p.w; }
+    double b = (sum_w > 0.) ? sum_wx / sum_w : fit->GetParameter(1);
+    b = std::clamp(b, x_min, x_max);
+
+    // ---- 5. Curvature: parabola must reach 0 residual at x_max ----
+    // i.e. the band converges back to the fit curve in the plateau.
+    // Solve: 0 = a*(x_max - b)^2 + target  =>  a = -target/(x_max-b)^2
+    double dx = x_max - b;
+    double a1 = (dx > 1.) ?  target_up / (dx * dx) : 4e-6;   // upper arm opens upward left of b
+    double a2 = (dx > 1.) ? -target_dn / (dx * dx) : -6e-6;  // lower arm opens downward
+
+    double c1 = 1.0 + target_up;  // vertex value (widest point of upper band)
+    double c2 = 1.0 - target_dn;
+
+    cout << "  Auto-scaled bands (" << pts.size() << " turn-on pts):"
+         << " target_up=" << target_up << " target_dn=" << target_dn
+         << " b=" << b << " a1=" << a1 << " a2=" << a2
+         << " c1=" << c1 << " c2=" << c2 << endl;
+
+    return {a1, a2, b, b, c1, c2};
+}
+
 // -----------------------------------------------------------------------
 // Fit functions
 // -----------------------------------------------------------------------
@@ -684,6 +783,27 @@ struct SampleGroup {
 };
 
 // -----------------------------------------------------------------------
+// Per-bin priority-ordered list of Data sample prefixes to try.
+// Priority logic: two leptons in every event, so we match the dataset
+// that best reflects the lepton content of the bin.
+//   Electron2 / Muon0  -> DoubleElectron (2 e, 0 mu)  | backup: SingleElectron / SingleMuon
+//   Electron1 / Muon1  -> MuonEG         (1 e, 1 mu)  | backup: SingleElectron / SingleMuon
+//   Electron0 / Muon2  -> DoubleMuon     (0 e, 2 mu)  | backup: SingleMuon     / SingleElectron
+// -----------------------------------------------------------------------
+vector<string> Data_Sample_Priority(const string& bin)
+{
+    if (bin == "Electron2" || bin == "Muon0")
+        return {"Data_DoubleElectron", "Data_SingleElectron", "Data_SingleMuon"};
+    if (bin == "Electron1" || bin == "Muon1")
+        return {"Data_MuonEG", "Data_SingleElectron", "Data_SingleMuon"};
+    if (bin == "Electron0" || bin == "Muon2")
+        return {"Data_DoubleMuon", "Data_SingleMuon", "Data_SingleElectron"};
+    // Unknown bin: try everything in a reasonable order
+    return {"Data_DoubleElectron", "Data_MuonEG", "Data_DoubleMuon",
+            "Data_SingleElectron", "Data_SingleMuon"};
+}
+
+// -----------------------------------------------------------------------
 // Discover configs from canvas names in the root file
 // -----------------------------------------------------------------------
 vector<TriggerConfig> Discover_Configs(const string& fname)
@@ -696,10 +816,9 @@ vector<TriggerConfig> Discover_Configs(const string& fname)
 
     const string PREFIX = "can_eff_MET_trigger_eff__";
 
-    // (bin, year) -> {nominal samples, syst label -> samples}
     struct BinGroup {
         set<string>              nominal_samples;
-        map<string, set<string>> syst_samples; // systLabel -> {samples}
+        map<string, set<string>> syst_samples;
     };
     map<pair<string,string>, BinGroup> found;
 
@@ -710,96 +829,108 @@ vector<TriggerConfig> Discover_Configs(const string& fname)
         if (cname.find(PREFIX) == string::npos) continue;
         if (string(key->GetClassName()) != "TCanvas") continue;
 
-        // Strip prefix: "TriggerBin_Electron0__bkg_2018"
-        //            or "TriggerSystBin_Electron0_Gold__bkg_2018"
         string rest = cname.substr(PREFIX.length());
-
         string bin, sample, systLabel;
         bool isSyst = false;
 
         if (rest.rfind("TriggerBin_", 0) == 0) {
-            // Nominal: TriggerBin_{bin}__{sample}
             rest = rest.substr(string("TriggerBin_").length());
             size_t sep = rest.find("__");
             if (sep == string::npos) continue;
-            bin = rest.substr(0, sep);  // "Electron0"
-            sample      = rest.substr(sep + 2); // "bkg_2018"
+            bin    = rest.substr(0, sep);
+            sample = rest.substr(sep + 2);
 
         } else if (rest.rfind("TriggerSystBin_", 0) == 0) {
-            // Syst: TriggerSystBin_{bin}_{systLabel}__{sample}
             rest = rest.substr(string("TriggerSystBin_").length());
             size_t sep = rest.find("__");
             if (sep == string::npos) continue;
-            string binAndLabel = rest.substr(0, sep); // "Electron0_Gold"
-            sample             = rest.substr(sep + 2); // "bkg_2018"
+            string binAndLabel = rest.substr(0, sep);
+            sample             = rest.substr(sep + 2);
 
-            // Split "Electron0_Gold" -> bin="Electron0", systLabel="Gold"
-            size_t us = binAndLabel.find('_');
+            // "Electron0_Gold" -> bin="Electron0", systLabel="Gold"
+            // But bin names like "Electron0" don't contain '_', whereas
+            // "MuonEG" does not apply here -- systLabel is always a single
+            // word appended after the bin, so split on the LAST '_' that
+            // follows the bin prefix.  We find the bin prefix length first.
+            size_t us = string::npos;
+            for (const string& pfx : std::vector<string>{"Electron", "Muon"}) {
+                if (binAndLabel.rfind(pfx, 0) == 0) {
+                    // bin is prefix + digits, e.g. "Electron0" or "Muon12"
+                    size_t i = pfx.size();
+                    while (i < binAndLabel.size() && isdigit(binAndLabel[i])) i++;
+                    // i now points to '_' before systLabel
+                    if (i < binAndLabel.size() && binAndLabel[i] == '_') us = i;
+                    break;
+                }
+            }
             if (us == string::npos) continue;
-            bin = binAndLabel.substr(0, us);
-            systLabel   = binAndLabel.substr(us + 1);
-            isSyst      = true;
+            bin       = binAndLabel.substr(0, us);
+            systLabel = binAndLabel.substr(us + 1);
+            isSyst    = true;
         } else {
             continue;
         }
 
-        // Extract year from end of sample string
+        // Validate bin prefix
+        if (bin.rfind("Electron", 0) != 0 && bin.rfind("Muon", 0) != 0) continue;
+
+        // Extract year from tail of sample string (last _YYYY)
         size_t last_us = sample.rfind('_');
         if (last_us == string::npos) continue;
         string year = sample.substr(last_us + 1);
         if (year.size() < 4 || !isdigit(year[0])) continue;
 
         auto& group = found[{bin, year}];
-        if (isSyst) {
-            group.syst_samples[systLabel].insert(sample);
-        } else {
-            group.nominal_samples.insert(sample);
-        }
+        if (isSyst) group.syst_samples[systLabel].insert(sample);
+        else        group.nominal_samples.insert(sample);
     }
     f->Close(); delete f;
 
-    // Build TriggerConfig -> one per (bin, year, nominal_sample)
-    // with the full syst map attached
     vector<TriggerConfig> configs;
     for (auto& [key_pair, group] : found) {
-        const string& bin = key_pair.first;
-        const string& year        = key_pair.second;
+        const string& bin  = key_pair.first;
+        const string& year = key_pair.second;
 
-        if (bin.rfind("Electron", 0) != 0 &&
-            bin.rfind("Muon",     0) != 0) continue;
-        string data_type = "";
-        if (bin.rfind("Electron", 0) == 0)      data_type = "Electron";
-        else if (bin.rfind("Muon", 0) == 0)      data_type = "Muon";
-        else {
-            cout << "WARNING: Unknown bin prefix for " << bin << " -- skipping." << endl;
+        // Find bkg sample
+        string bkg_sample = "";
+        for (const auto& s : group.nominal_samples)
+            if (s.find("bkg") != string::npos) { bkg_sample = s; break; }
+
+        if (bkg_sample.empty()) {
+            cout << "WARNING: No bkg sample for " << bin << " " << year
+                 << " -- skipping." << endl;
             continue;
         }
 
-        string bkg_sample  = "";
+        // Find best data sample according to per-bin priority list
         string data_sample = "";
-        for (const auto& s : group.nominal_samples) {
-            if (s.find("bkg")          != string::npos) bkg_sample  = s;
-            if (s.find("Data_"+data_type) != string::npos) data_sample = s;
+        string chosen_prefix = "";
+        for (const string& pfx : Data_Sample_Priority(bin)) {
+            for (const auto& s : group.nominal_samples) {
+                if (s.find(pfx) != string::npos) {
+                    data_sample   = s;
+                    chosen_prefix = pfx;
+                    break;
+                }
+            }
+            if (!data_sample.empty()) break;
         }
 
-        if (bkg_sample.empty() || data_sample.empty()) {
-            cout << "WARNING: Incomplete nominal samples for "
-                 << bin << " " << year << " -- skipping." << endl;
+        if (data_sample.empty()) {
+            cout << "WARNING: No data sample found for " << bin << " " << year
+                 << " (tried all priorities) -- skipping." << endl;
             continue;
         }
 
-        // Collect syst labels
-        map<string,string> systs; // label -> sample (same sample suffix as nominal)
-        for (auto& [lbl, samples] : group.syst_samples) {
-            // We just store the label; the sample name is reconstructed in Make_Syst_Canvas_Name
-            systs[lbl] = lbl; // placeholder -> actual sample looked up by label+bin+year
-        }
+        map<string,string> systs;
+        for (auto& [lbl, samples] : group.syst_samples)
+            systs[lbl] = lbl;
 
         configs.push_back({bin, year, "", data_sample, bkg_sample, systs});
 
         cout << "Discovered: " << bin << " " << year
-             << " bkg=" << bkg_sample
-             << " data=" << data_sample
+             << " bkg="  << bkg_sample
+             << " data=" << data_sample << " (matched: " << chosen_prefix << ")"
              << " systs=[";
         for (auto& [l,_] : systs) cout << l << " ";
         cout << "]" << endl;

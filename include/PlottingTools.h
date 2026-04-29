@@ -46,17 +46,29 @@ void Plot_Hist2D(TH2* h) {
     h->GetXaxis()->CenterTitle(); h->GetYaxis()->CenterTitle(); h->GetZaxis()->CenterTitle();
     h->GetZaxis()->SetTitle(("N_{events} / "+std::to_string(int(lumi))+" fb^{-1}").c_str());
     h->GetXaxis()->SetTitleOffset(1.05);
-    TLatex l; l.SetTextFont(42); l.SetNDC();
+    h->GetZaxis()->SetTitleOffset(1.05);
+    double t_size = 0.06;
+    h->GetXaxis()->SetTitleSize(t_size); h->GetYaxis()->SetTitleSize(t_size); h->GetZaxis()->SetTitleSize(t_size);
     std::string proc_title = title;
     if(proc_title.find("TChiWZ") != std::string::npos)
         proc_title = makeSMSChiTitle(ExtractProcName(proc_title));
     else
         proc_title = m_Title[ExtractProcName(proc_title)];
-    l.SetTextSize(0.035); l.DrawLatex(0.65,0.943,proc_title.c_str());
-    l.SetTextSize(0.04); l.DrawLatex(0.13,0.943,"#bf{CMS} Simulation Preliminary");
     string bin_label = ExtractBinName(title);
     std::replace(bin_label.begin(), bin_label.end(), '_', ' ');
-    l.SetTextSize(0.045); l.DrawLatex(0.7,0.04,bin_label.c_str());
+    double left   = gPad->GetLeftMargin();
+    double right  = 1.0 - gPad->GetRightMargin();
+    TLatex l;
+    l.SetTextFont(42);
+    l.SetNDC();
+    l.SetTextSize(0.04);
+    // --- Right-aligned (proc title) ---
+    l.SetTextAlign(31);   // right-align horizontally, top-align vertically
+    l.DrawLatex(right, 0.91, proc_title.c_str());
+    // --- Left-aligned (CMS label) ---
+    l.SetTextAlign(11);   // left-align horizontally, top-align vertically
+    l.DrawLatex(left, 0.91, "#bf{CMS} Simulation Preliminary");
+    //l.SetTextSize(0.045); l.DrawLatex(0.7,0.04,bin_label.c_str());
     TString pdfName = Form("%spdfs/%s/%s.pdf", outputDir.c_str(), ExtractBinName(title).c_str(), title.c_str());
     gErrorIgnoreLevel = 1001;
     can->SaveAs(pdfName);
@@ -1127,6 +1139,153 @@ void Plot_Hist2DScatter(const std::string& hname,
     gErrorIgnoreLevel = 0;
 
     for (auto* g : ownedGraphs) delete g;
+    delete leg;
+    delete can;
+}
+
+// ----------------------
+// Plot 2D contour overlay
+// ----------------------
+void Plot_Hist2DContour(const std::string& hname,
+                        const std::vector<TH2*>& bkgHists,
+                        const std::vector<TH2*>& sigHists)
+{
+    if (bkgHists.empty() && sigHists.empty()) return;
+
+    TH2* axisHist = !bkgHists.empty() ? bkgHists.front()
+                   : !sigHists.empty() ? sigHists.front()
+                   : nullptr;
+    if (!axisHist) return;
+
+    std::string canvas_name = "can_contour_" + hname;
+    TCanvas* can = new TCanvas(canvas_name.c_str(), canvas_name.c_str(), 1200, 700);
+    can->SetLeftMargin(hlo);
+    can->SetRightMargin(hhi);
+    can->SetBottomMargin(hbo);
+    can->SetTopMargin(hto);
+    can->SetGridx();
+    can->SetGridy();
+    can->cd();
+
+    // Draw axis only
+    axisHist->SetStats(0);
+    axisHist->Draw("AXIS");
+    axisHist->GetXaxis()->CenterTitle();
+    axisHist->GetYaxis()->CenterTitle();
+    axisHist->GetXaxis()->SetTitleSize(0.05);
+    axisHist->GetYaxis()->SetTitleSize(0.05);
+    axisHist->GetXaxis()->SetLabelSize(0.05);
+    axisHist->GetYaxis()->SetLabelSize(0.05);
+    axisHist->GetYaxis()->SetTitleOffset(0.92);
+
+    // Legend
+    TLegend* leg = new TLegend(1.-hhi+0.01, 1.- (bkgHists.size()+sigHists.size()+2)*(1.-0.49)/9., 0.98, 1.-hto-0.005);
+    leg->SetTextFont(132);
+    leg->SetTextSize(0.038);
+    leg->SetFillColor(kWhite);
+    leg->SetLineColor(kWhite);
+
+    auto drawOne = [&](TH2* h, bool isSignal) {
+        if (!h) return;
+    
+        std::string proc = ExtractProcName(h->GetName());
+    
+        int color = kBlack;
+        auto it = m_Color.find(proc);
+        if (it != m_Color.end()) color = it->second;
+        else {
+            color = fallbackColors[fallbackIndex % fallbackColors.size()];
+            m_Color[proc] = color;
+            fallbackIndex++;
+        }
+    
+        // --- CLONE to avoid ROOT weirdness ---
+        TH2* hc = (TH2*)h->Clone((std::string(h->GetName())+"_cont").c_str());
+        hc->SetDirectory(0);
+    
+        // --- shape prep ---
+        hc->Smooth(1);
+        if (hc->Integral() > 0)
+            hc->Scale(1.0 / hc->Integral());
+    
+        // --- contour definition AFTER scaling ---
+        double level = 0.2175 * hc->GetMaximum();
+        hc->SetLineWidth(3);
+        hc->SetLineStyle(1);
+        hc->SetLineColor(color);
+        hc->SetContour(1, &level);
+    
+        // --- Filled contour ---
+        hc->SetFillColorAlpha(color, 0.25);
+        hc->Draw("CONT0 SAME");
+        hc->Draw("CONT LIST SAME");
+        
+        gPad->Modified();
+        gPad->Update();
+        
+        // Get contours
+        TObjArray* contours = (TObjArray*)gROOT->GetListOfSpecials()->FindObject("contours");
+        if (!contours || contours->GetSize() == 0) return;
+        
+        TList* contLevel = (TList*)contours->At(0);  // only 1 contour level
+        if (!contLevel || contLevel->GetSize() == 0) return;
+
+        std::vector<TGraph*> safeGraphs;
+        for (int i = 0; i < contLevel->GetSize(); ++i) {
+            TGraph* gr = (TGraph*)contLevel->At(i);
+            if (!gr) continue;
+            safeGraphs.push_back((TGraph*)gr->Clone());
+        }
+                
+        for (auto* gr_clone : safeGraphs) {
+            gr_clone->SetLineColor(color);
+            gr_clone->SetLineWidth(3);
+            gr_clone->Draw("L SAME");
+        }
+        gPad->Modified();
+        gPad->Update();
+    
+        // legend
+        std::string label = m_Title.count(proc) ? m_Title[proc] : proc;
+        if (proc.find("TChiWZ") != std::string::npos)
+            label = makeSMSChiTitle(proc);
+    
+        leg->AddEntry(hc, label.c_str(), "F");
+    };
+
+    // Draw backgrounds first
+    for (auto* h : bkgHists) drawOne(h, false);
+
+    // Then signals on top
+    for (auto* h : sigHists) drawOne(h, true);
+
+    leg->Draw();
+
+    // CMS label
+    TLatex l;
+    l.SetNDC();
+    l.SetTextFont(42);
+    l.SetTextSize(0.04);
+    l.DrawLatex(0.1, 0.943, "#bf{CMS} Simulation Preliminary");
+
+    l.SetTextSize(0.045);
+    //l.DrawLatex(0.69, 0.943, ExtractBinName(axisHist->GetName()).c_str());
+
+    // Save
+    if (outFile) {
+        outFile->cd();
+        can->Write(0, TObject::kWriteDelete);
+    }
+
+    TString pdfName = Form("%spdfs/%s/%s.pdf",
+                           outputDir.c_str(),
+                           ExtractBinName(axisHist->GetName()).c_str(),
+                           SanitizeString(canvas_name).c_str());
+
+    gErrorIgnoreLevel = 1001;
+    can->SaveAs(pdfName);
+    gErrorIgnoreLevel = 0;
+
     delete leg;
     delete can;
 }
