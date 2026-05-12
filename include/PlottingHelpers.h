@@ -1092,144 +1092,145 @@ inline BracketTierSet BuildBracketTiers(const std::vector<std::string>& sortedBi
     return out;
 }
 
-inline void DrawBinAxisBrackets(TPad*                           pad,
-                                TH1*                            axisHist,
-                                const std::vector<std::string>& sortedBins,
-                                double                          bottomFrac    = 0.95,
-                                double                          tickClearance = -1.0)
+inline void DrawBinAxisBrackets(TPad* pad, TH1* axisHist, const std::vector<std::string>& sortedBins,
+                                 double bottomFrac = 0.95, double tickClearance = -1.0)
 {
     if (!pad || !axisHist || sortedBins.empty()) return;
- 
     int n = (int)sortedBins.size();
- 
-    // ---- 1. Replace raw bin labels with short pretty labels ----
-    for (int i = 0; i < n; ++i) {
-        std::string lbl = BinLabels::ShortBinLabel(sortedBins[i]);
-        axisHist->GetXaxis()->SetBinLabel(i + 1, lbl.c_str());
-    }
- 
-    // Choose label size and orientation based on bin count
-    bool verticalLabels = (n > 30);
-    double labelSize = (n > 40) ? 0.055 : 0.085;
-    if (verticalLabels) axisHist->GetXaxis()->LabelsOption("v");
-    axisHist->GetXaxis()->SetLabelSize(labelSize);
- 
-    // Must call Update() so ROOT computes axis geometry before we query it
-    pad->cd();
-    pad->Update();
- 
-    // ---- 2. Build bracket tiers --------------------------------
-    BracketTierSet tiers = BuildBracketTiers(sortedBins);
-    int nTiers = (int)tiers.tiers.size();
-    if (nTiers == 0) return;
- 
-    // ---- 3. Geometry -------------------------------------------
-    // All coordinates are in NDC of the pad.
+
+    // ---- 1. Build short labels and detect if they are all identical ----
+    std::vector<std::string> shortLabels;
+    shortLabels.reserve(n);
+    for (auto& b : sortedBins)
+        shortLabels.push_back(BinLabels::ShortBinLabel(b));
+
+    bool allSameTickLabel = true;
+    for (int i = 1; i < n; ++i)
+        if (shortLabels[i] != shortLabels[0]) { allSameTickLabel = false; break; }
+
+    // ---- 2. Set per-bin tick labels ----
+    for (int i = 0; i < n; ++i)
+        axisHist->GetXaxis()->SetBinLabel(i + 1, allSameTickLabel ? "" : shortLabels[i].c_str());
+
     double padLeft  = pad->GetLeftMargin();
     double padRight = 1.0 - pad->GetRightMargin();
     double padBot   = pad->GetBottomMargin();
- 
-    // --- Compute tick label clearance ---
-    // ROOT draws tick labels starting at the axis line (y = padBot in NDC)
-    // and extending downward.  The label footprint in NDC is approximately:
-    //   vertical labels:   labelSize * longest-label-char-count * aspect
-    //   horizontal labels: labelSize * labelOffset
-    // We estimate conservatively so brackets never clip labels.
-    if (tickClearance < 0.0) {
+
+    bool verticalLabels = false;
+    double labelSize = 0.0;
+    double binWidth = (padRight - padLeft) / n;
+
+    if (allSameTickLabel) {
+        axisHist->GetXaxis()->SetLabelSize(0.0001);
+        axisHist->GetXaxis()->SetLabelOffset(999);
+    } else {
+        verticalLabels = (n > 30);
+        //labelSize = (n > 40) ? 0.055 : 0.085;
+        // Scale label size with bin width; the 0.75 aspect factor converts
+        // NDC width -> NDC height. Clamp so it never gets unreadably large
+        // or small regardless of bin count.
+        labelSize = std::min(0.090, std::max(0.085, binWidth * 4.0));
+        if (verticalLabels) axisHist->GetXaxis()->LabelsOption("v");
+        axisHist->GetXaxis()->SetLabelSize(labelSize);
+    }
+
+    pad->cd();
+    pad->Update();
+
+    // ---- 3. Build bracket tiers ----
+    BracketTierSet tiers = BuildBracketTiers(sortedBins);
+    int nTiers = (int)tiers.tiers.size();
+    if (nTiers == 0) return;
+
+    // ---- 4. Geometry ----
+
+    if (allSameTickLabel) {
+        // Tick labels are invisible: reclaim almost all of their space.
+        // Just leave a tiny gap so we don't clip the axis line itself.
+        tickClearance = 0.005;
+    } else if (tickClearance < 0.0) {
         double labelOffset = axisHist->GetXaxis()->GetLabelOffset();
-        if (labelOffset <= 0.0) labelOffset = 0.005;  // ROOT default
- 
+        if (labelOffset <= 0.0) labelOffset = 0.005;
         if (verticalLabels) {
-            // For vertical (rotated) labels the dominant cost is the text
-            // width rendered as height.  Find longest short label.
             size_t maxChars = 1;
-            for (auto& b : sortedBins) {
-                size_t l = BinLabels::ShortBinLabel(b).size();
-                if (l > maxChars) maxChars = l;
-            }
-            // Each character -> 0.55 * labelSize in height when vertical,
-            // plus the label offset and a small gap.
+            for (auto& lbl : shortLabels)
+                if (lbl.size() > maxChars) maxChars = lbl.size();
             tickClearance = labelOffset + labelSize * maxChars * 0.55 + 0.01;
         } else {
-            // Horizontal labels are just one line tall plus offset.
             tickClearance = labelOffset + labelSize * 1.01 + 0.001;
         }
-        // Clamp: never eat more than half the bottom margin
         tickClearance = std::min(tickClearance, 0.5 * padBot);
     }
- 
-    // Total bracket zone sits below the tick labels
-    double bracketZoneTop = padBot - tickClearance;   // NDC y just below tick labels
-    double tierHeight     = (bottomFrac * padBot) / nTiers;
- 
-    // Guard: if tiers would extend below y=0 (outside pad), shrink tierHeight
+
+    double bracketZoneTop = padBot - tickClearance;
+    double tierHeight = (bottomFrac * bracketZoneTop) / nTiers;
     if (bracketZoneTop - nTiers * tierHeight < 0.0)
         tierHeight = bracketZoneTop / nTiers;
- 
-    // Bin width in NDC
-    double binWidth = (padRight - padLeft) / n;
- 
-    // Convert 1-based bin index to NDC x centre
-    auto BinCentreNDC = [&](int bin1) -> double {
+
+    auto BinCenterNDC = [&](int bin1) -> double {
         return padLeft + (bin1 - 0.5) * binWidth;
     };
- 
-    // ---- 4. Draw tiers -----------------------------------------
-    // tiers[0] = innermost (Mperp), tiers.back() = outermost (Run)
+
+    // ---- 5. Draw bracket tiers ----
+    // tiers[0] = innermost, tiers.back() = outermost.
+    // When all tick labels are identical, the outermost tier's top horizontal
+    // line is redundant (nothing to group above it), so we skip just that line
+    // while still drawing the label. Everything shifts up naturally because
+    // bracketZoneTop is already higher due to the collapsed tickClearance.
     for (int t = 0; t < nTiers; ++t) {
         double yTop  = bracketZoneTop - t * tierHeight;
         double yBot  = yTop - tierHeight;
-        // Bracket line sits near the top of this tier's band,
-        // tick feet reach ~25% down into the band
-        double yLine = yTop  - 0.12 * tierHeight;
+        double yLine = yTop - 0.12 * tierHeight;
         double yTick = yLine - 0.30 * tierHeight;
- 
+
+        bool isTopMost = (t == 0);
+        bool suppressTopLine = allSameTickLabel && isTopMost;
+
         for (const auto& span : tiers.tiers[t]) {
-            double xL   = BinCentreNDC(span.binFirst) - 0.5 * binWidth + 0.004;
-            double xR   = BinCentreNDC(span.binLast)  + 0.5 * binWidth - 0.004;
+            double xL   = BinCenterNDC(span.binFirst) - 0.5 * binWidth + 0.004;
+            double xR   = BinCenterNDC(span.binLast)  + 0.5 * binWidth - 0.004;
             double xMid = 0.5 * (xL + xR);
- 
-            // Horizontal bracket line
-            TLine* hline = new TLine(xL, yLine, xR, yLine);
-            hline->SetNDC();
-            hline->SetLineColor(kGray + 2);
-            hline->SetLineWidth(1);
-            hline->Draw();
- 
-            // Left descender tick
-            TLine* ltick = new TLine(xL, yLine, xL, yTick);
-            ltick->SetNDC();
-            ltick->SetLineColor(kGray + 2);
-            ltick->SetLineWidth(1);
-            ltick->Draw();
- 
-            // Right descender tick
-            TLine* rtick = new TLine(xR, yLine, xR, yTick);
-            rtick->SetNDC();
-            rtick->SetLineColor(kGray + 2);
-            rtick->SetLineWidth(1);
-            rtick->Draw();
- 
-            // Label centered in the lower portion of the tier band,
-            // between the bracket line and the band bottom.
-            // Scale text size with span width; outer tiers slightly larger.
+
+            if (!suppressTopLine) {
+                TLine* hline = new TLine(xL, yLine, xR, yLine);
+                hline->SetNDC(); hline->SetLineColor(kGray+2); hline->SetLineWidth(1); hline->Draw();
+
+                TLine* ltick = new TLine(xL, yLine, xL, yTick);
+                ltick->SetNDC(); ltick->SetLineColor(kGray+2); ltick->SetLineWidth(1); ltick->Draw();
+
+                TLine* rtick = new TLine(xR, yLine, xR, yTick);
+                rtick->SetNDC(); rtick->SetLineColor(kGray+2); rtick->SetLineWidth(1); rtick->Draw();
+            }
             double spanFrac = xR - xL;
-            double tsize = std::max(0.02, std::min(0.070, spanFrac * 0.60));
-            tsize += 0.004 * t;
-            tsize  = std::min(tsize, 0.075);
- 
-            // Place label between bracket line and band bottom
-            double yText = 0.5 * (yLine + yBot) - 0.001;
- 
+            double labelPadScale = 0.08;
+            if (span.label.find("^") != std::string::npos
+            ||  span.label.find("_") != std::string::npos)
+                labelPadScale = 0.13;
+            double labelPad = labelPadScale * tierHeight;
+            double minSize = 0.1;
+            double tsize;
+            if (suppressTopLine) {
+                tsize = std::min(minSize, std::max(0.030, binWidth * 0.8));
+            } else {
+                tsize = std::max(0.02, std::min(minSize, spanFrac * 0.65));
+                tsize += 0.004 * t;
+                // Floor: never smaller than a reasonable readable size regardless of span width
+                double minByBinWidth = std::min(minSize, std::max(0.040, binWidth * 0.8));
+                tsize = std::max(tsize, minByBinWidth);
+                double maxByHeight = (yLine - yBot - 2.0 * labelPad);
+                tsize = std::min(tsize, std::max(0.02, maxByHeight));
+                tsize = std::min(tsize, minSize);
+            } 
+            double yText = suppressTopLine
+                ? 0.5 * (yTop + yBot)
+                : 0.5 * (yLine + yBot) - 0.001;
+            
             TLatex* tex = new TLatex(xMid, yText, span.label.c_str());
-            tex->SetNDC();
-            tex->SetTextFont(42);
-            tex->SetTextSize(tsize);
-            tex->SetTextAlign(22);  // h-center, v-center
-            tex->Draw();
+            tex->SetNDC(); tex->SetTextFont(42); tex->SetTextSize(tsize);
+            tex->SetTextAlign(22); tex->Draw();
         }
     }
- 
+
     pad->Modified();
     pad->Update();
 }
