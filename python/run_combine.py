@@ -1228,8 +1228,8 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                         "./"+exe_dir+"/PlotFitDiagnostics.x",
                         "-i", FD_file,
                         "-o", plots_dir,
-                        "-t", "shapes_prefit",
                         "--config", FDpattern_cfg
+                        "-t", "shapes_prefit",
                     ]
                     print("[run_combine] Running prefit FitDiagnostics plotter with command:", " ".join(FD_plot_cmd_prefit), flush=True)
                     subprocess.run(FD_plot_cmd_prefit, check=True, stdout=sys.stdout, stderr=sys.stderr)
@@ -1237,8 +1237,8 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                         "./"+exe_dir+"/PlotFitDiagnostics.x",
                         "-i", FD_file,
                         "-o", plots_dir,
-                        "-t", "shapes_fit_b",
                         "--config", FDpattern_cfg
+                        "-t", "shapes_fit_b",
                     ]
                     print("[run_combine] Running postfit FitDiagnostics plotter with command:", " ".join(FD_plot_cmd_postfit), flush=True)
                     subprocess.run(FD_plot_cmd_postfit, check=True, stdout=sys.stdout, stderr=sys.stderr)

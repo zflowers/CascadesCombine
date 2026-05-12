@@ -35,6 +35,9 @@
 #include <TPaveText.h>
 #include <TDirectory.h>
 #include <TInterpreter.h>
+#include <TLine.h>
+#include <TBox.h>
+#include <TMathText.h>
 
 #include "SampleTool.h"
 
@@ -182,7 +185,9 @@ const TColor cms10(8011, 0.5725490196078431, 0.8549019607843137, 0.8666666666666
 
 std::vector<int> fallbackColors = {
     // CMS First
-    8001, 8002, 8004, 8005, 8006, 8007, 8008, 8009, 8010, 8011,
+    8001, 8002, 8011, 8005, 8006, 8007, 8004, 8009, 8008, 8011,
+    8001, 8002, 8011, 8005, 8006, 8007, 8004, 8002, 8007, 8001,
+
     // RestFrames
     7000, 7010, 7020, 7030, 7040, 7050, 7060, 7070,
     7001, 7011, 7021, 7031, 7041, 7051, 7061, 7071,
@@ -251,23 +256,37 @@ void loadFormatMaps(){
 
   m_Title["data"] = "Data";
   m_Color["data"] = kBlack;
+  
+  m_Title["top"] = "top";
+  m_Color["top"] = 7001;
+
+  m_Title["boson"] = "boson";
+  m_Color["boson"] = 7011;
+  //m_Color["boson"] = 8006;
+
+  m_Title["diboson"] = "di-bosons";
+  m_Color["diboson"] = 7042;
+
+  m_Title["triboson"] = "tri-bosons";
+  m_Color["triboson"] = 7062;
+
+  m_Title["DB"] = "dibosons";
+  m_Color["DB"] = 7041;
+  //m_Color["DB"] = 8002;
+
+  m_Title["TB"] = "tribosons";
+  m_Color["TB"] = 7033;
+  //m_Color["TB"] = 8006;
 
   m_Title["ttbar"] = "t #bar{t} + X";
   m_Color["ttbar"] = 7011;
   //m_Color["ttbar"] = 8003;
-  
-  m_Title["top"] = "t + X";
-  m_Color["top"] = 7011;
 
   m_Title["Vfakeleps"] = "fake enriched";
   m_Color["Vfakeleps"] = 7001;
   //m_Color["Vfakeleps"] = 8001;
 
-  m_Title["boson"] = "boson";
-  m_Color["boson"] = 7050;
-  //m_Color["boson"] = 8006;
-
-  m_Title["top_2018"] = "t + X";
+  m_Title["top_2018"] = "top";
   m_Color["top_2018"] = 7011;
   //m_Color["top_2018"] = 8003;
 
@@ -282,15 +301,7 @@ void loadFormatMaps(){
   m_Title["ST"] = "single top";
   m_Color["ST"] = 7010;
   //m_Color["ST"] = 8004;
-
-  m_Title["DB"] = "dibosons";
-  m_Color["DB"] = 7051;
-  //m_Color["DB"] = 8002;
-
-  m_Title["TB"] = "tribosons";
-  m_Color["TB"] = 7050;
-  //m_Color["TB"] = 8006;
-  
+ 
   m_Title["DBTB"] = "di & tri-bosons";
   m_Color["DBTB"] = 7050;
   //m_Color["DBTB"] = 8006;
@@ -319,8 +330,8 @@ void loadFormatMaps(){
   m_Color["DY"] = 7021;
   //m_Color["DY"] = 8006;
 
-  m_Title["top_Run2"] = "t + X";
-  m_Title["top_Run3"] = "t + X";
+  m_Title["top_Run2"] = "top";
+  m_Title["top_Run3"] = "top";
   m_Title["boson_Run2"] = "boson";
   m_Title["boson_Run3"] = "boson";
   m_Title["diboson_Run2"] = "diboson";
@@ -394,7 +405,7 @@ void loadFormatMaps(){
   m_Title["ttbar_FAKES"] = "t #bar{t} fakes";
   m_Color["ttbar_FAKES"] = 7020;
 
-  m_Title["top_FAKES"] = "t + X fakes";
+  m_Title["top_FAKES"] = "top fakes";
   m_Color["top_FAKES"] = 7020;
 
   m_Title["V_FAKES"] = "Nonprompt";
@@ -433,17 +444,8 @@ void loadFormatMaps(){
   m_Title["ST_all"] = "single top";
   m_Color["ST_all"] = 7010;
 
-  m_Title["diboson"] = "di-bosons";
-  m_Color["diboson"] = 7051;
-
-  m_Title["triboson"] = "tri-bosons";
-  m_Color["triboson"] = 7050;
-
   m_Title["ZDY_all"] = "Z / #gamma* + jets";
   m_Color["ZDY_all"] = 7000;
-
-  m_Title["boson"] = "V + jets";
-  m_Color["boson"] = 7001;
 
   m_Title["Total"] = "Total Bkg";
   m_Color["Total"] = 7000;
@@ -548,15 +550,16 @@ TGraph* TH2ToScatterGraph(const TH2* h, const std::string& name)
     return g;
 }
 
-struct MergedBinGroup {
-    std::string group_name;
-    std::vector<std::string> bin_names;
-};
-
 struct YamlBinPattern {
     std::string name;
     std::vector<std::string> include;
     std::vector<std::string> exclude;
+};
+
+struct MergedBinGroup {
+    std::string group_name;
+    std::vector<std::string> bin_names;
+    YamlBinPattern pattern;
 };
 
 struct YamlProcessPattern {
@@ -674,44 +677,569 @@ static std::string WildcardToRegex(const std::string& pat)
     return r;
 }
 
-double ExtractRISR(const std::string& bin)
-{
-    std::smatch m;
-    // R7 -> 0.70
-    if (std::regex_search(bin, m, std::regex("R(\\d+)(?!\\d)"))) {
-        int v = std::stoi(m[1]);
-        return v / 10.0;
+namespace BinTokens {
+
+    // --- Run: Run2=0, Run3=1 ------------------------------------
+    inline int ExtractRun(const std::string& bin) {
+        if (bin.find("Run3") != std::string::npos) return 1;
+        if (bin.find("Run2") != std::string::npos) return 0;
+        return 99;
     }
-    // R75 -> 0.75
-    if (std::regex_search(bin, m, std::regex("R(\\d{2})"))) {
-        int v = std::stoi(m[1]);
-        return v / 100.0;
+    
+    // --- Lepton multiplicity: 2L=0, 3L=1, 4L=2 -----------------
+    inline int ExtractLepMult(const std::string& bin) {
+        std::smatch m;
+        if (std::regex_search(bin, m, std::regex("_(\\d)L_")))
+            return std::stoi(m[1]) - 2;
+        return 99;
     }
-    return 999;
+    
+    // --- Quality: Bronze=0, Silver=1, Gold=2 ----------------------
+    inline int ExtractQuality(const std::string& bin) {
+        if (bin.find("Bronze") != std::string::npos) return 0;
+        if (bin.find("Silver") != std::string::npos) return 1;
+        if (bin.find("Gold")   != std::string::npos) return 2;
+        return 99;
+    }
+    
+    // --- Jet multiplicity: 0J=0, 1J=1 -----------------
+    inline int ExtractJets(const std::string& bin) {
+        if (bin.find("0J")    != std::string::npos) return 0;
+        if (bin.find("1J")    != std::string::npos) return 1;
+        return 2;   // Incl
+    }
+    
+    // --- PTISR: numeric value after 'P', e.g. P250 ----------
+    inline int ExtractPTISR(const std::string& bin) {
+        std::smatch m;
+        if (std::regex_search(bin, m, std::regex("_P(\\d+)")))
+            return std::stoi(m[1]);
+        return 9999;
+    }
+    
+    // --- RISR: e.g. R7->0.70, R75->0.75, R8->0.80, R9->0.90 -------
+    //     Rule: two-digit token (R75) -> divide by 100
+    //           one-digit token (R7)  -> divide by 10
+    inline double ExtractRISR(const std::string& bin) {
+        std::smatch m;
+        // Try two-digit first (R75, R85)
+        if (std::regex_search(bin, m, std::regex("_R(\\d{2})(?:[^\\d]|$)")))
+            return std::stoi(m[1]) / 100.0;
+        // Single digit (R7, R8, R9)
+        if (std::regex_search(bin, m, std::regex("_R(\\d)(?:[^\\d]|$)")))
+            return std::stoi(m[1]) / 10.0;
+        return 9.99;
+    }
+    
+    // --- Mperp sort key -----------------------------------------
+    //  Sort signal-like bins to the right:
+    //    M<N>  (lower bound only, e.g. M30)  -> use N as key, large first
+    //    M<lo>_<hi> (range)                  -> use lo as key
+    //    Mlt<N>                              -> key = 0 (lowest)
+    //    Btag (no Mperp)                     -> key = -1 (after all Mperp)
+    //
+    //  We want descending lower-edge -> ascending sort key = -lower_edge
+    inline double ExtractMperpSortKey(const std::string& bin) {
+        if (bin.find("Btag") != std::string::npos) return 1e6;  // Btag last
+    
+        std::smatch m;
+        // Mlt<N>  e.g. Mlt15 -> lower edge 0, sort key = -(0) = 0 -> smallest -> leftmost
+        if (std::regex_search(bin, m, std::regex("_Mlt(\\d+)")))
+            return 0.0;
+    
+        // M<lo>_<hi>  e.g. M20_30 -> lower edge 20
+        if (std::regex_search(bin, m, std::regex("_M(\\d+)_(\\d+)")))
+            return -std::stod(m[1]);   // negate: higher lower-edge -> more negative -> sorted first
+    
+        // M<N>  lower-bound only e.g. M30
+        if (std::regex_search(bin, m, std::regex("_M(\\d+)(?=_|$)")))
+            return -std::stod(m[1]);
+    
+        return 500.0;   // unknown Mperp token, before Btag
+    }
+    
+    // --- Flavor/Charge: a simple lexicographic fallback ----------
+    //  OS_ee < OS_emu < OS_mumu < OS_SF < OS_OF < OS_* < SS < Btag
+    inline int ExtractFlavorRank(const std::string& bin) {
+        if (bin.find("OS_ee")   != std::string::npos) return 0;
+        if (bin.find("OS_emu")  != std::string::npos) return 1;
+        if (bin.find("OS_mumu") != std::string::npos) return 2;
+        if (bin.find("OSOFa")   != std::string::npos) return 3;
+        if (bin.find("OSO")     != std::string::npos) return 3;  // other OS_OF variants
+        if (bin.find("OSSFa")   != std::string::npos) return 4;
+        if (bin.find("OSSF")    != std::string::npos) return 4;
+        if (bin.find("OS_")     != std::string::npos) return 5;  // other OS
+        if (bin.find("SSa")     != std::string::npos) return 6;
+        if (bin.find("SS")      != std::string::npos) return 6;
+        if (bin.find("Btag")    != std::string::npos) return 7;
+        return 8;
+    }
+    
+    // --- Composite sort key tuple --------------------------------
+    struct BinKey {
+        int    run;
+        int    lep;
+        int    quality;
+        int    jets;
+        int    ptisr;
+        double risr;
+        double mperp;
+        int    flavor;
+        std::string raw;   // tiebreak
+    };
+    
+    inline BinKey MakeKey(const std::string& bin) {
+        BinKey k;
+        k.run    = ExtractRun(bin);
+        k.lep    = ExtractLepMult(bin);
+        k.quality  = ExtractQuality(bin);
+        k.jets   = ExtractJets(bin);
+        k.ptisr  = ExtractPTISR(bin);
+        k.risr   = ExtractRISR(bin);
+        k.mperp  = ExtractMperpSortKey(bin);
+        k.flavor = ExtractFlavorRank(bin);
+        k.raw    = bin;
+        return k;
+    }
+    
+    inline bool KeyLess(const BinKey& a, const BinKey& b) {
+        if (a.run    != b.run)    return a.run    < b.run;
+        if (a.lep    != b.lep)    return a.lep    < b.lep;
+        if (a.quality  != b.quality)  return a.quality  < b.quality;
+        if (a.jets   != b.jets)   return a.jets   < b.jets;
+        if (a.ptisr  != b.ptisr)  return a.ptisr  < b.ptisr;
+        if (a.risr   != b.risr)   return a.risr   < b.risr;
+        if (a.mperp  != b.mperp)  return a.mperp  < b.mperp;
+        if (a.flavor != b.flavor) return a.flavor < b.flavor;
+        return a.raw < b.raw;
+    }
+
+} // namespace BinTokens
+
+/// Call this after BuildMergedBinGroupsFromYaml to re-sort bin_names.
+bool BinSortFull(const std::string& a, const std::string& b) {
+    return BinTokens::KeyLess(BinTokens::MakeKey(a), BinTokens::MakeKey(b));
 }
 
-double ExtractMperp(const std::string& bin)
-{
-    std::smatch m;
-    if (std::regex_search(bin, m, std::regex("Mlt(\\d+)")))
-        return 0.0; // lowest bin
-    if (std::regex_search(bin, m, std::regex("M(\\d+)")))
-        return std::stod(m[1]);
-    return 999;
+/// Sort a vector of bin name strings in-place.
+void SortBinNames(std::vector<std::string>& bins) {
+    std::sort(bins.begin(), bins.end(), BinSortFull);
 }
 
-bool BinSort(const std::string& a, const std::string& b)
+/// Convenience: sort all groups produced by BuildMergedBinGroupsFromYaml.
+void SortAllGroups(std::vector<MergedBinGroup>& groups) {
+    for (auto& g : groups)
+        SortBinNames(g.bin_names);
+}
+
+namespace BinLabels {
+
+    // Convert a full bin name to a short per-bin x-axis tick label.
+    inline std::string ShortBinLabel(const std::string& bin) {
+        // Btag bins
+        if (bin.find("Btag") != std::string::npos) return "b-tag";
+    
+        std::string label;
+    
+        // Flavor/charge part
+        std::string flav;
+        if      (bin.find("OS_ee")   != std::string::npos) flav = "e^{+}e^{-}";
+        else if (bin.find("OS_emu")  != std::string::npos) flav = "e^{#pm}#mu^{#mp}";
+        else if (bin.find("OS_mumu") != std::string::npos) flav = "#mu^{+}#mu^{-}";
+        else if (bin.find("OSOFa")   != std::string::npos) flav = "e^{#pm}#mu^{#mp}";
+        else if (bin.find("OSSFa")   != std::string::npos) flav = "#it{l}^{+}#it{l}^{-}";
+        else if (bin.find("OS_")     != std::string::npos) flav = "#it{l}^{+}#it{l}^{-}";
+        else if (bin.find("SSa")     != std::string::npos) flav = "#it{l}^{#pm}#it{l}^{#pm}";
+        else if (bin.find("SS")      != std::string::npos) flav = "#it{l}^{#pm}#it{l}^{#pm}";
+    
+        if (!label.empty() && !flav.empty()) return label + " " + flav;
+        if (!label.empty()) return label;
+        if (!flav.empty())  return flav;
+        return bin;   // fallback: show raw name
+    }
+    
+    /// Human-readable tier label strings
+    inline std::string RunLabel(int run) {
+        if (run == 0) return "Run 2";
+        if (run == 1) return "Run 3";
+        return "";
+    }
+    inline std::string LepLabel(int lep) {
+        return std::to_string(lep + 2) + "L";
+    }
+    inline std::string QualityLabel(int quality) {
+        if (quality == 0) return "Bronze";
+        if (quality == 1) return "Silver";
+        if (quality == 2) return "Gold";
+        return "";
+    }
+    inline std::string JetsLabel(int jets) {
+        if (jets == 0) return "0J";
+        if (jets == 1) return "1J";
+        if (jets == 2) return "J-incl";
+        return "";
+    }
+    inline std::string PTISRLabel(int ptisr) {
+        if (ptisr >= 9999) return "";
+        return "p_{T}^{ISR} > " + std::to_string(ptisr);
+    }
+    inline std::string RISRLabel(double risr) {
+        if (risr >= 9.0) return "";
+        std::ostringstream ss;
+        ss << "R_{ISR} > " << risr;
+        return ss.str();
+    }
+} // namespace BinLabels
+
+/// Describes one contiguous span of bins sharing a label at one tier.
+struct BracketSpan {
+    int    binFirst;   // 1-based bin index, inclusive
+    int    binLast;    // 1-based bin index, inclusive
+    std::string label;
+};
+
+/// All the bracket tiers for one plot.
+/// tiers[0] = innermost (Mperp), tiers.back() = outermost (Run)
+/// Only tiers with >1 unique value are included.
+struct BracketTierSet {
+    std::vector<std::vector<BracketSpan>> tiers;
+    std::vector<std::string>              tierNames;  // for debugging
+};
+
+/// Build bracket tiers from the sorted bin list.
+/// Tiers are added only when they have more than one distinct value
+/// across the bins, so a single-Run plot won't waste a row on "Run 2".
+inline BracketTierSet BuildBracketTiers(const std::vector<std::string>& sortedBins) {
+
+    int n = (int)sortedBins.size();
+    if (n == 0) return {};
+
+    // Pre-extract keys
+    std::vector<BinTokens::BinKey> keys;
+    keys.reserve(n);
+    for (auto& b : sortedBins) keys.push_back(BinTokens::MakeKey(b));
+
+    // Helper: build spans for a given tier-value function
+    auto BuildSpans = [&](std::function<std::string(int)> labelFn,
+                          std::function<bool(int,int)>   sameGroup) -> std::vector<BracketSpan>
+    {
+        std::vector<BracketSpan> spans;
+        int start = 0;
+        for (int i = 1; i <= n; ++i) {
+            if (i == n || !sameGroup(i-1, i)) {
+                BracketSpan sp;
+                sp.binFirst = start + 1;
+                sp.binLast  = i;
+                sp.label    = labelFn(start);
+                if (!sp.label.empty())
+                    spans.push_back(sp);
+                start = i;
+            }
+        }
+        return spans;
+    };
+
+    // Helper: skip tier if all spans have same label (only 1 unique value)
+    auto AllSame = [](const std::vector<BracketSpan>& spans) {
+        if (spans.size() <= 1) return true;
+        for (size_t i = 1; i < spans.size(); ++i)
+            if (spans[i].label != spans[0].label) return false;
+        return true;
+    };
+
+    BracketTierSet out;
+
+    // --- Tier: Mperp (innermost) ---
+    {
+        // First pass: collect spans with their raw mperp keys
+        struct MperpSpanRaw { int binFirst; int binLast; double mkey; };
+        std::vector<MperpSpanRaw> rawSpans;
+        int start = 0;
+        for (int i = 1; i <= n; ++i) {
+            bool newGroup = (i == n) || !(
+                keys[i].run   == keys[i-1].run   &&
+                keys[i].lep   == keys[i-1].lep   &&
+                keys[i].quality == keys[i-1].quality  &&
+                keys[i].jets  == keys[i-1].jets   &&
+                keys[i].ptisr == keys[i-1].ptisr  &&
+                keys[i].risr  == keys[i-1].risr   &&
+                keys[i].mperp == keys[i-1].mperp
+            );
+            if (newGroup) {
+                rawSpans.push_back({start + 1, i, keys[start].mperp});
+                start = i;
+            }
+        }
+    
+        // Second pass: build labels now that we can look at neighbours.
+        // Spans are ordered most-signal-like first (most negative mkey first).
+        // The upper bound of span[i] is the lower edge of span[i-1]
+        // (the more signal-like neighbour to its left).
+        std::vector<BracketSpan> spans;
+        for (int s = 0; s < (int)rawSpans.size(); ++s) {
+            double mkey     = rawSpans[s].mkey;
+            // prevMkey: lower edge of the span to the LEFT
+            double prevMkey = (s > 0) ? rawSpans[s-1].mkey : 1e7;
+    
+            BracketSpan sp;
+            sp.binFirst = rawSpans[s].binFirst;
+            sp.binLast  = rawSpans[s].binLast;
+    
+            if (mkey >= 1e5) {
+                sp.label = "b-tag";
+            } else if (mkey == 0.0) {
+                // Mlt bin: upper bound is the lower edge of the previous span
+                if (prevMkey < 0.0) {
+                    std::ostringstream ss;
+                    ss << "M_{#perp}  < " << static_cast<int>(-prevMkey);
+                    sp.label = ss.str();
+                } else {
+                    sp.label = "M_{#perp}  low";
+                }
+            } else {
+                int lo = static_cast<int>(-mkey);
+                if (prevMkey < 0.0) {
+                    int hi = static_cast<int>(-prevMkey);
+                    std::ostringstream ss;
+                    ss << hi << " > M_{#perp}  #geq " << lo;
+                    sp.label = ss.str();
+                } else {
+                    // Leftmost -> no upper bound known
+                    std::ostringstream ss;
+                    ss << "M_{#perp}  #geq " << lo;
+                    sp.label = ss.str();
+                }
+            }
+    
+            if (!sp.label.empty()) spans.push_back(sp);
+        }
+        if (!AllSame(spans)) { out.tiers.push_back(spans); out.tierNames.push_back("Mperp"); }
+    }
+
+    // --- Tier: RISR ---
+    {
+        auto spans = BuildSpans(
+            [&](int i){ return BinLabels::RISRLabel(keys[i].risr); },
+            [&](int i, int j){
+                return keys[i].run == keys[j].run &&
+                       keys[i].lep == keys[j].lep &&
+                       keys[i].quality == keys[j].quality &&
+                       keys[i].jets == keys[j].jets &&
+                       keys[i].ptisr == keys[j].ptisr &&
+                       keys[i].risr  == keys[j].risr;
+            });
+        if (!AllSame(spans)) { out.tiers.push_back(spans); out.tierNames.push_back("RISR"); }
+    }
+
+    // --- Tier: PTISR ---
+    {
+        auto spans = BuildSpans(
+            [&](int i){ return BinLabels::PTISRLabel(keys[i].ptisr); },
+            [&](int i, int j){
+                return keys[i].run == keys[j].run &&
+                       keys[i].lep == keys[j].lep &&
+                       keys[i].quality == keys[j].quality &&
+                       keys[i].jets == keys[j].jets &&
+                       keys[i].ptisr == keys[j].ptisr;
+            });
+        if (!AllSame(spans)) { out.tiers.push_back(spans); out.tierNames.push_back("PTISR"); }
+    }
+
+    // --- Tier: Jets ---
+    {
+        auto spans = BuildSpans(
+            [&](int i){ return BinLabels::JetsLabel(keys[i].jets); },
+            [&](int i, int j){
+                return keys[i].run == keys[j].run &&
+                       keys[i].lep == keys[j].lep &&
+                       keys[i].quality == keys[j].quality &&
+                       keys[i].jets == keys[j].jets;
+            });
+        if (!AllSame(spans)) { out.tiers.push_back(spans); out.tierNames.push_back("Jets"); }
+    }
+
+    // --- Tier: Quality ---
+    {
+        auto spans = BuildSpans(
+            [&](int i){ return BinLabels::QualityLabel(keys[i].quality); },
+            [&](int i, int j){
+                return keys[i].run == keys[j].run &&
+                       keys[i].lep == keys[j].lep &&
+                       keys[i].quality == keys[j].quality;
+            });
+        if (!AllSame(spans)) { out.tiers.push_back(spans); out.tierNames.push_back("Quality"); }
+    }
+
+    // --- Tier: Lepton multiplicity ---
+    {
+        auto spans = BuildSpans(
+            [&](int i){ return BinLabels::LepLabel(keys[i].lep); },
+            [&](int i, int j){
+                return keys[i].run == keys[j].run &&
+                       keys[i].lep == keys[j].lep;
+            });
+        if (!AllSame(spans)) { out.tiers.push_back(spans); out.tierNames.push_back("Lep"); }
+    }
+
+    // --- Tier: Run (outermost) ---
+    {
+        auto spans = BuildSpans(
+            [&](int i){ return BinLabels::RunLabel(keys[i].run); },
+            [&](int i, int j){ return keys[i].run == keys[j].run; });
+        if (!AllSame(spans)) { out.tiers.push_back(spans); out.tierNames.push_back("Run"); }
+    }
+
+    return out;
+}
+
+inline void DrawBinAxisBrackets(TPad*                           pad,
+                                TH1*                            axisHist,
+                                const std::vector<std::string>& sortedBins,
+                                double                          bottomFrac    = 0.95,
+                                double                          tickClearance = -1.0)
 {
-    double rA = ExtractRISR(a);
-    double rB = ExtractRISR(b);
+    if (!pad || !axisHist || sortedBins.empty()) return;
+ 
+    int n = (int)sortedBins.size();
+ 
+    // ---- 1. Replace raw bin labels with short pretty labels ----
+    for (int i = 0; i < n; ++i) {
+        std::string lbl = BinLabels::ShortBinLabel(sortedBins[i]);
+        axisHist->GetXaxis()->SetBinLabel(i + 1, lbl.c_str());
+    }
+ 
+    // Choose label size and orientation based on bin count
+    bool verticalLabels = (n > 30);
+    double labelSize = (n > 40) ? 0.055 : 0.085;
+    if (verticalLabels) axisHist->GetXaxis()->LabelsOption("v");
+    axisHist->GetXaxis()->SetLabelSize(labelSize);
+ 
+    // Must call Update() so ROOT computes axis geometry before we query it
+    pad->cd();
+    pad->Update();
+ 
+    // ---- 2. Build bracket tiers --------------------------------
+    BracketTierSet tiers = BuildBracketTiers(sortedBins);
+    int nTiers = (int)tiers.tiers.size();
+    if (nTiers == 0) return;
+ 
+    // ---- 3. Geometry -------------------------------------------
+    // All coordinates are in NDC of the pad.
+    double padLeft  = pad->GetLeftMargin();
+    double padRight = 1.0 - pad->GetRightMargin();
+    double padBot   = pad->GetBottomMargin();
+ 
+    // --- Compute tick label clearance ---
+    // ROOT draws tick labels starting at the axis line (y = padBot in NDC)
+    // and extending downward.  The label footprint in NDC is approximately:
+    //   vertical labels:   labelSize * longest-label-char-count * aspect
+    //   horizontal labels: labelSize * labelOffset
+    // We estimate conservatively so brackets never clip labels.
+    if (tickClearance < 0.0) {
+        double labelOffset = axisHist->GetXaxis()->GetLabelOffset();
+        if (labelOffset <= 0.0) labelOffset = 0.005;  // ROOT default
+ 
+        if (verticalLabels) {
+            // For vertical (rotated) labels the dominant cost is the text
+            // width rendered as height.  Find longest short label.
+            size_t maxChars = 1;
+            for (auto& b : sortedBins) {
+                size_t l = BinLabels::ShortBinLabel(b).size();
+                if (l > maxChars) maxChars = l;
+            }
+            // Each character -> 0.55 * labelSize in height when vertical,
+            // plus the label offset and a small gap.
+            tickClearance = labelOffset + labelSize * maxChars * 0.55 + 0.01;
+        } else {
+            // Horizontal labels are just one line tall plus offset.
+            tickClearance = labelOffset + labelSize * 1.01 + 0.001;
+        }
+        // Clamp: never eat more than half the bottom margin
+        tickClearance = std::min(tickClearance, 0.5 * padBot);
+    }
+ 
+    // Total bracket zone sits below the tick labels
+    double bracketZoneTop = padBot - tickClearance;   // NDC y just below tick labels
+    double tierHeight     = (bottomFrac * padBot) / nTiers;
+ 
+    // Guard: if tiers would extend below y=0 (outside pad), shrink tierHeight
+    if (bracketZoneTop - nTiers * tierHeight < 0.0)
+        tierHeight = bracketZoneTop / nTiers;
+ 
+    // Bin width in NDC
+    double binWidth = (padRight - padLeft) / n;
+ 
+    // Convert 1-based bin index to NDC x centre
+    auto BinCentreNDC = [&](int bin1) -> double {
+        return padLeft + (bin1 - 0.5) * binWidth;
+    };
+ 
+    // ---- 4. Draw tiers -----------------------------------------
+    // tiers[0] = innermost (Mperp), tiers.back() = outermost (Run)
+    for (int t = 0; t < nTiers; ++t) {
+        double yTop  = bracketZoneTop - t * tierHeight;
+        double yBot  = yTop - tierHeight;
+        // Bracket line sits near the top of this tier's band,
+        // tick feet reach ~25% down into the band
+        double yLine = yTop  - 0.12 * tierHeight;
+        double yTick = yLine - 0.30 * tierHeight;
+ 
+        for (const auto& span : tiers.tiers[t]) {
+            double xL   = BinCentreNDC(span.binFirst) - 0.5 * binWidth + 0.004;
+            double xR   = BinCentreNDC(span.binLast)  + 0.5 * binWidth - 0.004;
+            double xMid = 0.5 * (xL + xR);
+ 
+            // Horizontal bracket line
+            TLine* hline = new TLine(xL, yLine, xR, yLine);
+            hline->SetNDC();
+            hline->SetLineColor(kGray + 2);
+            hline->SetLineWidth(1);
+            hline->Draw();
+ 
+            // Left descender tick
+            TLine* ltick = new TLine(xL, yLine, xL, yTick);
+            ltick->SetNDC();
+            ltick->SetLineColor(kGray + 2);
+            ltick->SetLineWidth(1);
+            ltick->Draw();
+ 
+            // Right descender tick
+            TLine* rtick = new TLine(xR, yLine, xR, yTick);
+            rtick->SetNDC();
+            rtick->SetLineColor(kGray + 2);
+            rtick->SetLineWidth(1);
+            rtick->Draw();
+ 
+            // Label centered in the lower portion of the tier band,
+            // between the bracket line and the band bottom.
+            // Scale text size with span width; outer tiers slightly larger.
+            double spanFrac = xR - xL;
+            double tsize = std::max(0.02, std::min(0.070, spanFrac * 0.60));
+            tsize += 0.004 * t;
+            tsize  = std::min(tsize, 0.075);
+ 
+            // Place label between bracket line and band bottom
+            double yText = 0.5 * (yLine + yBot) - 0.001;
+ 
+            TLatex* tex = new TLatex(xMid, yText, span.label.c_str());
+            tex->SetNDC();
+            tex->SetTextFont(42);
+            tex->SetTextSize(tsize);
+            tex->SetTextAlign(22);  // h-center, v-center
+            tex->Draw();
+        }
+    }
+ 
+    pad->Modified();
+    pad->Update();
+}
 
-    if (rA != rB)
-        return rA < rB;
-
-    double mA = ExtractMperp(a);
-    double mB = ExtractMperp(b);
-
-    return mA < mB;
+std::vector<std::string> RecoverBinLabels(TH1* h) {
+    std::vector<std::string> out;
+    if (!h) return out;
+    for (int i = 1; i <= h->GetNbinsX(); ++i)
+        out.push_back(h->GetXaxis()->GetBinLabel(i));
+    return out;
 }
 
 std::vector<MergedBinGroup>
@@ -722,6 +1250,7 @@ BuildMergedBinGroupsFromYaml(const std::vector<std::string>& allBins,
     for (const auto& b : cfg.bins) {
         MergedBinGroup g;
         g.group_name = b.name;
+        g.pattern    = b;
         for (const auto& bin : allBins) {
             bool included = false;
             for (const auto& inc : b.include) {
@@ -744,7 +1273,7 @@ BuildMergedBinGroupsFromYaml(const std::vector<std::string>& allBins,
                 g.bin_names.push_back(bin);
         }
         if (!g.bin_names.empty()){
-            std::sort(g.bin_names.begin(), g.bin_names.end(), BinSort);
+            SortBinNames(g.bin_names);
             out.push_back(g);
         }
     }
@@ -1101,6 +1630,102 @@ BuildMergedJsonCutflow(
     } // end groups loop
 
     return out;
+}
+
+inline std::string BuildGroupTitle(const YamlBinPattern&           pattern,
+                                   const BracketTierSet&           tiers,
+                                   const std::vector<std::string>& binNames)
+{
+    std::unordered_set<std::string> bracketted(
+        tiers.tierNames.begin(), tiers.tierNames.end());
+
+    const std::string& nm = pattern.name;
+    std::vector<std::string> parts;
+
+    // --- Run ---
+    if (!bracketted.count("Run")) {
+        if      (nm.find("Run3") != std::string::npos) parts.push_back("Run-3");
+        else if (nm.find("Run2") != std::string::npos) parts.push_back("Run-2");
+    }
+
+    // --- Lepton multiplicity ---
+    if (!bracketted.count("Lep")) {
+        std::smatch m;
+        if (std::regex_search(nm, m, std::regex("_(\\d)L(?:_|$)")))
+            parts.push_back(m[1].str() + "L");
+    }
+
+    // --- Grade ---
+    if (!bracketted.count("Quality")) {
+        if      (nm.find("Gold")   != std::string::npos) parts.push_back("Gold");
+        else if (nm.find("Silver") != std::string::npos) parts.push_back("Silver");
+        else if (nm.find("Bronze") != std::string::npos) parts.push_back("Bronze");
+    }
+
+    // --- Jets: check bin_names since some YAML names omit the jet token ---
+    if (!bracketted.count("Jets")) {
+        // Collect jet tokens actually present in the bins
+        std::set<std::string> jetsSeen;
+        for (const auto& bin : binNames) {
+            if      (bin.find("0J")    != std::string::npos) jetsSeen.insert("0J");
+            else if (bin.find("1J")    != std::string::npos) jetsSeen.insert("1J");
+            else if (bin.find("Jincl") != std::string::npos) jetsSeen.insert("J-incl");
+        }
+        // Only emit if all bins agree on jet multiplicity (not a bracket variable)
+        if (jetsSeen.size() == 1)
+            parts.push_back(*jetsSeen.begin());
+        // if size > 1, jets vary across bins bracket handles it (or suppress)
+    }
+
+    // --- PTISR: extract from include patterns ---
+    if (!bracketted.count("PTISR")) {
+        std::set<std::string> ptisrSeen;
+        std::regex re("_P(\\d+)");
+        for (const auto& inc : pattern.include) {
+            std::smatch m;
+            if (std::regex_search(inc, m, re))
+                ptisrSeen.insert(m[1].str());
+        }
+        if (ptisrSeen.size() == 1)
+            parts.push_back("p_{T}^{ISR} > " + *ptisrSeen.begin());
+    }
+
+    // --- RISR: extract from include patterns ---
+    if (!bracketted.count("RISR")) {
+        std::set<int> risrSeen;
+        std::regex re("_R(\\d+)(?=[^\\d]|$)");
+        for (const auto& inc : pattern.include) {
+            std::smatch m;
+            std::string s = inc;
+            // collect all R tokens in this include string
+            while (std::regex_search(s, m, re)) {
+                risrSeen.insert(std::stoi(m[1].str()));
+                s = m.suffix().str();
+            }
+        }
+        if (risrSeen.size() == 1) {
+            int v = *risrSeen.begin();
+            double rval = (v >= 10) ? v / 100.0 : v / 10.0;
+            std::ostringstream ss;
+            ss << "R_{ISR} > " << rval;
+            parts.push_back(ss.str());
+        }
+        // if size > 1, RISR varies bracket tier handles it
+    }
+
+    // --- Btag special case ---
+    // Groups like Run2_Bronze_Btag have no PTISR/RISR tokens at all
+    if (parts.empty() || nm.find("Btag") != std::string::npos) {
+        if (nm.find("Btag") != std::string::npos)
+            parts.push_back("b-tag");
+    }
+
+    std::string title;
+    for (size_t i = 0; i < parts.size(); ++i) {
+        if (i > 0) title += ", ";
+        title += parts[i];
+    }
+    return title;
 }
 
 struct StackPlotInput {

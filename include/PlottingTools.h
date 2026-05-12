@@ -64,10 +64,10 @@ void Plot_Hist2D(TH2* h) {
     l.SetTextSize(0.04);
     // --- Right-aligned (proc title) ---
     l.SetTextAlign(31);   // right-align horizontally, top-align vertically
-    l.DrawLatex(right, 0.91, proc_title.c_str());
+    l.DrawLatex(right, 0.92, proc_title.c_str());
     // --- Left-aligned (CMS label) ---
     l.SetTextAlign(11);   // left-align horizontally, top-align vertically
-    l.DrawLatex(left, 0.91, "#bf{CMS} Simulation Preliminary");
+    l.DrawLatex(left, 0.92, "#bf{CMS} Simulation Preliminary");
     //l.SetTextSize(0.045); l.DrawLatex(0.7,0.04,bin_label.c_str());
     TString pdfName = Form("%spdfs/%s/%s.pdf", outputDir.c_str(), ExtractBinName(title).c_str(), title.c_str());
     gErrorIgnoreLevel = 1001;
@@ -209,7 +209,9 @@ void Plot_Stack(const string& hname,
                 vector<TH1*>& bkgHists,
                 vector<TH1*>& sigHists,
                 TH1* dataHist = nullptr,
-                double signal_boost = 1.0
+                double signal_boost = 1.0,
+                bool isFD_Stack = false,
+                const std::string& groupTitle = ""
                )
 {
     if (bkgHists.empty() && (sigHists.empty() || !dataHist)) return;
@@ -246,6 +248,7 @@ void Plot_Stack(const string& hname,
         h_BKG_ERR->SetMarkerSize(0);
     }
     TH1D* h_ratio_err = nullptr;
+    TH1D* h_ratio     = nullptr;
 
     double pad_ysplit = 0.5;
     string canvas_name = "can_stack_" + hname;
@@ -341,15 +344,15 @@ void Plot_Stack(const string& hname,
         pad_ratio->Draw();
         pad_ratio->cd();
 
-        TH1D* h_ratio = (TH1D*) h_DATA->Clone("h_ratio");
+        h_ratio = (TH1D*) h_DATA->Clone("h_ratio");
         h_ratio->Divide(h_BKG);
         h_ratio->SetTitle("");
         float XLabelSize = 0.08;
-        if (h_ratio->GetNbinsX() > 5) XLabelSize -= 0.001f * (h_ratio->GetNbinsX() - 5);
+        if (h_ratio->GetNbinsX() > 35) XLabelSize -= 0.001f * (h_ratio->GetNbinsX() - 5);
         if (XLabelSize < 0.015) XLabelSize = 0.015;
         h_ratio->GetXaxis()->SetLabelSize(XLabelSize);
         //h_ratio->GetXaxis()->LabelsOption("v");
-        h_ratio->GetXaxis()->SetLabelOffset(0.02);
+        h_ratio->GetXaxis()->SetLabelOffset(0.01);
         h_ratio->GetYaxis()->SetTitle("#frac{data}{bkg model}");
         h_ratio->GetYaxis()->CenterTitle();
         h_ratio->GetYaxis()->SetNdivisions(505);
@@ -463,18 +466,32 @@ void Plot_Stack(const string& hname,
     double mleft  = can->GetLeftMargin();
     double mright = 1.0 - can->GetRightMargin();
     double mtop   = 1.0 - can->GetTopMargin();
-    //double mleft  = pad_top->GetLeftMargin();
-    //double mright = 1.0 - pad_top->GetRightMargin();
-    //double mtop   = 1.0 - pad_top->GetTopMargin();
     
     double xmin = mleft;
     double xmax = mright;
-    double ytop = mtop + 0.012;
+    double ytop = mtop + 0.01;
     
     l.SetTextAlign(11);
-    l.DrawLatex(xmin, ytop, "#bf{#it{CMS}} Internal 13 TeV work-in-progress");
+    l.DrawLatex(xmin, ytop, "#bf{CMS} Simulation Preliminary");
     l.SetTextAlign(31);
-    l.DrawLatex(xmax, ytop, ExtractBinName(string(axisHist->GetName())).c_str()); 
+    const std::string& plotTitle = (isFD_Stack && !groupTitle.empty())
+                               ? groupTitle
+                               : ExtractBinName(string(axisHist->GetName()));
+    l.DrawLatex(xmax, ytop, plotTitle.c_str());
+
+    // FitDiagnostics Labeling
+    if(isFD_Stack) {
+        // Recover bin labels from whichever histogram is actually drawn on
+        // the label pad -> h_ratio when a ratio pad exists, axisHist otherwise.
+        TH1* labelAxisHist = h_ratio ? h_ratio : axisHist;
+        std::vector<std::string> currentSortedBins = RecoverBinLabels(labelAxisHist);
+        TPad* labelPad = pad_ratio ? pad_ratio : (TPad*)can;
+ 
+        // Enlarge bottom margin on the canvas to fit brackets.
+        can->SetBottomMargin(hbo * 1.55);
+        can->Modified();
+        DrawBinAxisBrackets(labelPad, labelAxisHist, currentSortedBins);
+    }
 
     if(outFile){ outFile->cd(); can->Write(0, TObject::kWriteDelete); }
     std::string BinName = SanitizeString(ExtractBinName(bkgHists[0]->GetName()));
@@ -482,24 +499,36 @@ void Plot_Stack(const string& hname,
     TString stackPdf = Form("%spdfs/%s/%s.pdf", outputDir.c_str(), BinName.c_str(), SanitizeString(canvas_name).c_str());
     gErrorIgnoreLevel = 1001; can->SaveAs(stackPdf); gErrorIgnoreLevel = 0;
 
-    delete can; if(h_BKG) delete h_BKG; if(h_DATA) delete h_DATA; if(h_BKG_ERR) delete h_BKG_ERR; if(h_ratio_err) delete h_ratio_err;
+    delete can;
+    if(h_BKG)       delete h_BKG;
+    if(h_DATA)      delete h_DATA;
+    if(h_BKG_ERR)   delete h_BKG_ERR;
+    if(h_ratio)     delete h_ratio;
+    if(h_ratio_err) delete h_ratio_err;
 }
 
-void PlotMergedStack(const std::string& mergedName,
-                     const CombinedBinHists& mergedHists,
+void PlotMergedStack(const std::string&       mergedName,
+                     const CombinedBinHists&  mergedHists,
+                     const YamlBinPattern&    pattern,
+                     const std::vector<std::string>& binNames,
                      double signalBoost = 1.0)
 {
-    // Convert CombinedBinHists -> vectors for Plot_Stack
     StackPlotInput stackInput = ConvertToStackInput(mergedHists);
-
-    // Skip if nothing to plot
     if (stackInput.bkgHists.empty() && stackInput.sigHists.empty() && !stackInput.dataHist) {
         std::cerr << "[warning] Nothing to plot for merged group: " << mergedName << std::endl;
         return;
     }
 
-    // Call the existing Plot_Stack helper
-    Plot_Stack(mergedName, stackInput.bkgHists, stackInput.sigHists, stackInput.dataHist, signalBoost);
+    // Build bracket tiers first so BuildGroupTitle can suppress what's already bracketed
+    TH1* anyHist = !stackInput.bkgHists.empty() ? stackInput.bkgHists.front()
+                 : stackInput.dataHist;
+    std::vector<std::string> sortedBins = anyHist ? RecoverBinLabels(anyHist)
+                                                   : binNames;
+    BracketTierSet tiers = BuildBracketTiers(sortedBins);
+    std::string groupTitle = BuildGroupTitle(pattern, tiers, binNames);
+
+    Plot_Stack(mergedName, stackInput.bkgHists, stackInput.sigHists,
+               stackInput.dataHist, signalBoost, true, groupTitle);
 }
 
 void Plot_Overlay(const std::string& hname,
@@ -551,6 +580,7 @@ void Plot_Overlay(const std::string& hname,
     axisHist->SetLineColor(kBlack);
     axisHist->GetYaxis()->SetTitle("Normalized events");
     axisHist->GetYaxis()->CenterTitle();
+    axisHist->GetXaxis()->CenterTitle();
     axisHist->GetXaxis()->SetLabelSize(0.04);
     axisHist->GetYaxis()->SetLabelSize(0.04);
     axisHist->GetXaxis()->SetTitleSize(0.05);
@@ -583,10 +613,11 @@ void Plot_Overlay(const std::string& hname,
 
         h->SetLineColor(color);
         h->SetLineWidth(3);
-        h->SetFillColorAlpha(color, 0.35);
+        h->SetFillColorAlpha(color, 0.4);
         if(!sigHists.empty()) h->SetLineStyle(7);
         else h->SetLineStyle(0);
-        h->SetFillStyle(3003);
+        if(!sigHists.empty()) h->SetFillStyle(0);
+        else h->SetFillStyle(3002);
         if(do_LogScale) DrawLogSmart(h, "SAME HIST");
         else h->Draw("SAME HIST");
     }
@@ -608,12 +639,9 @@ void Plot_Overlay(const std::string& hname,
         }
 
         h->SetLineColor(color);
-        //if(bkgHists.size() != 0) h->SetLineStyle(7);
-        //if(bkgHists.size() != 0) h->SetLineWidth(4);
-        //else h->SetLineWidth(3);
         h->SetLineWidth(3);
-        h->SetFillColorAlpha(color, 0.35);
-        h->SetFillStyle(3003);
+        h->SetFillColorAlpha(color, 0.4);
+        h->SetFillStyle(3002);
         if(do_LogScale) DrawLogSmart(h, "SAME HIST");
         else h->Draw("SAME HIST");
     }
@@ -640,7 +668,9 @@ void Plot_Overlay(const std::string& hname,
     leg->SetLineColor(kWhite);
 
     for (auto* h : bkgHists)
-        if (h)
+        if (h && sigHists.empty())
+            leg->AddEntry(h, m_Title[ExtractProcName(h->GetName())].c_str(), "LF");
+        else
             leg->AddEntry(h, m_Title[ExtractProcName(h->GetName())].c_str(), "L");
 
     for (auto* h : sigHists)
@@ -650,7 +680,7 @@ void Plot_Overlay(const std::string& hname,
                 proc = makeSMSChiTitle(proc);
             else
                 proc = m_Title[proc];
-            leg->AddEntry(h, proc.c_str(), "L");
+            leg->AddEntry(h, proc.c_str(), "LF");
         }
 
     if (dataHist) leg->AddEntry(dataHist, "Data", "EP");
@@ -663,23 +693,21 @@ void Plot_Overlay(const std::string& hname,
     l.SetTextSize(textsize);
     l.SetTextAlign(11);
     l.DrawLatex(can->GetLeftMargin(), 0.943,
-                "#bf{#it{CMS}} Internal 13 TeV work-in-progress");
+                "#bf{CMS} Simulation Preliminary");
 
     l.SetTextAlign(31);
-    l.DrawLatex(1.0 - can->GetRightMargin(), 0.943,
-                ExtractBinName(axisHist->GetName()).c_str());
+    //l.DrawLatex(1.0 - can->GetRightMargin(), 0.943, ExtractBinName(axisHist->GetName()).c_str());
 
     // ------------------------
     // Save PDF
     // ------------------------
     if (outFile) { outFile->cd(); can->Write(0, TObject::kWriteDelete); }
     std::string BinName = SanitizeString(ExtractBinName(axisHist->GetName()));
+    if(do_LogScale) canvas_name += "_log";
     TString pdf = Form("%spdfs/%s/%s.pdf",
                        outputDir.c_str(),
                        BinName.c_str(),
                        SanitizeString(canvas_name).c_str());
-    if(do_LogScale) pdf += "_log";
-
     gErrorIgnoreLevel = 1001;
     can->SaveAs(pdf);
     gErrorIgnoreLevel = 0;
@@ -838,7 +866,7 @@ void Plot_CutFlow(const std::string &hname,
     l.SetNDC();
     l.SetTextSize(0.04);
     l.SetTextFont(42);
-    l.DrawLatex(0.09,0.943,"#bf{#it{CMS}} Internal 13 TeV Simulation");
+    l.DrawLatex(0.09,0.943,"#bf{CMS} Simulation Preliminary");
     l.DrawLatex(0.69,0.943,ExtractBinName(string(axisHist->GetName())).c_str());
 
     // Save

@@ -146,7 +146,7 @@ void Make_SF_Plot(const string& fname, const TriggerConfig& cfg,
     string json_data   = JSON_Key(cfg.bin, cfg.data_sample);
     string plot_name   = "SF_" + cfg.bin + "_" + cfg.data_sample;
 
-    TLegend* leg = new TLegend(0.65, 0.05, 0.85, 0.3);
+    TLegend* leg = new TLegend(0.55, 0.05, 0.89, 0.3);
     leg->SetTextFont(132); leg->SetTextSize(0.045);
     if (invert_colors) {
         leg->SetTextColor(kWhite); leg->SetFillColor(kBlack);

@@ -143,7 +143,7 @@ int main(int argc, char* argv[]) {
         bool isCutFlow = (groupKey.find("__CutFlow") != string::npos);
         
         // Separate histograms
-        vector<TH1*> bkgHists, sigHists, emptyHists, bkgHists_Run2, bkgHists_Run3, sigHists_Run2, sigHists_Run3;
+        vector<TH1*> bkgHists, sigHists, smsHists, emptyHists, bkgHists_Run2, bkgHists_Run3, sigHists_Run2, sigHists_Run3;
         vector<string> bkgProcs, sigProcs, bkgProcs_Run2, bkgProcs_Run3, sigProcs_Run2, sigProcs_Run3;
         TH1* dataHist = nullptr;
         
@@ -168,6 +168,7 @@ int main(int argc, char* argv[]) {
                 || proc.find("SMS") != std::string::npos || proc.find("Cascades") != std::string::npos) {
                 sigHists.push_back(h);
                 sigProcs.push_back(proc); 
+                if(proc.find("SMS") != std::string::npos) smsHists.push_back(h);
                 if(proc.find("Run2") != std::string::npos){
                     sigHists_Run2.push_back(h);
                     sigProcs_Run2.push_back(proc); 
@@ -184,7 +185,6 @@ int main(int argc, char* argv[]) {
         SortByYield(bkgHists_Run3, bkgProcs_Run3);
 
         for (const auto& kv : h2ByVarProcToBin) {
-            const std::string& varProcKey = kv.first;
             const auto& binMap = kv.second;
         
             std::vector<TH2*> bkg2D, sig2D, sms2D;
@@ -204,6 +204,7 @@ int main(int argc, char* argv[]) {
             }
         
             //if (!bkg2D.empty() || !sig2D.empty()) {
+            //    const std::string& varProcKey = kv.first;
             //    Plot_Hist2DScatter(varProcKey + "_byBin_combined", bkg2D, sig2D);
             //    Plot_Hist2DScatter(varProcKey + "_byBin_bkg", bkg2D, {});
             //    Plot_Hist2DScatter(varProcKey + "_byBin_sig", {}, sig2D);
@@ -262,6 +263,8 @@ int main(int argc, char* argv[]) {
                 Plot_Overlay(groupKey+"_bkg", bkgHists, emptyHists, nullptr, true);
                 Plot_Overlay(groupKey+"_sig", emptyHists, sigHists, nullptr);
                 Plot_Overlay(groupKey+"_sig", emptyHists, sigHists, nullptr, true);
+                // Only sms
+                Plot_Overlay(groupKey+"_sms", emptyHists, smsHists, nullptr);
                 // Only Run2 bkg
                 Plot_Stack(groupKey+"_bkgRun2", bkgHists_Run2, emptyHists, nullptr, 1.0);
                 Plot_Overlay(groupKey+"_bkgRun2", bkgHists_Run2, emptyHists, nullptr);

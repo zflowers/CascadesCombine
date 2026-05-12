@@ -1,9 +1,6 @@
 // PlotFitDiagnostics.cpp
 #include "PlottingTools.h"
 
-// ----------------------
-// Main
-// ----------------------
 int main(int argc, char* argv[]) {
 
     string inputFile;
@@ -11,9 +8,6 @@ int main(int argc, char* argv[]) {
     string patternFile;
     loadFormatMaps();
 
-    // ----------------------
-    // Parse CLI args
-    // ----------------------
     for(int i=1;i<argc;++i){
         string arg = argv[i];
 
@@ -54,18 +48,12 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // ----------------------
-    // Open ROOT file
-    // ----------------------
     TFile* fIn = TFile::Open(inputFile.c_str(), "READ");
     if(!fIn || fIn->IsZombie()){
         cerr<<"[ERROR PlotFitDiagnostics] Cannot open file: "<<inputFile<<endl;
         return 1;
     }
 
-    // ----------------------
-    // Get the requested tree
-    // ----------------------
     TDirectory* fitDir = (TDirectory*)fIn->Get(treeName.c_str());
     if(!fitDir){
         cerr<<"[ERROR PlotFitDiagnostics] Tree "<<treeName<<" not found in file.\n";
@@ -80,9 +68,6 @@ int main(int argc, char* argv[]) {
     gStyle->SetOptStat(0);
     gStyle->SetOptTitle(0);
 
-    // ----------------------
-    // STEP 1 Scan all bins inside the tree
-    // ----------------------
     vector<string> allBinNames;
     {
         TIter next(fitDir->GetListOfKeys());
@@ -95,37 +80,17 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // ----------------------
-    // STEP 2 Determine which bins the user wants to merge
-    // ----------------------
-    map<string, vector<string>> mergedBinGroups;
-    if(patternFile.empty()) {std::cout << "[PlotFitDiagnostics] NEED TO SUPPLY CONFIG FILE FOR RULES\n"; return 1;}
     YamlConfig cfg = LoadYamlConfig(patternFile);
+    if (patternFile.empty()) { std::cout << "[PlotFitDiagnostics] NEED TO SUPPLY CONFIG FILE FOR RULES\n"; return 1; }
     vector<MergedBinGroup> groups = BuildMergedBinGroupsFromYaml(allBinNames, cfg);
-    for (const auto& g : groups){
-        mergedBinGroups[g.group_name] = g.bin_names;
+    for (const auto& g : groups)
         gSystem->mkdir((outputDir+"pdfs/"+SanitizeString(g.group_name)).c_str(), kTRUE);
+    
+    for (const auto& grp : groups) {
+        CombinedBinHists mergedHists = LoadAndCombineBinHists(
+            fitDir, grp.group_name, grp.bin_names, cfg.process_merges);
+        PlotMergedStack(treeName+"_"+grp.group_name, mergedHists, grp.pattern, grp.bin_names);
     }
-
-    // ----------------------
-    // STEP 3 Loop over each merged group
-    // ----------------------
-    for(const auto& grp : mergedBinGroups){
-
-        const string& mergedName = grp.first;
-        const vector<string>& binsToCombine = grp.second;
-
-        // ----------------------
-        // STEP 4 Retrieve per-process hist for each bin
-        // ----------------------
-        CombinedBinHists mergedHists = LoadAndCombineBinHists(fitDir, mergedName, binsToCombine, cfg.process_merges);
-
-        // ----------------------
-        // STEP 5 Produce stack plot for this merged group
-        // ----------------------
-        PlotMergedStack(treeName+"_"+mergedName, mergedHists);
-    }
-
     cout << "[PlotFitDiagnostics] All plots saved in: " << outputDir << endl;
     return 0;
 }

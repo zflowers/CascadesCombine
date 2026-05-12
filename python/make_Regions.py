@@ -459,12 +459,7 @@ def build_bins_4l(era, ptisr_tag=100):
         risr_cond = format_rISR_condition(r)
 
         for mcat in ("Ml", "Mh"):
-            if mcat == "Mh":
-                mcut = f"Mperp_LEP>={r['Mh']};"
-                mname = "Mh"
-            else:
-                mcut = f"Mperp_LEP<{r['Ml_hi']};"
-                mname = "Ml"
+            mcut, mname = make_mperp_cut_tokens(r, mcat)
 
             for nb in NLEP_B_SPLITS_4L:
                 raw_key = f"Bin4L_Gold_{r['name']}_{mname}"
