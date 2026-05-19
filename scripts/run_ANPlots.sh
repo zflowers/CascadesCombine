@@ -22,7 +22,7 @@ run_all() {
     fi
 }
 SLEEP=70
-VERSION="v15"
+VERSION="v16"
 make clean
 make all -j 8
 

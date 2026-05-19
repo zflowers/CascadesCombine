@@ -357,6 +357,7 @@ def write_submit_file(
     lumi=1,
     make_json=True,
     make_root=True,
+    make_cutflow=False,
     dryrun=False,
     bins_cfg: str = ""
 ):
@@ -555,6 +556,8 @@ def write_submit_file(
             if job.get("hist_yaml"):
                 # pass only the basename; condor will transfer the YAML into the job CWD
                 args_list.append(f"--hist-yaml {Path(job['hist_yaml']).name}")
+            if make_cutflow:
+                args_list.append("--cuflow")
 
         # Add single-line cut fields
         if cuts_flat:
@@ -758,6 +761,7 @@ def main():
     parser.add_argument("--make-json", action="store_true", help="Enable JSON output")
     parser.add_argument("--make-root", action="store_true", help="Enable ROOT/histogram output")
     parser.add_argument("--hist-yaml", default="", help="Path to histogram YAML config (used if --make-root)")
+    parser.add_argument("--cutflow", action="store_true", help="Create cutflow histogram")
     parser.add_argument("--dryrun", "--dry-run", action="store_true")
     parser.add_argument("--run-dir", type=str, default="condor", help="Directory to hold condor outputs (per-run condor dir)")
     args = parser.parse_args()
@@ -840,6 +844,7 @@ def main():
         lumi=args.lumi,
         make_json=args.make_json,
         make_root=args.make_root,
+        make_cutflow=args.make_cutflow,
         dryrun=args.dryrun,
         bins_cfg=args.bins_cfg
     )

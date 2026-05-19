@@ -30,6 +30,7 @@ static void usage(const char* me) {
     std::cerr << "  --hist-yaml        YAML file defining histogram expressions\n";
     std::cerr << "  --proc-yaml        YAML file containg processes inputted for ST lookup\n";
     std::cerr << "  --json             Write JSON yields\n";
+    std::cerr << "  --cutflow          Make cut flow plot\n";
     std::cerr << "  --signal           Mark this process as signal\n";
     std::cerr << "  --sig-type TYPE    Specify signal type (sets --signal automatically)\n";
     std::cerr << "  --lumi VALUE       Integrated luminosity to scale yields\n";
@@ -47,7 +48,7 @@ int main(int argc, char** argv) {
     std::string binArg, cutsStr, lepCutsStr, predefCutsStr, userCutsStr, rootFilePath, outputJsonPathBase, processName, sampleName, histOutputPath, cutsMultiStr, lepCutsMultiStr, predefCutsMultiStr, userCutsMultiStr, binsCfgName;
     std::vector<std::string> smsFilters;
     std::vector<std::string> systematicNames;
-    bool isSignal=false, doHist=false, doJSON=false;
+    bool isSignal=false, doHist=false, doJSON=false, doCutFlow=false;
     std::string sigType, histYamlPath, procYamlPath;
     double Lumi=1.0;
 
@@ -69,6 +70,7 @@ int main(int argc, char** argv) {
         {"hist-yaml", required_argument, 0, 'y'},
         {"proc-yaml", required_argument, 0, 'd'},
         {"json", no_argument, 0, 'J'},
+        {"cutflow", no_argument, 0, 'F'},
         {"root-output", required_argument, 0, 'O'},
         {"cuts-multi", required_argument, 0, 'M'},
         {"lep-cuts-multi", required_argument, 0, 'L'},
@@ -100,6 +102,7 @@ int main(int argc, char** argv) {
             case 'y': histYamlPath=optarg; break;
             case 'd': procYamlPath=optarg; break;
             case 'J': doJSON=true; break;
+            case 'F': doCutFlow=true; break;
             case 'O': histOutputPath = optarg; break;
             case 'M': cutsMultiStr = optarg; break;
             case 'L': lepCutsMultiStr = optarg; break;
@@ -556,99 +559,101 @@ int main(int argc, char** argv) {
                     keep[i] = ok ? 1 : 0;
                     if (ok) plans_fill[i] = plans_val[i]; // propagate validated plan
                 } 
-                // --- FILL CUTFLOW per-process ---
-                // create separate cutflows per FAKE-split process
-                std::vector<std::pair<std::string, ROOT::RDF::RNode>> proc_nodes_val;
-                if (!runFAKES) {
-                    proc_nodes_val.emplace_back(key, node);
-                } else {
-                    // Create mutually exclusive filters
-                    auto node_HFelec = node.Filter("isHFFakeElectron");
-                    auto node_HFmuon = node.Filter("isHFFakeMuon");
-                    auto node_LFelec = node.Filter("isLFFakeElectron");
-                    auto node_LFmuon = node.Filter("isLFFakeMuon");
-                    auto node_clean  = node.Filter("hasNoFake");
+                if(doCutFlow) {
+                    // --- FILL CUTFLOW per-process ---
+                    // create separate cutflows per FAKE-split process
+                    std::vector<std::pair<std::string, ROOT::RDF::RNode>> proc_nodes_val;
+                    if (!runFAKES) {
+                        proc_nodes_val.emplace_back(key, node);
+                    } else {
+                        // Create mutually exclusive filters
+                        auto node_HFelec = node.Filter("isHFFakeElectron");
+                        auto node_HFmuon = node.Filter("isHFFakeMuon");
+                        auto node_LFelec = node.Filter("isLFFakeElectron");
+                        auto node_LFmuon = node.Filter("isLFFakeMuon");
+                        auto node_clean  = node.Filter("hasNoFake");
     
-                    proc_nodes_val.emplace_back(key_HFelec, node_HFelec);
-                    proc_nodes_val.emplace_back(key_HFmuon, node_HFmuon);
-                    proc_nodes_val.emplace_back(key_LFelec, node_LFelec);
-                    proc_nodes_val.emplace_back(key_LFmuon, node_LFmuon);
-                    proc_nodes_val.emplace_back(key, node_clean);
-                }
-    
-                for (auto &pkv : proc_nodes_val) {
-                    const std::string &proc_key = pkv.first;
-                    ROOT::RDF::RNode  proc_node = pkv.second;
-    
-                    // Book CutFlow specific to (bin, proc_key)
-                    std::string cfName = bin + "__" + map_key_to_process[proc_key] + "__CutFlow";
-                    auto hist_CutFlow = std::make_shared<TH1D>(cfName.c_str(), cfName.c_str(), Ncuts+1, 0.0, double(Ncuts+1));
-                    hist_CutFlow->Sumw2();
-    
-                    // Total events from proc_node (no cuts)
-                    auto sumW_NoCuts = proc_node.Sum<double>("weight_scaled");
-                    auto sumW2_NoCuts = proc_node.Sum<double>("weight_sq_scaled");
-                    double sW_NoCuts = sumW_NoCuts.GetValue();
-                    double sW2_NoCuts = sumW2_NoCuts.GetValue();
-                    double err_NoCuts = (sW2_NoCuts>=0)?std::sqrt(sW2_NoCuts):0.0;
-                    hist_CutFlow->SetBinContent(0, sW_NoCuts);
-                    hist_CutFlow->SetBinError(0, err_NoCuts);
-                    hist_CutFlow->SetBinContent(1, sW_NoCuts);
-                    hist_CutFlow->SetBinError(1, err_NoCuts);
-                    hist_CutFlow->GetXaxis()->SetBinLabel(1, "NTUPLES");
-    
-                    if (Ncuts > 1) {
-                        // local make_pass_name uses proc_key to avoid column name collisions across procs
-                        auto make_pass_name = [&](int i){ return map_key_to_process[proc_key] + std::string("_pass_") + std::to_string(i+1); };
-    
-                        ROOT::RDF::RNode defNode = proc_node;
-                        for (int i = 0; i < Ncuts; ++i) {
-                            std::string expr = (i == 0) ? ("(" + cutsOrdered[0] + ")")
-                                                        : (make_pass_name(i-1) + " && (" + cutsOrdered[i] + ")");
-                            defNode = defNode.Define(make_pass_name(i), expr);
-                        }
-
-                        // npassed = sum(pass_i ? 1 : 0)
-                        std::string npassedExpr;
-                        for (int i = 0; i < Ncuts; ++i) {
-                            if (i) npassedExpr += " + ";
-                            npassedExpr += "(" + make_pass_name(i) + " ? 1 : 0)";
-                        }
-                        std::string npassed_col = map_key_to_process[proc_key] + std::string("_npassed");
-                        defNode = defNode.Define(npassed_col, npassedExpr);
-    
-                        // Fill Histo1D once (use .c_str())
-                        std::string histNameTmp = map_key_to_process[proc_key] + std::string("_npassed_tmp");
-                        auto r_h_npassed = defNode.Histo1D(
-                            { histNameTmp.c_str(), histNameTmp.c_str(), Ncuts, 0.0, double(Ncuts) },
-                            npassed_col.c_str(),
-                            "weight_scaled"
-                        );
-    
-                        // Execute once and get the TH1D by value (copy)
-                        auto h_npassed = r_h_npassed.GetValue();
-    
-                        // Fill classical CutFlow: bins 1..Ncuts = events surviving cut1..cutN
-                        for (int i = 2; i <= Ncuts+1; ++i) {
-                            double surv = 0.0;
-                            double surv_err2 = 0.0;
-                            for (int k = i-1; k <= Ncuts; ++k) {
-                                int rootBin = k + 1;
-                                double c = h_npassed.GetBinContent(rootBin);
-                                double e = h_npassed.GetBinError(rootBin);
-                                surv += c;
-                                surv_err2 += e * e;
-                            }
-                            hist_CutFlow->SetBinContent(i, surv);
-                            hist_CutFlow->SetBinError(i, std::sqrt(surv_err2));
-    
-                            std::string lbl = (i - 2 < (int)cutLabels.size()) ? cutLabels[i - 2] : ("Cut_" + std::to_string(i-1));
-                            hist_CutFlow->GetXaxis()->SetBinLabel(i, lbl.c_str());
-                        }
+                        proc_nodes_val.emplace_back(key_HFelec, node_HFelec);
+                        proc_nodes_val.emplace_back(key_HFmuon, node_HFmuon);
+                        proc_nodes_val.emplace_back(key_LFelec, node_LFelec);
+                        proc_nodes_val.emplace_back(key_LFmuon, node_LFmuon);
+                        proc_nodes_val.emplace_back(key, node_clean);
                     }
-                    // --- Write CutFlow for this proc (bin) ---
-                    hist_CutFlow->Write();
-                } // end proc_nodes_val loop
+    
+                    for (auto &pkv : proc_nodes_val) {
+                        const std::string &proc_key = pkv.first;
+                        ROOT::RDF::RNode  proc_node = pkv.second;
+    
+                        // Book CutFlow specific to (bin, proc_key)
+                        std::string cfName = bin + "__" + map_key_to_process[proc_key] + "__CutFlow";
+                        auto hist_CutFlow = std::make_shared<TH1D>(cfName.c_str(), cfName.c_str(), Ncuts+1, 0.0, double(Ncuts+1));
+                        hist_CutFlow->Sumw2();
+    
+                        // Total events from proc_node (no cuts)
+                        auto sumW_NoCuts = proc_node.Sum<double>("weight_scaled");
+                        auto sumW2_NoCuts = proc_node.Sum<double>("weight_sq_scaled");
+                        double sW_NoCuts = sumW_NoCuts.GetValue();
+                        double sW2_NoCuts = sumW2_NoCuts.GetValue();
+                        double err_NoCuts = (sW2_NoCuts>=0)?std::sqrt(sW2_NoCuts):0.0;
+                        hist_CutFlow->SetBinContent(0, sW_NoCuts);
+                        hist_CutFlow->SetBinError(0, err_NoCuts);
+                        hist_CutFlow->SetBinContent(1, sW_NoCuts);
+                        hist_CutFlow->SetBinError(1, err_NoCuts);
+                        hist_CutFlow->GetXaxis()->SetBinLabel(1, "NTUPLES");
+    
+                        if (Ncuts > 1) {
+                            // local make_pass_name uses proc_key to avoid column name collisions across procs
+                            auto make_pass_name = [&](int i){ return map_key_to_process[proc_key] + std::string("_pass_") + std::to_string(i+1); };
+    
+                            ROOT::RDF::RNode defNode = proc_node;
+                            for (int i = 0; i < Ncuts; ++i) {
+                                std::string expr = (i == 0) ? ("(" + cutsOrdered[0] + ")")
+                                                            : (make_pass_name(i-1) + " && (" + cutsOrdered[i] + ")");
+                                defNode = defNode.Define(make_pass_name(i), expr);
+                            }
+
+                            // npassed = sum(pass_i ? 1 : 0)
+                            std::string npassedExpr;
+                            for (int i = 0; i < Ncuts; ++i) {
+                                if (i) npassedExpr += " + ";
+                                npassedExpr += "(" + make_pass_name(i) + " ? 1 : 0)";
+                            }
+                            std::string npassed_col = map_key_to_process[proc_key] + std::string("_npassed");
+                            defNode = defNode.Define(npassed_col, npassedExpr);
+    
+                            // Fill Histo1D once (use .c_str())
+                            std::string histNameTmp = map_key_to_process[proc_key] + std::string("_npassed_tmp");
+                            auto r_h_npassed = defNode.Histo1D(
+                                { histNameTmp.c_str(), histNameTmp.c_str(), Ncuts, 0.0, double(Ncuts) },
+                                npassed_col.c_str(),
+                                "weight_scaled"
+                            );
+    
+                            // Execute once and get the TH1D by value (copy)
+                            auto h_npassed = r_h_npassed.GetValue();
+    
+                            // Fill classical CutFlow: bins 1..Ncuts = events surviving cut1..cutN
+                            for (int i = 2; i <= Ncuts+1; ++i) {
+                                double surv = 0.0;
+                                double surv_err2 = 0.0;
+                                for (int k = i-1; k <= Ncuts; ++k) {
+                                    int rootBin = k + 1;
+                                    double c = h_npassed.GetBinContent(rootBin);
+                                    double e = h_npassed.GetBinError(rootBin);
+                                    surv += c;
+                                    surv_err2 += e * e;
+                                }
+                                hist_CutFlow->SetBinContent(i, surv);
+                                hist_CutFlow->SetBinError(i, std::sqrt(surv_err2));
+    
+                                std::string lbl = (i - 2 < (int)cutLabels.size()) ? cutLabels[i - 2] : ("Cut_" + std::to_string(i-1));
+                                hist_CutFlow->GetXaxis()->SetBinLabel(i, lbl.c_str());
+                            }
+                        }
+                        // --- Write CutFlow for this proc (bin) ---
+                        hist_CutFlow->Write();
+                    } // end proc_nodes_val loop
+                } // end CutFlow
     
                 // --- FILL PASS per-bin ---
                 ROOT::RDF::RNode fill_node = base_node_fill;

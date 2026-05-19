@@ -2597,6 +2597,9 @@ SampleTool::SampleTool(){
   MasterDict["top"] = mergeEntriesList(
     MasterDict,
     {
+      "top_2026",
+      "top_2025",
+      "top_2024",
       "top_2023BPix",
       "top_2023",
       "top_2022EE",
@@ -2625,6 +2628,9 @@ SampleTool::SampleTool(){
   MasterDict["boson"] = mergeEntriesList(
     MasterDict,
     {
+      "boson_2026",
+      "boson_2025",
+      "boson_2024",
       "boson_2023BPix",
       "boson_2023",
       "boson_2022EE",
@@ -2639,6 +2645,9 @@ SampleTool::SampleTool(){
   MasterDict["diboson"] = mergeEntriesList(
     MasterDict,
     {
+      "DB_2026",
+      "DB_2025",
+      "DB_2024",
       "DB_2023BPix",
       "DB_2023",
       "DB_2022EE",
@@ -2653,6 +2662,9 @@ SampleTool::SampleTool(){
   MasterDict["triboson"] = mergeEntriesList(
     MasterDict,
     {
+      "TB_2026",
+      "TB_2025",
+      "TB_2024",
       "TB_2023BPix",
       "TB_2023",
       "TB_2022EE",
@@ -2833,10 +2845,14 @@ SampleTool::SampleTool(){
   MasterDict["bkg"] = mergeEntriesList(
     MasterDict,
     {
-      "top",
-      "boson",
-      "diboson",
-      "triboson",
+      "top_Run2",
+      "boson_Run2",
+      "diboson_Run2",
+      "triboson_Run2",
+      "top_Run3",
+      "boson_Run3",
+      "diboson_Run3",
+      "triboson_Run3",
     }
   );
 

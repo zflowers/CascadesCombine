@@ -287,6 +287,7 @@ void Plot_Stack(const string& hname,
         axisHist->GetYaxis()->SetTitleOffset(0.45);
         axisHist->GetYaxis()->SetLabelSize(0.05);
     }
+    axisHist->GetYaxis()->SetNdivisions(303);
 
     for (size_t i = 0; i < bkgHists.size(); ++i) { TH1* h = bkgHists[i]; if (!h || h->GetEntries()==0) continue;
         h->SetLineColor(kBlack); h->SetLineWidth(1);

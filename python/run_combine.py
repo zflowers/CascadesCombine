@@ -47,6 +47,8 @@ def parse_args():
                    help="Number of bins to group per job")
     p.add_argument("--max-materialize", type=str, default="100",
                    help="max number of jobs per cluster to condor")
+    p.add_argument("--cutflow", action="store_true",
+                   help="make cutflow hist")
     return p.parse_args()
 
 def early_setup(run_name, existing_BFI_name: Optional[str]=None, existing_BF_name: Optional[str]=None):
@@ -384,7 +386,7 @@ def build_binaries():
         raise
     print("[run_combine] Build finished.", flush=True)
 
-def submit_jobs(config, processes, hist, make_json=False, make_root=False, lumi="1.", run_dir=None, bins_per_job=1, max_materialize="100"):
+def submit_jobs(config, processes, hist, make_json=False, make_root=False, make_cutflow=False, lumi="1.", run_dir=None, bins_per_job=1, max_materialize="100"):
     """
     Runs submitJobs.py to generate Condor scripts.
     """
@@ -400,6 +402,8 @@ def submit_jobs(config, processes, hist, make_json=False, make_root=False, lumi=
         if hist:
             cmd.append("--hist-yaml")
             cmd.append(hist)
+            if make_cutflow:
+                cmd.append("--cutflow")
     print(f"[run_combine] Running submitJobs.py with cmd: {' '.join(cmd)}", flush=True)
     subprocess.run(cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
@@ -747,6 +751,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
 
     make_impacts = args.make_impacts
     make_FD = args.make_FD
+    cutflow = False
 
     # Disallow passing both existing-BFI-dir and existing-BF-dir
     if args.existing_BFI_dir and args.existing_BF_dir:
@@ -848,6 +853,8 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             processes_cfg = "config/process_cfgs/processes_stress.yaml"
             make_json = True
             make_root = True
+        if args.make_root and args.cutflow:
+            cutflow = True
 
     # Acquire lock (blocking or not)
     lock = None
@@ -926,6 +933,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
             hist=hist_cfg,
             make_json=make_json,
             make_root=make_root,
+            make_cutflow=cutflow,
             lumi=lumi,
             run_dir=condor_dir,
             bins_per_job=args.bins_per_job,

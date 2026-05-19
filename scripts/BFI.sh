@@ -37,6 +37,7 @@ LUMI=""
 SMS_FILTERS=""
 JSON_FLAG=""
 HIST_FLAG=""
+CUTFLOW_FLAG=""
 
 # --- Parse arguments (updated to collect repeated per-bin flags) ---
 while [[ $# -gt 0 ]]; do
@@ -48,6 +49,7 @@ while [[ $# -gt 0 ]]; do
         # Standalone flags
         --json) JSON_FLAG="--json"; shift;;
         --hist) HIST_FLAG="--hist"; shift;;
+        --cutflow) CUTFLOW_FLAG="--cutflow"; shift;;
 
         # Output filenames
         --json-output) OUTPUT_JSON=$(clean_arg "$2"); shift 2;;
@@ -136,6 +138,7 @@ CMD="./BFI_condor.x --bin \"$BIN\" --file \"$ROOTFILE\""
 [[ -n "$OUTPUT_HIST" ]] && CMD="$CMD --root-output \"$OUTPUT_HIST\""
 [[ -n "$HIST_YAML" ]] && CMD="$CMD --hist-yaml \"$HIST_YAML\""
 [[ -n "$PROC_YAML" ]] && CMD="$CMD --proc-yaml \"$PROC_YAML\""
+[[ -n "$CUTFLOW_FLAG" ]] && CMD="$CMD $CUTFLOW_FLAG"
 
 # If we collected per-bin repeated cuts, pass them as a single --cuts-multi argument (||| as delimiter)
 if [[ -n "$CUTS_MULTI" ]]; then
@@ -172,8 +175,6 @@ fi
 [[ -n "$SMS_FILTERS" ]] && CMD="$CMD --sms-filters \"$SMS_FILTERS\""
 
 # --- Echo and run ---
-#echo "Running BFI_condor.x with command:"
-#echo "$CMD"
 eval "$CMD"
 
 echo "[$(date)] Job finished."

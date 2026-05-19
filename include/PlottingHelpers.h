@@ -1181,7 +1181,7 @@ inline void DrawBinAxisBrackets(TPad* pad, TH1* axisHist, const std::vector<std:
         double yTop  = bracketZoneTop - t * tierHeight;
         double yBot  = yTop - tierHeight;
         double yLine = yTop - 0.12 * tierHeight;
-        double yTick = yLine - 0.30 * tierHeight;
+        double yTick = yLine + 0.30 * tierHeight;
 
         bool isTopMost = (t == 0);
         bool suppressTopLine = allSameTickLabel && isTopMost;

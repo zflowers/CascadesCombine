@@ -39,7 +39,7 @@ def _sanitize_for_condor_dir(s: str) -> str:
     return re.sub(r'[^A-Za-z0-9_.-]', '_', s)[:200]
 
 def build_command(bin_name, cfg, bkg_processes, sig_processes, data_processes, sms_filters,
-                  make_json, make_root, hist_yaml, lumi, run_dir,
+                  make_json, make_root, make_cutflow, hist_yaml, lumi, run_dir,
                   bins_cfg_path, max_materialize):
     """
     bins_cfg_path: path to the per-group JSON file that contains bin->cfg mapping.
@@ -75,6 +75,8 @@ def build_command(bin_name, cfg, bkg_processes, sig_processes, data_processes, s
         cmd.append("--make-root")
     if hist_yaml:
         cmd += ["--hist-yaml", hist_yaml]
+    if make_root and make_cutflow:
+        cmd.append("--cutflow")
 
     return cmd
 
@@ -97,6 +99,7 @@ def main():
     parser.add_argument("--processes-cfg", type=str, default="config/process_cfgs/processes.yaml")
     parser.add_argument("--make-json", action="store_true", help="Pass --make-json to createJobs.py")
     parser.add_argument("--make-root", action="store_true", help="Pass --make-root to createJobs.py")
+    parser.add_argument("--cutflow", action="store_true", help="Pass --cutflow to createJobs.py")
     parser.add_argument("--hist-yaml", type=str, default=None, help="YAML file for histogram configuration")
     parser.add_argument("--run-dir", type=str, default="condor", help="directory for holding condor info")
     parser.add_argument("--bins-per-job", type=int, default=1,
@@ -112,7 +115,7 @@ def main():
         make_json = True
     if make_root: # extra resources for histograms
         global memory, cpus
-        memory = "1 GB"
+        memory = "2 GB"
         cpus = "1"
 
     dryrun = args.dryrun
@@ -190,7 +193,7 @@ def main():
 
         # Build command that points createJobs at the group JSON (not the full master YAML)
         cmd = build_command(combined_bin_arg, first_cfg, bkg_processes, sig_processes, data_processes, sms_filters,
-                            make_json, make_root, args.hist_yaml, lumi, run_dir, group_json_path, max_materialize)
+                            make_json, make_root, args.make_cutflow, args.hist_yaml, lumi, run_dir, group_json_path, max_materialize)
         jobs.append(cmd)
 
     # Write a bins_list file so downstream tools know the exact condor work dirs created.
