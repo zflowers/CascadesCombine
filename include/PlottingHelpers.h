@@ -452,13 +452,13 @@ void loadFormatMaps(){
   m_Title["Total Bkg"] = "Total Bkg";
   m_Color["Total Bkg"] = 7000;
 
-  m_Title["bkg"] = "Bkg";
+  m_Title["bkg"] = "Background";
   m_Color["bkg"] = 7001;
 
-  m_Title["bkg_Run2"] = "Bkg";
+  m_Title["bkg_Run2"] = "Background";
   m_Color["bkg_Run2"] = 7001;
 
-  m_Title["bkg_Run3"] = "Bkg";
+  m_Title["bkg_Run3"] = "Background";
   m_Color["bkg_Run3"] = 7001;
 
   m_Title["Data_2016"] = "Data";
@@ -991,7 +991,7 @@ inline BracketTierSet BuildBracketTiers(const std::vector<std::string>& sortedBi
                 // Mlt bin: upper bound is the lower edge of the previous span
                 if (prevMkey < 0.0) {
                     std::ostringstream ss;
-                    ss << "M_{#perp}  < " << static_cast<int>(-prevMkey);
+                    ss << "M_{#perp}  [0," << static_cast<int>(-prevMkey) << "]";
                     sp.label = ss.str();
                 } else {
                     sp.label = "M_{#perp}  low";
@@ -1001,12 +1001,13 @@ inline BracketTierSet BuildBracketTiers(const std::vector<std::string>& sortedBi
                 if (prevMkey < 0.0) {
                     int hi = static_cast<int>(-prevMkey);
                     std::ostringstream ss;
-                    ss << hi << " > M_{#perp}  #geq " << lo;
+                    //ss << hi << " > M_{#perp}  > " << lo;
+                    ss << "M_{#perp}  [" << hi << "," << lo << "]";
                     sp.label = ss.str();
                 } else {
                     // Leftmost -> no upper bound known
                     std::ostringstream ss;
-                    ss << "M_{#perp}  #geq " << lo;
+                    ss << "M_{#perp}  > " << lo;
                     sp.label = ss.str();
                 }
             }
@@ -1435,6 +1436,7 @@ CombinedBinHists LoadAndCombineBinHists(TDirectory* treeDir,
             if (!obj->InheritsFrom(TH1::Class())) continue;
             TH1* h = dynamic_cast<TH1*>(obj);
             if (!h) continue;
+            if (h->GetBinContent(1) < 1.e-7) continue; // skip procs with small (~0) yields
     
             // Skip totals/covariance
             if (procName.find("total") != std::string::npos) continue;
