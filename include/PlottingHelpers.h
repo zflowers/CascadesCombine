@@ -749,12 +749,12 @@ namespace BinTokens {
     
         // M<lo>_<hi>  e.g. M20_30 -> lower edge 20
         if (std::regex_search(bin, m, std::regex("_M(\\d+)_(\\d+)")))
-            return -std::stod(m[1]);   // negate: higher lower-edge -> more negative -> sorted first
-    
+            return std::stod(m[1]);    // higher lower-edge -> larger key -> sorted last (right)
+      
         // M<N>  lower-bound only e.g. M30
         if (std::regex_search(bin, m, std::regex("_M(\\d+)(?=_|$)")))
-            return -std::stod(m[1]);
-    
+            return std::stod(m[1]); 
+
         return 500.0;   // unknown Mperp token, before Btag
     }
     
@@ -970,68 +970,96 @@ inline BracketTierSet BuildBracketTiers(const std::vector<std::string>& sortedBi
                 start = i;
             }
         }
-    
-        // Second pass: build labels now that we can look at neighbours.
-        // Spans are ordered most-signal-like first (most negative mkey first).
-        // The upper bound of span[i] is the lower edge of span[i-1]
-        // (the more signal-like neighbour to its left).
+        // Second pass: build labels using the RIGHT neighbour as the upper bound.
+        // After the sort reversal, spans go low-mperp (left) -> high-mperp (right),
+        // so span[s+1].mkey gives the lower edge of the next bin = upper bound of span[s].
         std::vector<BracketSpan> spans;
         for (int s = 0; s < (int)rawSpans.size(); ++s) {
             double mkey     = rawSpans[s].mkey;
-            // prevMkey: lower edge of the span to the LEFT
-            double prevMkey = (s > 0) ? rawSpans[s-1].mkey : 1e7;
-    
+            // nextMkey: lower edge of the span to the RIGHT
+            double nextMkey = (s + 1 < (int)rawSpans.size()) ? rawSpans[s + 1].mkey : 1e7;
+ 
             BracketSpan sp;
             sp.binFirst = rawSpans[s].binFirst;
             sp.binLast  = rawSpans[s].binLast;
-    
+ 
             if (mkey >= 1e5) {
                 sp.label = "b-tag";
             } else if (mkey == 0.0) {
-                // Mlt bin: upper bound is the lower edge of the previous span
-                if (prevMkey < 0.0) {
+                // Mlt bin: upper bound is the lower edge of the next (right) span
+                if (nextMkey > 0.0 && nextMkey < 1e5) {
                     std::ostringstream ss;
-                    ss << "M_{#perp}  [0," << static_cast<int>(-prevMkey) << "]";
+                    ss << "M_{#perp}  [0," << static_cast<int>(nextMkey) << "]";
                     sp.label = ss.str();
                 } else {
                     sp.label = "M_{#perp}  low";
                 }
             } else {
-                int lo = static_cast<int>(-mkey);
-                if (prevMkey < 0.0) {
-                    int hi = static_cast<int>(-prevMkey);
+                int lo = static_cast<int>(mkey);
+                if (nextMkey > 0.0 && nextMkey < 1e5) {
+                    int hi = static_cast<int>(nextMkey);
                     std::ostringstream ss;
-                    //ss << hi << " > M_{#perp}  > " << lo;
-                    ss << "M_{#perp}  [" << hi << "," << lo << "]";
+                    ss << "M_{#perp}  [" << lo << "," << hi << "]";
                     sp.label = ss.str();
                 } else {
-                    // Leftmost -> no upper bound known
+                    // Rightmost span -> no upper bound known
                     std::ostringstream ss;
                     ss << "M_{#perp}  > " << lo;
                     sp.label = ss.str();
                 }
             }
-    
+ 
             if (!sp.label.empty()) spans.push_back(sp);
-        }
+        } 
         if (!AllSame(spans)) { out.tiers.push_back(spans); out.tierNames.push_back("Mperp"); }
     }
 
     // --- Tier: RISR ---
     {
-        auto spans = BuildSpans(
-            [&](int i){ return BinLabels::RISRLabel(keys[i].risr); },
-            [&](int i, int j){
-                return keys[i].run == keys[j].run &&
-                       keys[i].lep == keys[j].lep &&
-                       keys[i].quality == keys[j].quality &&
-                       keys[i].jets == keys[j].jets &&
-                       keys[i].ptisr == keys[j].ptisr &&
-                       keys[i].risr  == keys[j].risr;
-            });
+        // First pass: collect raw spans with their risr value (same grouping as before)
+        struct RisrSpanRaw { int binFirst; int binLast; double risr; };
+        std::vector<RisrSpanRaw> rawRisr;
+        {
+            int start = 0;
+            for (int i = 1; i <= n; ++i) {
+                bool newGroup = (i == n) || !(
+                    keys[i].run    == keys[i-1].run    &&
+                    keys[i].lep    == keys[i-1].lep    &&
+                    keys[i].quality == keys[i-1].quality &&
+                    keys[i].jets   == keys[i-1].jets   &&
+                    keys[i].ptisr  == keys[i-1].ptisr  &&
+                    keys[i].risr   == keys[i-1].risr
+                );
+                if (newGroup) {
+                    rawRisr.push_back({start + 1, i, keys[start].risr});
+                    start = i;
+                }
+            }
+        }
+ 
+        // Second pass: build range labels.
+        // Bins are sorted low-RISR -> high-RISR (ascending), so the upper bound
+        // of span[s] is the lower bound of span[s+1]; the last span caps at 1.0.
+        std::vector<BracketSpan> spans;
+        for (int s = 0; s < (int)rawRisr.size(); ++s) {
+            double lo = rawRisr[s].risr;
+            if (lo >= 9.0) continue;   // sentinel — no RISR token
+ 
+            double hi = (s + 1 < (int)rawRisr.size() && rawRisr[s+1].risr < 9.0)
+                        ? rawRisr[s+1].risr
+                        : 1.0;          // implicit upper bound
+ 
+            std::ostringstream ss;
+            ss << "R_{ISR}  [" << lo << "," << hi << "]";
+ 
+            BracketSpan sp;
+            sp.binFirst = rawRisr[s].binFirst;
+            sp.binLast  = rawRisr[s].binLast;
+            sp.label    = ss.str();
+            spans.push_back(sp);
+        }
         if (!AllSame(spans)) { out.tiers.push_back(spans); out.tierNames.push_back("RISR"); }
     }
-
     // --- Tier: PTISR ---
     {
         auto spans = BuildSpans(
