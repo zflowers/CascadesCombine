@@ -52,6 +52,8 @@ map<string,string> m_Title;
 map<string,int>    m_Color;
 SampleTool tool;
 
+std::string CMS_label = "#bf{CMS} Preliminary";
+
 double hlo = 0.09;
 double hhi = 0.22;
 double hbo = 0.15;
@@ -896,6 +898,7 @@ struct BracketSpan {
     int    binFirst;   // 1-based bin index, inclusive
     int    binLast;    // 1-based bin index, inclusive
     std::string label;
+    std::string sideLabel; // label drawn on side of bracket
 };
 
 /// All the bracket tiers for one plot.
@@ -982,6 +985,7 @@ inline BracketTierSet BuildBracketTiers(const std::vector<std::string>& sortedBi
             BracketSpan sp;
             sp.binFirst = rawSpans[s].binFirst;
             sp.binLast  = rawSpans[s].binLast;
+            if (s == 0) sp.sideLabel = "M_{#perp}";
  
             if (mkey >= 1e5) {
                 sp.label = "b-tag";
@@ -989,7 +993,7 @@ inline BracketTierSet BuildBracketTiers(const std::vector<std::string>& sortedBi
                 // Mlt bin: upper bound is the lower edge of the next (right) span
                 if (nextMkey > 0.0 && nextMkey < 1e5) {
                     std::ostringstream ss;
-                    ss << "M_{#perp}  [0," << static_cast<int>(nextMkey) << "]";
+                    ss << "[0," << static_cast<int>(nextMkey) << "]";
                     sp.label = ss.str();
                 } else {
                     sp.label = "M_{#perp}  low";
@@ -999,12 +1003,12 @@ inline BracketTierSet BuildBracketTiers(const std::vector<std::string>& sortedBi
                 if (nextMkey > 0.0 && nextMkey < 1e5) {
                     int hi = static_cast<int>(nextMkey);
                     std::ostringstream ss;
-                    ss << "M_{#perp}  [" << lo << "," << hi << "]";
+                    ss << "[" << lo << "," << hi << "]";
                     sp.label = ss.str();
                 } else {
                     // Rightmost span -> no upper bound known
                     std::ostringstream ss;
-                    ss << "M_{#perp}  > " << lo;
+                    ss << " > " << lo;
                     sp.label = ss.str();
                 }
             }
@@ -1069,12 +1073,13 @@ inline BracketTierSet BuildBracketTiers(const std::vector<std::string>& sortedBi
                     hi = rawRisr[s+1].risr;
             } 
             std::ostringstream ss;
-            ss << "R_{ISR}  [" << lo << "," << hi << "]";
+            ss << "[" << lo << "," << hi << "]";
  
             BracketSpan sp;
-            sp.binFirst = rawRisr[s].binFirst;
-            sp.binLast  = rawRisr[s].binLast;
-            sp.label    = ss.str();
+            sp.binFirst  = rawRisr[s].binFirst;
+            sp.binLast   = rawRisr[s].binLast;
+            sp.label     = ss.str();
+            if (s == 0) sp.sideLabel = "R_{ISR}";
             spans.push_back(sp);
         }
         if (!AllSame(spans)) { out.tiers.push_back(spans); out.tierNames.push_back("RISR"); }
@@ -1141,15 +1146,16 @@ inline BracketTierSet BuildBracketTiers(const std::vector<std::string>& sortedBi
             if (hasNext && sameParent) {
         
                 int hi = rawPTISR[s + 1].ptisr;
-                ss << "p_{T}^{ISR}  [" << lo << "," << hi << "]";
+                ss << "[" << lo << "," << hi << "]";
         
             } else {
         
                 // Terminal PTISR bin within this parent grouping
-                ss << "p_{T}^{ISR} #geq " << lo;
+                ss << " > " << lo;
             }
         
             sp.label = ss.str();
+            if (s == 0) sp.sideLabel = "p_{T}^{ISR}";
             spans.push_back(sp);
         }
 
@@ -1341,6 +1347,15 @@ inline void DrawBinAxisBrackets(TPad* pad, TH1* axisHist, const std::vector<std:
             TLatex* tex = new TLatex(xMid, yText, span.label.c_str());
             tex->SetNDC(); tex->SetTextFont(42); tex->SetTextSize(tsize);
             tex->SetTextAlign(22); tex->Draw();
+            if (!span.sideLabel.empty()) {
+                double xSide = padLeft - 0.01;
+                TLatex* side = new TLatex(xSide, yText, span.sideLabel.c_str());
+                side->SetNDC();
+                side->SetTextFont(42);
+                side->SetTextSize(tsize);
+                side->SetTextAlign(32);
+                side->Draw();
+            }
         }
     }
 
