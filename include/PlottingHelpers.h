@@ -853,6 +853,8 @@ namespace BinLabels {
         else if (bin.find("OS_")     != std::string::npos) flav = "#it{l}^{+}#it{l}^{-}";
         else if (bin.find("SSa")     != std::string::npos) flav = "#it{l}^{#pm}#it{l}^{#pm}";
         else if (bin.find("SS")      != std::string::npos) flav = "#it{l}^{#pm}#it{l}^{#pm}";
+        else if (bin.find("_31")     != std::string::npos) flav = "Lep Split 3+1";
+        else if (bin.find("_22")     != std::string::npos) flav = "Lep Split 2+2";
     
         if (!label.empty() && !flav.empty()) return label + " " + flav;
         if (!label.empty()) return label;
