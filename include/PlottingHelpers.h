@@ -1043,12 +1043,31 @@ inline BracketTierSet BuildBracketTiers(const std::vector<std::string>& sortedBi
         std::vector<BracketSpan> spans;
         for (int s = 0; s < (int)rawRisr.size(); ++s) {
             double lo = rawRisr[s].risr;
-            if (lo >= 9.0) continue;   // sentinel — no RISR token
+            if (lo >= 9.0) continue;   // sentinel -> no RISR token
  
-            double hi = (s + 1 < (int)rawRisr.size() && rawRisr[s+1].risr < 9.0)
-                        ? rawRisr[s+1].risr
-                        : 1.0;          // implicit upper bound
- 
+            double hi = 1.0;
+            
+            if (s + 1 < (int)rawRisr.size()) {
+            
+                bool sameParent =
+                    keys[rawRisr[s].binFirst - 1].run     ==
+                    keys[rawRisr[s+1].binFirst - 1].run &&
+            
+                    keys[rawRisr[s].binFirst - 1].lep     ==
+                    keys[rawRisr[s+1].binFirst - 1].lep &&
+            
+                    keys[rawRisr[s].binFirst - 1].quality ==
+                    keys[rawRisr[s+1].binFirst - 1].quality &&
+            
+                    keys[rawRisr[s].binFirst - 1].jets    ==
+                    keys[rawRisr[s+1].binFirst - 1].jets &&
+            
+                    keys[rawRisr[s].binFirst - 1].ptisr   ==
+                    keys[rawRisr[s+1].binFirst - 1].ptisr;
+            
+                if (sameParent && rawRisr[s+1].risr < 9.0)
+                    hi = rawRisr[s+1].risr;
+            } 
             std::ostringstream ss;
             ss << "R_{ISR}  [" << lo << "," << hi << "]";
  
@@ -1062,18 +1081,83 @@ inline BracketTierSet BuildBracketTiers(const std::vector<std::string>& sortedBi
     }
     // --- Tier: PTISR ---
     {
-        auto spans = BuildSpans(
-            [&](int i){ return BinLabels::PTISRLabel(keys[i].ptisr); },
-            [&](int i, int j){
-                return keys[i].run == keys[j].run &&
-                       keys[i].lep == keys[j].lep &&
-                       keys[i].quality == keys[j].quality &&
-                       keys[i].jets == keys[j].jets &&
-                       keys[i].ptisr == keys[j].ptisr;
-            });
-        if (!AllSame(spans)) { out.tiers.push_back(spans); out.tierNames.push_back("PTISR"); }
-    }
+        // First pass: collect raw spans with their ptisr value
+        struct PTISRSpanRaw { int binFirst; int binLast; int ptisr; };
+        std::vector<PTISRSpanRaw> rawPTISR;
 
+        {
+            int start = 0;
+            for (int i = 1; i <= n; ++i) {
+                bool newGroup = (i == n) || !(
+                    keys[i].run    == keys[i-1].run    &&
+                    keys[i].lep    == keys[i-1].lep    &&
+                    keys[i].quality == keys[i-1].quality &&
+                    keys[i].jets   == keys[i-1].jets   &&
+                    keys[i].ptisr  == keys[i-1].ptisr
+                );
+
+                if (newGroup) {
+                    rawPTISR.push_back({start + 1, i, keys[start].ptisr});
+                    start = i;
+                }
+            }
+        }
+
+        // Second pass: build labels using next PTISR threshold
+        std::vector<BracketSpan> spans;
+
+        for (int s = 0; s < (int)rawPTISR.size(); ++s) {
+        
+            int lo = rawPTISR[s].ptisr;
+            if (lo >= 9999) continue;
+        
+            BracketSpan sp;
+            sp.binFirst = rawPTISR[s].binFirst;
+            sp.binLast  = rawPTISR[s].binLast;
+        
+            std::ostringstream ss;
+        
+            bool hasNext =
+                (s + 1 < (int)rawPTISR.size()) &&
+                (rawPTISR[s + 1].ptisr < 9999);
+        
+            bool sameParent = false;
+        
+            if (hasNext) {
+                sameParent =
+                    keys[rawPTISR[s].binFirst - 1].run     ==
+                    keys[rawPTISR[s+1].binFirst - 1].run &&
+        
+                    keys[rawPTISR[s].binFirst - 1].lep     ==
+                    keys[rawPTISR[s+1].binFirst - 1].lep &&
+        
+                    keys[rawPTISR[s].binFirst - 1].quality ==
+                    keys[rawPTISR[s+1].binFirst - 1].quality &&
+        
+                    keys[rawPTISR[s].binFirst - 1].jets    ==
+                    keys[rawPTISR[s+1].binFirst - 1].jets;
+            }
+        
+            if (hasNext && sameParent) {
+        
+                int hi = rawPTISR[s + 1].ptisr;
+                ss << "p_{T}^{ISR}  [" << lo << "," << hi << "]";
+        
+            } else {
+        
+                // Terminal PTISR bin within this parent grouping
+                ss << "p_{T}^{ISR} #geq " << lo;
+            }
+        
+            sp.label = ss.str();
+            spans.push_back(sp);
+        }
+
+        if (!AllSame(spans)) {
+            out.tiers.push_back(spans);
+            out.tierNames.push_back("PTISR");
+        }
+    }
     // --- Tier: Jets ---
     {
         auto spans = BuildSpans(
