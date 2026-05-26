@@ -1257,8 +1257,8 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                         "-b",
                         f'macro/CreatePrePostCSV.C("{FD_file}","{FD_file.replace(".Test.root","CSV.csv")}")'
                     ]
+                    print("[run_combine] Making csv/zscore files with command:", " ".join(FD_CSV_cmd), flush=True)
                     subprocess.run(FD_CSV_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
-
 
     # Clean up tar
     if not args.only_yields and make_json:

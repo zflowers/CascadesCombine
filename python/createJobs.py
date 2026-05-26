@@ -844,7 +844,7 @@ def main():
         lumi=args.lumi,
         make_json=args.make_json,
         make_root=args.make_root,
-        make_cutflow=args.make_cutflow,
+        make_cutflow=args.cutflow,
         dryrun=args.dryrun,
         bins_cfg=args.bins_cfg
     )
