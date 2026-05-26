@@ -513,6 +513,7 @@ void PlotMergedStack(const std::string&       mergedName,
                      const CombinedBinHists&  mergedHists,
                      const YamlBinPattern&    pattern,
                      const std::vector<std::string>& binNames,
+                     const std::unordered_map<std::string, const YamlBinPattern*>& binLookup,
                      double signalBoost = 1.0)
 {
     StackPlotInput stackInput = ConvertToStackInput(mergedHists);
@@ -527,7 +528,7 @@ void PlotMergedStack(const std::string&       mergedName,
     std::vector<std::string> sortedBins = anyHist ? RecoverBinLabels(anyHist)
                                                    : binNames;
     BracketTierSet tiers = BuildBracketTiers(sortedBins);
-    std::string groupTitle = BuildGroupTitle(pattern, tiers, binNames);
+    std::string groupTitle = BuildGroupTitle(pattern, tiers, binNames, binLookup);
 
     Plot_Stack(mergedName, stackInput.bkgHists, stackInput.sigHists,
                stackInput.dataHist, signalBoost, true, groupTitle);

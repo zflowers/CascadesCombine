@@ -1762,9 +1762,48 @@ BuildMergedJsonCutflow(
     return out;
 }
 
+// PTISR helpers
+std::string SwapPTISRTag(const std::string& name)
+{
+    if (name.find("Low_PTISR") != std::string::npos)
+        return std::regex_replace(name, std::regex("Low_PTISR"), "High_PTISR");
+
+    if (name.find("High_PTISR") != std::string::npos)
+        return std::regex_replace(name, std::regex("High_PTISR"), "Low_PTISR");
+
+    return "";
+}
+
+bool ExtractPTISRBoundary(const YamlBinPattern& p, int& out)
+{
+    std::regex re("_P(\\d+)");
+    std::smatch m;
+
+    for (const auto& inc : p.include) {
+        if (std::regex_search(inc, m, re)) {
+            out = std::stoi(m[1].str());
+            return true;
+        }
+    }
+    return false;
+}
+
+std::unordered_map<std::string, const YamlBinPattern*> BuildBinLookup(const YamlConfig& cfg)
+{
+    std::unordered_map<std::string, const YamlBinPattern*> map;
+
+    for (const auto& b : cfg.bins) {
+        map[b.name] = &b;
+    }
+
+    return map;
+}
+
 inline std::string BuildGroupTitle(const YamlBinPattern&           pattern,
                                    const BracketTierSet&           tiers,
-                                   const std::vector<std::string>& binNames)
+                                   const std::vector<std::string>& binNames,
+                                   const std::unordered_map<std::string, const YamlBinPattern*>& binLookup
+                                  )
 {
     std::unordered_set<std::string> bracketted(
         tiers.tierNames.begin(), tiers.tierNames.end());
@@ -1807,17 +1846,32 @@ inline std::string BuildGroupTitle(const YamlBinPattern&           pattern,
         // if size > 1, jets vary across bins bracket handles it (or suppress)
     }
 
-    // --- PTISR: extract from include patterns ---
+    // --- PTISR ---
     if (!bracketted.count("PTISR")) {
-        std::set<std::string> ptisrSeen;
+        std::smatch m;
         std::regex re("_P(\\d+)");
-        for (const auto& inc : pattern.include) {
-            std::smatch m;
-            if (std::regex_search(inc, m, re))
-                ptisrSeen.insert(m[1].str());
+        int selfBoundary = -1;
+        auto itSelf = binLookup.find(nm);
+        if (itSelf != binLookup.end()) {
+            ExtractPTISRBoundary(*itSelf->second, selfBoundary);
         }
-        if (ptisrSeen.size() == 1)
-            parts.push_back("p_{T}^{ISR} > " + *ptisrSeen.begin());
+        std::string partnerName = SwapPTISRTag(nm);
+        int partnerBoundary = -1;
+        auto it = binLookup.find(partnerName);
+        if (it != binLookup.end()) {
+            ExtractPTISRBoundary(*it->second, partnerBoundary);
+        }
+        std::ostringstream ss;
+        if (selfBoundary > 0 && partnerBoundary > 0 && selfBoundary < partnerBoundary) {
+            int low  = std::min(selfBoundary, partnerBoundary);
+            int high = std::max(selfBoundary, partnerBoundary);
+            ss << "p_{T}^{ISR}: [" << low << ", " << high << "]";
+            parts.push_back(ss.str());
+        }
+        else if (selfBoundary > 0) {
+            ss << "p_{T}^{ISR} > " << selfBoundary;
+            parts.push_back(ss.str());
+        }
     }
 
     // --- RISR: extract from include patterns ---
@@ -2370,3 +2424,4 @@ void DrawLogSmart(T* obj, const char* opt = "",
                   double fallbackMin = 1e-1, double rangeFactor = 1.2) {
     DrawLog(obj, opt, fallbackMin, rangeFactor);
 }
+
