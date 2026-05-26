@@ -12,7 +12,7 @@ processes:
   sig:
     - Cascades
     - SMS_TChiWZ
-    - SMS_TChiWZpreUL
+    #- SMS_TChiWZpreUL
 
 sms_filters:
   - SMS_300_290

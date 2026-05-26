@@ -552,6 +552,10 @@ void BuildFit::AddRaSys(const stringlist& binset, const stringlist& procs){
 void BuildFit::AddPTISRSys(const stringlist& binset, const stringlist& procs){
     cb.SetFlag("filters-use-regex", true);
 
+    // overall Run2 to Run3 PTISR factor
+    cb.cp().process(procs).bin({".*Run3.*_P.*"})
+        .AddSyst(cb, "Run3_PTISR", "lnN", SystMap<>::init(1.20));
+
     cb.cp().process(procs).bin({".*Run2.*2L.*0J.*P350.*"})
         .AddSyst(cb, "Run2_PTISR_2L_0J", "lnN", SystMap<>::init(1.10));
     cb.cp().process(procs).bin({".*Run2.*2L.*1J.*P350.*"})
@@ -674,14 +678,14 @@ void BuildFit::AddSameSignSys(const stringlist& binset, const stringlist& procs)
 
 void BuildFit::AddOSSFSys(const stringlist& binset, const stringlist& procs){
     cb.SetFlag("filters-use-regex", true);
-    cb.cp().process(procs).bin({".*Run2.*2L.*_OSSF.*"})
-        .AddSyst(cb, "Run2_OSSF_2L", "lnN", SystMap<>::init(1.10));
-    cb.cp().process(procs).bin({".*Run2.*3L.*_OSSF.*"})
-        .AddSyst(cb, "Run2_OSSF_3L", "lnN", SystMap<>::init(1.10));
-    cb.cp().process(procs).bin({".*Run3.*2L.*_OSSF.*"})
-        .AddSyst(cb, "Run3_OSSF_2L", "lnN", SystMap<>::init(1.10));
-    cb.cp().process(procs).bin({".*Run3.*3L.*_OSSF.*"})
-        .AddSyst(cb, "Run3_OSSF_3L", "lnN", SystMap<>::init(1.10));
+    cb.cp().process(procs).bin({".*Run2.*2L.*_OS_emu*"})
+        .AddSyst(cb, "Run2_OSOF_2L", "lnN", SystMap<>::init(1.10));
+    cb.cp().process(procs).bin({".*Run2.*3L.*_OS_emu.*"})
+        .AddSyst(cb, "Run2_OSOF_3L", "lnN", SystMap<>::init(1.10));
+    cb.cp().process(procs).bin({".*Run3.*2L.*_OS_emu.*"})
+        .AddSyst(cb, "Run3_OSOF_2L", "lnN", SystMap<>::init(1.10));
+    cb.cp().process(procs).bin({".*Run3.*3L.*_OS_emu.*"})
+        .AddSyst(cb, "Run3_OSOF_3L", "lnN", SystMap<>::init(1.10));
     cb.SetFlag("filters-use-regex", false);
 }
 
@@ -778,7 +782,8 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
     cb.FilterProcs([](ch::Process const *p){ return p->rate() <= 0; });
 
     // 6) Add Systematics
-    //cb.cp().SetAutoMCStats(cb, 0.); // Turn on autoMCstats
+    // Turn on autoMCstats
+    //cb.cp().SetAutoMCStats(cb, 0.); // Second arg is event threshold
     // All non-triboson processes -> rateParam
     AddFakeFamiliesAsSharedNorms(
         truebkgprocs,

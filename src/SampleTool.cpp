@@ -19,7 +19,7 @@ SampleTool::SampleTool(){
   LumiDict["Summer23BPix_130X"] = 9.451;
   LumiDict["Summer24_130X"] = 108.95;
   LumiDict["Summer25_130X"] = 110.73;
-  LumiDict["Summer26_130X"] = 50.;
+  LumiDict["Summer26_130X"] = 30.;
 
   double RUN2_TOTAL_LUMI = 0.;
   RUN2_TOTAL_LUMI += LumiDict["Summer20UL16APV_106X"];
@@ -34,7 +34,7 @@ SampleTool::SampleTool(){
   RUN3_TOTAL_LUMI += LumiDict["Summer23BPix_130X"]; 
   RUN3_TOTAL_LUMI += LumiDict["Summer24_130X"]; 
   RUN3_TOTAL_LUMI += LumiDict["Summer25_130X"]; 
-  RUN3_TOTAL_LUMI += LumiDict["Summer26_130X"]; 
+  //RUN3_TOTAL_LUMI += LumiDict["Summer26_130X"]; 
 
   // Scale lumis since not all samples available yet
   std::vector<std::string> run3Eras = {
@@ -106,6 +106,8 @@ SampleTool::SampleTool(){
 
   LumiDict["Summer22_130X_Cascades"] = RUN2_TOTAL_LUMI + RUN3_TOTAL_LUMI;
   LumiDict["Summer23BPix_130X_Cascades"] = RUN2_TOTAL_LUMI + RUN3_TOTAL_LUMI;
+
+  // File paths start here
 
   MasterDict["ttbar_2026"] = {
     pathPrefix + "Summer26_130X/TTG-1Jets_PTG-100to200_TuneCP5_13p6TeV_amcatnloFXFXold-pythia8_Summer23BPix_Summer26_130X.root",
@@ -2545,7 +2547,7 @@ SampleTool::SampleTool(){
   MasterDict["top_Run3"] = mergeEntriesList(
     MasterDict,
     {
-      "top_2026",
+      //"top_2026",
       "top_2025",
       "top_2024",
       "top_2023BPix",
@@ -2558,7 +2560,7 @@ SampleTool::SampleTool(){
   MasterDict["boson_Run3"] = mergeEntriesList(
     MasterDict,
     {
-      "boson_2026",
+      //"boson_2026",
       "boson_2025",
       "boson_2024",
       "boson_2023BPix",
@@ -2571,7 +2573,7 @@ SampleTool::SampleTool(){
   MasterDict["diboson_Run3"] = mergeEntriesList(
     MasterDict,
     {
-      "DB_2026",
+      //"DB_2026",
       "DB_2025",
       "DB_2024",
       "DB_2023BPix",
@@ -2584,7 +2586,7 @@ SampleTool::SampleTool(){
   MasterDict["triboson_Run3"] = mergeEntriesList(
     MasterDict,
     {
-      "TB_2026",
+      //"TB_2026",
       "TB_2025",
       "TB_2024",
       "TB_2023BPix",
@@ -2597,7 +2599,7 @@ SampleTool::SampleTool(){
   MasterDict["top"] = mergeEntriesList(
     MasterDict,
     {
-      "top_2026",
+      //"top_2026",
       "top_2025",
       "top_2024",
       "top_2023BPix",
@@ -2628,7 +2630,7 @@ SampleTool::SampleTool(){
   MasterDict["boson"] = mergeEntriesList(
     MasterDict,
     {
-      "boson_2026",
+      //"boson_2026",
       "boson_2025",
       "boson_2024",
       "boson_2023BPix",
@@ -2645,7 +2647,7 @@ SampleTool::SampleTool(){
   MasterDict["diboson"] = mergeEntriesList(
     MasterDict,
     {
-      "DB_2026",
+      //"DB_2026",
       "DB_2025",
       "DB_2024",
       "DB_2023BPix",
@@ -2662,7 +2664,7 @@ SampleTool::SampleTool(){
   MasterDict["triboson"] = mergeEntriesList(
     MasterDict,
     {
-      "TB_2026",
+      //"TB_2026",
       "TB_2025",
       "TB_2024",
       "TB_2023BPix",
@@ -3010,7 +3012,7 @@ SampleTool::SampleTool(){
       "SMS_TChiWZ_2023BPix",
       "SMS_TChiWZ_2024",
       "SMS_TChiWZ_2025",
-      "SMS_TChiWZ_2026",
+      //"SMS_TChiWZ_2026",
     }
   );
   MasterDict["SMS_TChiWZpreUL"] = mergeEntriesList(
@@ -3025,7 +3027,7 @@ SampleTool::SampleTool(){
       "SMS_TChiWZpreUL_2023BPix",
       "SMS_TChiWZpreUL_2024",
       "SMS_TChiWZpreUL_2025",
-      "SMS_TChiWZpreUL_2026",
+      //"SMS_TChiWZpreUL_2026",
     }
   );
   MasterDict["SMS_TSlepSleppreUL"] = mergeEntriesList(
@@ -3040,7 +3042,7 @@ SampleTool::SampleTool(){
       "SMS_TSlepSleppreUL_2023BPix",
       "SMS_TSlepSleppreUL_2024",
       "SMS_TSlepSleppreUL_2025",
-      "SMS_TSlepSleppreUL_2026",
+      //"SMS_TSlepSleppreUL_2026",
     }
   );
   MasterDict["SMS_TChiWZTEST"] = mergeEntriesList(
@@ -3056,7 +3058,7 @@ SampleTool::SampleTool(){
       "SMS_TChiWZTEST_2023BPix",
       "SMS_TChiWZTEST_2024",
       "SMS_TChiWZTEST_2025",
-      "SMS_TChiWZTEST_2026",
+      //"SMS_TChiWZTEST_2026",
     }
   );
   MasterDict["SMS_TSlepSlep_TEST"] = mergeEntriesList(
@@ -3072,7 +3074,7 @@ SampleTool::SampleTool(){
       "SMS_TSlepSlep_TEST_2023BPix",
       "SMS_TSlepSlep_TEST_2024",
       "SMS_TSlepSlep_TEST_2025",
-      "SMS_TSlepSlep_TEST_2026",
+      //"SMS_TSlepSlep_TEST_2026",
     }
   );
 
