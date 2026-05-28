@@ -211,7 +211,10 @@ void Plot_Stack(const string& hname,
                 TH1* dataHist = nullptr,
                 double signal_boost = 1.0,
                 bool isFD_Stack = false,
-                const std::string& groupTitle = ""
+                const std::string& groupTitle = "",
+                const std::unordered_map<std::string, const YamlBinPattern*>& binLookup = {},
+                const std::map<std::string, std::set<int>>& risrNeighborMap = {},
+                const YamlBinPattern* groupPattern = {}
                )
 {
     if (bkgHists.empty() && (sigHists.empty() || !dataHist)) return;
@@ -492,7 +495,7 @@ void Plot_Stack(const string& hname,
         // Enlarge bottom margin on the canvas to fit brackets.
         can->SetBottomMargin(hbo * 1.55);
         can->Modified();
-        DrawBinAxisBrackets(labelPad, labelAxisHist, currentSortedBins);
+        DrawBinAxisBrackets(labelPad, labelAxisHist, currentSortedBins, binLookup, risrNeighborMap, groupPattern);
     }
 
     if(outFile){ outFile->cd(); can->Write(0, TObject::kWriteDelete); }
@@ -514,6 +517,8 @@ void PlotMergedStack(const std::string&       mergedName,
                      const YamlBinPattern&    pattern,
                      const std::vector<std::string>& binNames,
                      const std::unordered_map<std::string, const YamlBinPattern*>& binLookup,
+                     const std::map<std::string, std::set<int>>& risrNeighborMap,
+                     const YamlBinPattern* groupPattern,
                      double signalBoost = 1.0)
 {
     StackPlotInput stackInput = ConvertToStackInput(mergedHists);
@@ -527,11 +532,11 @@ void PlotMergedStack(const std::string&       mergedName,
                  : stackInput.dataHist;
     std::vector<std::string> sortedBins = anyHist ? RecoverBinLabels(anyHist)
                                                    : binNames;
-    BracketTierSet tiers = BuildBracketTiers(sortedBins);
+    BracketTierSet tiers = BuildBracketTiers(sortedBins, binLookup, risrNeighborMap, groupPattern);
     std::string groupTitle = BuildGroupTitle(pattern, tiers, binNames, binLookup);
 
     Plot_Stack(mergedName, stackInput.bkgHists, stackInput.sigHists,
-               stackInput.dataHist, signalBoost, true, groupTitle);
+               stackInput.dataHist, signalBoost, true, groupTitle, binLookup, risrNeighborMap, groupPattern);
 }
 
 void Plot_Overlay(const std::string& hname,

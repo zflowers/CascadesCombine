@@ -722,17 +722,17 @@ namespace BinTokens {
     // --- RISR: e.g. R7->0.70, R75->0.75, R8->0.80, R9->0.90 -------
     //     Rule: two-digit token (R75) -> divide by 100
     //           one-digit token (R7)  -> divide by 10
-    inline double ExtractRISR(const std::string& bin) {
+    inline int ExtractRISR(const std::string& bin)
+    {
         std::smatch m;
-        // Try two-digit first (R75, R85)
+        // R75
         if (std::regex_search(bin, m, std::regex("_R(\\d{2})(?:[^\\d]|$)")))
-            return std::stoi(m[1]) / 100.0;
-        // Single digit (R7, R8, R9)
+            return std::stoi(m[1]);
+        // R7
         if (std::regex_search(bin, m, std::regex("_R(\\d)(?:[^\\d]|$)")))
-            return std::stoi(m[1]) / 10.0;
-        return 9.99;
+            return std::stoi(m[1]) * 10;
+        return 999;
     }
-    
     // --- Mperp sort key -----------------------------------------
     //  Sort signal-like bins to the right:
     //    M<N>  (lower bound only, e.g. M30)  -> use N as key, large first
@@ -784,7 +784,7 @@ namespace BinTokens {
         int    quality;
         int    jets;
         int    ptisr;
-        double risr;
+        int risr;
         double mperp;
         int    flavor;
         std::string raw;   // tiebreak
@@ -818,6 +818,29 @@ namespace BinTokens {
 
 } // namespace BinTokens
 
+inline bool SameRISRParent(const BinTokens::BinKey& a,
+                           const BinTokens::BinKey& b)
+{
+    return
+        a.run     == b.run     &&
+        a.lep     == b.lep     &&
+        a.quality == b.quality &&
+        a.jets    == b.jets    &&
+        a.ptisr   == b.ptisr;
+}
+
+inline bool SameMperpParent(const BinTokens::BinKey& a,
+                            const BinTokens::BinKey& b)
+{
+    return
+        a.run     == b.run     &&
+        a.lep     == b.lep     &&
+        a.quality == b.quality &&
+        a.jets    == b.jets    &&
+        a.ptisr   == b.ptisr   &&
+        a.risr    == b.risr;
+}
+
 /// Call this after BuildMergedBinGroupsFromYaml to re-sort bin_names.
 bool BinSortFull(const std::string& a, const std::string& b) {
     return BinTokens::KeyLess(BinTokens::MakeKey(a), BinTokens::MakeKey(b));
@@ -832,6 +855,160 @@ void SortBinNames(std::vector<std::string>& bins) {
 void SortAllGroups(std::vector<MergedBinGroup>& groups) {
     for (auto& g : groups)
         SortBinNames(g.bin_names);
+}
+
+std::string SwapPTISRTag(const std::string& name)
+{
+    if (name.find("Low_PTISR") != std::string::npos)
+        return std::regex_replace(name, std::regex("Low_PTISR"), "High_PTISR");
+
+    if (name.find("High_PTISR") != std::string::npos)
+        return std::regex_replace(name, std::regex("High_PTISR"), "Low_PTISR");
+
+    return "";
+}
+
+bool ExtractPTISRBoundary(const YamlBinPattern& p, int& out)
+{
+    std::regex re("_P(\\d+)");
+    std::smatch m;
+
+    for (const auto& inc : p.include) {
+        if (std::regex_search(inc, m, re)) {
+            out = std::stoi(m[1].str());
+            return true;
+        }
+    }
+    return false;
+}
+
+inline bool ExtractRISRBoundary(const YamlBinPattern& p, double& out)
+{
+    std::regex re("_R(\\d+)");
+    std::smatch m;
+
+    for (const auto& inc : p.include) {
+        if (std::regex_search(inc, m, re)) {
+
+            int v = std::stoi(m[1].str());
+
+            out = (v >= 10)
+                ? v / 100.0
+                : v / 10.0;
+
+            return true;
+        }
+    }
+
+    return false;
+}
+
+inline double FindNextRISRBoundary(
+    int currentIndex,
+    const std::vector<BinTokens::BinKey>& keys)
+{
+    const auto& current = keys[currentIndex];
+
+    double best = 999;
+
+    for (size_t i = 0; i < keys.size(); ++i) {
+
+        if ((int)i == currentIndex)
+            continue;
+
+        const auto& other = keys[i];
+
+        if (!SameRISRParent(current, other))
+            continue;
+
+        if (other.risr > current.risr &&
+            other.risr < best)
+        {
+            best = other.risr;
+        }
+    }
+
+    return best;
+}
+
+inline bool ExtractMperpBoundary(const YamlBinPattern& p, int& out)
+{
+    std::smatch m;
+
+    for (const auto& inc : p.include) {
+
+        // Mlt15 -> lower edge = 0
+        if (std::regex_search(inc, m, std::regex("_Mlt(\\d+)"))) {
+            out = 0;
+            return true;
+        }
+
+        // M20_30 -> lower edge = 20
+        if (std::regex_search(inc, m, std::regex("_M(\\d+)_(\\d+)"))) {
+            out = std::stoi(m[1].str());
+            return true;
+        }
+
+        // M30 -> lower edge = 30
+        if (std::regex_search(inc, m, std::regex("_M(\\d+)(?:_|$)"))) {
+            out = std::stoi(m[1].str());
+            return true;
+        }
+    }
+
+    return false;
+}
+
+inline int FindNextMperpBoundary(
+    int currentIndex,
+    const std::vector<BinTokens::BinKey>& keys)
+{
+    const auto& current = keys[currentIndex];
+
+    int best = 999999;
+
+    for (size_t i = 0; i < keys.size(); ++i) {
+
+        if ((int)i == currentIndex)
+            continue;
+
+        const auto& other = keys[i];
+
+        if (!SameMperpParent(current, other))
+            continue;
+
+        if (other.mperp > current.mperp &&
+            other.mperp < best)
+        {
+            best = static_cast<int>(other.mperp);
+        }
+    }
+
+    return best;
+}
+
+// Build once after LoadYamlConfig, pass into BuildBracketTiers
+// Key: include pattern with R-token replaced by placeholder
+// Value: sorted set of all R integer values seen across all YAML entries sharing that pattern shape
+std::map<std::string, std::set<int>> BuildRISRNeighborMap(const YamlConfig& cfg)
+{
+    std::regex rToken("_R(\\d+)(?=[^\\d]|$)");
+    std::map<std::string, std::set<int>> out;
+
+    for (const auto& b : cfg.bins) {
+        for (const auto& inc : b.include) {
+            std::smatch m;
+            if (std::regex_search(inc, m, rToken)) {
+                int raw = std::stoi(m[1].str());
+                // Normalize to the same scale as ExtractRISR:
+                // single-digit (R8) -> multiply by 10; two-digit (R85) -> keep as-is
+                int rval = (raw < 10) ? raw * 10 : raw;
+                std::string key = std::regex_replace(inc, rToken, "_R{X}");
+                out[key].insert(rval);
+            }
+        }
+    }
+    return out;
 }
 
 namespace BinLabels {
@@ -887,10 +1064,10 @@ namespace BinLabels {
         if (ptisr >= 9999) return "";
         return "p_{T}^{ISR} > " + std::to_string(ptisr);
     }
-    inline std::string RISRLabel(double risr) {
-        if (risr >= 9.0) return "";
+    inline std::string RISRLabel(int risr) {
+        if (risr >= 999) return "";
         std::ostringstream ss;
-        ss << "R_{ISR} > " << risr;
+        ss << "R_{ISR} > " << (risr / 100.0);
         return ss.str();
     }
 } // namespace BinLabels
@@ -914,7 +1091,13 @@ struct BracketTierSet {
 /// Build bracket tiers from the sorted bin list.
 /// Tiers are added only when they have more than one distinct value
 /// across the bins, so a single-Run plot won't waste a row on "Run 2".
-inline BracketTierSet BuildBracketTiers(const std::vector<std::string>& sortedBins) {
+inline BracketTierSet BuildBracketTiers(
+    const std::vector<std::string>& sortedBins,
+    const std::unordered_map<std::string,
+    const YamlBinPattern*>& binLookup,
+    const std::map<std::string, std::set<int>>& risrNeighborMap,
+    const YamlBinPattern* groupPattern 
+   ){
 
     int n = (int)sortedBins.size();
     if (n == 0) return {};
@@ -982,8 +1165,9 @@ inline BracketTierSet BuildBracketTiers(const std::vector<std::string>& sortedBi
         for (int s = 0; s < (int)rawSpans.size(); ++s) {
             double mkey     = rawSpans[s].mkey;
             // nextMkey: lower edge of the span to the RIGHT
-            double nextMkey = (s + 1 < (int)rawSpans.size()) ? rawSpans[s + 1].mkey : 1e7;
- 
+            int nextMkey = FindNextMperpBoundary(
+                           rawSpans[s].binFirst - 1,
+                           keys);
             BracketSpan sp;
             sp.binFirst = rawSpans[s].binFirst;
             sp.binLast  = rawSpans[s].binLast;
@@ -1023,7 +1207,7 @@ inline BracketTierSet BuildBracketTiers(const std::vector<std::string>& sortedBi
     // --- Tier: RISR ---
     {
         // First pass: collect raw spans with their risr value (same grouping as before)
-        struct RisrSpanRaw { int binFirst; int binLast; double risr; };
+        struct RisrSpanRaw { int binFirst; int binLast; int risr; };
         std::vector<RisrSpanRaw> rawRisr;
         {
             int start = 0;
@@ -1046,37 +1230,52 @@ inline BracketTierSet BuildBracketTiers(const std::vector<std::string>& sortedBi
         // Second pass: build range labels.
         // Bins are sorted low-RISR -> high-RISR (ascending), so the upper bound
         // of span[s] is the lower bound of span[s+1]; the last span caps at 1.0.
+        // Pre-compute: for this group's include patterns, what is the next R value
+        // in the global YAML neighbor map?
+        auto FindYamlNextRISR = [&](int maxRisr) -> int {
+            std::regex rToken("_R(\\d+)(?=[^\\d]|$)");
+            
+            // Collect all R values from ALL shape keys that match any include 
+            // pattern of this group (with R token wildcarded)
+            std::set<int> allRvals;
+            
+            for (const auto& inc : groupPattern->include) {
+                std::smatch m;
+                if (std::regex_search(inc, m, rToken)) {
+                    std::string key = std::regex_replace(inc, rToken, "_R{X}");
+                    auto it = risrNeighborMap.find(key);
+                    if (it != risrNeighborMap.end()) {
+                        allRvals.insert(it->second.begin(), it->second.end());
+                    }
+                }
+            }
+            
+            // Find the first value greater than maxRisr
+            auto pos = allRvals.upper_bound(maxRisr);
+            if (pos != allRvals.end())
+                return *pos;
+            
+            return -1; // no successor -> caller uses 1.0
+        }; 
         std::vector<BracketSpan> spans;
         for (int s = 0; s < (int)rawRisr.size(); ++s) {
-            double lo = rawRisr[s].risr;
-            if (lo >= 9.0) continue;   // sentinel -> no RISR token
- 
-            double hi = 1.0;
-            
-            if (s + 1 < (int)rawRisr.size()) {
-            
-                bool sameParent =
-                    keys[rawRisr[s].binFirst - 1].run     ==
-                    keys[rawRisr[s+1].binFirst - 1].run &&
-            
-                    keys[rawRisr[s].binFirst - 1].lep     ==
-                    keys[rawRisr[s+1].binFirst - 1].lep &&
-            
-                    keys[rawRisr[s].binFirst - 1].quality ==
-                    keys[rawRisr[s+1].binFirst - 1].quality &&
-            
-                    keys[rawRisr[s].binFirst - 1].jets    ==
-                    keys[rawRisr[s+1].binFirst - 1].jets &&
-            
-                    keys[rawRisr[s].binFirst - 1].ptisr   ==
-                    keys[rawRisr[s+1].binFirst - 1].ptisr;
-            
-                if (sameParent && rawRisr[s+1].risr < 9.0)
-                    hi = rawRisr[s+1].risr;
-            } 
+            int lo = rawRisr[s].risr;
+            if (lo >= 999) continue;
+        
+            double nextRisr = FindNextRISRBoundary(rawRisr[s].binFirst - 1, keys);
+        
+            double hi;
+            if (nextRisr < 999) {
+                // Neighbor exists within this group's bins
+                hi = nextRisr / 100.0;
+            } else {
+                // No in-group neighbor: ask the YAML map what comes after the max R token
+                int yamlSucc = FindYamlNextRISR(lo);
+                hi = (yamlSucc > 0) ? yamlSucc / 100.0 : 1.0;
+            }
+        
             std::ostringstream ss;
-            ss << "[" << lo << "," << hi << "]";
- 
+            ss << "[" << (lo / 100.0) << "," << hi << "]";
             BracketSpan sp;
             sp.binFirst  = rawRisr[s].binFirst;
             sp.binLast   = rawRisr[s].binLast;
@@ -1213,8 +1412,15 @@ inline BracketTierSet BuildBracketTiers(const std::vector<std::string>& sortedBi
     return out;
 }
 
-inline void DrawBinAxisBrackets(TPad* pad, TH1* axisHist, const std::vector<std::string>& sortedBins,
-                                 double bottomFrac = 0.95, double tickClearance = -1.0)
+inline void DrawBinAxisBrackets(TPad* pad,
+                                TH1* axisHist,
+                                const std::vector<std::string>& sortedBins,
+                                const std::unordered_map<std::string,
+                                const YamlBinPattern*>& binLookup,
+                                const std::map<std::string, std::set<int>>& risrNeighborMap,
+                                const YamlBinPattern* groupPattern,
+                                double bottomFrac = 0.95, double tickClearance = -1.0
+)
 {
     if (!pad || !axisHist || sortedBins.empty()) return;
     int n = (int)sortedBins.size();
@@ -1259,7 +1465,7 @@ inline void DrawBinAxisBrackets(TPad* pad, TH1* axisHist, const std::vector<std:
     pad->Update();
 
     // ---- 3. Build bracket tiers ----
-    BracketTierSet tiers = BuildBracketTiers(sortedBins);
+    BracketTierSet tiers = BuildBracketTiers(sortedBins, binLookup, risrNeighborMap, groupPattern);
     int nTiers = (int)tiers.tiers.size();
     if (nTiers == 0) return;
 
@@ -1762,32 +1968,6 @@ BuildMergedJsonCutflow(
     } // end groups loop
 
     return out;
-}
-
-// PTISR helpers
-std::string SwapPTISRTag(const std::string& name)
-{
-    if (name.find("Low_PTISR") != std::string::npos)
-        return std::regex_replace(name, std::regex("Low_PTISR"), "High_PTISR");
-
-    if (name.find("High_PTISR") != std::string::npos)
-        return std::regex_replace(name, std::regex("High_PTISR"), "Low_PTISR");
-
-    return "";
-}
-
-bool ExtractPTISRBoundary(const YamlBinPattern& p, int& out)
-{
-    std::regex re("_P(\\d+)");
-    std::smatch m;
-
-    for (const auto& inc : p.include) {
-        if (std::regex_search(inc, m, re)) {
-            out = std::stoi(m[1].str());
-            return true;
-        }
-    }
-    return false;
 }
 
 std::unordered_map<std::string, const YamlBinPattern*> BuildBinLookup(const YamlConfig& cfg)
