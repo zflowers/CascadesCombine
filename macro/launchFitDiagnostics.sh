@@ -23,6 +23,7 @@ for WS in "${dcdir}"/*/*_workspace.root; do
       --skipSBFit \
       --saveShapes \
       --saveWithUncertainties \
+      --robustHesse 1 \
       --saveNormalizations
     popd > /dev/null || exit 1
     break
