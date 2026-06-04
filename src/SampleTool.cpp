@@ -3,7 +3,7 @@
 SampleTool::SampleTool(){
   // Path to ntuples in fnal eos
   string pathPrefix = "root://cmseos.fnal.gov//store/user/lpcsusylep/";
-  pathPrefix += "NTUPLES_Cascades_v8/";
+  pathPrefix += "NTUPLES_Cascades_v9/";
 
   LumiDict["HEM_LUMI"] = 21.077794578; // need for HEM veto
   LumiDict["Summer16_102X"] = 16.8+19.5;
@@ -11,15 +11,15 @@ SampleTool::SampleTool(){
   LumiDict["Autumn18_102X"] = 59.832475339;
   LumiDict["Summer20UL16APV_106X"] = 19.5;
   LumiDict["Summer20UL16_106X"] = 16.8;
-  LumiDict["Summer20UL17_106X"] = 41.479680529;
-  LumiDict["Summer20UL18_106X"] = 59.832475339;
-  LumiDict["Summer22_130X"] = 7.9804;
-  LumiDict["Summer22EE_130X"] = 26.6717;
-  LumiDict["Summer23_130X"] = 17.794;
-  LumiDict["Summer23BPix_130X"] = 9.451;
-  LumiDict["Summer24_130X"] = 108.95;
-  LumiDict["Summer25_130X"] = 110.73;
-  LumiDict["Summer26_130X"] = 30.;
+  LumiDict["Summer20UL17_106X"] = 42.07;
+  LumiDict["Summer20UL18_106X"] = 59.56;
+  LumiDict["Summer22_130X"] = 7.99;
+  LumiDict["Summer22EE_130X"] = 26.68;
+  LumiDict["Summer23_130X"] = 17.96;
+  LumiDict["Summer23BPix_130X"] = 9.68;
+  LumiDict["Summer24_130X"] = 109.95;
+  LumiDict["Summer25_130X"] = 110.84;
+  LumiDict["Summer26_130X"] = 28.06;
 
   double RUN2_TOTAL_LUMI = 0.;
   RUN2_TOTAL_LUMI += LumiDict["Summer20UL16APV_106X"];
