@@ -308,7 +308,7 @@ std::vector<std::string> BuildFit::WriteJsonAsFlatHists(
 
             // Write nominal histogram for non-data processes (CH expects process histos and data_obs)
             if (!isData) {
-                if (sumW <= 0.0 && err <= 0.0) {sumW = 1.e-9; err = 1.e-9;}
+                //if (sumW <= 0.0 && err <= 0.0) {sumW = 1.e-9; err = 1.e-9;}
                 TH1F *h = new TH1F(hname.c_str(), hname.c_str(), 1, 0, 1);
                 h->Sumw2();
                 h->SetBinContent(1, sumW);
@@ -679,6 +679,7 @@ void BuildFit::AddSameSignSys(const stringlist& binset, const stringlist& procs)
 void BuildFit::AddOSOFSys(const stringlist& binset, const stringlist& procs){
     cb.SetFlag("filters-use-regex", true);
 
+    /*
     cb.cp().process(procs).bin({".*Run2.*2L.*0J.*_Mlt.*_OS_emu*"})
         .AddSyst(cb, "Run2_OSOF_2L_0J_MperpLow", "lnN", SystMap<>::init(1.10));
     cb.cp().process(procs).bin({".*Run3.*2L*.0J.*_Mlt.*_OS_emu.*"})
@@ -703,6 +704,16 @@ void BuildFit::AddOSOFSys(const stringlist& binset, const stringlist& procs){
         .AddSyst(cb, "Run2_OSOF_3L_MperpLow", "lnN", SystMap<>::init(1.10));
     cb.cp().process(procs).bin({".*Run3.*3L.*_Mlt.*_OSOFa.*"})
         .AddSyst(cb, "Run3_OSOF_3L_MperpLow", "lnN", SystMap<>::init(1.10));
+    */
+    cb.cp().process(procs).bin({".*Run2.*2L.*_OS_emu*"})
+        .AddSyst(cb, "Run2_OSOF_2L", "lnN", SystMap<>::init(1.10));
+    cb.cp().process(procs).bin({".*Run3.*2L.*_OS_emu.*"})
+        .AddSyst(cb, "Run3_OSOF_2L", "lnN", SystMap<>::init(1.10));
+
+    cb.cp().process(procs).bin({".*Run2.*3L.*_OSOFa.*"})
+        .AddSyst(cb, "Run2_OSOF_3L", "lnN", SystMap<>::init(1.10));
+    cb.cp().process(procs).bin({".*Run3.*3L.*_OSOFa.*"})
+        .AddSyst(cb, "Run3_OSOF_3L", "lnN", SystMap<>::init(1.10));
 
     cb.SetFlag("filters-use-regex", false);
 }
