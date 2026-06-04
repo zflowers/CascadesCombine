@@ -1,4 +1,5 @@
 *.o
+*.pdf
 myprogram
 *.x
 *.json

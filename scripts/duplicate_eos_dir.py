@@ -4,25 +4,27 @@ import subprocess
 import time
 
 # ======== CONFIG ========
-BASE = "root://cmseos.fnal.gov//store/user/lpcsusylep/NTUPLES_Cascades_v8"
+BASE = "root://cmseos.fnal.gov//store/user/lpcsusylep/NTUPLES_Cascades_v9"
 
-SOURCE_SUFFIX = "Summer22_130X"
-SOURCE_DIR = SOURCE_SUFFIX + "_SMS"
+SOURCE_SUFFIX = "Summer23BPix_130X"
+#SOURCE_DIR = SOURCE_SUFFIX + "_SMS"
+SOURCE_DIR = SOURCE_SUFFIX
 
 TARGET_SUFFIXES = [
-    "Summer20UL16APV_106X",
-    "Summer20UL16_106X",
-    "Summer20UL17_106X",
-    "Summer20UL18_106X",
-    "Summer22EE_130X",
-    "Summer23BPix_130X",
-    "Summer23_130X",
+    #"Summer20UL16APV_106X",
+    #"Summer20UL16_106X",
+    #"Summer20UL17_106X",
+    #"Summer20UL18_106X",
+    #"Summer22EE_130X",
+    #"Summer23BPix_130X",
+    #"Summer23_130X",
     "Summer24_130X",
     "Summer25_130X",
-    "Summer26_130X",
+    #"Summer26_130X",
 ]
 
-DIR_SUFFIX = "_SMS"
+#DIR_SUFFIX = "_SMS"
+DIR_SUFFIX = ""
 
 DRY_RUN = False
 MAX_RETRIES = 3
@@ -64,9 +66,21 @@ with open(filelist) as f:
 
         for target_suffix in TARGET_SUFFIXES:
             DEST_DIR = target_suffix + DIR_SUFFIX
+            src_parts = SOURCE_SUFFIX.split("_")   # ["Summer23BPix", "130X"]
+            tgt_parts = target_suffix.split("_")   # ["Summer24", "130X"]
 
-            # Replace suffix in filename if present
-            if SOURCE_SUFFIX in filename:
+            shared_tokens = []
+            for s, t in zip(reversed(src_parts), reversed(tgt_parts)):
+                if s == t:
+                    shared_tokens.insert(0, s)
+                else:
+                    break
+
+            if shared_tokens:
+                shared = "_" + "_".join(shared_tokens)          # "_130X"
+                replacement = "_" + target_suffix               # "_Summer24_130X"
+                dest_filename = filename.replace(shared, replacement, 1) if shared in filename else filename
+            elif SOURCE_SUFFIX in filename:
                 dest_filename = filename.replace(SOURCE_SUFFIX, target_suffix, 1)
             else:
                 dest_filename = filename
