@@ -45,7 +45,7 @@ def parse_args():
                    help="Stop after getting yields")
     p.add_argument("--bins-per-job", type=int, default=10,
                    help="Number of bins to group per job")
-    p.add_argument("--max-materialize", type=str, default="100",
+    p.add_argument("--max-materialize", type=str, default="50",
                    help="max number of jobs per cluster to condor")
     p.add_argument("--cutflow", action="store_true",
                    help="make cutflow hist")

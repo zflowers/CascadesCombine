@@ -1,38 +1,165 @@
 #!/usr/bin/env python3
-import sys
 import subprocess
 import time
 
 # ======== CONFIG ========
 BASE = "root://cmseos.fnal.gov//store/user/lpcsusylep/NTUPLES_Cascades_v9"
-
-SOURCE_SUFFIX = "Summer23BPix_130X"
-#SOURCE_DIR = SOURCE_SUFFIX + "_SMS"
-SOURCE_DIR = SOURCE_SUFFIX
-
-TARGET_SUFFIXES = [
-    #"Summer20UL16APV_106X",
-    #"Summer20UL16_106X",
-    #"Summer20UL17_106X",
-    #"Summer20UL18_106X",
-    #"Summer22EE_130X",
-    #"Summer23BPix_130X",
-    #"Summer23_130X",
-    "Summer24_130X",
-    "Summer25_130X",
-    #"Summer26_130X",
-]
-
-#DIR_SUFFIX = "_SMS"
-DIR_SUFFIX = ""
-
 DRY_RUN = False
 MAX_RETRIES = 3
 RETRY_DELAY = 5  # seconds
+
+# Each job:
+#   source_dir:      subdirectory under BASE to copy from
+#   dest_dirs:       list of subdirectories under BASE to copy to
+#   files:           list of source filenames to copy
+#   compound_naming: if True, dest filename embeds both the original era token
+#                    and the target era token (e.g. _106X -> _106X_Summer22EE_130X)
+#                    if False, dest filename just swaps the source dir suffix for the target
+#                    (e.g. _Summer22_130X -> _Summer25_130X)
+
+JOBS = [
+
+    # ----------------------------------------------------------------
+    # Step 1: Summer22_130X_SMS -> all 106X and 130X dirs
+    # Simple swap naming (Summer22_130X -> target)
+    # Just for TSlepSlep_TEST and TChiWZTEST single-mass files
+    # ----------------------------------------------------------------
+    {
+        "source_dir": "Summer22_130X_SMS",
+        "source_suffix": "Summer22_130X",
+        "dest_dirs": [
+            "Summer20UL16APV_106X_SMS",
+            "Summer20UL16_106X_SMS",
+            "Summer20UL17_106X_SMS",
+            "Summer20UL18_106X_SMS",
+            "Summer22EE_130X_SMS",
+            "Summer23_130X_SMS",
+            "Summer23BPix_130X_SMS",
+            "Summer24_130X_SMS",
+            "Summer25_130X_SMS",
+            "Summer26_130X_SMS",
+        ],
+        "compound_naming": False,
+        "files": [
+            "TChiWZ_MNLSP300_MLSP290_EDFilterOR_TuneCP5_13p6TeV-madgraph-pythia8_Summer22_130X.root",
+            "TSlepSlep_MSlep250_MLSP245_TuneCP5_13p6TeV-madgraph-pythia8_Summer22_130X.root",
+        ],
+    },
+
+    # ----------------------------------------------------------------
+    # Step 2: Fan-out with compound naming
+    # ----------------------------------------------------------------
+    {
+        "source_dir": "Summer20UL16APV_106X_SMS",
+        "source_suffix": "Summer20UL16APV_106X",
+        "dest_dirs": [
+            "Summer22EE_130X_SMS",
+        ],
+        "compound_naming": True,
+        "files": [
+            "SMS-TChiWZ_ZToLL_mZMin-0p1_TuneCP5_13TeV-madgraphMLM-pythia8_Summer20UL16APV_106X.root",
+        ],
+    },
+    {
+        "source_dir": "Summer20UL16_106X_SMS",
+        "source_suffix": "Summer20UL16_106X",
+        "dest_dirs": [
+            "Summer22_130X_SMS",
+        ],
+        "compound_naming": True,
+        "files": [
+            "SMS-TChiWZ_ZToLL_mZMin-0p1_TuneCP5_13TeV-madgraphMLM-pythia8_Summer20UL16_106X.root",
+        ],
+    },
+    {
+        "source_dir": "Summer20UL17_106X_SMS",
+        "source_suffix": "Summer20UL17_106X",
+        "dest_dirs": [
+            "Summer23_130X_SMS",
+            "Summer24_130X_SMS",
+            "Summer26_130X_SMS",
+        ],
+        "compound_naming": True,
+        "files": [
+            "SMS-TChiWZ_ZToLL_mZMin-0p1_TuneCP5_13TeV-madgraphMLM-pythia8_Summer20UL17_106X.root",
+        ],
+    },
+    {
+        "source_dir": "Summer20UL18_106X_SMS",
+        "source_suffix": "Summer20UL18_106X",
+        "dest_dirs": [
+            "Summer23BPix_130X_SMS",
+            "Summer25_130X_SMS",
+        ],
+        "compound_naming": True,
+        "files": [
+            "SMS-TChiWZ_ZToLL_mZMin-0p1_TuneCP5_13TeV-madgraphMLM-pythia8_Summer20UL18_106X.root",
+        ],
+    },
+    {
+        "source_dir": "Summer16_102X_SMS",
+        "source_suffix": "Summer16_102X",
+        "dest_dirs": [
+            "Summer22_130X_SMS",
+            "Summer22EE_130X_SMS",
+        ],
+        "compound_naming": True,
+        "files": [
+            "SMS-TChiWZ_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
+            "SMS-TChiWZ_dM-60to90_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
+            "SMS-TChipmWW_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
+            "SMS-TChipmWW_dM-3to50_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
+            "SMS-TChipmWW_dM-60to90_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
+            "SMS-TSlepSlep_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
+            "SMS-TSlepSlep_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
+            "TChiWZ_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
+        ],
+    },
+    {
+        "source_dir": "Fall17_102X_SMS",
+        "source_suffix": "Fall17_102X",
+        "dest_dirs": [
+            "Summer23_130X_SMS",
+            "Summer23BPix_130X_SMS",
+        ],
+        "compound_naming": True,
+        "files": [
+            "SMS-TChiWZ_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
+            "SMS-TChiWZ_dM-60to90_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
+            "SMS-TChipmWW_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
+            "SMS-TChipmWW_dM-3to50_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
+            "SMS-TChipmWW_dM-60to90_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
+            "SMS-TSlepSlep_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
+            "SMS-TSlepSlep_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
+            "TChiWZ_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
+        ],
+    },
+    {
+        "source_dir": "Autumn18_102X_SMS",
+        "source_suffix": "Autumn18_102X",
+        "dest_dirs": [
+            "Summer24_130X_SMS",
+            "Summer25_130X_SMS",
+            "Summer26_130X_SMS",
+        ],
+        "compound_naming": True,
+        "files": [
+            "SMS-TChiWZ_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
+            "SMS-TChiWZ_dM-60to90_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
+            "SMS-TChipmWW_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
+            "SMS-TChipmWW_dM-3to50_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
+            "SMS-TChipmWW_dM-60to90_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
+            "SMS-TSlepSlep_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
+            "SMS-TSlepSlep_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
+            "TChiWZ_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
+        ],
+    },
+
+]
 # ========================
 
+
 def run_cmd(cmd):
-    """Run a command with retries."""
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             subprocess.run(cmd, check=True)
@@ -46,62 +173,43 @@ def run_cmd(cmd):
                 return False
 
 
-if len(sys.argv) != 2:
-    print("Usage: python3 scripts/duplicate_eos_dir.py filelist.txt")
-    sys.exit(1)
-
-filelist = sys.argv[1]
-
 n_total = 0
-n_skipped = 0
 n_failed = 0
 
-with open(filelist) as f:
-    for line in f:
-        filename = line.strip()
-        if not filename:
-            continue
+for job in JOBS:
+    source_dir    = job["source_dir"]
+    source_suffix = job["source_suffix"]
+    compound      = job["compound_naming"]
 
-        source = f"{BASE}/{SOURCE_DIR}/{filename}"
+    for dest_dir in job["dest_dirs"]:
+        # Derive the target era suffix from the dest dir name (strip trailing _SMS)
+        target_suffix = dest_dir.replace("_SMS", "")
 
-        for target_suffix in TARGET_SUFFIXES:
-            DEST_DIR = target_suffix + DIR_SUFFIX
-            src_parts = SOURCE_SUFFIX.split("_")   # ["Summer23BPix", "130X"]
-            tgt_parts = target_suffix.split("_")   # ["Summer24", "130X"]
-
-            shared_tokens = []
-            for s, t in zip(reversed(src_parts), reversed(tgt_parts)):
-                if s == t:
-                    shared_tokens.insert(0, s)
-                else:
-                    break
-
-            if shared_tokens:
-                shared = "_" + "_".join(shared_tokens)          # "_130X"
-                replacement = "_" + target_suffix               # "_Summer24_130X"
-                dest_filename = filename.replace(shared, replacement, 1) if shared in filename else filename
-            elif SOURCE_SUFFIX in filename:
-                dest_filename = filename.replace(SOURCE_SUFFIX, target_suffix, 1)
+        for src_filename in job["files"]:
+            if compound:
+                # Replace just the X-version token (_106X or _102X) with _<target_suffix>
+                # e.g. _Summer20UL17_106X -> _Summer20UL17_Summer23_130X
+                dest_filename = src_filename.replace(
+                    source_suffix,
+                    source_suffix.rsplit("_", 2)[0] + "_" + target_suffix,
+                    1
+                )
             else:
-                dest_filename = filename
+                # simple swap: _Summer22_130X -> _Summer23_130X
+                dest_filename = src_filename.replace(source_suffix, target_suffix, 1)
 
-            dest = f"{BASE}/{DEST_DIR}/{dest_filename}"
-
+            source = f"{BASE}/{source_dir}/{src_filename}"
+            dest   = f"{BASE}/{dest_dir}/{dest_filename}"
+            cmd    = ["xrdcp", "-f", source, dest]
             n_total += 1
-
-            cmd = ["xrdcp", "-f", source, dest]
 
             if DRY_RUN:
                 print("[DRY-RUN]", " ".join(cmd))
-                continue
-
-            print("[COPY]", " ".join(cmd))
-            success = run_cmd(cmd)
-
-            if not success:
-                n_failed += 1
+            else:
+                print("[COPY]", " ".join(cmd))
+                if not run_cmd(cmd):
+                    n_failed += 1
 
 print("\n===== SUMMARY =====")
 print(f"Total operations: {n_total}")
-print(f"Skipped (exists): {n_skipped}")
 print(f"Failed:           {n_failed}")

@@ -38,6 +38,7 @@ SMS_FILTERS=""
 JSON_FLAG=""
 HIST_FLAG=""
 CUTFLOW_FLAG=""
+PROC_NAME=""
 
 # --- Parse arguments (updated to collect repeated per-bin flags) ---
 while [[ $# -gt 0 ]]; do
@@ -97,6 +98,10 @@ while [[ $# -gt 0 ]]; do
         # Other options
         --sig-type) SIG_TYPE=$(clean_arg "$2"); shift 2;;
         --lumi) LUMI=$(clean_arg "$2"); shift 2;;
+        --proc-name)
+            PROC_NAME=$(clean_arg "$2")
+            shift 2
+            ;;
 
         # Multi-value argument handling for sms filters
         --sms-filters)
@@ -139,6 +144,7 @@ CMD="./BFI_condor.x --bin \"$BIN\" --file \"$ROOTFILE\""
 [[ -n "$HIST_YAML" ]] && CMD="$CMD --hist-yaml \"$HIST_YAML\""
 [[ -n "$PROC_YAML" ]] && CMD="$CMD --proc-yaml \"$PROC_YAML\""
 [[ -n "$CUTFLOW_FLAG" ]] && CMD="$CMD $CUTFLOW_FLAG"
+[[ -n "$PROC_NAME" ]] && CMD="$CMD --proc-name \"$PROC_NAME\""
 
 # If we collected per-bin repeated cuts, pass them as a single --cuts-multi argument (||| as delimiter)
 if [[ -n "$CUTS_MULTI" ]]; then
