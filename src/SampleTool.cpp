@@ -109,6 +109,11 @@ SampleTool::SampleTool(){
 
   // File paths start here
 
+  // For Derek:
+  MasterDict["ttbar_derek_2018"] = {
+    pathPrefix + "Summer20UL18_106X/TTJets_DiLept_TuneCP5_13TeV-madgraphMLM-pythia8_Summer20UL18_106X.root",
+  };
+
   MasterDict["ttbar_2026"] = {
     pathPrefix + "Summer26_130X/TTG-1Jets_TuneCP5_13p6TeV_amcatnloFXFXold-pythia8_Summer24_Summer26_130X.root",
     pathPrefix + "Summer26_130X/TTGG_TuneCP5_13p6TeV_madgraph-madspin-pythia8_Summer24_Summer26_130X.root",
