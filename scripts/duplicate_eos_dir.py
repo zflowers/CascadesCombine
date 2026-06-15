@@ -8,17 +8,11 @@ DRY_RUN = False
 MAX_RETRIES = 3
 RETRY_DELAY = 5  # seconds
 
-# Each job:
-#   source_dir:      subdirectory under BASE to copy from
-#   dest_dirs:       list of subdirectories under BASE to copy to
-#   files:           list of source filenames to copy
-#   compound_naming: if True, dest filename embeds both the original era token
-#                    and the target era token (e.g. _106X -> _106X_Summer22EE_130X)
-#                    if False, dest filename just swaps the source dir suffix for the target
-#                    (e.g. _Summer22_130X -> _Summer25_130X)
-
 JOBS = [
 
+    # ----------------------------------------------------------------
+    # Signal jobs (explicit file lists)
+    # ----------------------------------------------------------------
     # ----------------------------------------------------------------
     # Step 1: Summer22_130X_SMS -> all 106X and 130X dirs
     # Simple swap naming (Summer22_130X -> target)
@@ -155,6 +149,20 @@ JOBS = [
         ],
     },
 
+    # ----------------------------------------------------------------
+    # Background jobs (auto-discover all files in source dir)
+    # ----------------------------------------------------------------
+    {
+        "source_dir": "Summer24_130X",
+        "source_suffix": "Summer24_130X",
+        "dest_dirs": [
+            "Summer25_130X",
+            "Summer26_130X",
+        ],
+        "compound_naming": True,
+        "files": None,  # None means auto-discover via eosls
+    },
+
 ]
 # ========================
 
@@ -173,6 +181,27 @@ def run_cmd(cmd):
                 return False
 
 
+def eos_ls(path):
+    """List files in an EOS directory. Returns list of filenames."""
+    cmd = ["eos", "root://cmseos.fnal.gov", "ls", path]
+    try:
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        return [f.strip() for f in result.stdout.splitlines() if f.strip()]
+    except subprocess.CalledProcessError:
+        print(f"[ERROR] Could not list directory: {path}")
+        return []
+
+
+def get_dest_filename(src_filename, source_suffix, target_suffix, compound):
+    if compound:
+        # e.g. _Summer24_130X -> _Summer24_Summer25_130X
+        # Strip the trailing _130X or _102X or _106X version token from source_suffix
+        base = source_suffix.rsplit("_", 2)[0]  # "Summer24"
+        return src_filename.replace(source_suffix, f"{base}_{target_suffix}", 1)
+    else:
+        return src_filename.replace(source_suffix, target_suffix, 1)
+
+
 n_total = 0
 n_failed = 0
 
@@ -181,22 +210,21 @@ for job in JOBS:
     source_suffix = job["source_suffix"]
     compound      = job["compound_naming"]
 
+    # Auto-discover files if not explicitly listed
+    if job["files"] is None:
+        eos_path = f"/store/user/lpcsusylep/NTUPLES_Cascades_v9/{source_dir}"
+        filelist = eos_ls(eos_path)
+        if not filelist:
+            print(f"[WARN] No files found in {eos_path}, skipping job.")
+            continue
+    else:
+        filelist = job["files"]
+
     for dest_dir in job["dest_dirs"]:
-        # Derive the target era suffix from the dest dir name (strip trailing _SMS)
         target_suffix = dest_dir.replace("_SMS", "")
 
-        for src_filename in job["files"]:
-            if compound:
-                # Replace just the X-version token (_106X or _102X) with _<target_suffix>
-                # e.g. _Summer20UL17_106X -> _Summer20UL17_Summer23_130X
-                dest_filename = src_filename.replace(
-                    source_suffix,
-                    source_suffix.rsplit("_", 2)[0] + "_" + target_suffix,
-                    1
-                )
-            else:
-                # simple swap: _Summer22_130X -> _Summer23_130X
-                dest_filename = src_filename.replace(source_suffix, target_suffix, 1)
+        for src_filename in filelist:
+            dest_filename = get_dest_filename(src_filename, source_suffix, target_suffix, compound)
 
             source = f"{BASE}/{source_dir}/{src_filename}"
             dest   = f"{BASE}/{dest_dir}/{dest_filename}"
