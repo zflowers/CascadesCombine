@@ -1259,7 +1259,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                         "./"+macro_dir+"/Zscore.x",
                         "-f 2",
                         "-i", f'{FD_file.replace(".Test.root","CSV_zscore.txt")}',
-                        "-o", output_dir,
+                        "-o", output_dir+"/"+str(signals[0]),
                     ]
                     print("[run_combine] Running Zscore exe with command:", " ".join(FD_Zscore_cmd), flush=True)
                     subprocess.run(FD_Zscore_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
