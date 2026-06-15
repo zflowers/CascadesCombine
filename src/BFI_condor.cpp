@@ -210,7 +210,7 @@ int main(int argc, char** argv) {
             expanded.reserve(outCuts.size());
             for (const auto &c : outCuts) expanded.push_back(BFI->ExpandMacros(c));
             finalCutsExpandedMap[bin] = std::move(expanded);
-    
+
             // user-cuts: store per-bin list of user-cut *names* (they will be looked up in allUserCuts later)
             userCutsPerBin[bin] = splitSemicolon(userForBin);
         }
