@@ -563,18 +563,12 @@ void BuildFit::AddPTISRSys(const stringlist& binset, const stringlist& procs){
     cb.cp().process(procs).bin({".*Run2.*3L.*P300.*"})
         .AddSyst(cb, "Run2_PTISR_3L", "lnN", SystMap<>::init(1.10));
 
-    cb.cp().process(procs).bin({".*Run2.*2L.*Silver.*P350.*"})
-        .AddSyst(cb, "Run2_PTISR_2L_Silver", "lnN", SystMap<>::init(1.10));
-
     cb.cp().process(procs).bin({".*Run3.*2L.*0J.*P350.*"})
         .AddSyst(cb, "Run3_PTISR_2L_0J", "lnN", SystMap<>::init(1.10));
     cb.cp().process(procs).bin({".*Run3.*2L.*1J.*P350.*"})
         .AddSyst(cb, "Run3_PTISR_2L_1J", "lnN", SystMap<>::init(1.10));
     cb.cp().process(procs).bin({".*Run3.*3L.*P300.*"})
         .AddSyst(cb, "Run3_PTISR_3L", "lnN", SystMap<>::init(1.10));
-
-    cb.cp().process(procs).bin({".*Run3.*2L.*Silver.*P350.*"})
-        .AddSyst(cb, "Run3_PTISR_2L_Silver", "lnN", SystMap<>::init(1.10));
 
     cb.SetFlag("filters-use-regex", false);
 }
@@ -679,33 +673,7 @@ void BuildFit::AddSameSignSys(const stringlist& binset, const stringlist& procs)
 void BuildFit::AddOSOFSys(const stringlist& binset, const stringlist& procs){
     cb.SetFlag("filters-use-regex", true);
 
-    /*
-    cb.cp().process(procs).bin({".*Run2.*2L.*0J.*_Mlt.*_OS_emu*"})
-        .AddSyst(cb, "Run2_OSOF_2L_0J_MperpLow", "lnN", SystMap<>::init(1.10));
-    cb.cp().process(procs).bin({".*Run3.*2L*.0J.*_Mlt.*_OS_emu.*"})
-        .AddSyst(cb, "Run3_OSOF_2L_0J_MperpLow", "lnN", SystMap<>::init(1.10));
-
-    cb.cp().process(procs).bin({".*Run2.*2L.*0J.*_M[0-9]+_OS_emu.*"})
-        .AddSyst(cb, "Run2_OSOF_2L_0J_MperpHigh", "lnN", SystMap<>::init(1.10));
-    cb.cp().process(procs).bin({".*Run3.*2L.*0J.*_M[0-9]+_OS_emu.*"})
-        .AddSyst(cb, "Run3_OSOF_2L_0J_MperpHigh", "lnN", SystMap<>::init(1.10));
-
-    cb.cp().process(procs).bin({".*Run2.*2L.*1J.*_Mlt.*_OS_emu*"})
-        .AddSyst(cb, "Run2_OSOF_2L_1J_MperpLow", "lnN", SystMap<>::init(1.10));
-    cb.cp().process(procs).bin({".*Run3.*2L*.1J.*_Mlt.*_OS_emu.*"})
-        .AddSyst(cb, "Run3_OSOF_2L_1J_MperpLow", "lnN", SystMap<>::init(1.10));
-
-    cb.cp().process(procs).bin({".*Run2.*2L.*1J.*_M[0-9]+_OS_emu.*"})
-        .AddSyst(cb, "Run2_OSOF_2L_1J_MperpHigh", "lnN", SystMap<>::init(1.10));
-    cb.cp().process(procs).bin({".*Run3.*2L.*1J.*_M[0-9]+_OS_emu.*"})
-        .AddSyst(cb, "Run3_OSOF_2L_1J_MperpHigh", "lnN", SystMap<>::init(1.10));
-
-    cb.cp().process(procs).bin({".*Run2.*3L.*_Mlt.*_OSOFa.*"})
-        .AddSyst(cb, "Run2_OSOF_3L_MperpLow", "lnN", SystMap<>::init(1.10));
-    cb.cp().process(procs).bin({".*Run3.*3L.*_Mlt.*_OSOFa.*"})
-        .AddSyst(cb, "Run3_OSOF_3L_MperpLow", "lnN", SystMap<>::init(1.10));
-    */
-    cb.cp().process(procs).bin({".*Run2.*2L.*_OS_emu*"})
+    cb.cp().process(procs).bin({".*Run2.*2L.*_OS_emu.*"})
         .AddSyst(cb, "Run2_OSOF_2L", "lnN", SystMap<>::init(1.10));
     cb.cp().process(procs).bin({".*Run3.*2L.*_OS_emu.*"})
         .AddSyst(cb, "Run3_OSOF_2L", "lnN", SystMap<>::init(1.10));
@@ -714,6 +682,22 @@ void BuildFit::AddOSOFSys(const stringlist& binset, const stringlist& procs){
         .AddSyst(cb, "Run2_OSOF_3L", "lnN", SystMap<>::init(1.10));
     cb.cp().process(procs).bin({".*Run3.*3L.*_OSOFa.*"})
         .AddSyst(cb, "Run3_OSOF_3L", "lnN", SystMap<>::init(1.10));
+
+    cb.SetFlag("filters-use-regex", false);
+}
+
+void BuildFit::AddOSSFSys(const stringlist& binset, const stringlist& procs){
+    cb.SetFlag("filters-use-regex", true);
+
+    cb.cp().process(procs).bin({".*Run2.*2L.*_OS_(ee|mumu).*"})
+        .AddSyst(cb, "Run2_OSSF_2L", "lnN", SystMap<>::init(1.10));
+    cb.cp().process(procs).bin({".*Run3.*2L.*_OS_(ee|mumu).*"})
+        .AddSyst(cb, "Run3_OSSF_2L", "lnN", SystMap<>::init(1.10));
+
+    cb.cp().process(procs).bin({".*Run2.*3L.*_OSSFa.*"})
+        .AddSyst(cb, "Run2_OSSF_3L", "lnN", SystMap<>::init(1.10));
+    cb.cp().process(procs).bin({".*Run3.*3L.*_OSSFa.*"})
+        .AddSyst(cb, "Run3_OSSF_3L", "lnN", SystMap<>::init(1.10));
 
     cb.SetFlag("filters-use-regex", false);
 }
@@ -729,6 +713,7 @@ void BuildFit::AddLepHemiSys(const stringlist& binset, const stringlist& procs){
 
 void BuildFit::AddBtagSys(const stringlist& binset, const stringlist& procs){
     cb.SetFlag("filters-use-regex", true);
+
     cb.cp().process(procs).bin({".*Run2.*2L.*0J.*P250.*Btag.*"})
         .AddSyst(cb, "Run2_Btag_2L_0J_lPTISR", "lnN", SystMap<>::init(1.20));
     cb.cp().process(procs).bin({".*Run2.*2L.*0J.*P350.*Btag.*"})
@@ -737,8 +722,6 @@ void BuildFit::AddBtagSys(const stringlist& binset, const stringlist& procs){
         .AddSyst(cb, "Run2_Btag_2L_1J_lPTISR", "lnN", SystMap<>::init(1.20));
     cb.cp().process(procs).bin({".*Run2.*2L.*1J.*P350.*Btag.*"})
         .AddSyst(cb, "Run2_Btag_2L_1J_hPTISR", "lnN", SystMap<>::init(1.20));
-    cb.cp().process(procs).bin({".*Run2.*2L.*Silver.*P350.*Btag.*"})
-        .AddSyst(cb, "Run2_Btag_2L_Silver", "lnN", SystMap<>::init(1.20));
     cb.cp().process(procs).bin({".*Run2.*3L.*P200.*Btag.*"})
         .AddSyst(cb, "Run2_Btag_3L_lPTISR", "lnN", SystMap<>::init(1.20));
     cb.cp().process(procs).bin({".*Run2.*3L.*P300.*Btag.*"})
@@ -754,14 +737,13 @@ void BuildFit::AddBtagSys(const stringlist& binset, const stringlist& procs){
         .AddSyst(cb, "Run3_Btag_2L_1J_lPTISR", "lnN", SystMap<>::init(1.20));
     cb.cp().process(procs).bin({".*Run3.*2L.*1J.*P350.*Btag.*"})
         .AddSyst(cb, "Run3_Btag_2L_1J_hPTISR", "lnN", SystMap<>::init(1.20));
-    cb.cp().process(procs).bin({".*Run3.*2L.*Silver.*P350.*Btag.*"})
-        .AddSyst(cb, "Run3_Btag_2L_Silver", "lnN", SystMap<>::init(1.20));
     cb.cp().process(procs).bin({".*Run3.*3L.*P200.*Btag.*"})
         .AddSyst(cb, "Run3_Btag_3L_lPTISR", "lnN", SystMap<>::init(1.20));
     cb.cp().process(procs).bin({".*Run3.*3L.*P300.*Btag.*"})
         .AddSyst(cb, "Run3_Btag_3L_hPTISR", "lnN", SystMap<>::init(1.20));
     cb.cp().process(procs).bin({".*Run3.*4L.*Btag.*"})
         .AddSyst(cb, "Run3_Btag_4L", "lnN", SystMap<>::init(1.20));
+
     cb.SetFlag("filters-use-regex", false);
 }
 
@@ -839,6 +821,7 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
     AddPTISRSys(kept_bins, bkgprocs);
     AddSameSignSys(kept_bins, bkgprocs);
     AddOSOFSys(kept_bins, bkgprocs);
+    AddOSSFSys(kept_bins, bkgprocs);
     AddLepHemiSys(kept_bins, bkgprocs);
     AddBtagSys(kept_bins, bkgprocs);
 
