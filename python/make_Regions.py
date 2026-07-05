@@ -62,7 +62,7 @@ JET_CONFIGS_3L = {
 
 # ---------------- RISR / Mperp bins ----------------
 RISR_BINS_2L = [
-    {"name": "R95", "min": 0.95, "max": 1.0,  "Mh": 15, "Mm_lo": 5,  "Mm_hi": 15, "Ml_hi": 5},
+    {"name": "R95", "min": 0.95, "max": 1.0,  "Mh": 15, "Mm_lo": 7,  "Mm_hi": 15, "Ml_hi": 7},
     {"name": "R9",  "min": 0.9,  "max": 0.95, "Mh": 20, "Mm_lo": 10, "Mm_hi": 20, "Ml_hi": 10},
     {"name": "R85", "min": 0.85, "max": 0.9,  "Mh": 25, "Mm_lo": 15, "Mm_hi": 25, "Ml_hi": 15},
     {"name": "R8",  "min": 0.8,  "max": 0.85, "Mh": 30, "Mm_lo": 15, "Mm_hi": 30, "Ml_hi": 15},
@@ -79,7 +79,8 @@ RISR_BINS_3L = [
 
 # 4L RISR/Mperp bins
 RISR_BINS_4L = [
-    {"name": "R7", "min": 0.7, "max": 1.0, "Mh": 40, "Ml_hi": 40},
+    #{"name": "R7", "min": 0.7, "max": 1.0, "Mh": 40, "Ml_hi": 40},
+    {"name": "R7", "min": 0.7, "max": 1.0},
 ]
 
 NLEP_B_SPLITS_4L = [2, 1]  # order just for readability
@@ -458,32 +459,33 @@ def build_bins_4l(era, ptisr_tag=100):
     for r in RISR_BINS_4L:
         risr_cond = format_rISR_condition(r)
 
-        for mcat in ("Ml", "Mh"):
-            mcut, mname = make_mperp_cut_tokens(r, mcat)
+        #for mcat in ("Ml", "Mh"):
+        #    mcut, mname = make_mperp_cut_tokens(r, mcat)
 
-            for nb in NLEP_B_SPLITS_4L:
-                raw_key = f"Bin4L_Gold_{r['name']}_{mname}"
-                if   nb == 2: raw_key += "_22"
-                elif nb == 1: raw_key += "_31"
-                key = era_bin_name(era, raw_key)
-                cuts = DoubleQuotedScalarString(
-                    assemble_cuts_string(
-                        4,
-                        COMMON_BASE_TOKENS + [MET_CUT],
-                        PTISR_CUT,
-                        risr_cond,
-                        JET_CUT,
-                        mcut,
-                        extra_tokens=[f"Nlep_b_LEP=={nb};Nbjet==0;"] + EXTRA_BASE,
-                    )
+        for nb in NLEP_B_SPLITS_4L:
+            raw_key = f"Bin4L_Gold_{r['name']}"
+            if   nb == 2: raw_key += "_22"
+            elif nb == 1: raw_key += "_31"
+            key = era_bin_name(era, raw_key)
+            cuts = DoubleQuotedScalarString(
+                assemble_cuts_string(
+                    4,
+                    COMMON_BASE_TOKENS + [MET_CUT],
+                    PTISR_CUT,
+                    risr_cond,
+                    JET_CUT,
+                    #mcut,
+                    None,
+                    extra_tokens=[f"Nlep_b_LEP=={nb};Nbjet==0;"] + EXTRA_BASE,
                 )
+            )
 
-                out[key] = {
-                    "cuts": cuts,
-                    "lep-cuts": make_lep_cuts_block(COMMON_LEP, []),
-                    "predefined-cuts": DoubleQuotedScalarString("Cleaning_LEP;dphiMETV_LEP;"),
-                    "user-cuts": DoubleQuotedScalarString("minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"),
-                }
+            out[key] = {
+                "cuts": cuts,
+                "lep-cuts": make_lep_cuts_block(COMMON_LEP, []),
+                "predefined-cuts": DoubleQuotedScalarString("Cleaning_LEP;dphiMETV_LEP;"),
+                "user-cuts": DoubleQuotedScalarString("minMll_minDR_2D_low;HEM_Veto;leadSjet_pt;"),
+            }
     return out
 
 # ---------------- sideband generator ----------------
@@ -636,6 +638,10 @@ def main(outdir: Path, dry_run=False, maratio_threshold=DEFAULT_MARATIO_THRESHOL
         subprocess.run(make_Consolidated_cmd_2, check=True, text=True)
         make_Consolidated_cmd_3 = ["python3", "python/make_Consolidated_Regions.py", "config/bin_cfgs/Regions_Run3_3L_Jincl_lPTISR_Silver.yaml", "config/bin_cfgs/Regions_Run3_3L_Jincl_hPTISR_Silver.yaml"]
         subprocess.run(make_Consolidated_cmd_3, check=True, text=True)
+        #make_Consolidated_cmd_4 = ["python3", "python/make_Consolidated_Regions.py", "config/bin_cfgs/Regions_Run2_top_sideband_Silver.yaml"]
+        #subprocess.run(make_Consolidated_cmd_4, check=True, text=True)
+        #make_Consolidated_cmd_5 = ["python3", "python/make_Consolidated_Regions.py", "config/bin_cfgs/Regions_Run3_top_sideband_Silver.yaml"]
+        #subprocess.run(make_Consolidated_cmd_5, check=True, text=True)
     except Exception as e:
         print("skipping make_Consolidated_Regions.py (error calling it):", e)
     print("DONE MAKING REGIONS YAMLS")

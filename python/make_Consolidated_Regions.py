@@ -2,31 +2,44 @@
 """
 make_Consolidated_Regions.py
 
-Consolidates pairs (or groups) of YAML region files that differ only in
-jet-multiplicity (0J / 1J / ...) and PTISR bin (lPTISR / hPTISR, or P<value>
-embedded in bin names).
+Consolidates one or more YAML region files, merging bins that differ only in
+jet-multiplicity (0J / 1J / ...) and/or PTISR bin (lPTISR / hPTISR, or
+P<value> embedded in bin names) into a single bin.
 
 Usage:
-    python make_Consolidated_Regions.py file1.yaml file2.yaml [file3.yaml ...]
+    python make_Consolidated_Regions.py file1.yaml [file2.yaml ...]
 
-All input files must share the same "base" name once the J-count and PTISR
-tokens are stripped (e.g. Regions_2L_0J_lPTISR_Silver.yaml and
-Regions_2L_1J_hPTISR_Silver.yaml both reduce to Regions_2L_Silver).
+Two supported scenarios:
 
-The output file is written next to the first input file (or in the current
-directory) as <base>.yaml.
+1. Multiple files, one bin-family split across them (the original use case):
+       Regions_2L_0J_lPTISR_Silver.yaml + Regions_2L_1J_hPTISR_Silver.yaml
+   All input files must share the same "base" name once the J-count and
+   PTISR tokens are stripped (both reduce to Regions_2L_Silver).
+
+2. A single file containing multiple bins that already encode the J/PTISR
+   split internally (e.g. Regions_Run3_top_sideband_Silver.yaml, which has
+   0J_P250 / 1J_P250 / 0J_P350 / 1J_P350 bins per RISR bin). All bins whose
+   key reduces to the same base (after stripping J/PTISR tokens) are merged
+   together, same rules as scenario 1. Any other axes present in the key
+   (e.g. R7/R8/R9) are preserved as-is and kept as separate output bins.
+
+In both cases, the output file is written next to the first input file as
+<base>.yaml, where <base> is the common stem with J/PTISR tokens stripped.
+If stripping leaves the stem unchanged (single-file case with no J/PTISR
+tokens in the filename), "_Consolidated" is appended to avoid overwriting
+the input file.
 
 Consolidation rules
 -------------------
 Filename  : strip  <NJ>  and  <lPTISR|hPTISR>  tokens.
 Bin key   : strip  <NJ>_P<value>  or  P<value>  prefixed by _ from the key.
 cuts      : semi-colon-separated list; rules per token:
-              PTISR_LEP>=<v>   -> keep token with the MINIMUM (loosest) value
-              PTISR_LEP<<v>    -> DROP (upper bound disappears after merging)
-              Njet_S==<v>      -> DROP (covered by the union of jet bins)
-              Njet_S>=<v>      -> DROP
-              everything else  -> must be IDENTICAL across all files;
-                                  raise an error if they differ.
+              PTISR_LEP>=<v>   → keep token with the MINIMUM (loosest) value
+              PTISR_LEP<<v>    → DROP (upper bound disappears after merging)
+              Njet_S==<v>      → DROP (covered by the union of jet bins)
+              Njet_S>=<v>      → DROP
+              everything else  → must be IDENTICAL across all files;
+                                 raise an error if they differ.
 lep-cuts, predefined-cuts, user-cuts:
               must be identical across all files; raise an error if they differ.
 """
@@ -216,9 +229,21 @@ def consolidate(input_paths: list[Path]) -> tuple[str, str]:
         )
     output_stem = stems[0]
 
-    # Group bins by their base key
+    # If stripping J/PTISR tokens didn't change the stem (e.g. a single file
+    # whose filename has no lPTISR/hPTISR/NJ token, like
+    # Regions_Run3_top_sideband_Silver.yaml), the output filename would
+    # collide with an input filename. Append a suffix to avoid overwriting.
+    if len(input_paths) == 1 and output_stem == input_paths[0].stem:
+        output_stem = f"{output_stem}_Consolidated"
+
+    # Group bins by their base key. We first group using ORIGINAL keys
+    # mapped to their stripped form, but only apply the stripped form when
+    # 2+ distinct original bins actually land in the same group (i.e. a real
+    # merge is happening). A standalone bin (no J/PTISR partner) keeps its
+    # original key untouched, so labels like "_P100" aren't silently lost
+    # when there's nothing to consolidate against.
     from collections import defaultdict
-    groups: dict[str, list[dict]] = defaultdict(list)
+    groups: dict[str, list[tuple]] = defaultdict(list)   # base_key -> [(orig_key, entry), ...]
     group_order: list[str] = []   # preserve first-seen order
 
     for data in datasets:
@@ -226,17 +251,20 @@ def consolidate(input_paths: list[Path]) -> tuple[str, str]:
             bk = key_base(raw_key)
             if bk not in groups:
                 group_order.append(bk)
-            groups[bk].append(entry)
+            groups[bk].append((raw_key, entry))
 
     # Consolidate each group
     output_bins: list[str] = []
 
     for bk in group_order:
-        entries = groups[bk]
+        members = groups[bk]
+        entries = [e for _, e in members]
 
-        if len(entries) == 1:
-            # Nothing to merge; just re-emit with the cleaned key
-            output_bins.append(dump_bin(bk, entries[0]))
+        if len(members) == 1:
+            # Nothing to merge; re-emit with the ORIGINAL key (don't strip
+            # J/PTISR tokens from a bin that has no partner to merge with).
+            orig_key, entry = members[0]
+            output_bins.append(dump_bin(orig_key, entry))
             continue
 
         # Validate that non-cuts fields are identical
@@ -269,7 +297,7 @@ def consolidate(input_paths: list[Path]) -> tuple[str, str]:
 # ---------------------------------------------------------------------------
 
 def main():
-    if len(sys.argv) < 3:
+    if len(sys.argv) < 2:
         print(__doc__)
         sys.exit(1)
 

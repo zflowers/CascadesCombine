@@ -375,7 +375,7 @@ def _cli():
     ap.add_argument("--executable", default=f'{os.environ.get("CMSSW_BASE")}/src/CascadesCombine/macro/run_combine.sh')
     ap.add_argument("--method", default="AsymptoticLimits")
     ap.add_argument("--extra-args", default="")
-    ap.add_argument("--cpus", type=int, default=2)
+    ap.add_argument("--cpus", type=int, default=1)
     ap.add_argument("--memory", default="4GB")
     ap.add_argument("--disk", default="2GB")
     ap.add_argument("--dryrun", action="store_true")

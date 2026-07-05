@@ -40,9 +40,9 @@ JOBS = [
         ],
     },
 
-    # ----------------------------------------------------------------
-    # Step 2: Fan-out with compound naming
-    # ----------------------------------------------------------------
+    ## ----------------------------------------------------------------
+    ## Step 2: Fan-out with compound naming
+    ## ----------------------------------------------------------------
     {
         "source_dir": "Summer20UL16APV_106X_SMS",
         "source_suffix": "Summer20UL16APV_106X",
@@ -90,64 +90,64 @@ JOBS = [
             "SMS-TChiWZ_ZToLL_mZMin-0p1_TuneCP5_13TeV-madgraphMLM-pythia8_Summer20UL18_106X.root",
         ],
     },
-    {
-        "source_dir": "Summer16_102X_SMS",
-        "source_suffix": "Summer16_102X",
-        "dest_dirs": [
-            "Summer22_130X_SMS",
-            "Summer22EE_130X_SMS",
-        ],
-        "compound_naming": True,
-        "files": [
-            "SMS-TChiWZ_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
-            "SMS-TChiWZ_dM-60to90_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
-            "SMS-TChipmWW_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
-            "SMS-TChipmWW_dM-3to50_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
-            "SMS-TChipmWW_dM-60to90_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
-            "SMS-TSlepSlep_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
-            "SMS-TSlepSlep_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
-            "TChiWZ_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
-        ],
-    },
-    {
-        "source_dir": "Fall17_102X_SMS",
-        "source_suffix": "Fall17_102X",
-        "dest_dirs": [
-            "Summer23_130X_SMS",
-            "Summer23BPix_130X_SMS",
-        ],
-        "compound_naming": True,
-        "files": [
-            "SMS-TChiWZ_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
-            "SMS-TChiWZ_dM-60to90_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
-            "SMS-TChipmWW_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
-            "SMS-TChipmWW_dM-3to50_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
-            "SMS-TChipmWW_dM-60to90_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
-            "SMS-TSlepSlep_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
-            "SMS-TSlepSlep_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
-            "TChiWZ_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
-        ],
-    },
-    {
-        "source_dir": "Autumn18_102X_SMS",
-        "source_suffix": "Autumn18_102X",
-        "dest_dirs": [
-            "Summer24_130X_SMS",
-            "Summer25_130X_SMS",
-            "Summer26_130X_SMS",
-        ],
-        "compound_naming": True,
-        "files": [
-            "SMS-TChiWZ_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
-            "SMS-TChiWZ_dM-60to90_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
-            "SMS-TChipmWW_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
-            "SMS-TChipmWW_dM-3to50_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
-            "SMS-TChipmWW_dM-60to90_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
-            "SMS-TSlepSlep_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
-            "SMS-TSlepSlep_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
-            "TChiWZ_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
-        ],
-    },
+    #{
+    #    "source_dir": "Summer16_102X_SMS",
+    #    "source_suffix": "Summer16_102X",
+    #    "dest_dirs": [
+    #        "Summer22_130X_SMS",
+    #        "Summer22EE_130X_SMS",
+    #    ],
+    #    "compound_naming": True,
+    #    "files": [
+    #        "SMS-TChiWZ_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
+    #        "SMS-TChiWZ_dM-60to90_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
+    #        "SMS-TChipmWW_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
+    #        "SMS-TChipmWW_dM-3to50_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
+    #        "SMS-TChipmWW_dM-60to90_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
+    #        "SMS-TSlepSlep_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
+    #        "SMS-TSlepSlep_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
+    #        "TChiWZ_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
+    #    ],
+    #},
+    #{
+    #    "source_dir": "Fall17_102X_SMS",
+    #    "source_suffix": "Fall17_102X",
+    #    "dest_dirs": [
+    #        "Summer23_130X_SMS",
+    #        "Summer23BPix_130X_SMS",
+    #    ],
+    #    "compound_naming": True,
+    #    "files": [
+    #        "SMS-TChiWZ_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
+    #        "SMS-TChiWZ_dM-60to90_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
+    #        "SMS-TChipmWW_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
+    #        "SMS-TChipmWW_dM-3to50_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
+    #        "SMS-TChipmWW_dM-60to90_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
+    #        "SMS-TSlepSlep_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
+    #        "SMS-TSlepSlep_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
+    #        "TChiWZ_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
+    #    ],
+    #},
+    #{
+    #    "source_dir": "Autumn18_102X_SMS",
+    #    "source_suffix": "Autumn18_102X",
+    #    "dest_dirs": [
+    #        "Summer24_130X_SMS",
+    #        "Summer25_130X_SMS",
+    #        "Summer26_130X_SMS",
+    #    ],
+    #    "compound_naming": True,
+    #    "files": [
+    #        "SMS-TChiWZ_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
+    #        "SMS-TChiWZ_dM-60to90_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
+    #        "SMS-TChipmWW_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
+    #        "SMS-TChipmWW_dM-3to50_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
+    #        "SMS-TChipmWW_dM-60to90_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
+    #        "SMS-TSlepSlep_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
+    #        "SMS-TSlepSlep_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
+    #        "TChiWZ_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
+    #    ],
+    #},
 
     # ----------------------------------------------------------------
     # Background jobs (auto-discover all files in source dir)

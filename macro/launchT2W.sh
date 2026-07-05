@@ -22,3 +22,4 @@ for datacard in "${dcdir}"/*/*.txt; do
       -o "${name}_workspace.root"
     break
 done
+# -v 10 \

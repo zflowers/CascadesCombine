@@ -347,13 +347,33 @@ struct SystInfo {
 };
 
 static const std::vector<SystInfo> kDefaultSFSystematics = {
+    // leave PileUp off until skims have fixed weights
+    //{"PileUp", "PUweight", "PUweight_up", "PUweight_down"}
+
     //{"METtrig", "MetTrigSFweight", "MetTrigSFweight_up", "MetTrigSFweight_down"},
-    //{"PU",      "PUweight",        "PUweight_up",        "PUweight_down"}
+    //{"MuF", "MuFweight", "MuFweight_up", "MuFweight_down"},
+    //{"MuR", "MuRweight", "MuRweight_up", "MuRweight_down"},
+    //{"PDF", "PDFweight", "PDFweight_up", "PDFweight_down"},
+    //{"Prefire", "PrefireWeight", "PrefireWeight_up", "PrefireWeight_down"},
+    //{"BtagHF", "BtagHFSFweight", "BtagHFSFweight_up", "BtagHFSFweight_down"},
+    //{"BtagLF", "BtagLFSFweight", "BtagLFSFweight_up", "BtagLFSFweight_down"},
+    //{"elBLP_over_COL", "elBLP_over_COL_SFweight", "elBLP_over_COL_SFweight_up", "elBLP_over_COL_SFweight_down"},
+    //{"elID_over_BLP", "elID_over_BLP_SFweight", "elID_over_BLP_SFweight_up", "elID_over_BLP_SFweight_down"},
+    //{"elISO_over_ID", "elISO_over_ID_SFweight", "elISO_over_ID_SFweight_up", "elISO_over_ID_SFweight_down"},
+    //{"elPrompt_ISOID", "elPrompt_ISOID_SFweight", "elPrompt_ISOID_SFweight_up", "elPrompt_ISOID_SFweight_down"},
+    //{"elNOT_Prompt_ISOID", "elNOT_Prompt_ISOID_SFweight", "elNOT_Prompt_ISOID_SFweight_up", "elNOT_Prompt_ISOID_SFweight_down"},
+    //{"elNOT_ID_nor_ISO", "elNOT_ID_nor_ISO_SFweight", "elNOT_ID_nor_ISO_SFweight_up", "elNOT_ID_nor_ISO_SFweight_down"},
+    //{"muBLP_over_COL", "muBLP_over_COL_SFweight", "muBLP_over_COL_SFweight_up", "muBLP_over_COL_SFweight_down"},
+    //{"muID_over_BLP", "muID_over_BLP_SFweight", "muID_over_BLP_SFweight_up", "muID_over_BLP_SFweight_down"},
+    //{"muISO_over_ID", "muISO_over_ID_SFweight", "muISO_over_ID_SFweight_up", "muISO_over_ID_SFweight_down"},
+    //{"muPrompt_ISOID", "muPrompt_ISOID_SFweight", "muPrompt_ISOID_SFweight_up", "muPrompt_ISOID_SFweight_down"},
+    //{"muNOT_Prompt_ISOID", "muNOT_Prompt_ISOID_SFweight", "muNOT_Prompt_ISOID_SFweight_up", "muNOT_Prompt_ISOID_SFweight_down"},
+    //{"muNOT_ID_nor_ISO", "muNOT_ID_nor_ISO_SFweight", "muNOT_ID_nor_ISO_SFweight_up", "muNOT_ID_nor_ISO_SFweight_down"},
 };
 
 static const std::vector<std::string> kDefaultTreeSystematics = {
-    //"JESUncer_CMS_scale_j_Total",
-    //"JERUncer_Total",
+    //"JesUncer_CMS_scale_j_Total",
+    //"JerUncertaintySetTotal",
     //"METUncer_UnClust"
 };
 
@@ -384,33 +404,48 @@ ROOT::RDF::RNode MultiSystWeights(ROOT::RDF::RNode node,
     node = node.Define(
         "syst_nomin_product",
         // all weights
-        //[](
-        //    double pu, double MuF, double MuR, double PDF,
-        //    double BtagHF, double BtagLF, double met_trig,
-        //    double elBLP_over_COL, double elID_over_BLP, double elISO_over_ID, double elPrompt_ISOID, double elNOT_Prompt_ISOID, double elNOT_ID_nor_ISO,
-        //    double muBLP_over_COL, double muID_over_BLP, double muISO_over_ID, double muPrompt_ISOID, double muNOT_Prompt_ISOID, double muNOT_ID_nor_ISO,
-        //    double prefire
-        //  ) {
-        //      return pu * MuF * MuR * PDF * BtagHF * BtagLF * met_trig * elBLP_over_COL * elID_over_BLP * elISO_over_ID * elPrompt_ISOID * elNOT_Prompt_ISOID * elNOT_ID_nor_ISO * muBLP_over_COL * muID_over_BLP * muISO_over_ID * muPrompt_ISOID * muNOT_Prompt_ISOID * muNOT_ID_nor_ISO * prefire;
-        //},
-        //{
-        //  "PUweight", "MuFweight", "MuRweight", "PDFweight",
-        //  "BtagHFSFweight", "BtagLFSFweight", "MetTrigSFweight",
-        //  "elBLP_over_COL_SFweight", "elID_over_BLP_SFweight", "elISO_over_ID_SFweight", "elPrompt_ISOID_SFweight", "elNOT_Prompt_ISOID_SFweight", "elNOT_ID_nor_ISO_SFweight",
-        //  "muBLP_over_COL_SFweight", "muID_over_BLP_SFweight", "muISO_over_ID_SFweight", "muPrompt_ISOID_SFweight", "muNOT_Prompt_ISOID_SFweight", "muNOT_ID_nor_ISO_SFweight",
-        //  "PrefireWeight",
-        //}
-        
-        //[](double pu) {
-        //    return pu;
-        //},
-        //{"PUweight"}
-        
-        // No weights
-        []() {
-            return 1.;
+        [](
+            double pu, double MuF, double MuR, double PDF,
+            double BtagHF, double BtagLF, double met_trig,
+            double elBLP_over_COL, double elID_over_BLP, double elISO_over_ID, double elPrompt_ISOID, double elNOT_Prompt_ISOID, double elNOT_ID_nor_ISO,
+            double muBLP_over_COL, double muID_over_BLP, double muISO_over_ID, double muPrompt_ISOID, double muNOT_Prompt_ISOID, double muNOT_ID_nor_ISO,
+            double prefire
+          ) {
+              return 1.0
+                   //* pu
+                   * MuF
+                   * MuR
+                   * PDF
+                   * BtagHF
+                   * BtagLF
+                   * met_trig
+                   * elBLP_over_COL
+                   * elID_over_BLP
+                   * elISO_over_ID
+                   * elPrompt_ISOID
+                   * elNOT_Prompt_ISOID
+                   * elNOT_ID_nor_ISO
+                   * muBLP_over_COL
+                   * muID_over_BLP
+                   * muISO_over_ID
+                   * muPrompt_ISOID
+                   * muNOT_Prompt_ISOID
+                   * muNOT_ID_nor_ISO
+                   * prefire
+                   ;
         },
-        {}
+        {
+          "PUweight", "MuFweight", "MuRweight", "PDFweight",
+          "BtagHFSFweight", "BtagLFSFweight", "MetTrigSFweight",
+          "elBLP_over_COL_SFweight", "elID_over_BLP_SFweight", "elISO_over_ID_SFweight", "elPrompt_ISOID_SFweight", "elNOT_Prompt_ISOID_SFweight", "elNOT_ID_nor_ISO_SFweight",
+          "muBLP_over_COL_SFweight", "muID_over_BLP_SFweight", "muISO_over_ID_SFweight", "muPrompt_ISOID_SFweight", "muNOT_Prompt_ISOID_SFweight", "muNOT_ID_nor_ISO_SFweight",
+          "PrefireWeight",
+        }
+        // No weights
+        //[]() {
+        //    return 1.;
+        //},
+        //{}
     );
 
     // --- Multiply base weight by nominal product ---
@@ -429,28 +464,52 @@ ROOT::RDF::RNode MultiSystWeights(ROOT::RDF::RNode node,
     {   
         std::string colUp   = "weight_scaled_" + s.tag + "Up";
         std::string colDown = "weight_scaled_" + s.tag + "Down";
-    
+
         node = node.Define(
             colUp,
-            [=](double base, double nomProd, double nomVal, double upVal, double) {
-                double val = base * nomProd * (upVal / nomVal);
-                if (!std::isfinite(val)) val = base; // fallback if NaN or Inf
-                return val;
-            },  
-            {"weight_scaled_raw", "syst_nomin_product", s.nominal, s.up, s.down}
-        );  
-    
+            [](double wnom,
+               double nomVal,
+               double upVal)
+            {
+                double ratio = upVal / nomVal;
+                if (!std::isfinite(ratio))
+                    ratio = 1.0;
+                return wnom * ratio;
+            },
+            {"weight_scaled", s.nominal, s.up}
+        );
+
         node = node.Define(
             colDown,
-            [=](double base, double nomProd, double nomVal, double, double downVal) {
-                double val = base * nomProd * (downVal / nomVal);
-                if (!std::isfinite(val)) val = base; // fallback if NaN or Inf
-                return val;
-            },  
-            {"weight_scaled_raw", "syst_nomin_product", s.nominal, s.up, s.down}
-        );  
-    }
+            [](double wnom,
+               double nomVal,
+               double downVal)
+            {
+                double ratio = downVal / nomVal;
+                if (!std::isfinite(ratio))
+                    ratio = 1.0;
+                return wnom * ratio;
+            },
+            {"weight_scaled", s.nominal, s.down}
+        );
 
+        std::string colUpSq = "weight_sq_" + s.tag + "Up";
+        
+        node = node.Define(
+            colUpSq,
+            [](double w){ return w*w; },
+            {colUp}
+        );
+
+        std::string colDownSq = "weight_sq_" + s.tag + "Down";
+        
+        node = node.Define(
+            colDownSq,
+            [](double w){ return w*w; },
+            {colDown}
+        );
+    }
+    
     return node;
 }
 

@@ -529,7 +529,7 @@ def wait_for_jobs(work_dirs = None, condor="condor"):
     monitor.wait_until_jobs_below(clusters=clusters)
     return idle_time_end - idle_time_start
 
-def run_checkjobs_loop_parallel(condor_dir=None, work_dirs=None, no_resubmit=False, max_resubmits=3, check_json=False, check_root=False):
+def run_checkjobs_loop_parallel(condor_dir=None, work_dirs=None, no_resubmit=False, max_resubmits=5, check_json=False, check_root=False):
     """
     Check all work directories with checkJobs.py, resubmit failing jobs across
     all directories in one cycle, then wait once for all resubmitted jobs to finish.
@@ -1096,7 +1096,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                 
                 print("[run_combine] Launched limit jobs", flush=True)
                 
-                if len(signals) < 20: # don't run significance for all points
+                if len(signals) < 30: # don't run significance for all points
                     print("[run_combine] Launching significance jobs...", flush=True)
                     for sig in signals:
                         significances_submit_cmd = [
@@ -1259,7 +1259,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                         "./"+macro_dir+"/Zscore.x",
                         "-f 2",
                         "-i", f'{FD_file.replace(".Test.root","CSV_zscore.txt")}',
-                        "-o", output_dir+"/"+str(signals[0]),
+                        "-o", output_dir+"/"+str(signals[0])+"/",
                     ]
                     print("[run_combine] Running Zscore exe with command:", " ".join(FD_Zscore_cmd), flush=True)
                     subprocess.run(FD_Zscore_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)

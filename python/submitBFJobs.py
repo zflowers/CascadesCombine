@@ -75,8 +75,8 @@ def make_submit_content(
     input_json: str = "flattened.json",
     logs_dir: str = "BF_condor_logs",
     request_cpus: int = 1,
-    request_memory: str = "2GB",
-    request_disk: str = "2GB",
+    request_memory: str = "1GB",
+    request_disk: str = "1GB",
     universe: str = "vanilla",
     cmssw_tarball="cmssw_runtime.tgz",
 ) -> str:
@@ -144,8 +144,8 @@ def make_submit_file(
     logs_dir: str = "BF_condor_logs",
     transfer_output_files: Optional[List[str]] = None,
     request_cpus: int = 1,
-    request_memory: str = "2GB",
-    request_disk: str = "2GB",
+    request_memory: str = "1GB",
+    request_disk: str = "1GB",
 ) -> str:
     """
     Write the submit file to the current directory and return its absolute path.
@@ -341,8 +341,8 @@ def _cli():
     parser.add_argument("--logs-dir", default="BF_condor_logs", help="Directory to store condor stdout/err/log files")
     parser.add_argument("--json", default="flattened.json", help="input flattened json file")
     parser.add_argument("--cpus", type=int, default=1)
-    parser.add_argument("--memory", default="2GB")
-    parser.add_argument("--disk", default="2GB")
+    parser.add_argument("--memory", default="1GB")
+    parser.add_argument("--disk", default="1GB")
     parser.add_argument("--dryrun", action="store_true", help="Don't actually condor_submit; just write the submit file")
     parser.add_argument("--record-dir", default=None, help="Where to record submitted_clusters.txt (defaults to cwd)")
     args = parser.parse_args()

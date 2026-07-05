@@ -257,6 +257,9 @@ int main(int argc, char** argv) {
         else
             processName = GetProcessNameFromKey(rootFilePath, preferredGroups);
     }
+    else if (processName == "Cascades") {
+        processName = BFTool::GetSignalTokensCascades(rootFilePath);
+    }
     bool doFAKES = isProcFAKES(procYamlPath, processName);
 
     // --- Build active systematics config ---
@@ -739,9 +742,9 @@ int main(int argc, char** argv) {
     
             // --- JSON output per-bin ---
             if(doJSON){
-                std::cout << "[BFI_condor] Filling json (bin=" << bin << ")\n";
+                std::cout << "[BFI_condor] Booking json actions (bin=" << bin << ")\n";
                 ROOT::RDF::RNode json_node_base = base_node_fill;
-    
+            
                 // Build per-proc json nodes
                 std::vector<std::pair<std::string, ROOT::RDF::RNode>> proc_json_nodes;
                 if (!runFAKES) {
@@ -752,128 +755,163 @@ int main(int argc, char** argv) {
                     auto node_LFelec = json_node_base.Filter("isLFFakeElectron");
                     auto node_LFmuon = json_node_base.Filter("isLFFakeMuon");
                     auto node_clean  = json_node_base.Filter("hasNoFake");
-    
+            
                     proc_json_nodes.emplace_back(key_HFelec, node_HFelec);
                     proc_json_nodes.emplace_back(key_HFmuon, node_HFmuon);
                     proc_json_nodes.emplace_back(key_LFelec, node_LFelec);
                     proc_json_nodes.emplace_back(key_LFmuon, node_LFmuon);
                     proc_json_nodes.emplace_back(key, node_clean);
                 }
-    
-                // For each proc, apply finalCutsExpanded and validUserCuts filters, then sum
+            
+                // --- PHASE 1: BOOK ALL ACTIONS (LAZY) ---
+                struct DeferredSyst {
+                    ROOT::RDF::RResultPtr<double> sum_up;
+                    ROOT::RDF::RResultPtr<double> sum2_up;
+                    ROOT::RDF::RResultPtr<double> sum_down;
+                    ROOT::RDF::RResultPtr<double> sum2_down;
+                };
+            
+                struct DeferredProc {
+                    std::string proc_key;
+                    ROOT::RDF::RResultPtr<unsigned long long> cnt;
+                    ROOT::RDF::RResultPtr<double> sumW;
+                    ROOT::RDF::RResultPtr<double> sumW2;
+                    std::map<std::string, DeferredSyst> systs;
+                };
+            
+                std::vector<DeferredProc> deferred_procs;
+                deferred_procs.reserve(proc_json_nodes.size());
+            
                 for (auto &pkv : proc_json_nodes) {
                     const std::string &proc_key = pkv.first;
                     ROOT::RDF::RNode proc_json_node = pkv.second;
-    
+            
                     // Apply bin final cuts
                     for (const auto &c : finalCutsExpanded) if (!c.empty()) proc_json_node = proc_json_node.Filter(c);
                     for (const auto &vc : validUserCuts) proc_json_node = proc_json_node.Filter(vc.expr);
-    
-                    // --- basic nominal ---
-                    auto cnt = proc_json_node.Count();
-                    auto sumW = proc_json_node.Sum<double>("weight_scaled");
-                    auto sumW2 = proc_json_node.Sum<double>("weight_sq_scaled");
-    
-                    unsigned long long n_entries = cnt.GetValue();
-                    double sW = sumW.GetValue();
-                    double sW2Val = sumW2.GetValue();
+            
+                    DeferredProc dp;
+                    dp.proc_key = proc_key;
+            
+                    // 1. Book Count
+                    dp.cnt = proc_json_node.Count();
+                    
+                    // 2. Book nominal sums
+                    dp.sumW = proc_json_node.Sum<double>("weight_scaled");
+                    dp.sumW2 = proc_json_node.Sum<double>("weight_sq_scaled");
+            
+                    // 3. Book all systematic sums
+                    if (treeSystTag.empty() && !IsData && !isSignal && runInternalSysts) {
+                        for (const auto &s : sysCfg.sf) {
+                            DeferredSyst ds;
+                            std::string colUp   = "weight_scaled_" + s.tag + "Up";
+                            std::string colDown = "weight_scaled_" + s.tag + "Down";
+            
+                            // Book Up sums
+                            ds.sum_up = proc_json_node.Sum<double>(colUp);
+                            std::string colUp2 = colUp;
+                            colUp2.replace(0, strlen("weight_scaled_"), "weight_sq_");
+                            ds.sum2_up = proc_json_node.Sum<double>(colUp2);
+            
+                            // Book Down sums
+                            ds.sum_down = proc_json_node.Sum<double>(colDown);
+                            std::string colDown2 = colDown;
+                            colDown2.replace(0, strlen("weight_scaled_"), "weight_sq_");
+                            ds.sum2_down = proc_json_node.Sum<double>(colDown2);
+            
+                            dp.systs[s.tag] = ds;
+                        }
+                    }
+                    deferred_procs.push_back(dp);
+                }
+            
+                // --- PHASE 2: TRIGGER EXECUTION ONCE ---
+                // Accessing GetValue on any single result forces RDataFrame to evaluate 
+                // ALL booked actions simultaneously across all threads.
+                if (!deferred_procs.empty()) {
+                    (void)deferred_procs.front().cnt.GetValue(); 
+                }
+            
+                // --- PHASE 3: READ AND PROCESS RESULTS ---
+                for (auto &dp : deferred_procs) {
+                    const std::string &proc_key = dp.proc_key;
+            
+                    unsigned long long n_entries = dp.cnt.GetValue();
+                    double sW = dp.sumW.GetValue();
+                    double sW2Val = dp.sumW2.GetValue();
                     double err = (sW2Val >= 0.0) ? std::sqrt(sW2Val) : 0.0;
-    
+            
                     // Prepare container for this file
                     FileYields fy;
                     fy.nominal = { (double)n_entries, sW, err };
-    
-                    // --- For each systematic compute Up/Down sums ---
-                    // for now turn off sys for signal
-                    if(!IsData && !isSignal && runInternalSysts) {
+            
+                    // Process pre-booked systematics
+                    if (treeSystTag.empty() && !IsData && !isSignal && runInternalSysts) {
                         for (const auto &s : sysCfg.sf) {
-                            std::string colUp   = "weight_scaled_" + s.tag + "Up";
-                            std::string colDown = "weight_scaled_" + s.tag + "Down";
-    
-                            // Sum for Up
+                            auto &ds = dp.systs[s.tag];
+                            
                             double sum_up = 0.0, sum2_up = 0.0;
                             try {
-                                sum_up  = proc_json_node.Sum<double>(colUp).GetValue();
-                                std::string colUp2 = colUp;
-                                colUp2.replace(0, strlen("weight_scaled_"), "weight_sq_");
-                                sum2_up = proc_json_node.Sum<double>(colUp2).GetValue();
-                            } catch (...) {
-                                sum2_up = 0.0;
-                            }
+                                sum_up = ds.sum_up.GetValue();
+                                sum2_up = ds.sum2_up.GetValue();
+                            } catch (...) { sum2_up = 0.0; }
                             double err_up = (sum2_up >= 0.0) ? std::sqrt(sum2_up) : 0.0;
-    
-                            // Sum for Down
+            
                             double sum_down = 0.0, sum2_down = 0.0;
                             try {
-                                std::string colDownName = "weight_scaled_" + s.tag + "Down";
-                                sum_down  = proc_json_node.Sum<double>(colDownName).GetValue();
-                                std::string colDown2 = colDown;
-                                colDown2.replace(0, strlen("weight_scaled_"), "weight_sq_");
-                                sum2_down = proc_json_node.Sum<double>(colDown2).GetValue();
-                            } catch (...) {
-                                sum2_down = 0.0;
-                            }
+                                sum_down = ds.sum_down.GetValue();
+                                sum2_down = ds.sum2_down.GetValue();
+                            } catch (...) { sum2_down = 0.0; }
                             double err_down = (sum2_down >= 0.0) ? std::sqrt(sum2_down) : 0.0;
-    
-                            // Record into file yields
+            
                             SystYields sy;
                             sy.up   = { (double)n_entries, sum_up, err_up };
                             sy.down = { (double)n_entries, sum_down, err_down };
                             fy.systs[s.tag] = sy;
                         }
                     }
-                    // --- store per-file result and accumulate into totals (only once per-file) ---
-                    // First handle tree-systematic passes: ALWAYS store the variation under .systs[tag]
-                    // (create the file entry if needed)
+            
+                    // Handle tree-systematic passes
                     if (!treeSystTag.empty()) {
-                        auto &fyr = fileResultsByBin[bin][proc_key][rootFilePath]; // creates entry if absent
+                        auto &fyr = fileResultsByBin[bin][proc_key][rootFilePath];
                         if (treeSystIsUp) {
                             fyr.systs[treeSystTag].up = { (double)n_entries, sW, err };
                         } else {
                             fyr.systs[treeSystTag].down = { (double)n_entries, sW, err };
                         }
-                        // Do NOT touch nominal or totals for tree-systematic pass
                         continue;
                     }
                     
-                    // Nominal pass: only write nominal + accumulate totals only once
+                    // Nominal pass: write nominal + accumulate totals
                     if (fileResultsByBin[bin].find(proc_key) == fileResultsByBin[bin].end() ||
-                        fileResultsByBin[bin][proc_key].find(rootFilePath) == fileResultsByBin[bin][proc_key].end())
+                        fileResultsByBin[bin][proc_key].find(rootFilePath) == fileResultsByBin[bin][proc_key].end()
+                       )
                     {
-                        // Record nominal per-bin, per-process, per-rootfile
                         fileResultsByBin[bin][proc_key][rootFilePath] = fy;
-                    
-                        // Accumulate totals
                         auto &tot = totalsByBin[bin][proc_key];
                     
-                        // nominal
                         tot.nominal[0] += (double)n_entries;
                         tot.nominal[1] += sW;
-                        // accumulate variance (sqrt at the end) -> store as sum(sigma^2)
                         tot.nominal[2] += (err * err);
                     
-                        // systematics accumulation (internal SF systs that we computed into fy.systs)
                         if(!IsData){
                             for (const auto &s_kv : fy.systs) {
                                 const std::string &stag = s_kv.first;
                                 const SystYields &sy = s_kv.second;
                     
-                                // Ensure entry exists
                                 auto &dest_syst = tot.systs[stag];
-                                // accumulate up
-                                dest_syst.up[0]  += sy.up[0];   // entries (will be the same)
-                                dest_syst.up[1]  += sy.up[1];   // sum
-                                dest_syst.up[2]  += (sy.up[2] * sy.up[2]); // accumulate variance (err^2)
-                                // accumulate down
+                                dest_syst.up[0]  += sy.up[0];
+                                dest_syst.up[1]  += sy.up[1];
+                                dest_syst.up[2]  += (sy.up[2] * sy.up[2]);
+            
                                 dest_syst.down[0]+= sy.down[0];
                                 dest_syst.down[1]+= sy.down[1];
                                 dest_syst.down[2]+= (sy.down[2] * sy.down[2]);
                             }
                         }
                     }
-                } // end proc_json_nodes loop
+                } // end deferred_procs loop
             } // end doJSON
-    
         } // end loop over bins
     }; // end processTree
 
@@ -891,8 +929,7 @@ int main(int argc, char** argv) {
             processTree(baseTree, keyPT, histSystConfig, false, "", false, runFAKES);
         } else {
             processTree(baseTree, keyPT, activeSystematics, runInternalSystsOnNominal, "", false, runFAKES);
-            // for now turn off sys for signal
-            if(!is_data && !isSignal){
+            if(!is_data){
                 for (const auto &treeSyst : activeSystematics.tree) {
                     processTree(baseTree+"_"+treeSyst+"Up",   keyPT, activeSystematics, false, treeSyst, true, runFAKES);
                     processTree(baseTree+"_"+treeSyst+"Down", keyPT, activeSystematics, false, treeSyst, false, runFAKES);

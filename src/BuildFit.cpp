@@ -309,6 +309,7 @@ std::vector<std::string> BuildFit::WriteJsonAsFlatHists(
             // Write nominal histogram for non-data processes (CH expects process histos and data_obs)
             if (!isData) {
                 //if (sumW <= 0.0 && err <= 0.0) {sumW = 1.e-9; err = 1.e-9;}
+                //if (sumW < 0.0) {sumW = 0.0;}
                 TH1F *h = new TH1F(hname.c_str(), hname.c_str(), 1, 0, 1);
                 h->Sumw2();
                 h->SetBinContent(1, sumW);
@@ -576,53 +577,29 @@ void BuildFit::AddPTISRSys(const stringlist& binset, const stringlist& procs){
 void BuildFit::AddFAKETransferSys(const stringlist& binset){
     cb.SetFlag("filters-use-regex", true);
 
-    cb.cp().bin({".*Run2.*Bronze.*"}).process({".*FAKES.*LFMuon.*"})
-       .AddSyst(cb, "Run2_IDISO_LFMuon", "lnN", SystMap<>::init(1.20));
+    cb.cp().bin({".*Run2.*Bronze.*"}).process({".*FAKES.*Muon.*"})
+       .AddSyst(cb, "Run2_IDISO_Muon", "lnN", SystMap<>::init(1.30));
    
-    cb.cp().bin({".*Run2.*Bronze.*"}).process({".*FAKES.*HFMuon.*"})
-       .AddSyst(cb, "Run2_IDISO_HFMuon", "lnN", SystMap<>::init(1.20));
+    cb.cp().bin({".*Run2.*Bronze.*"}).process({".*FAKES.*Elec.*"})
+       .AddSyst(cb, "Run2_IDISO_Elec", "lnN", SystMap<>::init(1.30));
    
-    cb.cp().bin({".*Run2.*Bronze.*"}).process({".*FAKES.*LFElec.*"})
-       .AddSyst(cb, "Run2_IDISO_LFElec", "lnN", SystMap<>::init(1.20));
+     cb.cp().bin({".*Run2.*Silver.*"}).process({".*FAKES.*Muon.*"})
+       .AddSyst(cb, "Run2_SIP3D_Muon", "lnN", SystMap<>::init(1.30));
    
-    cb.cp().bin({".*Run2.*Bronze.*"}).process({".*FAKES.*HFElec.*"})
-       .AddSyst(cb, "Run2_IDISO_HFElec", "lnN", SystMap<>::init(1.20));
+     cb.cp().bin({".*Run2.*Silver.*"}).process({".*FAKES.*Elec.*"})
+       .AddSyst(cb, "Run2_SIP3D_Elec", "lnN", SystMap<>::init(1.30));
    
-     cb.cp().bin({".*Run2.*Silver.*"}).process({".*FAKES.*LFMuon.*"})
-       .AddSyst(cb, "Run2_SIP3D_LFMuon", "lnN", SystMap<>::init(1.20));
+    cb.cp().bin({".*Run3.*Bronze.*"}).process({".*FAKES.*Muon.*"})
+       .AddSyst(cb, "Run3_IDISO_Muon", "lnN", SystMap<>::init(1.30));
    
-     cb.cp().bin({".*Run2.*Silver.*"}).process({".*FAKES.*HFMuon.*"})
-       .AddSyst(cb, "Run2_SIP3D_HFMuon", "lnN", SystMap<>::init(1.20));
+    cb.cp().bin({".*Run3.*Bronze.*"}).process({".*FAKES.*Elec.*"})
+       .AddSyst(cb, "Run3_IDISO_Elec", "lnN", SystMap<>::init(1.30));
    
-     cb.cp().bin({".*Run2.*Silver.*"}).process({".*FAKES.*LFElec.*"})
-       .AddSyst(cb, "Run2_SIP3D_LFElec", "lnN", SystMap<>::init(1.20));
+     cb.cp().bin({".*Run3.*Silver.*"}).process({".*FAKES.*Muon.*"})
+       .AddSyst(cb, "Run3_SIP3D_Muon", "lnN", SystMap<>::init(1.30));
    
-     cb.cp().bin({".*Run2.*Silver.*"}).process({".*FAKES.*HFElec.*"})
-       .AddSyst(cb, "Run2_SIP3D_HFElec", "lnN", SystMap<>::init(1.20));
-
-    cb.cp().bin({".*Run3.*Bronze.*"}).process({".*FAKES.*LFMuon.*"})
-       .AddSyst(cb, "Run3_IDISO_LFMuon", "lnN", SystMap<>::init(1.20));
-   
-    cb.cp().bin({".*Run3.*Bronze.*"}).process({".*FAKES.*HFMuon.*"})
-       .AddSyst(cb, "Run3_IDISO_HFMuon", "lnN", SystMap<>::init(1.20));
-   
-    cb.cp().bin({".*Run3.*Bronze.*"}).process({".*FAKES.*LFElec.*"})
-       .AddSyst(cb, "Run3_IDISO_LFElec", "lnN", SystMap<>::init(1.20));
-   
-    cb.cp().bin({".*Run3.*Bronze.*"}).process({".*FAKES.*HFElec.*"})
-       .AddSyst(cb, "Run3_IDISO_HFElec", "lnN", SystMap<>::init(1.20));
-   
-     cb.cp().bin({".*Run3.*Silver.*"}).process({".*FAKES.*LFMuon.*"})
-       .AddSyst(cb, "Run3_SIP3D_LFMuon", "lnN", SystMap<>::init(1.20));
-   
-     cb.cp().bin({".*Run3.*Silver.*"}).process({".*FAKES.*HFMuon.*"})
-       .AddSyst(cb, "Run3_SIP3D_HFMuon", "lnN", SystMap<>::init(1.20));
-   
-     cb.cp().bin({".*Run3.*Silver.*"}).process({".*FAKES.*LFElec.*"})
-       .AddSyst(cb, "Run3_SIP3D_LFElec", "lnN", SystMap<>::init(1.20));
-   
-     cb.cp().bin({".*Run3.*Silver.*"}).process({".*FAKES.*HFElec.*"})
-       .AddSyst(cb, "Run3_SIP3D_HFElec", "lnN", SystMap<>::init(1.20));
+     cb.cp().bin({".*Run3.*Silver.*"}).process({".*FAKES.*Elec.*"})
+       .AddSyst(cb, "Run3_SIP3D_Elec", "lnN", SystMap<>::init(1.30));
 
      cb.SetFlag("filters-use-regex", false);
 }
@@ -821,7 +798,6 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
     AddPTISRSys(kept_bins, bkgprocs);
     AddSameSignSys(kept_bins, bkgprocs);
     AddOSOFSys(kept_bins, bkgprocs);
-    AddOSSFSys(kept_bins, bkgprocs);
     AddLepHemiSys(kept_bins, bkgprocs);
     AddBtagSys(kept_bins, bkgprocs);
 

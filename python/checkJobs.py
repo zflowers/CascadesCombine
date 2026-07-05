@@ -106,7 +106,7 @@ def parse_submit_for_mapping(submit_path: str) -> tuple[str, dict[str, str]]:
         "when_to_transfer_output = ON_EXIT\n"
         "transfer_input_files = BFI_condor.x\n"
         "request_cpus = 2\n"
-        "request_memory = 2 GB\n\n"
+        "request_memory = 4 GB\n\n"
     )
 
     if not os.path.exists(submit_path):

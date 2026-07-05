@@ -1644,7 +1644,7 @@ void Plot_EventCount2D(TH2* h, const std::string &mode,
         double yup  = h->GetYaxis()->GetBinUpEdge(iy);
         double xc = 0.5*(xlow+xup);
         double yc = 0.5*(ylow+yup);
-        if(val < 1.e-5 && (mode != "yield" || mode != "raw"))
+        if(val < 1.e-5 && mode != "yield" && mode != "raw")
             val = 0.;
         TString label = "";
         if(val < 1)
@@ -1957,7 +1957,6 @@ void MakeAndPlotCutflow2D(
         }
     }
 
-    h2->SetMinimum(0.01);
     // --- 11) call plotting routine which handles drawing + special Zbi total-row masking ---
     Plot_EventCount2D(h2, mode, zmin_override, zmax_override);
 }

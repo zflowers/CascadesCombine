@@ -21,8 +21,9 @@ run_all() {
         echo "[run_all] Warning: Debug log does not exist yet at $DEBUG_LOG"
     fi
 }
+
 SLEEP=70
-VERSION="v408"
+VERSION="v419"
 make clean
 make all -j 8
 echo "Submitting Regions..."
@@ -82,11 +83,11 @@ cat config/bin_cfgs/Regions_Run3.yaml >> config/bin_cfgs/Regions.yaml
 
 # Set BPJ to % of total
 BIN_COUNT=$(grep -c 'Bin' config/bin_cfgs/Regions.yaml)
-BINS_PER_JOB=$(awk -v n="$BIN_COUNT" 'BEGIN { printf "%d\n", n*0.02 + 0.5 }')
+BINS_PER_JOB=$(awk -v n="$BIN_COUNT" 'BEGIN { printf "%d\n", n*0.01 + 0.5 }')
 
 # Run2+Run3 Sensitivity
-run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_Regions_234L_Run2Run3_${VERSION}
-sleep ${SLEEP}
+#run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_Regions_234L_Run2Run3_${VERSION}
+#sleep ${SLEEP}
 
 # Run2 Only Sensitivity
 #run_all --make-json --skip-compile --processes-cfg config/process_cfgs/processes_Run2.yaml --bins-cfg config/bin_cfgs/Regions_Run2.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_Regions_234L_Run2_${VERSION}
@@ -104,13 +105,17 @@ sleep ${SLEEP}
 #run_all --skip-compile --skip-plot-yields --make-json --bins-cfg config/bin_cfgs/Regions.yaml --bins-per-job ${BINS_PER_JOB} --processes-cfg config/process_cfgs/processes_allTChiWZ.yaml --run-name Cascades_Regions_234L_Run2_Run3_allTChiWZ_${VERSION}
 #sleep ${SLEEP}
 
-# all preULTChiWZ Run2+Run3
-#run_all --skip-compile --skip-plot-yields --make-json --bins-cfg config/bin_cfgs/Regions.yaml --bins-per-job ${BINS_PER_JOB} --processes-cfg config/process_cfgs/processes_allpreULTChiWZ.yaml --run-name Cascades_Regions_234L_Run2_Run3_allpreULTChiWZ_${VERSION}
+# all preULTChiWW Run2+Run3
+#run_all --skip-compile --skip-plot-yields --make-json --bins-cfg config/bin_cfgs/Regions.yaml --bins-per-job ${BINS_PER_JOB} --processes-cfg config/process_cfgs/processes_allpreULTChiWW.yaml --run-name Cascades_Regions_234L_Run2_Run3_allpreULTChiWW_${VERSION}
 #sleep ${SLEEP}
 
 # all preULTSlepSlep Run2+Run3
 #run_all --skip-compile --skip-plot-yields --make-json --bins-cfg config/bin_cfgs/Regions.yaml --bins-per-job ${BINS_PER_JOB} --processes-cfg config/process_cfgs/processes_allpreULTSlepSlep.yaml --run-name Cascades_Regions_234L_Run2_Run3_allpreULTSlepSlep_${VERSION}
 #sleep ${SLEEP}
+
+# all preULTChiWZ Run2+Run3
+run_all --skip-compile --skip-plot-yields --make-json --bins-cfg config/bin_cfgs/Regions.yaml --bins-per-job ${BINS_PER_JOB} --processes-cfg config/process_cfgs/processes_allpreULTChiWZ.yaml --run-name Cascades_Regions_234L_Run2_Run3_allpreULTChiWZ_${VERSION}
+sleep ${SLEEP}
 
 # CR Fit
 rm -f config/bin_cfgs/Regions_CR_Run2.yaml # Clean up yaml
@@ -147,16 +152,19 @@ cat config/bin_cfgs/Regions_CR_Run2.yaml >> config/bin_cfgs/Regions_CR.yaml
 cat config/bin_cfgs/Regions_CR_Run3.yaml >> config/bin_cfgs/Regions_CR.yaml
 
 # Run2 Only CR Fit
-run_all --skip-plot-yields --make-impacts --make-FD --processes-cfg config/process_cfgs/data_processes_Run2.yaml --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_CR_Run2.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_CRFit_Impacts_FD_234L_Run2_${VERSION}
-sleep ${SLEEP}
+#run_all --skip-plot-yields --make-FD --processes-cfg config/process_cfgs/data_processes_Run2.yaml --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_CR_Run2.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_CRFit_Impacts_FD_234L_Run2_${VERSION}
+#sleep ${SLEEP}
 
 # Run3 Only CR Fit
-run_all --skip-plot-yields --make-impacts --make-FD --processes-cfg config/process_cfgs/data_processes_Run3.yaml --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_CR_Run3.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_CRFit_Impacts_FD_234L_Run3_${VERSION}
-sleep ${SLEEP}
+#run_all --skip-plot-yields --make-FD --processes-cfg config/process_cfgs/data_processes_Run3.yaml --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_CR_Run3.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_CRFit_Impacts_FD_234L_Run3_${VERSION}
+#sleep ${SLEEP}
 
 # Run2 + Run3 CR Fit
-run_all --skip-plot-yields --make-impacts --make-FD --processes-cfg config/process_cfgs/data_processes.yaml --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_CR.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_CRFit_Impacts_FD_234L_Run2Run3_${VERSION}
-sleep ${SLEEP}
+#run_all --skip-plot-yields --make-FD --processes-cfg config/process_cfgs/data_processes.yaml --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions_CR.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_CRFit_Impacts_FD_234L_Run2Run3_${VERSION}
+#sleep ${SLEEP}
+
+# --make-impacts
+# turns on impacts
 
 sleep 30 # final sleep just to hold user from accidentally submitting something before last sub is out the door
 echo "Submitted Regions!"
