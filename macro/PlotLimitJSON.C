@@ -507,13 +507,13 @@ void PlotLimitJSON(const string& json, bool inclObs = false, PlotType ptype = kT
   line->DrawLineNDC(0.18, 0.842, 0.22, 0.842);
   line->DrawLineNDC(0.18, 0.818, 0.22, 0.818);
 // l.SetTextColor(kWhite);		    
-  if(inclObs)
+  if(inclObs) {
     l.DrawLatex(0.23, 0.78,"observed");
-  line->SetLineColor(kBlack);
-//  line->SetLineColor(kWhite);
-  line->SetLineWidth(2);
-  line->SetLineStyle(1);
-  line->DrawLineNDC(0.18, 0.78, 0.22, 0.78);
+    line->SetLineColor(kBlack);
+    line->SetLineWidth(2);
+    line->SetLineStyle(1);
+    line->DrawLineNDC(0.18, 0.78, 0.22, 0.78);
+  }
 
   /////////////
   // dM vs. MP
@@ -576,12 +576,13 @@ void PlotLimitJSON(const string& json, bool inclObs = false, PlotType ptype = kT
   line->DrawLineNDC(0.18, exppos+lgap, 0.22, exppos+lgap);
   line->DrawLineNDC(0.18, exppos-lgap, 0.22, exppos-lgap);
 
-  if(inclObs) l.DrawLatex(0.23, exppos-expobsgap,"observed");
+  if(inclObs) { 
+  l.DrawLatex(0.23, exppos-expobsgap,"observed");
   line->SetLineColor(kBlack);
   line->SetLineWidth(2);
   line->SetLineStyle(1);
   line->DrawLineNDC(0.18, exppos-expobsgap, 0.22, exppos-expobsgap);
-
+  }
   }
 
   else if(ptype == kHN2C1){
@@ -598,12 +599,13 @@ void PlotLimitJSON(const string& json, bool inclObs = false, PlotType ptype = kT
   line->DrawLineNDC(xpos, exppos+lgap, xpos+xlgap, exppos+lgap);
   line->DrawLineNDC(xpos, exppos-lgap,xpos+xlgap, exppos-lgap);
 
+  if(inclObs) {
   l.DrawLatex(xpos+xlinetotext, exppos-expobsgap,"observed");
   line->SetLineColor(kBlack);
   line->SetLineWidth(2);
   line->SetLineStyle(1);
   line->DrawLineNDC(xpos, exppos-expobsgap, xpos+xlgap, exppos-expobsgap);
-	
+  }	
   }
   else if(ptype == kTChiWW){
         double exppos = 0.76;
@@ -619,12 +621,12 @@ void PlotLimitJSON(const string& json, bool inclObs = false, PlotType ptype = kT
   line->DrawLineNDC(xpos, exppos+lgap, xpos+xlgap, exppos+lgap);
   line->DrawLineNDC(xpos, exppos-lgap,xpos+xlgap, exppos-lgap);
 
-  l.DrawLatex(xpos+xlinetotext, exppos-expobsgap,"observed");
+  if(inclObs) { l.DrawLatex(xpos+xlinetotext, exppos-expobsgap,"observed");
   line->SetLineColor(kBlack);
   line->SetLineWidth(2);
   line->SetLineStyle(1);
   line->DrawLineNDC(xpos, exppos-expobsgap, xpos+xlgap, exppos-expobsgap);
-
+  }
   }
   else if(ptype == kTSlSnu){
         double exppos = 0.7;
@@ -641,12 +643,12 @@ void PlotLimitJSON(const string& json, bool inclObs = false, PlotType ptype = kT
   line->DrawLineNDC(xpos, exppos+lgap, xpos+xlgap, exppos+lgap);
   line->DrawLineNDC(xpos, exppos-lgap,xpos+xlgap, exppos-lgap);
 
-  l.DrawLatex(xpos+xlinetotext, exppos-expobsgap,"observed");
+  if(inclObs) { l.DrawLatex(xpos+xlinetotext, exppos-expobsgap,"observed");
   line->SetLineColor(kBlack);
   line->SetLineWidth(2);
   line->SetLineStyle(1);
   line->DrawLineNDC(xpos, exppos-expobsgap, xpos+xlgap, exppos-expobsgap);
-
+  }
   }
 
   else{
@@ -661,11 +663,12 @@ void PlotLimitJSON(const string& json, bool inclObs = false, PlotType ptype = kT
   line->DrawLineNDC(0.18, 0.842, 0.22, 0.842);
   line->DrawLineNDC(0.18, 0.818, 0.22, 0.818);
   
-  l.DrawLatex(0.23, 0.78,"observed");
+  if(inclObs) { l.DrawLatex(0.23, 0.78,"observed");
   line->SetLineColor(kBlack);
   line->SetLineWidth(2);
   line->SetLineStyle(1);
   line->DrawLineNDC(0.18, 0.78, 0.22, 0.78);
+  }
 } 
   TFile* out = new TFile(outfile.c_str(),"RECREATE");
   out->WriteTObject(can_MC);
@@ -869,8 +872,8 @@ TCanvas* Plot2DHist_dMvMP(const string& name, TH2D* hist, PlotType ptype){
   }
   if(ptype == kTSlSl){
     xlabel = "m_{ #tilde{#it{l}}} [GeV]";
-   // ylabel = "m_{#tilde{#it{l}}} - m_{#tilde{#chi}^{0}_{1}} [GeV]";
-   ylabel = "#Delta m( ) [GeV]";
+   ylabel = "m_{#tilde{#it{l}}} - m_{#tilde{#chi}^{0}_{1}} [GeV]";
+   //ylabel = "#Delta m( ) [GeV]";
   }
   if(ptype == kTChiWW){
     xlabel = "m_{#tilde{#chi}^{#pm}_{1}} [GeV]";
@@ -965,7 +968,10 @@ hist->GetZaxis()->SetTitle("95% CL upper limit [fb]");
         hist->GetYaxis()->SetRangeUser(55.,400.);
 	hist->GetYaxis()->SetTitleOffset(1.23);
          hist->SetMinimum(5);
-
+  }	
+  if(ptype == kTSlSl){
+	 hist->GetXaxis()->SetRangeUser(100.,350.);
+         hist->GetYaxis()->SetRangeUser(0.,140.);
   }	
   hist->Draw("COLZ");
 

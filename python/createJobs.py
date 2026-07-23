@@ -741,10 +741,6 @@ def main():
     parser.add_argument("--dryrun", "--dry-run", action="store_true")
     parser.add_argument("--run-dir", type=str, default="condor", help="Directory to hold condor outputs (per-run condor dir)")
     args = parser.parse_args()
-    #if args.sig_processes and args.data_processes:
-    #    print("User asked for jobs with both signal and data!")
-    #    print("This has the potential to unblind!")
-    #    print("Remove this if block only when ready to unblind!")
 
     # Set condor base dir from argument (make absolute to be unambiguous in logs)
     condor_base = Path(args.run_dir).resolve()

@@ -311,7 +311,7 @@ SampleTool::SampleTool(){
     pathPrefix + "Summer20UL16APV_106X/ttHToNonbb_M125_TuneCP5_13TeV-powheg-pythia8_Summer20UL16APV_106X.root",
     pathPrefix + "Summer20UL16APV_106X/ttHTobb_M125_TuneCP5_13TeV-powheg-pythia8_Summer20UL16APV_106X.root",
     pathPrefix + "Summer20UL16APV_106X/ttWJets_TuneCP5_13TeV_madgraphMLM_pythia8_Summer20UL16APV_106X.root",
-    //pathPrefix + "Summer20UL16APV_106X/ttZJets_TuneCP5_13TeV_madgraphMLM_pythia8_Summer20UL16APV_106X.root", //
+    pathPrefix + "Summer20UL16APV_106X/ttZJets_TuneCP5_13TeV_madgraphMLM_pythia8_Summer20UL16APV_106X.root",
     pathPrefix + "Summer20UL16APV_106X/TGJets_TuneCP5_13TeV-amcatnlo-madspin-pythia8_Summer20UL16APV_106X.root",
     pathPrefix + "Summer20UL16APV_106X/TTGJets_TuneCP5_13TeV-amcatnloFXFX-madspin-pythia8_Summer20UL16APV_106X.root",
     pathPrefix + "Summer20UL16APV_106X/TTJets_DiLept_TuneCP5_13TeV-madgraphMLM-pythia8_Summer20UL16APV_106X.root",
@@ -1510,53 +1510,53 @@ SampleTool::SampleTool(){
   };
 
   MasterDict["SMS_TChiWZpreUL_2016"] = {
-    pathPrefix + "Summer16_102X_SMS/TChiWZ_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
-    pathPrefix + "Summer16_102X_SMS/SMS-TChiWZ_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
+    //pathPrefix + "Summer16_102X_SMS/TChiWZ_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
+    //pathPrefix + "Summer16_102X_SMS/SMS-TChiWZ_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
     pathPrefix + "Summer16_102X_SMS/SMS-TChiWZ_dM-60to90_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
   };
   MasterDict["SMS_TChiWZpreUL_2017"] = {
-    pathPrefix + "Fall17_102X_SMS/TChiWZ_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
-    pathPrefix + "Fall17_102X_SMS/SMS-TChiWZ_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
+    //pathPrefix + "Fall17_102X_SMS/TChiWZ_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
+    //pathPrefix + "Fall17_102X_SMS/SMS-TChiWZ_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
     pathPrefix + "Fall17_102X_SMS/SMS-TChiWZ_dM-60to90_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
   };
   MasterDict["SMS_TChiWZpreUL_2018"] = {
-    pathPrefix + "Autumn18_102X_SMS/TChiWZ_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
-    pathPrefix + "Autumn18_102X_SMS/SMS-TChiWZ_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
+    //pathPrefix + "Autumn18_102X_SMS/TChiWZ_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
+    //pathPrefix + "Autumn18_102X_SMS/SMS-TChiWZ_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
     pathPrefix + "Autumn18_102X_SMS/SMS-TChiWZ_dM-60to90_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
   };
   MasterDict["SMS_TChiWZpreUL_2022"] = {
-    pathPrefix + "Summer22_130X_SMS/SMS-TChiWZ_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_Summer22_130X.root",
+    //pathPrefix + "Summer22_130X_SMS/SMS-TChiWZ_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_Summer22_130X.root",
     pathPrefix + "Summer22_130X_SMS/SMS-TChiWZ_dM-60to90_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_Summer22_130X.root",
-    pathPrefix + "Summer22_130X_SMS/TChiWZ_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_Summer22_130X.root",
+    //pathPrefix + "Summer22_130X_SMS/TChiWZ_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_Summer22_130X.root",
   };
   MasterDict["SMS_TChiWZpreUL_2022EE"] = {
-    pathPrefix + "Summer22EE_130X_SMS/SMS-TChiWZ_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_Summer22EE_130X.root",
+    //pathPrefix + "Summer22EE_130X_SMS/SMS-TChiWZ_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_Summer22EE_130X.root",
     pathPrefix + "Summer22EE_130X_SMS/SMS-TChiWZ_dM-60to90_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_Summer22EE_130X.root",
-    pathPrefix + "Summer22EE_130X_SMS/TChiWZ_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_Summer22EE_130X.root",
+    //pathPrefix + "Summer22EE_130X_SMS/TChiWZ_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_Summer22EE_130X.root",
   };
   MasterDict["SMS_TChiWZpreUL_2023"] = {
-    pathPrefix + "Summer23_130X_SMS/SMS-TChiWZ_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_Summer23_130X.root",
+    //pathPrefix + "Summer23_130X_SMS/SMS-TChiWZ_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_Summer23_130X.root",
     pathPrefix + "Summer23_130X_SMS/SMS-TChiWZ_dM-60to90_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_Summer23_130X.root",
-    pathPrefix + "Summer23_130X_SMS/TChiWZ_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_Summer23_130X.root",
+    //pathPrefix + "Summer23_130X_SMS/TChiWZ_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_Summer23_130X.root",
   };
   MasterDict["SMS_TChiWZpreUL_2023BPix"] = {
-    pathPrefix + "Summer23BPix_130X_SMS/SMS-TChiWZ_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_Summer23BPix_130X.root",
+    //pathPrefix + "Summer23BPix_130X_SMS/SMS-TChiWZ_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_Summer23BPix_130X.root",
     pathPrefix + "Summer23BPix_130X_SMS/SMS-TChiWZ_dM-60to90_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_Summer23BPix_130X.root",
-    pathPrefix + "Summer23BPix_130X_SMS/TChiWZ_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_Summer23BPix_130X.root",
+    //pathPrefix + "Summer23BPix_130X_SMS/TChiWZ_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_Summer23BPix_130X.root",
   };
   MasterDict["SMS_TChiWZpreUL_2024"] = {
-    pathPrefix + "Summer24_130X_SMS/SMS-TChiWZ_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer24_130X.root",
+    //pathPrefix + "Summer24_130X_SMS/SMS-TChiWZ_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer24_130X.root",
     pathPrefix + "Summer24_130X_SMS/SMS-TChiWZ_dM-60to90_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer24_130X.root",
-    pathPrefix + "Summer24_130X_SMS/TChiWZ_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer24_130X.root",
+    //pathPrefix + "Summer24_130X_SMS/TChiWZ_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer24_130X.root",
   };
   MasterDict["SMS_TChiWZpreUL_2025"] = {
-    pathPrefix + "Summer25_130X_SMS/SMS-TChiWZ_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer25_130X.root",
+    //pathPrefix + "Summer25_130X_SMS/SMS-TChiWZ_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer25_130X.root",
     pathPrefix + "Summer25_130X_SMS/SMS-TChiWZ_dM-60to90_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer25_130X.root",
-    pathPrefix + "Summer25_130X_SMS/TChiWZ_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer25_130X.root",
+    //pathPrefix + "Summer25_130X_SMS/TChiWZ_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer25_130X.root",
   };
   MasterDict["SMS_TChiWZpreUL_2026"] = {
-    pathPrefix + "Summer26_130X_SMS/TChiWZ_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer26_130X.root",
-    pathPrefix + "Summer26_130X_SMS/SMS-TChiWZ_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer26_130X.root",
+    //pathPrefix + "Summer26_130X_SMS/TChiWZ_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer26_130X.root",
+    //pathPrefix + "Summer26_130X_SMS/SMS-TChiWZ_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer26_130X.root",
     pathPrefix + "Summer26_130X_SMS/SMS-TChiWZ_dM-60to90_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer26_130X.root",
   };
 
@@ -1597,93 +1597,93 @@ SampleTool::SampleTool(){
 
   MasterDict["SMS_TSlepSleppreUL_2016"] = {
     pathPrefix + "Summer16_102X_SMS/SMS-TSlepSlep_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
-    pathPrefix + "Summer16_102X_SMS/SMS-TSlepSlep_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
+    //pathPrefix + "Summer16_102X_SMS/SMS-TSlepSlep_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
   };
   MasterDict["SMS_TSlepSleppreUL_2017"] = {
     pathPrefix + "Fall17_102X_SMS/SMS-TSlepSlep_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
-    pathPrefix + "Fall17_102X_SMS/SMS-TSlepSlep_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
+    //pathPrefix + "Fall17_102X_SMS/SMS-TSlepSlep_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
   };
   MasterDict["SMS_TSlepSleppreUL_2018"] = {
     pathPrefix + "Autumn18_102X_SMS/SMS-TSlepSlep_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
-    pathPrefix + "Autumn18_102X_SMS/SMS-TSlepSlep_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
+    //pathPrefix + "Autumn18_102X_SMS/SMS-TSlepSlep_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
   };
   MasterDict["SMS_TSlepSleppreUL_2022"] = {
-    pathPrefix + "Summer22_130X_SMS/SMS-TSlepSlep_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_Summer22_130X.root",
+    //pathPrefix + "Summer22_130X_SMS/SMS-TSlepSlep_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_Summer22_130X.root",
     pathPrefix + "Summer22_130X_SMS/SMS-TSlepSlep_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_Summer22_130X.root",
   };
   MasterDict["SMS_TSlepSleppreUL_2022EE"] = {
-    pathPrefix + "Summer22EE_130X_SMS/SMS-TSlepSlep_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_Summer22EE_130X.root",
+    //pathPrefix + "Summer22EE_130X_SMS/SMS-TSlepSlep_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_Summer22EE_130X.root",
     pathPrefix + "Summer22EE_130X_SMS/SMS-TSlepSlep_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_Summer22EE_130X.root",
   };
   MasterDict["SMS_TSlepSleppreUL_2023"] = {
     pathPrefix + "Summer23_130X_SMS/SMS-TSlepSlep_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_Summer23_130X.root",
-    pathPrefix + "Summer23_130X_SMS/SMS-TSlepSlep_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_Summer23_130X.root",
+    //pathPrefix + "Summer23_130X_SMS/SMS-TSlepSlep_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_Summer23_130X.root",
   };
   MasterDict["SMS_TSlepSleppreUL_2023BPix"] = {
     pathPrefix + "Summer23BPix_130X_SMS/SMS-TSlepSlep_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_Summer23BPix_130X.root",
-    pathPrefix + "Summer23BPix_130X_SMS/SMS-TSlepSlep_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_Summer23BPix_130X.root",
+    //pathPrefix + "Summer23BPix_130X_SMS/SMS-TSlepSlep_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_Summer23BPix_130X.root",
   };
   MasterDict["SMS_TSlepSleppreUL_2024"] = {
-    pathPrefix + "Summer24_130X_SMS/SMS-TSlepSlep_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer24_130X.root",
+    //pathPrefix + "Summer24_130X_SMS/SMS-TSlepSlep_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer24_130X.root",
     pathPrefix + "Summer24_130X_SMS/SMS-TSlepSlep_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer24_130X.root",
   };
   MasterDict["SMS_TSlepSleppreUL_2025"] = {
-    pathPrefix + "Summer25_130X_SMS/SMS-TSlepSlep_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer25_130X.root",
+    //pathPrefix + "Summer25_130X_SMS/SMS-TSlepSlep_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer25_130X.root",
     pathPrefix + "Summer25_130X_SMS/SMS-TSlepSlep_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer25_130X.root",
   };
   MasterDict["SMS_TSlepSleppreUL_2026"] = {
-    pathPrefix + "Summer26_130X_SMS/SMS-TSlepSlep_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer26_130X.root",
+    //pathPrefix + "Summer26_130X_SMS/SMS-TSlepSlep_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer26_130X.root",
     pathPrefix + "Summer26_130X_SMS/SMS-TSlepSlep_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer26_130X.root",
   };
 
   MasterDict["SMS_TChiWWpreUL_2016"] = {
-    pathPrefix + "Summer16_102X_SMS/SMS-TChipmWW_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
-    pathPrefix + "Summer16_102X_SMS/SMS-TChipmWW_dM-3to50_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
+    //pathPrefix + "Summer16_102X_SMS/SMS-TChipmWW_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
+    //pathPrefix + "Summer16_102X_SMS/SMS-TChipmWW_dM-3to50_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
     pathPrefix + "Summer16_102X_SMS/SMS-TChipmWW_dM-60to90_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_102X.root",
   };
   MasterDict["SMS_TChiWWpreUL_2017"] = {
-    pathPrefix + "Fall17_102X_SMS/SMS-TChipmWW_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
-    pathPrefix + "Fall17_102X_SMS/SMS-TChipmWW_dM-3to50_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
+    //pathPrefix + "Fall17_102X_SMS/SMS-TChipmWW_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
+    //pathPrefix + "Fall17_102X_SMS/SMS-TChipmWW_dM-3to50_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
     pathPrefix + "Fall17_102X_SMS/SMS-TChipmWW_dM-60to90_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_102X.root",
   };
   MasterDict["SMS_TChiWWpreUL_2018"] = {
-    pathPrefix + "Autumn18_102X_SMS/SMS-TChipmWW_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
-    pathPrefix + "Autumn18_102X_SMS/SMS-TChipmWW_dM-3to50_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
+    //pathPrefix + "Autumn18_102X_SMS/SMS-TChipmWW_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
+    //pathPrefix + "Autumn18_102X_SMS/SMS-TChipmWW_dM-3to50_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
     pathPrefix + "Autumn18_102X_SMS/SMS-TChipmWW_dM-60to90_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_102X.root",
   };
   MasterDict["SMS_TChiWWpreUL_2022"] = {
-    pathPrefix + "Summer22_130X_SMS/SMS-TChipmWW_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_Summer22_130X.root",
-    pathPrefix + "Summer22_130X_SMS/SMS-TChipmWW_dM-3to50_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_Summer22_130X.root",
+    //pathPrefix + "Summer22_130X_SMS/SMS-TChipmWW_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_Summer22_130X.root",
+    //pathPrefix + "Summer22_130X_SMS/SMS-TChipmWW_dM-3to50_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_Summer22_130X.root",
     pathPrefix + "Summer22_130X_SMS/SMS-TChipmWW_dM-60to90_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_Summer22_130X.root",
   };
   MasterDict["SMS_TChiWWpreUL_2022EE"] = {
-    pathPrefix + "Summer22EE_130X_SMS/SMS-TChipmWW_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_Summer22EE_130X.root",
-    pathPrefix + "Summer22EE_130X_SMS/SMS-TChipmWW_dM-3to50_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_Summer22EE_130X.root",
+    //pathPrefix + "Summer22EE_130X_SMS/SMS-TChipmWW_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_Summer22EE_130X.root",
+    //pathPrefix + "Summer22EE_130X_SMS/SMS-TChipmWW_dM-3to50_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_Summer22EE_130X.root",
     pathPrefix + "Summer22EE_130X_SMS/SMS-TChipmWW_dM-60to90_genHT-160_genMET-80_TuneCUETP8M1_13TeV-madgraphMLM-pythia8_Summer16_Summer22EE_130X.root",
   };
   MasterDict["SMS_TChiWWpreUL_2023"] = {
-    pathPrefix + "Summer23_130X_SMS/SMS-TChipmWW_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_Summer23_130X.root",
-    pathPrefix + "Summer23_130X_SMS/SMS-TChipmWW_dM-3to50_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_Summer23_130X.root",
+    //pathPrefix + "Summer23_130X_SMS/SMS-TChipmWW_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_Summer23_130X.root",
+    //pathPrefix + "Summer23_130X_SMS/SMS-TChipmWW_dM-3to50_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_Summer23_130X.root",
     pathPrefix + "Summer23_130X_SMS/SMS-TChipmWW_dM-60to90_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_Summer23_130X.root",
   };
   MasterDict["SMS_TChiWWpreUL_2023BPix"] = {
-    pathPrefix + "Summer23BPix_130X_SMS/SMS-TChipmWW_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_Summer23BPix_130X.root",
-    pathPrefix + "Summer23BPix_130X_SMS/SMS-TChipmWW_dM-3to50_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_Summer23BPix_130X.root",
+    //pathPrefix + "Summer23BPix_130X_SMS/SMS-TChipmWW_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_Summer23BPix_130X.root",
+    //pathPrefix + "Summer23BPix_130X_SMS/SMS-TChipmWW_dM-3to50_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_Summer23BPix_130X.root",
     pathPrefix + "Summer23BPix_130X_SMS/SMS-TChipmWW_dM-60to90_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Fall17_Summer23BPix_130X.root",
   };
   MasterDict["SMS_TChiWWpreUL_2024"] = {
-    pathPrefix + "Summer24_130X_SMS/SMS-TChipmWW_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer24_130X.root",
-    pathPrefix + "Summer24_130X_SMS/SMS-TChipmWW_dM-3to50_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer24_130X.root",
+    //pathPrefix + "Summer24_130X_SMS/SMS-TChipmWW_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer24_130X.root",
+    //pathPrefix + "Summer24_130X_SMS/SMS-TChipmWW_dM-3to50_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer24_130X.root",
     pathPrefix + "Summer24_130X_SMS/SMS-TChipmWW_dM-60to90_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer24_130X.root",
   };
   MasterDict["SMS_TChiWWpreUL_2025"] = {
-    pathPrefix + "Summer25_130X_SMS/SMS-TChipmWW_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer25_130X.root",
-    pathPrefix + "Summer25_130X_SMS/SMS-TChipmWW_dM-3to50_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer25_130X.root",
+    //pathPrefix + "Summer25_130X_SMS/SMS-TChipmWW_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer25_130X.root",
+    //pathPrefix + "Summer25_130X_SMS/SMS-TChipmWW_dM-3to50_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer25_130X.root",
     pathPrefix + "Summer25_130X_SMS/SMS-TChipmWW_dM-60to90_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer25_130X.root",
   };
   MasterDict["SMS_TChiWWpreUL_2026"] = {
-    pathPrefix + "Summer26_130X_SMS/SMS-TChipmWW_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer26_130X.root",
-    pathPrefix + "Summer26_130X_SMS/SMS-TChipmWW_dM-3to50_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer26_130X.root",
+    //pathPrefix + "Summer26_130X_SMS/SMS-TChipmWW_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer26_130X.root",
+    //pathPrefix + "Summer26_130X_SMS/SMS-TChipmWW_dM-3to50_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer26_130X.root",
     pathPrefix + "Summer26_130X_SMS/SMS-TChipmWW_dM-60to90_genHT-160_genMET-80_TuneCP2_13TeV-madgraphMLM-pythia8_Autumn18_Summer26_130X.root",
   };
 
@@ -3271,8 +3271,6 @@ void SampleTool::LoadSigs( const stringlist& siglist ){
                     SignalKeys.push_back( sms_entry );
                     sms_filters_tmp.push_back( sms_entry );
                 }
-                if (BFTool::filterSignalsSMS.empty())
-                    BFTool::SetFilterSignalsSMS(sms_filters_tmp);
             }
         }
     }

@@ -308,8 +308,6 @@ std::vector<std::string> BuildFit::WriteJsonAsFlatHists(
 
             // Write nominal histogram for non-data processes (CH expects process histos and data_obs)
             if (!isData) {
-                //if (sumW <= 0.0 && err <= 0.0) {sumW = 1.e-9; err = 1.e-9;}
-                //if (sumW < 0.0) {sumW = 0.0;}
                 TH1F *h = new TH1F(hname.c_str(), hname.c_str(), 1, 0, 1);
                 h->Sumw2();
                 h->SetBinContent(1, sumW);
@@ -336,9 +334,18 @@ std::vector<std::string> BuildFit::WriteJsonAsFlatHists(
                             double nRaw_ud = arr[IDX_RAW];
                             double sumW_ud = arr[IDX_SUMW];
                             double err_ud  = arr[IDX_ERR];
-                            if (sumW_ud <= 0.0 && err_ud <= 0.0) {sumW_ud = 1.e-9; err_ud = 1.e-9;}
 
                             std::string hsyst = origBin + "__" + procName + "__" + systName + std::string(udKey);
+                            constexpr double kMinYield = 1e-8;
+                            const double kRelativeFloor = 1e-3;  // 0.1% of nominal
+                            if (sumW > 0.0 && sumW_ud <= 0.0) {
+                                double floor = std::max(kMinYield, kRelativeFloor * sumW);
+                                std::cout
+                                    << "[WARNING] " << hsyst
+                                    << " has non-positive yield (" << sumW_ud
+                                    << "); replacing with " << floor << std::endl;
+                                sumW_ud = floor;
+                            }
 
                             TH1F *hs = new TH1F(hsyst.c_str(), hsyst.c_str(), 1, 0, 1);
                             hs->Sumw2();
@@ -504,21 +511,76 @@ void BuildFit::AddFakeFamiliesAsSharedNorms(
 }
 
 void BuildFit::AddShapeSystsFromJSON(JSONFactory* j, const std::vector<std::string>& kept_bins) {
+    constexpr int IDX_SUMW = 1;
+
     std::set<std::string> kept_set(kept_bins.begin(), kept_bins.end());
+
     for (const auto& itBin : j->j.items()) {
         const std::string& bin = itBin.key();
         if (!kept_set.count(bin)) continue; // skip bins that were dropped
 
         const json& binJson = itBin.value();
+
         for (const auto& itProc : binJson.items()) {
             const std::string proc = itProc.key();
             const json& valsObj = itProc.value();
+
+            if (!valsObj.contains("nominal")) continue;
             if (!valsObj.contains("systematics")) continue;
+
+            const json& nominal = valsObj["nominal"];
+            if (!nominal.is_array() || nominal.size() <= IDX_SUMW) continue;
+
+            const double nominalYield = nominal[IDX_SUMW];
             const json& systs = valsObj["systematics"];
+
             for (const auto& itS : systs.items()) {
-                const std::string systName = SanitizeName(itS.key());
-                cb.cp().bin({bin}).process({proc})
-                    .AddSyst(cb, systName, "shape", SystMap<>::init(1.0));
+                const std::string systKey = itS.key();
+                const json& ud = itS.value();
+
+                // -----------------------------
+                // lnN systematics
+                // -----------------------------
+                if (systKey.rfind("lnN_", 0) == 0) {
+                    if (nominalYield <= 0.) continue;
+                    if (!ud.contains("Up") || !ud.contains("Down")) continue;
+
+                    const json& upArr   = ud["Up"];
+                    const json& downArr = ud["Down"];
+
+                    if (!upArr.is_array()   || upArr.size()   <= IDX_SUMW) continue;
+                    if (!downArr.is_array() || downArr.size() <= IDX_SUMW) continue;
+
+                    const double upYield   = upArr[IDX_SUMW];
+                    const double downYield = downArr[IDX_SUMW];
+
+                    const double upRatio   = upYield   / nominalYield;
+                    const double downRatio = downYield / nominalYield;
+
+                    if (!std::isfinite(upRatio)   || upRatio   <= 0.) continue;
+                    if (!std::isfinite(downRatio) || downRatio <= 0.) continue;
+
+                    const std::string systName =
+                        SanitizeName(systKey.substr(4)); // remove "lnN_"
+
+                    cb.cp().bin({bin}).process({proc})
+                        .AddSyst(cb,
+                                 systName,
+                                 "lnN",
+                                 ch::syst::SystMapAsymm<>::init(downRatio, upRatio));
+                }
+                // -----------------------------
+                // Shape systematics (default)
+                // -----------------------------
+                else {
+                    const std::string systName = SanitizeName(systKey);
+
+                    cb.cp().bin({bin}).process({proc})
+                        .AddSyst(cb,
+                                 systName,
+                                 "shape",
+                                 SystMap<>::init(1.0));
+                }
             }
         }
     }
@@ -771,7 +833,7 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
 
     // 6) Add Systematics
     // Turn on autoMCstats
-    cb.cp().SetAutoMCStats(cb, 0.); // Second arg is event threshold
+    //cb.cp().SetAutoMCStats(cb, 0.); // Second arg is event threshold
 
     // All non-triboson processes -> rateParam
     AddFakeFamiliesAsSharedNorms(

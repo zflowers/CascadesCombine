@@ -270,6 +270,8 @@ def parse_nuisance_name(name):
             'HFElec': 'HFe',
             'LFMuon': 'LF#mu',
             'HFMuon': 'HF#mu',
+            'Elec': 'e',
+            'Muon': '#mu',
         }.get(t, t)   # 2L, 3L, 4L, 0J, 1J etc. pass through unchanged
 
     def build_sub(toks):
@@ -280,7 +282,8 @@ def parse_nuisance_name(name):
         flav_token = '_'.join(remainder)
         hf   = 'LF' if 'LF' in flav_token else 'HF'
         flav = 'e' if 'Elec' in flav_token else '#mu'
-        return f"#kappa_{{{category}}}^{{{era_str},{hf}{flav}}}"
+        #return f"#kappa_{{{category}}}^{{{era_str},{hf}{flav}}}"
+        return f"#kappa_{{{category}}}^{{{era_str},{flav}}}"
 
     # --- LepHemi: Run2_4L_LepHemi ---
     if category == '4L' and remainder and remainder[0] == 'LepHemi':
@@ -403,7 +406,7 @@ def draw_impacts_graph(gr, labels, modes, entries, outbase, title="", ytitle=Non
         ymax += delta
 
     # Create canvas: height scales with number of points to keep labels readable
-    canvas_w = 1200
+    canvas_w = max(1000, 20 * N + 600)
     canvas_h = max(600, 20 * N + 200)
     cv = ROOT.TCanvas(os.path.basename(outbase), os.path.basename(outbase), canvas_w, canvas_h)
     cv.SetLeftMargin(0.08)

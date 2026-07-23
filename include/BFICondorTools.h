@@ -347,34 +347,32 @@ struct SystInfo {
 };
 
 static const std::vector<SystInfo> kDefaultSFSystematics = {
-    // leave PileUp off until skims have fixed weights
-    //{"PileUp", "PUweight", "PUweight_up", "PUweight_down"}
-
-    //{"METtrig", "MetTrigSFweight", "MetTrigSFweight_up", "MetTrigSFweight_down"},
-    //{"MuF", "MuFweight", "MuFweight_up", "MuFweight_down"},
-    //{"MuR", "MuRweight", "MuRweight_up", "MuRweight_down"},
-    //{"PDF", "PDFweight", "PDFweight_up", "PDFweight_down"},
-    //{"Prefire", "PrefireWeight", "PrefireWeight_up", "PrefireWeight_down"},
-    //{"BtagHF", "BtagHFSFweight", "BtagHFSFweight_up", "BtagHFSFweight_down"},
-    //{"BtagLF", "BtagLFSFweight", "BtagLFSFweight_up", "BtagLFSFweight_down"},
-    //{"elBLP_over_COL", "elBLP_over_COL_SFweight", "elBLP_over_COL_SFweight_up", "elBLP_over_COL_SFweight_down"},
-    //{"elID_over_BLP", "elID_over_BLP_SFweight", "elID_over_BLP_SFweight_up", "elID_over_BLP_SFweight_down"},
-    //{"elISO_over_ID", "elISO_over_ID_SFweight", "elISO_over_ID_SFweight_up", "elISO_over_ID_SFweight_down"},
-    //{"elPrompt_ISOID", "elPrompt_ISOID_SFweight", "elPrompt_ISOID_SFweight_up", "elPrompt_ISOID_SFweight_down"},
-    //{"elNOT_Prompt_ISOID", "elNOT_Prompt_ISOID_SFweight", "elNOT_Prompt_ISOID_SFweight_up", "elNOT_Prompt_ISOID_SFweight_down"},
-    //{"elNOT_ID_nor_ISO", "elNOT_ID_nor_ISO_SFweight", "elNOT_ID_nor_ISO_SFweight_up", "elNOT_ID_nor_ISO_SFweight_down"},
-    //{"muBLP_over_COL", "muBLP_over_COL_SFweight", "muBLP_over_COL_SFweight_up", "muBLP_over_COL_SFweight_down"},
-    //{"muID_over_BLP", "muID_over_BLP_SFweight", "muID_over_BLP_SFweight_up", "muID_over_BLP_SFweight_down"},
-    //{"muISO_over_ID", "muISO_over_ID_SFweight", "muISO_over_ID_SFweight_up", "muISO_over_ID_SFweight_down"},
-    //{"muPrompt_ISOID", "muPrompt_ISOID_SFweight", "muPrompt_ISOID_SFweight_up", "muPrompt_ISOID_SFweight_down"},
-    //{"muNOT_Prompt_ISOID", "muNOT_Prompt_ISOID_SFweight", "muNOT_Prompt_ISOID_SFweight_up", "muNOT_Prompt_ISOID_SFweight_down"},
-    //{"muNOT_ID_nor_ISO", "muNOT_ID_nor_ISO_SFweight", "muNOT_ID_nor_ISO_SFweight_up", "muNOT_ID_nor_ISO_SFweight_down"},
+    {"lnN_PileUp", "PUweight", "PUweight_up", "PUweight_down"},
+    {"lnN_METtrig", "MetTrigSFweight", "MetTrigSFweight_up", "MetTrigSFweight_down"},
+    {"lnN_MuF", "MuFweight", "MuFweight_up", "MuFweight_down"},
+    {"lnN_MuR", "MuRweight", "MuRweight_up", "MuRweight_down"},
+    {"lnN_PDF", "PDFweight", "PDFweight_up", "PDFweight_down"},
+    {"lnN_Prefire", "PrefireWeight", "PrefireWeight_up", "PrefireWeight_down"},
+    {"lnN_BtagHF", "BtagHFSFweight", "BtagHFSFweight_up", "BtagHFSFweight_down"},
+    {"lnN_BtagLF", "BtagLFSFweight", "BtagLFSFweight_up", "BtagLFSFweight_down"},
+    {"lnN_elBLP_over_COL", "elBLP_over_COL_SFweight", "elBLP_over_COL_SFweight_up", "elBLP_over_COL_SFweight_down"},
+    {"lnN_elID_over_BLP", "elID_over_BLP_SFweight", "elID_over_BLP_SFweight_up", "elID_over_BLP_SFweight_down"},
+    {"lnN_elISO_over_ID", "elISO_over_ID_SFweight", "elISO_over_ID_SFweight_up", "elISO_over_ID_SFweight_down"},
+    {"lnN_elPrompt_ISOID", "elPrompt_ISOID_SFweight", "elPrompt_ISOID_SFweight_up", "elPrompt_ISOID_SFweight_down"},
+    {"lnN_elNOT_Prompt_ISOID", "elNOT_Prompt_ISOID_SFweight", "elNOT_Prompt_ISOID_SFweight_up", "elNOT_Prompt_ISOID_SFweight_down"},
+    {"lnN_elNOT_ID_nor_ISO", "elNOT_ID_nor_ISO_SFweight", "elNOT_ID_nor_ISO_SFweight_up", "elNOT_ID_nor_ISO_SFweight_down"},
+    {"lnN_muBLP_over_COL", "muBLP_over_COL_SFweight", "muBLP_over_COL_SFweight_up", "muBLP_over_COL_SFweight_down"},
+    {"lnN_muID_over_BLP", "muID_over_BLP_SFweight", "muID_over_BLP_SFweight_up", "muID_over_BLP_SFweight_down"},
+    {"lnN_muISO_over_ID", "muISO_over_ID_SFweight", "muISO_over_ID_SFweight_up", "muISO_over_ID_SFweight_down"},
+    {"lnN_muPrompt_ISOID", "muPrompt_ISOID_SFweight", "muPrompt_ISOID_SFweight_up", "muPrompt_ISOID_SFweight_down"},
+    {"lnN_muNOT_Prompt_ISOID", "muNOT_Prompt_ISOID_SFweight", "muNOT_Prompt_ISOID_SFweight_up", "muNOT_Prompt_ISOID_SFweight_down"},
+    {"lnN_muNOT_ID_nor_ISO", "muNOT_ID_nor_ISO_SFweight", "muNOT_ID_nor_ISO_SFweight_up", "muNOT_ID_nor_ISO_SFweight_down"},
 };
 
 static const std::vector<std::string> kDefaultTreeSystematics = {
-    //"JesUncer_CMS_scale_j_Total",
-    //"JerUncertaintySetTotal",
-    //"METUncer_UnClust"
+    "JesUncer_CMS_scale_j_Total",
+    "JerUncertaintySetTotal",
+    "METUncer_UnClust",
 };
 
 // Combined container so callers can pass a single object
@@ -412,7 +410,7 @@ ROOT::RDF::RNode MultiSystWeights(ROOT::RDF::RNode node,
             double prefire
           ) {
               return 1.0
-                   //* pu
+                   * pu
                    * MuF
                    * MuR
                    * PDF
@@ -441,7 +439,7 @@ ROOT::RDF::RNode MultiSystWeights(ROOT::RDF::RNode node,
           "muBLP_over_COL_SFweight", "muID_over_BLP_SFweight", "muISO_over_ID_SFweight", "muPrompt_ISOID_SFweight", "muNOT_Prompt_ISOID_SFweight", "muNOT_ID_nor_ISO_SFweight",
           "PrefireWeight",
         }
-        // No weights
+        // No SF weights
         //[]() {
         //    return 1.;
         //},
