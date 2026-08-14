@@ -1,4 +1,5 @@
 *.o
+*.eps
 *.pdf
 myprogram
 *.x
