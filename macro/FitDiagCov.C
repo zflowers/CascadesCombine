@@ -13,7 +13,7 @@ using namespace std;
 
 void FitDiagCov(){
         std::map<double,std::pair<int,int>> rho_map;
-        std::string fit_diag_file = "runs/run_Cascades_CRFit_Impacts_FD_234L_Run2Run3_v419_June30_2026_1144_run_July08_2026_1220/datacards/SMS_TChiWZ_SMS_500_450/fitDiagnostics.Test.root";
+        std::string fit_diag_file = "runs/run_Cascades_CRFit_Impacts_FD_234L_Run2Run3_v427_July24_2026_1144/datacards/SMS_TChiWZ_SMS_500_450/fitDiagnostics.Test.root";
         TFile* f = new TFile(fit_diag_file.c_str());
 	RooFitResult* r = (RooFitResult*) f->Get("fit_b");
 	TMatrixDSym m = r->covarianceMatrix();

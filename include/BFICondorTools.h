@@ -65,11 +65,11 @@ inline std::string GetProcessNameFromKey(const std::string &keyOrPath,
 
         auto it = ST.MasterDict.find(group);
         if (it == ST.MasterDict.end()) return;
-
-        for (const auto &entry : it->second) {
+        for (const auto &[entry, factor] : it->second) {
             if (ST.MasterDict.find(entry) != ST.MasterDict.end()) {
                 expandGroupRec(entry, out, visited);
-            } else {
+            } 
+            else {
                 out.insert(entry);
             }
         }
@@ -213,7 +213,7 @@ inline double GetLumiFromKey(const std::string& keyOrPath) {
     // 2) Fallback: try to match by filename against MasterDict entries
     std::string keyBase = fs::path(keyOrPath).filename().string();
     for (const auto &kv : ST.MasterDict) {
-        for (const auto &entry : kv.second) {
+        for (const auto &[entry, factor] : kv.second) {
             std::string entryBase = fs::path(entry).filename().string();
             if (keyBase == entryBase) {
                 if (auto k = findLumiKeyInString(entry); k.has_value()) {
@@ -347,32 +347,32 @@ struct SystInfo {
 };
 
 static const std::vector<SystInfo> kDefaultSFSystematics = {
-    {"lnN_PileUp", "PUweight", "PUweight_up", "PUweight_down"},
-    {"lnN_METtrig", "MetTrigSFweight", "MetTrigSFweight_up", "MetTrigSFweight_down"},
-    {"lnN_MuF", "MuFweight", "MuFweight_up", "MuFweight_down"},
-    {"lnN_MuR", "MuRweight", "MuRweight_up", "MuRweight_down"},
-    {"lnN_PDF", "PDFweight", "PDFweight_up", "PDFweight_down"},
-    {"lnN_Prefire", "PrefireWeight", "PrefireWeight_up", "PrefireWeight_down"},
-    {"lnN_BtagHF", "BtagHFSFweight", "BtagHFSFweight_up", "BtagHFSFweight_down"},
-    {"lnN_BtagLF", "BtagLFSFweight", "BtagLFSFweight_up", "BtagLFSFweight_down"},
-    {"lnN_elBLP_over_COL", "elBLP_over_COL_SFweight", "elBLP_over_COL_SFweight_up", "elBLP_over_COL_SFweight_down"},
-    {"lnN_elID_over_BLP", "elID_over_BLP_SFweight", "elID_over_BLP_SFweight_up", "elID_over_BLP_SFweight_down"},
-    {"lnN_elISO_over_ID", "elISO_over_ID_SFweight", "elISO_over_ID_SFweight_up", "elISO_over_ID_SFweight_down"},
-    {"lnN_elPrompt_ISOID", "elPrompt_ISOID_SFweight", "elPrompt_ISOID_SFweight_up", "elPrompt_ISOID_SFweight_down"},
-    {"lnN_elNOT_Prompt_ISOID", "elNOT_Prompt_ISOID_SFweight", "elNOT_Prompt_ISOID_SFweight_up", "elNOT_Prompt_ISOID_SFweight_down"},
-    {"lnN_elNOT_ID_nor_ISO", "elNOT_ID_nor_ISO_SFweight", "elNOT_ID_nor_ISO_SFweight_up", "elNOT_ID_nor_ISO_SFweight_down"},
-    {"lnN_muBLP_over_COL", "muBLP_over_COL_SFweight", "muBLP_over_COL_SFweight_up", "muBLP_over_COL_SFweight_down"},
-    {"lnN_muID_over_BLP", "muID_over_BLP_SFweight", "muID_over_BLP_SFweight_up", "muID_over_BLP_SFweight_down"},
-    {"lnN_muISO_over_ID", "muISO_over_ID_SFweight", "muISO_over_ID_SFweight_up", "muISO_over_ID_SFweight_down"},
-    {"lnN_muPrompt_ISOID", "muPrompt_ISOID_SFweight", "muPrompt_ISOID_SFweight_up", "muPrompt_ISOID_SFweight_down"},
-    {"lnN_muNOT_Prompt_ISOID", "muNOT_Prompt_ISOID_SFweight", "muNOT_Prompt_ISOID_SFweight_up", "muNOT_Prompt_ISOID_SFweight_down"},
-    {"lnN_muNOT_ID_nor_ISO", "muNOT_ID_nor_ISO_SFweight", "muNOT_ID_nor_ISO_SFweight_up", "muNOT_ID_nor_ISO_SFweight_down"},
+    //{"PileUp", "PUweight", "PUweight_up", "PUweight_down"},
+    //{"METtrig", "MetTrigSFweight", "MetTrigSFweight_up", "MetTrigSFweight_down"},
+    //{"MuF", "MuFweight", "MuFweight_up", "MuFweight_down"},
+    //{"MuR", "MuRweight", "MuRweight_up", "MuRweight_down"},
+    //{"PDF", "PDFweight", "PDFweight_up", "PDFweight_down"},
+    //{"Prefire", "PrefireWeight", "PrefireWeight_up", "PrefireWeight_down"},
+    //{"BtagHF", "BtagHFSFweight", "BtagHFSFweight_up", "BtagHFSFweight_down"},
+    //{"BtagLF", "BtagLFSFweight", "BtagLFSFweight_up", "BtagLFSFweight_down"},
+    //{"tnp_elBLP_over_COL", "elBLP_over_COL_SFweight", "elBLP_over_COL_SFweight_up", "elBLP_over_COL_SFweight_down"},
+    //{"tnp_elID_over_BLP", "elID_over_BLP_SFweight", "elID_over_BLP_SFweight_up", "elID_over_BLP_SFweight_down"},
+    //{"tnp_elISO_over_ID", "elISO_over_ID_SFweight", "elISO_over_ID_SFweight_up", "elISO_over_ID_SFweight_down"},
+    //{"tnp_elPrompt_ISOID", "elPrompt_ISOID_SFweight", "elPrompt_ISOID_SFweight_up", "elPrompt_ISOID_SFweight_down"},
+    //{"tnp_elNOT_Prompt_ISOID", "elNOT_Prompt_ISOID_SFweight", "elNOT_Prompt_ISOID_SFweight_up", "elNOT_Prompt_ISOID_SFweight_down"},
+    //{"tnp_elNOT_ID_nor_ISO", "elNOT_ID_nor_ISO_SFweight", "elNOT_ID_nor_ISO_SFweight_up", "elNOT_ID_nor_ISO_SFweight_down"},
+    //{"tnp_muBLP_over_COL", "muBLP_over_COL_SFweight", "muBLP_over_COL_SFweight_up", "muBLP_over_COL_SFweight_down"},
+    //{"tnp_muID_over_BLP", "muID_over_BLP_SFweight", "muID_over_BLP_SFweight_up", "muID_over_BLP_SFweight_down"},
+    //{"tnp_muISO_over_ID", "muISO_over_ID_SFweight", "muISO_over_ID_SFweight_up", "muISO_over_ID_SFweight_down"},
+    //{"tnp_muPrompt_ISOID", "muPrompt_ISOID_SFweight", "muPrompt_ISOID_SFweight_up", "muPrompt_ISOID_SFweight_down"},
+    //{"tnp_muNOT_Prompt_ISOID", "muNOT_Prompt_ISOID_SFweight", "muNOT_Prompt_ISOID_SFweight_up", "muNOT_Prompt_ISOID_SFweight_down"},
+    //{"tnp_muNOT_ID_nor_ISO", "muNOT_ID_nor_ISO_SFweight", "muNOT_ID_nor_ISO_SFweight_up", "muNOT_ID_nor_ISO_SFweight_down"},
 };
 
 static const std::vector<std::string> kDefaultTreeSystematics = {
-    "JesUncer_CMS_scale_j_Total",
-    "JerUncertaintySetTotal",
-    "METUncer_UnClust",
+    //"JesUncer_CMS_scale_j_Total",
+    //"JerUncertaintySetTotal",
+    //"METUncer_UnClust",
 };
 
 // Combined container so callers can pass a single object
@@ -565,6 +565,7 @@ static BaseNodeHandle MakeBaseNode(const std::string &tree_name,
 
     const double fullLumi = Lumi;
     const double hemLumi  = ST.LumiDict.at("HEM_LUMI"); // assume key exists
+    const double fileFactor = ST.GetFileFactor(rootFilePath);
 
     // Instantiate functors
     PassHEM passHEM(is_data, year, fullLumi, hemLumi);
@@ -572,8 +573,8 @@ static BaseNodeHandle MakeBaseNode(const std::string &tree_name,
     ROOT::RDF::RNode node = (*df)
         .Define("pass_HEM", passHEM, {"eventnum", "runnum", "HEM_Veto"})
         .Define("event_lumi",
-            [is_data, Lumi]() {
-                return is_data ? 1.0 : Lumi;
+            [is_data, Lumi, fileFactor]() {
+                return is_data ? 1.0 : Lumi * fileFactor;
             })
         .Define("weight_scaled_raw",
             [is_data](double w, double lumi) {

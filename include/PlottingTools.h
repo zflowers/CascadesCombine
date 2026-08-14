@@ -287,7 +287,7 @@ void Plot_Stack(const string& hname,
     axisHist->GetYaxis()->SetTitle(("N_{events}"));// / "+std::to_string(int(lumi))+" fb^{-1}").c_str());
     if(h_DATA){
         axisHist->GetXaxis()->SetLabelSize(0.0);
-        axisHist->GetYaxis()->SetTitleSize(0.05);
+        axisHist->GetYaxis()->SetTitleSize(0.072);
         axisHist->GetYaxis()->SetTitleOffset(0.45);
         axisHist->GetYaxis()->SetLabelSize(0.05);
     }
@@ -361,7 +361,7 @@ void Plot_Stack(const string& hname,
         h_ratio->GetYaxis()->SetTitle("#frac{data}{bkg model}");
         h_ratio->GetYaxis()->CenterTitle();
         h_ratio->GetYaxis()->SetNdivisions(505);
-        h_ratio->GetYaxis()->SetTitleSize(0.05);
+        h_ratio->GetYaxis()->SetTitleSize(0.07);
         h_ratio->GetYaxis()->SetTitleOffset(0.45);
         h_ratio->GetYaxis()->SetLabelSize(0.05);
 
@@ -601,7 +601,8 @@ void Plot_Overlay(const std::string& hname,
     for (auto* h : bkgHists) if (h) ymax = std::max(ymax, h->GetMaximum());
     for (auto* h : sigHists) if (h) ymax = std::max(ymax, h->GetMaximum());
     if (dataHist) ymax = std::max(ymax, dataHist->GetMaximum());
-    axisHist->GetYaxis()->SetRangeUser(1e-4, 1.15 * ymax);
+    double ymaxNice = std::ceil(ymax * 10.) / 10.;
+    axisHist->GetYaxis()->SetRangeUser(0., ymaxNice);
 
     // ------------------------
     // Draw backgrounds

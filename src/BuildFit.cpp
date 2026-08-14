@@ -338,7 +338,8 @@ std::vector<std::string> BuildFit::WriteJsonAsFlatHists(
                             std::string hsyst = origBin + "__" + procName + "__" + systName + std::string(udKey);
                             constexpr double kMinYield = 1e-8;
                             const double kRelativeFloor = 1e-3;  // 0.1% of nominal
-                            if (sumW > 0.0 && sumW_ud <= 0.0) {
+                            //if (sumW > 0.0 && sumW_ud <= 0.0) {
+                            if (sumW > 0.0 && sumW_ud < 0.0) {
                                 double floor = std::max(kMinYield, kRelativeFloor * sumW);
                                 std::cout
                                     << "[WARNING] " << hsyst
@@ -538,49 +539,31 @@ void BuildFit::AddShapeSystsFromJSON(JSONFactory* j, const std::vector<std::stri
                 const std::string systKey = itS.key();
                 const json& ud = itS.value();
 
-                // -----------------------------
-                // lnN systematics
-                // -----------------------------
-                if (systKey.rfind("lnN_", 0) == 0) {
-                    if (nominalYield <= 0.) continue;
-                    if (!ud.contains("Up") || !ud.contains("Down")) continue;
+                if (nominalYield <= 0.) continue;
+                if (!ud.contains("Up") || !ud.contains("Down")) continue;
 
-                    const json& upArr   = ud["Up"];
-                    const json& downArr = ud["Down"];
+                const json& upArr   = ud["Up"];
+                const json& downArr = ud["Down"];
 
-                    if (!upArr.is_array()   || upArr.size()   <= IDX_SUMW) continue;
-                    if (!downArr.is_array() || downArr.size() <= IDX_SUMW) continue;
+                if (!upArr.is_array()   || upArr.size()   <= IDX_SUMW) continue;
+                if (!downArr.is_array() || downArr.size() <= IDX_SUMW) continue;
 
-                    const double upYield   = upArr[IDX_SUMW];
-                    const double downYield = downArr[IDX_SUMW];
+                const double upYield   = upArr[IDX_SUMW];
+                const double downYield = downArr[IDX_SUMW];
 
-                    const double upRatio   = upYield   / nominalYield;
-                    const double downRatio = downYield / nominalYield;
+                const double upRatio   = upYield   / nominalYield;
+                const double downRatio = downYield / nominalYield;
 
-                    if (!std::isfinite(upRatio)   || upRatio   <= 0.) continue;
-                    if (!std::isfinite(downRatio) || downRatio <= 0.) continue;
+                if (!std::isfinite(upRatio)   || upRatio   <= 0.) continue;
+                if (!std::isfinite(downRatio) || downRatio <= 0.) continue;
 
-                    const std::string systName =
-                        SanitizeName(systKey.substr(4)); // remove "lnN_"
+                const std::string systName = SanitizeName(systKey);
 
-                    cb.cp().bin({bin}).process({proc})
-                        .AddSyst(cb,
-                                 systName,
-                                 "lnN",
-                                 ch::syst::SystMapAsymm<>::init(downRatio, upRatio));
-                }
-                // -----------------------------
-                // Shape systematics (default)
-                // -----------------------------
-                else {
-                    const std::string systName = SanitizeName(systKey);
-
-                    cb.cp().bin({bin}).process({proc})
-                        .AddSyst(cb,
-                                 systName,
-                                 "shape",
-                                 SystMap<>::init(1.0));
-                }
+                cb.cp().bin({bin}).process({proc})
+                    .AddSyst(cb,
+                             systName,
+                             "lnN",
+                             ch::syst::SystMapAsymm<>::init(downRatio, upRatio));
             }
         }
     }
@@ -753,33 +736,51 @@ void BuildFit::AddLepHemiSys(const stringlist& binset, const stringlist& procs){
 void BuildFit::AddBtagSys(const stringlist& binset, const stringlist& procs){
     cb.SetFlag("filters-use-regex", true);
 
+//    cb.cp().process(procs).bin({".*Run2.*2L.*0J.*P250.*Btag.*"})
+//        .AddSyst(cb, "Run2_Btag_2L_0J_lPTISR", "lnN", SystMap<>::init(1.20));
+//    cb.cp().process(procs).bin({".*Run2.*2L.*0J.*P350.*Btag.*"})
+//        .AddSyst(cb, "Run2_Btag_2L_0J_hPTISR", "lnN", SystMap<>::init(1.20));
+//    cb.cp().process(procs).bin({".*Run2.*2L.*1J.*P250.*Btag.*"})
+//        .AddSyst(cb, "Run2_Btag_2L_1J_lPTISR", "lnN", SystMap<>::init(1.20));
+//    cb.cp().process(procs).bin({".*Run2.*2L.*1J.*P350.*Btag.*"})
+//        .AddSyst(cb, "Run2_Btag_2L_1J_hPTISR", "lnN", SystMap<>::init(1.20));
+//    cb.cp().process(procs).bin({".*Run2.*3L.*P200.*Btag.*"})
+//        .AddSyst(cb, "Run2_Btag_3L_lPTISR", "lnN", SystMap<>::init(1.20));
+//    cb.cp().process(procs).bin({".*Run2.*3L.*P300.*Btag.*"})
+//        .AddSyst(cb, "Run2_Btag_3L_hPTISR", "lnN", SystMap<>::init(1.20));
+//    cb.cp().process(procs).bin({".*Run2.*4L.*Btag.*"})
+//        .AddSyst(cb, "Run2_Btag_4L", "lnN", SystMap<>::init(1.20));
+
+//    cb.cp().process(procs).bin({".*Run3.*2L.*0J.*P250.*Btag.*"})
+//        .AddSyst(cb, "Run3_Btag_2L_0J_lPTISR", "lnN", SystMap<>::init(1.20));
+//    cb.cp().process(procs).bin({".*Run3.*2L.*0J.*P350.*Btag.*"})
+//        .AddSyst(cb, "Run3_Btag_2L_0J_hPTISR", "lnN", SystMap<>::init(1.20));
+//    cb.cp().process(procs).bin({".*Run3.*2L.*1J.*P250.*Btag.*"})
+//        .AddSyst(cb, "Run3_Btag_2L_1J_lPTISR", "lnN", SystMap<>::init(1.20));
+//    cb.cp().process(procs).bin({".*Run3.*2L.*1J.*P350.*Btag.*"})
+//        .AddSyst(cb, "Run3_Btag_2L_1J_hPTISR", "lnN", SystMap<>::init(1.20));
+//    cb.cp().process(procs).bin({".*Run3.*3L.*P200.*Btag.*"})
+//        .AddSyst(cb, "Run3_Btag_3L_lPTISR", "lnN", SystMap<>::init(1.20));
+//    cb.cp().process(procs).bin({".*Run3.*3L.*P300.*Btag.*"})
+//        .AddSyst(cb, "Run3_Btag_3L_hPTISR", "lnN", SystMap<>::init(1.20));
+//    cb.cp().process(procs).bin({".*Run3.*4L.*Btag.*"})
+//        .AddSyst(cb, "Run3_Btag_4L", "lnN", SystMap<>::init(1.20));
+
     cb.cp().process(procs).bin({".*Run2.*2L.*0J.*P250.*Btag.*"})
-        .AddSyst(cb, "Run2_Btag_2L_0J_lPTISR", "lnN", SystMap<>::init(1.20));
-    cb.cp().process(procs).bin({".*Run2.*2L.*0J.*P350.*Btag.*"})
-        .AddSyst(cb, "Run2_Btag_2L_0J_hPTISR", "lnN", SystMap<>::init(1.20));
+        .AddSyst(cb, "Run2_Btag_2L_0J_PTISR", "lnN", SystMap<>::init(1.20));
     cb.cp().process(procs).bin({".*Run2.*2L.*1J.*P250.*Btag.*"})
-        .AddSyst(cb, "Run2_Btag_2L_1J_lPTISR", "lnN", SystMap<>::init(1.20));
-    cb.cp().process(procs).bin({".*Run2.*2L.*1J.*P350.*Btag.*"})
-        .AddSyst(cb, "Run2_Btag_2L_1J_hPTISR", "lnN", SystMap<>::init(1.20));
+        .AddSyst(cb, "Run2_Btag_2L_1J_PTISR", "lnN", SystMap<>::init(1.20));
     cb.cp().process(procs).bin({".*Run2.*3L.*P200.*Btag.*"})
-        .AddSyst(cb, "Run2_Btag_3L_lPTISR", "lnN", SystMap<>::init(1.20));
-    cb.cp().process(procs).bin({".*Run2.*3L.*P300.*Btag.*"})
-        .AddSyst(cb, "Run2_Btag_3L_hPTISR", "lnN", SystMap<>::init(1.20));
+        .AddSyst(cb, "Run2_Btag_3L_PTISR", "lnN", SystMap<>::init(1.20));
     cb.cp().process(procs).bin({".*Run2.*4L.*Btag.*"})
         .AddSyst(cb, "Run2_Btag_4L", "lnN", SystMap<>::init(1.20));
 
     cb.cp().process(procs).bin({".*Run3.*2L.*0J.*P250.*Btag.*"})
-        .AddSyst(cb, "Run3_Btag_2L_0J_lPTISR", "lnN", SystMap<>::init(1.20));
-    cb.cp().process(procs).bin({".*Run3.*2L.*0J.*P350.*Btag.*"})
-        .AddSyst(cb, "Run3_Btag_2L_0J_hPTISR", "lnN", SystMap<>::init(1.20));
+        .AddSyst(cb, "Run3_Btag_2L_0J_PTISR", "lnN", SystMap<>::init(1.20));
     cb.cp().process(procs).bin({".*Run3.*2L.*1J.*P250.*Btag.*"})
-        .AddSyst(cb, "Run3_Btag_2L_1J_lPTISR", "lnN", SystMap<>::init(1.20));
-    cb.cp().process(procs).bin({".*Run3.*2L.*1J.*P350.*Btag.*"})
-        .AddSyst(cb, "Run3_Btag_2L_1J_hPTISR", "lnN", SystMap<>::init(1.20));
+        .AddSyst(cb, "Run3_Btag_2L_1J_PTISR", "lnN", SystMap<>::init(1.20));
     cb.cp().process(procs).bin({".*Run3.*3L.*P200.*Btag.*"})
-        .AddSyst(cb, "Run3_Btag_3L_lPTISR", "lnN", SystMap<>::init(1.20));
-    cb.cp().process(procs).bin({".*Run3.*3L.*P300.*Btag.*"})
-        .AddSyst(cb, "Run3_Btag_3L_hPTISR", "lnN", SystMap<>::init(1.20));
+        .AddSyst(cb, "Run3_Btag_3L_PTISR", "lnN", SystMap<>::init(1.20));
     cb.cp().process(procs).bin({".*Run3.*4L.*Btag.*"})
         .AddSyst(cb, "Run3_Btag_4L", "lnN", SystMap<>::init(1.20));
 
@@ -836,24 +837,11 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
     //cb.cp().SetAutoMCStats(cb, 0.); // Second arg is event threshold
 
     // All non-triboson processes -> rateParam
-    AddFakeFamiliesAsSharedNorms(
-        truebkgprocs,
-        fakesprocs,
-        "rateParam",
-        1.0,
-        "triboson",
-        false   // exclude triboson
-    );
-    
+    //AddFakeFamiliesAsSharedNorms(truebkgprocs, fakesprocs, "rateParam", 1.0, "triboson", false /* exclude triboson */);
     // Only triboson processes -> lnN 1.4
-    AddFakeFamiliesAsSharedNorms(
-        truebkgprocs,
-        fakesprocs,
-        "lnN",
-        1.4,
-        "triboson",
-        true    // include only triboson
-    );
+    //AddFakeFamiliesAsSharedNorms(truebkgprocs, fakesprocs, "lnN", 1.4, "triboson", true /* include only triboson */);
+    // NEW implement all proc rates as lnNs with 50% prior
+    AddFakeFamiliesAsSharedNorms(truebkgprocs, fakesprocs, "lnN", 1.5, "", false /* include only triboson */);
 
     AddFloatingNormsGroupedByFakeType(fakesprocs, "rateParam", 1.0);
     AddFAKETransferSys(kept_bins);
@@ -877,4 +865,3 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
     json_root_file->Close();
     delete json_root_file;
 }
-

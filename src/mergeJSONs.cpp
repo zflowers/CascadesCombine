@@ -42,7 +42,7 @@ bool mergeJSONsFlattenedWithFileBreakdown(
         auto it = ST.MasterDict.find(group);
         if (it == ST.MasterDict.end()) return;
 
-        for (const auto &entry : it->second) {
+        for (const auto &[entry, factor] : it->second) {
             // If the entry is itself a group key, recurse; otherwise treat it as a file path
             if (ST.MasterDict.find(entry) != ST.MasterDict.end()) {
                 expandGroupRec(entry, out, visited);

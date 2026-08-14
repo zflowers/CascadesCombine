@@ -559,6 +559,7 @@ def run_checkjobs_loop_parallel(condor_dir=None, work_dirs=None, no_resubmit=Fal
                 check_cmd.append("--check-json")
             if check_root:
                 check_cmd.append("--check-root")
+            print("checkJobs cmd:",check_cmd,flush=True)
             proc = subprocess.run(check_cmd, capture_output=True, text=True)
 
             # Print outputs (labeled)

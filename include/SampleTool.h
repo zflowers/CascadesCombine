@@ -22,10 +22,10 @@ using namespace std;
 class SampleTool{
 
 	public:
-	map <string, stringlist> BkgDict{};
-	map <string, stringlist> SigDict{};
-        map<string, stringlist> DataDict{};
-	map <string, stringlist> MasterDict{};
+	std::map<std::string, std::map<std::string, double>> BkgDict{};
+	std::map<std::string, std::map<std::string, double>> SigDict{};
+        std::map<std::string, std::map<std::string, double>> DataDict{};
+	std::map<std::string, std::map<std::string, double>> MasterDict{};
         map <string, double> LumiDict{};
 
 	stringlist SignalKeys{};
@@ -39,19 +39,28 @@ class SampleTool{
 	void LoadAllFromMaster();
 
 	SampleTool();
-	
-	void PrintDict( map<string, stringlist>& d );
-	void PrintKeys( stringlist sl );
-        template <typename... Keys>
-        stringlist mergeEntriesSafe(
-            const std::map<std::string, stringlist>& dict,
-            const Keys&... keys) const;
 
-        stringlist mergeEntriesList(
-            const std::map<std::string, stringlist>& dict,
+        double GetFileFactor(const std::string &filePath) const;
+	
+        void PrintDict(std::map<std::string, std::map<std::string,double>>& d);
+        
+        void PrintKeys(stringlist sl);
+        
+        template <typename... Keys>
+        std::map<std::string,double> mergeEntriesSafe(
+            const std::map<std::string, std::map<std::string,double>>& dict,
+            const Keys&... keys) const;
+        
+        std::map<std::string,double> mergeEntriesList(
+            const std::map<std::string, std::map<std::string,double>>& dict,
             const stringlist& keys) const;
-	stringlist loadPreferredGroupsFromYaml(const std::string &yamlPath);
-        void WriteLatexTablesForGroups(const std::vector<std::string>& groups, const std::string& outdir) const;
+        
+        stringlist loadPreferredGroupsFromYaml(const std::string &yamlPath);
+        
+        void WriteLatexTablesForGroups(
+            const std::vector<std::string>& groups,
+            const std::string& outdir
+        ) const;
 
 };
 

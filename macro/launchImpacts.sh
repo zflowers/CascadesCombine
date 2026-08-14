@@ -37,8 +37,8 @@ for WS in "${dcdir}"/*/*_workspace.root; do
       -M Impacts \
       -d "$WSFILE" \
       -m "120" \
-      --doFits
-      #--robustFit 1 \
+      --doFits \
+      --robustFit 1
     popd > /dev/null || exit 1
     break
 done

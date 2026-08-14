@@ -428,7 +428,13 @@ def draw_impacts_graph(gr, labels, modes, entries, outbase, title="", ytitle=Non
     for i, lab in enumerate(labels):
         h.GetXaxis().SetBinLabel(i + 1, lab)
     h.GetXaxis().LabelsOption("v")  # vertical labels
-    h.GetXaxis().SetLabelSize(0.028)
+    nBins = h.GetNbinsX()
+    x = (nBins - 10.0) / (70.0 - 10.0)
+    x = max(0.0, x)
+    labelSize = 0.065 - (0.065 - 0.01) * x**0.7
+    # don't let it get too small
+    labelSize = max(0.015, labelSize)
+    h.GetXaxis().SetLabelSize(labelSize)
     h.GetXaxis().SetTitle("")
 
     h.Draw("HIST")

@@ -9,6 +9,7 @@
 #include <TMath.h>
 #include <TLegend.h>
 #include <TLine.h>
+#include <TMathText.h>
 #include <TLatex.h>
 #include <TH2D.h>
 #include <TStyle.h>
@@ -17,9 +18,8 @@
 #include <string>
 #include <algorithm>
 #include <string>
-#include "TSystem.h"
-
-//#include "../include/XsecTool.hh"
+#include <TSystem.h>
+#include <TApplication.h>
 #include "../src/XsecTool.cc"
 
 using namespace std;
@@ -456,9 +456,12 @@ void PlotLimitJSON(const string& json, bool inclObs = false, PlotType ptype = kT
   gStyle->SetPalette(kViridis);  
   Limit* limit_def = new Limit(json);
   if(limit_def == NULL) return;
-  TLatex l;
+  TMathText l;
+  TLatex tl;
   l.SetTextFont(42);
   l.SetNDC();
+  tl.SetTextFont(42);
+  tl.SetNDC();
   TLine* line = new TLine();
 
   /////////////
@@ -494,11 +497,10 @@ void PlotLimitJSON(const string& json, bool inclObs = false, PlotType ptype = kT
   gr_exp_MC_obs->SetLineStyle(1);
  if(inclObs) gr_exp_MC_obs->Draw("same C");
 
-  l.SetTextAlign(12);
-  l.SetTextSize(0.035);
-  l.SetTextFont(42);
- // l.SetTextColor(kWhite);
-  l.DrawLatex(0.23, 0.83,"expected #pm 1 #sigma");
+  tl.SetTextAlign(12);
+  tl.SetTextSize(0.035);
+  tl.SetTextFont(42);
+  tl.DrawLatex(0.23, 0.83,"expected #pm 1 #sigma");
   line->SetLineColor(7043);
   line->SetLineWidth(2);
   line->SetLineStyle(1);
@@ -506,9 +508,8 @@ void PlotLimitJSON(const string& json, bool inclObs = false, PlotType ptype = kT
   line->SetLineStyle(3);
   line->DrawLineNDC(0.18, 0.842, 0.22, 0.842);
   line->DrawLineNDC(0.18, 0.818, 0.22, 0.818);
-// l.SetTextColor(kWhite);		    
   if(inclObs) {
-    l.DrawLatex(0.23, 0.78,"observed");
+    tl.DrawLatex(0.23, 0.78,"observed");
     line->SetLineColor(kBlack);
     line->SetLineWidth(2);
     line->SetLineStyle(1);
@@ -556,16 +557,16 @@ void PlotLimitJSON(const string& json, bool inclObs = false, PlotType ptype = kT
   gr_exp_dM_obs->SetLineStyle(1);
   if(inclObs) gr_exp_dM_obs->Draw("same C");
 
-  l.SetTextAlign(12);
-  l.SetTextSize(0.035);
-  l.SetTextFont(42);
+  tl.SetTextAlign(12);
+  tl.SetTextSize(0.035);
+  tl.SetTextFont(42);
   double lgap =0.842- 0.83;
   double expobsgap= 0.83 - 0.78;
   double xlgap = 0.22-0.18;
   double xlinetotext= 0.23-0.18;
   if(ptype == kTChiWZ){
     double exppos = 0.25;
-     l.DrawLatex(0.23, exppos,"expected #pm 1 #sigma");
+     tl.DrawLatex(0.23, exppos,"expected #pm 1 #sigma");
   line->SetLineColor(kMagenta);
   line->SetLineWidth(2);
   line->SetLineStyle(1);
@@ -577,7 +578,7 @@ void PlotLimitJSON(const string& json, bool inclObs = false, PlotType ptype = kT
   line->DrawLineNDC(0.18, exppos-lgap, 0.22, exppos-lgap);
 
   if(inclObs) { 
-  l.DrawLatex(0.23, exppos-expobsgap,"observed");
+  tl.DrawLatex(0.23, exppos-expobsgap,"observed");
   line->SetLineColor(kBlack);
   line->SetLineWidth(2);
   line->SetLineStyle(1);
@@ -589,7 +590,7 @@ void PlotLimitJSON(const string& json, bool inclObs = false, PlotType ptype = kT
 	double exppos = 0.76;
  	double xpos =0.5;
 
-     l.DrawLatex(xpos+xlinetotext, exppos,"expected #pm 1 #sigma");
+     tl.DrawLatex(xpos+xlinetotext, exppos,"expected #pm 1 #sigma");
   line->SetLineColor(kMagenta);
   line->SetLineWidth(2);
   line->SetLineStyle(1);
@@ -600,7 +601,7 @@ void PlotLimitJSON(const string& json, bool inclObs = false, PlotType ptype = kT
   line->DrawLineNDC(xpos, exppos-lgap,xpos+xlgap, exppos-lgap);
 
   if(inclObs) {
-  l.DrawLatex(xpos+xlinetotext, exppos-expobsgap,"observed");
+  tl.DrawLatex(xpos+xlinetotext, exppos-expobsgap,"observed");
   line->SetLineColor(kBlack);
   line->SetLineWidth(2);
   line->SetLineStyle(1);
@@ -611,7 +612,7 @@ void PlotLimitJSON(const string& json, bool inclObs = false, PlotType ptype = kT
         double exppos = 0.76;
         double xpos =0.5;
 
-     l.DrawLatex(xpos+xlinetotext, exppos,"expected #pm 1 #sigma");
+     tl.DrawLatex(xpos+xlinetotext, exppos,"expected #pm 1 #sigma");
   line->SetLineColor(kMagenta);
   line->SetLineWidth(2);
   line->SetLineStyle(1);
@@ -621,7 +622,7 @@ void PlotLimitJSON(const string& json, bool inclObs = false, PlotType ptype = kT
   line->DrawLineNDC(xpos, exppos+lgap, xpos+xlgap, exppos+lgap);
   line->DrawLineNDC(xpos, exppos-lgap,xpos+xlgap, exppos-lgap);
 
-  if(inclObs) { l.DrawLatex(xpos+xlinetotext, exppos-expobsgap,"observed");
+  if(inclObs) { tl.DrawLatex(xpos+xlinetotext, exppos-expobsgap,"observed");
   line->SetLineColor(kBlack);
   line->SetLineWidth(2);
   line->SetLineStyle(1);
@@ -632,7 +633,7 @@ void PlotLimitJSON(const string& json, bool inclObs = false, PlotType ptype = kT
         double exppos = 0.7;
         double xpos =0.54;
 
-     l.DrawLatex(xpos+xlinetotext, exppos,"expected #pm 1 #sigma");
+     tl.DrawLatex(xpos+xlinetotext, exppos,"expected #pm 1 #sigma");
   line->SetLineColor(kMagenta);
   line->SetLineWidth(2);
   line->SetLineStyle(1);
@@ -643,7 +644,7 @@ void PlotLimitJSON(const string& json, bool inclObs = false, PlotType ptype = kT
   line->DrawLineNDC(xpos, exppos+lgap, xpos+xlgap, exppos+lgap);
   line->DrawLineNDC(xpos, exppos-lgap,xpos+xlgap, exppos-lgap);
 
-  if(inclObs) { l.DrawLatex(xpos+xlinetotext, exppos-expobsgap,"observed");
+  if(inclObs) { tl.DrawLatex(xpos+xlinetotext, exppos-expobsgap,"observed");
   line->SetLineColor(kBlack);
   line->SetLineWidth(2);
   line->SetLineStyle(1);
@@ -653,7 +654,7 @@ void PlotLimitJSON(const string& json, bool inclObs = false, PlotType ptype = kT
 
   else{
 
-  l.DrawLatex(0.23, 0.83,"expected #pm 1 #sigma");
+  tl.DrawLatex(0.23, 0.83,"expected #pm 1 #sigma");
   line->SetLineColor(kMagenta);
   line->SetLineWidth(2);
   line->SetLineStyle(1);
@@ -663,7 +664,7 @@ void PlotLimitJSON(const string& json, bool inclObs = false, PlotType ptype = kT
   line->DrawLineNDC(0.18, 0.842, 0.22, 0.842);
   line->DrawLineNDC(0.18, 0.818, 0.22, 0.818);
   
-  if(inclObs) { l.DrawLatex(0.23, 0.78,"observed");
+  if(inclObs) { tl.DrawLatex(0.23, 0.78,"observed");
   line->SetLineColor(kBlack);
   line->SetLineWidth(2);
   line->SetLineStyle(1);
@@ -671,6 +672,12 @@ void PlotLimitJSON(const string& json, bool inclObs = false, PlotType ptype = kT
   }
 } 
   TFile* out = new TFile(outfile.c_str(),"RECREATE");
+  can_MC->cd();
+  can_MC->Modified();
+  can_MC->Update();
+  can_dM->cd();
+  can_dM->Modified();
+  can_dM->Update();
   out->WriteTObject(can_MC);
   out->WriteTObject(can_dM);
   out->WriteTObject(hist_exp_dM,"h2d");
@@ -679,7 +686,8 @@ void PlotLimitJSON(const string& json, bool inclObs = false, PlotType ptype = kT
   out->WriteTObject(gr_exp_dM_dn,"gr_dn");
   out->WriteTObject(gr_exp_dM_obs,"gr_obs");
   out->Close();
- 
+
+  gApplication->Terminate();
 }
 
 double popdouble(std::string& line){
@@ -734,19 +742,19 @@ TCanvas* Plot2DHist_MCvMP(const string& name, TH2D* hist, PlotType ptype){
   TCanvas* can = (TCanvas*) new TCanvas(name.c_str(),name.c_str(),700.,600);
 
   string xlabel = "m_{P} [GeV]";
-  string ylabel = "m_{#tilde{#chi}^{0}_{1}} [GeV]";
+  string ylabel = "m_{\\~{\\chi}^{0}_{1}} [GeV]";
 
   if(ptype == kTChiWZ){
-    xlabel = "m_{#tilde{#chi}^{#pm}_{1}} [GeV]";
-    ylabel = "m_{#tilde{#chi}^{0}_{1}} [GeV]";
+    xlabel = "m_{\\~{\\chi}^{\\pm}_{1}} [GeV]";
+    ylabel = "m_{\\~{\\chi}^{0}_{1}} [GeV]";
   }
   else if(ptype == kTSlSl){
-    xlabel = "m_{ #tilde{#it{l}}} [GeV]";
-    ylabel = "m_{#tilde{#chi}^{0}_{1}} [GeV]";
+    xlabel = "m_{ \\~{\\ell}} [GeV]";
+    ylabel = "m_{\\~{\\chi}^{0}_{1}} [GeV]";
   }
   else if(ptype == kTChiWW){
-     xlabel = "m_{#tilde{#chi}^{#pm}_{1}} [GeV]";
-     ylabel = "m_{#tilde{#chi}^{0}_{1}} [GeV]";
+     xlabel = "m_{\\~{\\chi}^{\\pm}_{1}} [GeV]";
+     ylabel = "m_{\\~{\\chi}^{0}_{1}} [GeV]";
   }
                   
   can->SetLeftMargin(0.15);
@@ -809,50 +817,53 @@ TCanvas* Plot2DHist_MCvMP(const string& name, TH2D* hist, PlotType ptype){
   }
   hist->Draw("COLZ");
 
-  TLatex l;
+  TMathText l;
+  TLatex tl;
   l.SetTextFont(42);
   l.SetNDC();
+  tl.SetTextFont(42);
+  tl.SetNDC();
 
   TLine* line = new TLine();
   line->SetLineWidth(2);
   line->SetLineColor(kBlack);
 
-  l.SetTextAlign(31);
-  l.SetTextSize(0.04);
-  l.SetTextFont(42);
-  l.DrawLatex(0.8, 0.95, "138 fb^{-1} (13 TeV)");
-  l.SetTextAlign(11);
-  l.SetTextSize(0.04);
-  l.SetTextFont(42);
-  l.DrawLatex(0.16, 0.95,"#bf{#it{CMS}} work-in-progress");
-  l.SetTextSize(0.05);
+  tl.SetTextAlign(31);
+  tl.SetTextSize(0.04);
+  tl.SetTextFont(42);
+  tl.DrawLatex(0.8, 0.95, "138 fb^{-1} (13 TeV)");
+  tl.SetTextAlign(11);
+  tl.SetTextSize(0.04);
+  tl.SetTextFont(42);
+  tl.DrawLatex(0.16, 0.95,"#bf{#it{CMS}} work-in-progress");
+  tl.SetTextSize(0.05);
 
   // SMS info
   string SMS;
   if(ptype == kTChiWZ){
-    SMS =  "pp #rightarrow #tilde{#chi}_{2}^{0} #tilde{#chi}_{1}^{#pm}; ";
-    SMS += "#tilde{#chi}_{2}^{0} #rightarrow Z*#tilde{#chi}_{1}^{0}, ";
-    SMS += "#tilde{#chi}_{1}^{#pm} #rightarrow W*#tilde{#chi}_{1}^{0}";
+    SMS =  "pp \\rightarrow \\~{\\chi}_{2}^{0} \\~{\\chi}_{1}^{\\pm}; ";
+    SMS += "\\~{\\chi}_{2}^{0} \\rightarrow Z*\\~{\\chi}_{1}^{0}, ";
+    SMS += "\\~{\\chi}_{1}^{\\pm} \\rightarrow W*\\~{\\chi}_{1}^{0}";
   }
   else if(ptype == kTSlSl){
-    SMS =  "pp #rightarrow #tilde{#it{l}}_{L/R} #tilde{#it{l}}_{L/R}; ";
-    SMS += "#tilde{#it{l}}_{L/R} #rightarrow #it{l} #tilde{#chi}_{1}^{0}";
+    SMS = "pp \\rightarrow \\~{\\ell}_{L/R}\\,\\~{\\ell}_{L/R}; ";
+    SMS += "\\~{\\ell}_{L/R} \\rightarrow \\ell\\,\\~{\\chi}_{1}^{0}";
   }
   else if(ptype == kTChiWW){
-     SMS = "pp #rightarrow #tilde{#chi}_{1}^{#pm} #tilde{#chi}_{1}^{#mp}; ";
-     SMS += "#tilde{#chi}_{1}^{#pm} #rightarrow W*#tilde{#chi}_{1}^{0}";
+     SMS = "pp \\rightarrow \\~{\\chi}_{1}^{\\pm} \\~{\\chi}_{1}^{\\mp}; ";
+     SMS += "\\~{\\chi}_{1}^{\\pm} \\rightarrow W*\\~{\\chi}_{1}^{0}";
   }
   else if(ptype == kTSlSnu){
-     SMS = "pp #rightarrow #tilde{#chi}_{2}^{0} #tilde{#chi}_{1}^{#pm}; ";
-     SMS += "#tilde{#chi}_{2}^{0} #rightarrow #tilde{#it{l}} #it{l}; ";
-     SMS += "#tilde{#chi}_{1}^{#pm} #rightarrow #tilde{#nu} #it{l}; ";
-     SMS += "#tilde{#it{l}} #rightarrow #it{l} #tilde{#chi}_{1}^{0}; ";
-     SMS += "#tilde{#nu} #rightarrow #it{#nu} #tilde{#chi}_{1}^{0}; ";
+     SMS = "pp \\rightarrow \\~{\\chi}_{2}^{0} \\~{\\chi}_{1}^{\\pm}; ";
+     SMS += "\\~{\\chi}_{2}^{0} \\rightarrow \\~{\\ell} \\ell; ";
+     SMS += "\\~{\\chi}_{1}^{\\pm} \\rightarrow \\~{\\nu} \\ell; ";
+     SMS += "\\~{\\ell} \\rightarrow \\ell \\~{\\chi}_{1}^{0}; ";
+     SMS += "\\~{\\nu} \\rightarrow \\it{\\nu} \\~{\\chi}_{1}^{0}; ";
   }
 
   l.SetTextSize(0.035);
   l.SetTextFont(42);
-  l.DrawLatex(0.18, 0.87,SMS.c_str());
+  l.DrawMathText(0.18, 0.87,SMS.c_str());
 
   return can;
 }
@@ -863,28 +874,28 @@ TCanvas* Plot2DHist_dMvMP(const string& name, TH2D* hist, PlotType ptype){
 
   gStyle->SetPalette(kViridis);
   string xlabel = "m_{P} [GeV]";
-  string ylabel = "m_{P} - M_{ #tilde{#chi}^{0}_{1}} [GeV]";
+  string ylabel = "m_{P} - M_{ \\~{\\chi}^{0}_{1}} [GeV]";
 
   if(ptype == kTChiWZ || ptype == kHN2C1){
-    xlabel = "m_{( #tilde{#chi}^{#pm}_{1}, #tilde{#chi}^{0}_{2})} [GeV]";
-    //ylabel = "m_{#tilde{#chi}^{#pm}_{1}} - m_{#tilde{#chi}^{0}_{1}} [GeV]";
-    ylabel = "#Delta m(#tilde{#chi}^{#pm}_{1}, #tilde{#chi}^{0}_{1}) [GeV]"; 
+    xlabel = "m_{( \\~{\\chi}^{\\pm}_{1}, \\~{\\chi}^{0}_{2})} [GeV]";
+    //ylabel = "m_{\\~{\\chi}^{\\pm}_{1}} - m_{\\~{\\chi}^{0}_{1}} [GeV]";
+    ylabel = "\\Delta m(\\~{\\chi}^{\\pm}_{1}, \\~{\\chi}^{0}_{1}) [GeV]"; 
   }
   if(ptype == kTSlSl){
-    xlabel = "m_{ #tilde{#it{l}}} [GeV]";
-   ylabel = "m_{#tilde{#it{l}}} - m_{#tilde{#chi}^{0}_{1}} [GeV]";
-   //ylabel = "#Delta m( ) [GeV]";
+    xlabel = "m_{ \\~{\\ell}} [GeV]";
+   ylabel = "m_{\\~{\\ell}} - m_{\\~{\\chi}^{0}_{1}} [GeV]";
+   //ylabel = "\\Delta m( ) [GeV]";
   }
   if(ptype == kTChiWW){
-    xlabel = "m_{#tilde{#chi}^{#pm}_{1}} [GeV]";
-    ylabel = "#Delta m(#tilde{#chi}^{#pm}_{1}, #tilde{#chi}^{0}_{1}) [GeV]";
-//    ylabel = "#Delta m( ) [GeV]";
+    xlabel = "m_{\\~{\\chi}^{\\pm}_{1}} [GeV]";
+    ylabel = "\\Delta m(\\~{\\chi}^{\\pm}_{1}, \\~{\\chi}^{0}_{1}) [GeV]";
+//    ylabel = "\\Delta m( ) [GeV]";
   }
   if(ptype == kTSlSnu){
-    //xlabel = "m_{(#tilde{#chi}^{0}_{2}, #tilde{#chi}^{#pm}_{1} )} [GeV]";
-    //ylabel = "#Delta m(#tilde{#chi}^{#pm}_{1}, #tilde{#chi}^{0}_{1}) [GeV]";
-    xlabel = "m_{#tilde{#chi}^{#pm}_{1}} [GeV]";
-    ylabel = "#Delta m(#tilde{#chi}^{#pm}_{1}, #tilde{#chi}^{0}_{1}) [GeV]";
+    //xlabel = "m_{(\\~{\\chi}^{0}_{2}, \\~{\\chi}^{\\pm}_{1} )} [GeV]";
+    //ylabel = "\\Delta m(\\~{\\chi}^{\\pm}_{1}, \\~{\\chi}^{0}_{1}) [GeV]";
+    xlabel = "m_{\\~{\\chi}^{\\pm}_{1}} [GeV]";
+    ylabel = "\\Delta m(\\~{\\chi}^{\\pm}_{1}, \\~{\\chi}^{0}_{1}) [GeV]";
   }
   
   can->SetLeftMargin(0.15);
@@ -975,24 +986,27 @@ hist->GetZaxis()->SetTitle("95% CL upper limit [fb]");
   }	
   hist->Draw("COLZ");
 
-  TLatex l;
+  TMathText l;
+  TLatex tl;
   l.SetTextFont(42);
   l.SetNDC();
+  tl.SetTextFont(42);
+  tl.SetNDC();
 
   TLine* line = new TLine();
   line->SetLineWidth(2);
   line->SetLineColor(kBlack);
 
-  l.SetTextAlign(31);
-  l.SetTextSize(0.04);
-  l.SetTextFont(42);
-  //l.DrawLatex(0.8, 0.95, "138 fb^{-1} (13 TeV)");
-  l.SetTextAlign(11);
-  l.SetTextSize(0.04);
-  l.SetTextFont(42);
-  //l.DrawLatex(0.16, 0.95,"#bf{CMS}");
-  l.DrawLatex(0.16, 0.95,"#bf{CMS} #it{Preliminary}");
-  l.SetTextSize(0.05);
+  tl.SetTextAlign(31);
+  tl.SetTextSize(0.04);
+  tl.SetTextFont(42);
+  //tl.DrawLatex(0.8, 0.95, "138 fb^{-1} (13 TeV)");
+  tl.SetTextAlign(11);
+  tl.SetTextSize(0.04);
+  tl.SetTextFont(42);
+  //tl.DrawLatex(0.16, 0.95,"#bf{CMS}");
+  tl.DrawLatex(0.16, 0.95,"#bf{CMS} #it{Preliminary}");
+  tl.SetTextSize(0.05);
 
   // SMS info
   string SMS;
@@ -1000,84 +1014,83 @@ hist->GetZaxis()->SetTitle("95% CL upper limit [fb]");
   string SMS3="";
   string SMS4="";
   if(ptype == kTChiWZ){
-    SMS =  "pp #rightarrow #tilde{#chi}_{1}^{#pm} #tilde{#chi}_{2}^{0} ";
-    
-    SMS2 = "#tilde{#chi}_{1}^{#pm} #rightarrow W*#tilde{#chi}_{1}^{0},  ";
-    SMS2 += "#tilde{#chi}_{2}^{0} #rightarrow Z*#tilde{#chi}_{1}^{0}  ";
-    //SMS2 += "#tilde{#chi}_{1}^{#pm} #rightarrow W*#tilde{#chi}_{1}^{0}";
+    SMS = "pp \\rightarrow \\~{\\chi}_{1}^{\\pm}\\,\\~{\\chi}_{2}^{0}";
+    SMS2 = "\\~{\\chi}_{1}^{\\pm} \\rightarrow W^*\\,\\~{\\chi}_{1}^{0}, ";
+    SMS2 += "\\~{\\chi}_{2}^{0} \\rightarrow Z^*\\,\\~{\\chi}_{1}^{0}";
+    //SMS2 += "\\~{\\chi}_{1}^{\\pm} \\rightarrow W*\\~{\\chi}_{1}^{0}";
     SMS3 = "(Wino)";
-    SMS4 = "m_{#tilde{#chi}_{1}^{0}} < 0";
+    SMS4 = "m_{\\~{\\chi}_{1}^{0}} < 0";
   }
   if(ptype == kHN2C1){
-    SMS =  "pp #rightarrow #tilde{#chi}_{1}^{#pm} #tilde{#chi}_{2}^{0} ";
-    SMS2 = "#tilde{#chi}_{1}^{#pm} #rightarrow W*#tilde{#chi}_{1}^{0},  ";
-    SMS2 += "#tilde{#chi}_{2}^{0} #rightarrow Z*#tilde{#chi}_{1}^{0}";
-  //  SMS2 += "#tilde{#chi}_{1}^{#pm} #rightarrow W*#tilde{#chi}_{1}^{0}";
+    SMS =  "pp \\rightarrow \\~{\\chi}_{1}^{\\pm} \\~{\\chi}_{2}^{0} ";
+    SMS2 = "\\~{\\chi}_{1}^{\\pm} \\rightarrow W*\\~{\\chi}_{1}^{0},  ";
+    SMS2 += "\\~{\\chi}_{2}^{0} \\rightarrow Z*\\~{\\chi}_{1}^{0}";
+  //  SMS2 += "\\~{\\chi}_{1}^{\\pm} \\rightarrow W*\\~{\\chi}_{1}^{0}";
     SMS3 = "(Higgsino)";
-    SMS4 = "m_{#tilde{#chi}_{1}^{0}} < 0";
+    SMS4 = "m_{\\~{\\chi}_{1}^{0}} < 0";
   }
   if(ptype == kTSlSl){
-    SMS =  "pp #rightarrow #tilde{#it{l}}_{L/R} #tilde{#it{l}}_{L/R}; ";
-    SMS += "#tilde{#it{l}}_{L/R} #rightarrow #it{l} #tilde{#chi}_{1}^{0}";
+    SMS = "pp \\rightarrow \\~{\\ell}_{L/R}\\,\\~{\\ell}_{L/R}; ";
+    SMS += "\\~{\\ell}_{L/R} \\rightarrow \\ell\\,\\~{\\chi}_{1}^{0}";
   }
   if(ptype == kTChiWW){
-     SMS = "pp #rightarrow #tilde{#chi}_{1}^{+}  #tilde{#chi}_{1}^{-} ";
-     SMS2 = "#tilde{#chi}_{1}^{#pm} #rightarrow W*#tilde{#chi}_{1}^{0}";
+     SMS = "pp \\rightarrow \\~{\\chi}_{1}^{+}  \\~{\\chi}_{1}^{-} ";
+     SMS2 = "\\~{\\chi}_{1}^{\\pm} \\rightarrow W*\\~{\\chi}_{1}^{0}";
      SMS3 = "(Wino)";
-     SMS4 = "m_{#tilde{#chi}_{1}^{0}} < 0";
+     SMS4 = "m_{\\~{\\chi}_{1}^{0}} < 0";
   }
   if(ptype == kTSlSnu){
-    SMS = "pp #rightarrow #tilde{#chi}_{1}^{+} #tilde{#chi}_{1}^{-}  (Wino)";
-     SMS2 = "#tilde{#chi}_{1}^{#pm} #rightarrow #tilde{#it{l}} #it{#nu},  ";
-     SMS3 = "#tilde{#chi}_{1}^{#pm} #rightarrow #tilde{#nu} #it{l},  ";
-     SMS2 += "#tilde{#it{l}} #rightarrow #it{l} #tilde{#chi}_{1}^{0}";
-     SMS3 += "#tilde{#nu} #rightarrow #it{#nu} #tilde{#chi}_{1}^{0}";
-     SMS4 = "m_{#tilde{#chi}_{1}^{0}} < 0";
+    SMS = "pp \\rightarrow \\~{\\chi}_{1}^{+} \\~{\\chi}_{1}^{-}  (Wino)";
+     SMS2 = "\\~{\\chi}_{1}^{\\pm} \\rightarrow \\~{\\ell} \\it{\\nu},  ";
+     SMS3 = "\\~{\\chi}_{1}^{\\pm} \\rightarrow \\~{\\nu} \\ell,  ";
+     SMS2 += "\\~{\\ell} \\rightarrow \\ell \\~{\\chi}_{1}^{0}";
+     SMS3 += "\\~{\\nu} \\rightarrow \\it{\\nu} \\~{\\chi}_{1}^{0}";
+     SMS4 = "m_{\\~{\\chi}_{1}^{0}} < 0";
   }
 
   l.SetTextSize(0.035);
   l.SetTextFont(42);
  // l.SetTextColor(kWhite);
   if( ptype == kTChiWZ ){
-	l.DrawLatex(0.18,0.36, SMS.c_str());
-	l.DrawLatex(0.33,0.36, SMS3.c_str());
-	l.DrawLatex(0.18,0.30, SMS2.c_str());
+	l.DrawMathText(0.18,0.36, SMS.c_str());
+	l.DrawMathText(0.33,0.36, SMS3.c_str());
+	l.DrawMathText(0.18,0.30, SMS2.c_str());
 	l.SetTextAngle(65);
         l.SetTextSize(0.03);
         l.SetTextColor(kGray+2);
-        l.DrawLatex(0.18,0.81, SMS4.c_str());
+        l.DrawMathText(0.18,0.81, SMS4.c_str());
   }
   else if( ptype == kTChiWW){
-     l.DrawLatex(0.5,0.87, SMS.c_str());
-        l.DrawLatex(0.65,0.87, SMS3.c_str());
-        l.DrawLatex(0.5,0.81, SMS2.c_str());
+     l.DrawMathText(0.5,0.87, SMS.c_str());
+        l.DrawMathText(0.65,0.87, SMS3.c_str());
+        l.DrawMathText(0.5,0.81, SMS2.c_str());
 	 l.SetTextAngle(55);
         l.SetTextSize(0.03);
         l.SetTextColor(kGray+2);
-        l.DrawLatex(0.19,0.81, SMS4.c_str());
+        l.DrawMathText(0.19,0.81, SMS4.c_str());
   }
   else if( ptype == kHN2C1 ){
-	l.DrawLatex(0.5,0.87, SMS.c_str());
-        l.DrawLatex(0.65,0.87, SMS3.c_str());
-        l.DrawLatex(0.5,0.81, SMS2.c_str());	
+	l.DrawMathText(0.5,0.87, SMS.c_str());
+        l.DrawMathText(0.65,0.87, SMS3.c_str());
+        l.DrawMathText(0.5,0.81, SMS2.c_str());	
         l.SetTextAngle(50);
         l.SetTextSize(0.03);
         l.SetTextColor(kGray+2);
-        l.DrawLatex(0.19,0.8, SMS4.c_str());
+        l.DrawMathText(0.19,0.8, SMS4.c_str());
   }
   else if( ptype == kTSlSnu ){
-        l.DrawLatex(0.54,0.87, SMS.c_str());
-        l.DrawLatex(0.54,0.75, SMS3.c_str());
-        l.DrawLatex(0.54,0.81, SMS2.c_str());
+        l.DrawMathText(0.54,0.87, SMS.c_str());
+        l.DrawMathText(0.54,0.75, SMS3.c_str());
+        l.DrawMathText(0.54,0.81, SMS2.c_str());
 	l.SetTextAngle(55);
 	l.SetTextSize(0.03);
 	l.SetTextColor(kGray+2);
-	l.DrawLatex(0.28,0.6, SMS4.c_str());
+	l.DrawMathText(0.28,0.6, SMS4.c_str());
   }
   else{
-    l.DrawLatex(0.18, 0.87,SMS.c_str());
+    l.DrawMathText(0.18, 0.87,SMS.c_str());
   }
-  //if(SMS2 != "") l.DrawLatex(0.18,0.85,SMS2.c_str());
+  //if(SMS2 != "") l.DrawMathText(0.18,0.85,SMS2.c_str());
   return can;
 }
 
