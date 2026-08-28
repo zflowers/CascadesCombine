@@ -1009,6 +1009,7 @@ def main(args, run_info, try_acquire_lock_or_exit, start_time):
                 "-o", plots_dir,
                 "-l", plot_lumi,
                 "--ratios", hist_cfg,
+                "--config", FDpattern_cfg,
             ]
             print("[run_combine] Plotting histograms with command:", " ".join(plot_cmd), flush=True)
             subprocess.run(plot_cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)

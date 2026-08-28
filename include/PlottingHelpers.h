@@ -63,6 +63,11 @@ double hto = 0.07;
 // Helpers
 // ----------------------
 
+void EnsurePlotDirectory(const std::string& path)
+{
+    gSystem->mkdir(path.c_str(), kTRUE);
+}
+
 std::string SanitizeString(const std::string& name) {
     std::string out;
     for (char c : name) {
@@ -2231,7 +2236,6 @@ std::vector<RatioDef> LoadRatioYAML(const std::string &filename) {
 
     YAML::Node doc = YAML::LoadFile(filename);
     if(!doc["ratios"]) {
-        std::cerr << "[LoadRatioYAML] No 'ratios:' key found in " << filename << std::endl;
         return ratios;
     }
 

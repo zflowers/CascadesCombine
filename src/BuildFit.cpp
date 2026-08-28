@@ -621,6 +621,7 @@ void BuildFit::AddPTISRSys(const stringlist& binset, const stringlist& procs){
 
 void BuildFit::AddFAKETransferSys(const stringlist& binset){
     cb.SetFlag("filters-use-regex", true);
+// turn on SIP3D after unblinding
 
     cb.cp().bin({".*Run2.*Bronze.*"}).process({".*FAKES.*Muon.*"})
        .AddSyst(cb, "Run2_IDISO_Muon", "lnN", SystMap<>::init(1.30));
@@ -628,11 +629,11 @@ void BuildFit::AddFAKETransferSys(const stringlist& binset){
     cb.cp().bin({".*Run2.*Bronze.*"}).process({".*FAKES.*Elec.*"})
        .AddSyst(cb, "Run2_IDISO_Elec", "lnN", SystMap<>::init(1.30));
    
-     cb.cp().bin({".*Run2.*Silver.*"}).process({".*FAKES.*Muon.*"})
-       .AddSyst(cb, "Run2_SIP3D_Muon", "lnN", SystMap<>::init(1.30));
+//     cb.cp().bin({".*Run2.*Silver.*"}).process({".*FAKES.*Muon.*"})
+//       .AddSyst(cb, "Run2_SIP3D_Muon", "lnN", SystMap<>::init(1.30));
    
-     cb.cp().bin({".*Run2.*Silver.*"}).process({".*FAKES.*Elec.*"})
-       .AddSyst(cb, "Run2_SIP3D_Elec", "lnN", SystMap<>::init(1.30));
+//     cb.cp().bin({".*Run2.*Silver.*"}).process({".*FAKES.*Elec.*"})
+//       .AddSyst(cb, "Run2_SIP3D_Elec", "lnN", SystMap<>::init(1.30));
    
     cb.cp().bin({".*Run3.*Bronze.*"}).process({".*FAKES.*Muon.*"})
        .AddSyst(cb, "Run3_IDISO_Muon", "lnN", SystMap<>::init(1.30));
@@ -640,11 +641,11 @@ void BuildFit::AddFAKETransferSys(const stringlist& binset){
     cb.cp().bin({".*Run3.*Bronze.*"}).process({".*FAKES.*Elec.*"})
        .AddSyst(cb, "Run3_IDISO_Elec", "lnN", SystMap<>::init(1.30));
    
-     cb.cp().bin({".*Run3.*Silver.*"}).process({".*FAKES.*Muon.*"})
-       .AddSyst(cb, "Run3_SIP3D_Muon", "lnN", SystMap<>::init(1.30));
+//     cb.cp().bin({".*Run3.*Silver.*"}).process({".*FAKES.*Muon.*"})
+//       .AddSyst(cb, "Run3_SIP3D_Muon", "lnN", SystMap<>::init(1.30));
    
-     cb.cp().bin({".*Run3.*Silver.*"}).process({".*FAKES.*Elec.*"})
-       .AddSyst(cb, "Run3_SIP3D_Elec", "lnN", SystMap<>::init(1.30));
+//     cb.cp().bin({".*Run3.*Silver.*"}).process({".*FAKES.*Elec.*"})
+//       .AddSyst(cb, "Run3_SIP3D_Elec", "lnN", SystMap<>::init(1.30));
 
      cb.SetFlag("filters-use-regex", false);
 }
@@ -735,36 +736,6 @@ void BuildFit::AddLepHemiSys(const stringlist& binset, const stringlist& procs){
 
 void BuildFit::AddBtagSys(const stringlist& binset, const stringlist& procs){
     cb.SetFlag("filters-use-regex", true);
-
-//    cb.cp().process(procs).bin({".*Run2.*2L.*0J.*P250.*Btag.*"})
-//        .AddSyst(cb, "Run2_Btag_2L_0J_lPTISR", "lnN", SystMap<>::init(1.20));
-//    cb.cp().process(procs).bin({".*Run2.*2L.*0J.*P350.*Btag.*"})
-//        .AddSyst(cb, "Run2_Btag_2L_0J_hPTISR", "lnN", SystMap<>::init(1.20));
-//    cb.cp().process(procs).bin({".*Run2.*2L.*1J.*P250.*Btag.*"})
-//        .AddSyst(cb, "Run2_Btag_2L_1J_lPTISR", "lnN", SystMap<>::init(1.20));
-//    cb.cp().process(procs).bin({".*Run2.*2L.*1J.*P350.*Btag.*"})
-//        .AddSyst(cb, "Run2_Btag_2L_1J_hPTISR", "lnN", SystMap<>::init(1.20));
-//    cb.cp().process(procs).bin({".*Run2.*3L.*P200.*Btag.*"})
-//        .AddSyst(cb, "Run2_Btag_3L_lPTISR", "lnN", SystMap<>::init(1.20));
-//    cb.cp().process(procs).bin({".*Run2.*3L.*P300.*Btag.*"})
-//        .AddSyst(cb, "Run2_Btag_3L_hPTISR", "lnN", SystMap<>::init(1.20));
-//    cb.cp().process(procs).bin({".*Run2.*4L.*Btag.*"})
-//        .AddSyst(cb, "Run2_Btag_4L", "lnN", SystMap<>::init(1.20));
-
-//    cb.cp().process(procs).bin({".*Run3.*2L.*0J.*P250.*Btag.*"})
-//        .AddSyst(cb, "Run3_Btag_2L_0J_lPTISR", "lnN", SystMap<>::init(1.20));
-//    cb.cp().process(procs).bin({".*Run3.*2L.*0J.*P350.*Btag.*"})
-//        .AddSyst(cb, "Run3_Btag_2L_0J_hPTISR", "lnN", SystMap<>::init(1.20));
-//    cb.cp().process(procs).bin({".*Run3.*2L.*1J.*P250.*Btag.*"})
-//        .AddSyst(cb, "Run3_Btag_2L_1J_lPTISR", "lnN", SystMap<>::init(1.20));
-//    cb.cp().process(procs).bin({".*Run3.*2L.*1J.*P350.*Btag.*"})
-//        .AddSyst(cb, "Run3_Btag_2L_1J_hPTISR", "lnN", SystMap<>::init(1.20));
-//    cb.cp().process(procs).bin({".*Run3.*3L.*P200.*Btag.*"})
-//        .AddSyst(cb, "Run3_Btag_3L_lPTISR", "lnN", SystMap<>::init(1.20));
-//    cb.cp().process(procs).bin({".*Run3.*3L.*P300.*Btag.*"})
-//        .AddSyst(cb, "Run3_Btag_3L_hPTISR", "lnN", SystMap<>::init(1.20));
-//    cb.cp().process(procs).bin({".*Run3.*4L.*Btag.*"})
-//        .AddSyst(cb, "Run3_Btag_4L", "lnN", SystMap<>::init(1.20));
 
     cb.cp().process(procs).bin({".*Run2.*2L.*0J.*P250.*Btag.*"})
         .AddSyst(cb, "Run2_Btag_2L_0J_PTISR", "lnN", SystMap<>::init(1.20));

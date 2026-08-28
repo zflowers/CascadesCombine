@@ -107,6 +107,19 @@ SampleTool::SampleTool(){
   LumiDict["Summer22_130X_Cascades"] = RUN2_TOTAL_LUMI + RUN3_TOTAL_LUMI;
   LumiDict["Summer23BPix_130X_Cascades"] = RUN2_TOTAL_LUMI + RUN3_TOTAL_LUMI;
 
+  // Overload data lumi paths
+  LumiDict["Summer20UL16APV_106X_Data"] = 1.;
+  LumiDict["Summer20UL16_106X_Data"] = 1.;
+  LumiDict["Summer20UL17_106X_Data"] = 1.;
+  LumiDict["Summer20UL18_106X_Data"] = 1.;
+  LumiDict["Summer22_130X_Data"] = 1.;
+  LumiDict["Summer22EE_130X_Data"] = 1.;
+  LumiDict["Summer23_130X_Data"] = 1.;
+  LumiDict["Summer23BPix_130X_Data"] = 1.;
+  LumiDict["Summer24_130X_Data"] = 1.;
+  LumiDict["Summer25_130X_Data"] = 1.;
+  LumiDict["Summer26_130X_Data"] = 1.;
+
   // File paths start here
 
   // For Derek:
@@ -3002,6 +3015,28 @@ SampleTool::SampleTool(){
       "Data_2016",
       "Data_2017",
       "Data_2018",
+      "Data_2022",
+      "Data_2022EE",
+      "Data_2023",
+      "Data_2023BPix",
+      "Data_2024",
+      "Data_2025",
+    }
+  );
+
+  MasterDict["Data_Run2"] = mergeEntriesList(
+    MasterDict,
+    {
+      "Data_2016APV",
+      "Data_2016",
+      "Data_2017",
+      "Data_2018",
+    }
+  );
+
+  MasterDict["Data_Run3"] = mergeEntriesList(
+    MasterDict,
+    {
       "Data_2022",
       "Data_2022EE",
       "Data_2023",

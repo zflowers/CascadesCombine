@@ -795,11 +795,10 @@ def main():
         hist_yaml_file=args.hist_yaml if args.hist_yaml else None,
     )
 
-    #filtered_jobs = []
-    #for job in jobs:
-    #    if job_is_compatible_with_bins(job, args.bin):
-    #        filtered_jobs.append(job)
-    #jobs = filtered_jobs
+    # Deterministically shuffle jobs to decorrelate simultaneous file accesses.
+    seed = int(hashlib.sha256(args.bin.encode()).hexdigest()[:16], 16)
+    rng = random.Random(seed)
+    rng.shuffle(jobs)
 
     # If a hist YAML was provided, store it in each job (reference staged configs if available)
     if args.hist_yaml:

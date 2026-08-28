@@ -135,6 +135,7 @@ int main(int argc, char** argv) {
     if (Lumi <= 0.) Lumi = GetLumiFromKey(rootFilePath); // get lumi from ST for file
     if (sampleName.empty()) sampleName = GetSampleNameFromKey(rootFilePath);
     if (binArg.empty() || rootFilePath.empty() || (!doHist && !doJSON)) { usage(argv[0]); return 1; }
+    if(IsData) Lumi = 1.;
     std::cout << "Using Lumi: " << Lumi << std::endl;
 
     // split semicolon-separated bin list
@@ -386,33 +387,45 @@ int main(int argc, char** argv) {
     
         // --- Define any other derived variables from YAML (these are independent of bin) ---
         std::vector<DerivedVar> derivedVars;
-        if(doHist && !histYamlPath.empty()){
+        if (doHist && !histYamlPath.empty()) {
             derivedVars = loadDerivedVariablesYAML(histYamlPath);
         }
+        
         std::vector<DerivedVar> validatedDerivedVars;
-
+        
+        // First create the validation node WITH all derived variables.
         BaseNodeHandle valHandle =
             MakeBaseNode(tree_name, rootFilePath, BFI, Lumi, IsData, year, derivedVars);
+        
         ROOT::RDF::RNode base_node_val = valHandle.node;
-        BaseNodeHandle fillHandle =
-            MakeBaseNode(tree_name, rootFilePath, BFI, Lumi, IsData, year, validatedDerivedVars);
-        ROOT::RDF::RNode base_node_fill = fillHandle.node;
-    
+        
         auto test_cnt = base_node_val.Count();
         unsigned long long nEntries = test_cnt.GetValue();
+        
         std::map<std::string, CutDef> allUserCuts;
+        
         // --- Load all user cuts ---
         base_node_val = BuildFitInput::loadCutsUser(base_node_val, allUserCuts, true);
-        base_node_fill = BuildFitInput::loadCutsUser(base_node_fill, allUserCuts, true);
         
         // skip validation if there are no events to validate on
-        if(nEntries > 0) {
+        if (nEntries > 0) {
             // --- Validate derived variables ---
             for (const auto &dv : derivedVars) {
-                if(ValidateDerivedVarNode(base_node_val, dv))
+                if (ValidateDerivedVarNode(base_node_val, dv)) {
                     validatedDerivedVars.push_back(dv);
+                }
             }
         }
+        
+        // Now create the actual filling node WITH the validated derived variables.
+        BaseNodeHandle fillHandle =
+            MakeBaseNode(tree_name, rootFilePath, BFI, Lumi, IsData, year,
+                         validatedDerivedVars);
+        
+        ROOT::RDF::RNode base_node_fill = fillHandle.node;
+        
+        // Load user cuts onto the filling node as well.
+        base_node_fill = BuildFitInput::loadCutsUser(base_node_fill, allUserCuts, true);
 
         // Prepare histogram definitions
         auto userHists = loadHistogramsUser();

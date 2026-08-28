@@ -501,6 +501,8 @@ void Plot_Stack(const string& hname,
     if(outFile){ outFile->cd(); can->Write(0, TObject::kWriteDelete); }
     std::string BinName = SanitizeString(ExtractBinName(bkgHists[0]->GetName()));
     if(BinName.empty()) BinName = SanitizeString(hname);
+    std::string pdfDir = outputDir + "pdfs/" + BinName;
+    EnsurePlotDirectory(pdfDir);
     TString stackPdf = Form("%spdfs/%s/%s.pdf", outputDir.c_str(), BinName.c_str(), SanitizeString(canvas_name).c_str());
     gErrorIgnoreLevel = 1001; can->SaveAs(stackPdf); gErrorIgnoreLevel = 0;
 

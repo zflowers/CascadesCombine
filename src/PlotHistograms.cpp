@@ -7,6 +7,7 @@
 int main(int argc, char* argv[]) {
     string inputFile;
     string ratiosYaml;
+    string patternFile;
     for(int i=1;i<argc;++i){
         string arg=argv[i];
         if(arg=="-i"||arg=="--input"){ if(i+1<argc) inputFile=argv[++i]; else{ cerr<<"[ERROR] Missing "<<arg<<endl; return 1;} }
@@ -17,10 +18,18 @@ int main(int argc, char* argv[]) {
             if(i+1<argc) ratiosYaml = argv[++i];
             else { cerr<<"[ERROR] Missing "<<arg<<endl; return 1; }
         }
+        else if(arg=="--config"){
+            if(i+1<argc) patternFile = argv[++i];
+            else {
+                cerr << "[ERROR] Missing " << arg << endl;
+                return 1;
+            }
+        }
         else if(arg=="--help"){
             cout << "[PlotHistograms] Usage: " << argv[0] << " [options]\n"
                  << " -i <file.root>\n"
-                 << " -r <ratios.yaml>\n";
+                 << " -r <ratios.yaml>\n"
+                 << " --config <plotting.yaml>\n";
             return 0;
         }
         else{ cerr<<"[ERROR] Unknown arg "<<arg<<endl; return 1;}
@@ -33,6 +42,7 @@ int main(int argc, char* argv[]) {
     gStyle->SetOptStat(0); gStyle->SetOptTitle(0);
     loadFormatMaps();
     tool.LoadAllFromMaster();
+    YamlConfig cfg = LoadYamlConfig(patternFile);
 
     map<string,map<string,TH1*>> groups;
     vector<TH1*> all_clones;
@@ -115,11 +125,6 @@ int main(int argc, char* argv[]) {
         if(outputDir.back() != '/') outputDir += '/';
     }
 
-    gSystem->mkdir(outputDir.c_str(), kTRUE);
-    gSystem->mkdir((outputDir+"pdfs").c_str(), kTRUE);
-    for(const auto& bin : uniqueBinNames)
-        gSystem->mkdir((outputDir+"pdfs/"+bin).c_str(), kTRUE);
-
     TString baseName=gSystem->BaseName(inputFileName); baseName.ReplaceAll(".root","");
     TString outRootName=Form("%soutput_%s.root",outputDir.c_str(),baseName.Data());
     outFile=new TFile(outRootName,"RECREATE");
@@ -139,6 +144,74 @@ int main(int argc, char* argv[]) {
         string groupKey = gpair.first;
         auto &procmap = gpair.second;
         if(procmap.empty()) continue;
+        
+        // Apply the same process-merging rules used by PlotFitDiagnostics.
+        // This operates on the actual histograms for this group.
+        map<string, TH1*> mergedProcmap;
+        set<string> consumed;
+        
+        for(const auto &rule : cfg.process_merges){
+        
+            vector<string> matches;
+        
+            for(const auto &pp : procmap){
+        
+                const string &proc = pp.first;
+        
+                if(consumed.count(proc)) continue;
+        
+                bool match = false;
+        
+                for(const auto &inc : rule.include){
+                    if(fnmatch(inc.c_str(), proc.c_str(), 0) == 0){
+                        match = true;
+                        break;
+                    }
+                }
+        
+                if(!match) continue;
+        
+                for(const auto &ex : rule.exclude){
+                    if(fnmatch(ex.c_str(), proc.c_str(), 0) == 0){
+                        match = false;
+                        break;
+                    }
+                }
+        
+                if(match)
+                    matches.push_back(proc);
+            }
+        
+            if(matches.empty()) continue;
+        
+            // Clone the first histogram as the destination.
+            TH1 *merged = dynamic_cast<TH1*>(procmap.at(matches.front())->Clone(
+                (rule.name + "__" + groupKey).c_str()));
+        
+            if(!merged) continue;
+        
+            merged->SetDirectory(nullptr);
+            all_clones.push_back(merged);
+        
+            // Start with zero and add all matching processes.
+            merged->Reset();
+        
+            for(const auto &proc : matches){
+                merged->Add(procmap.at(proc));
+                consumed.insert(proc);
+            }
+        
+            mergedProcmap[rule.name] = merged;
+        }
+        
+        // Keep processes which were not consumed by any rule.
+        for(const auto &pp : procmap){
+            if(!consumed.count(pp.first))
+                mergedProcmap[pp.first] = pp.second;
+        }
+        
+        // Use merged map from here onward.
+        procmap = mergedProcmap;
 
         bool isCutFlow = (groupKey.find("__CutFlow") != string::npos);
         
@@ -151,7 +224,19 @@ int main(int argc, char* argv[]) {
             TH1* h = pp.second;
             if(!h) continue;
             const string& proc = pp.first;
-        
+            std::string proc_name_lower = proc;
+            std::transform(proc_name_lower.begin(), proc_name_lower.end(), proc_name_lower.begin(), [](unsigned char c)
+                { return std::tolower(c); });
+            if(proc_name_lower.find("data") != std::string::npos) {
+               if(dataHist){
+                   cerr << "[WARNING] Multiple data hists in group " << groupKey
+                        << " (" << dataHist->GetName() << " vs " << h->GetName()
+                        << "); keeping the first." << endl;
+               } else {
+                   dataHist = h;
+               }
+               continue;
+            }
             if(tool.BkgDict.count(proc)) {
                 bkgHists.push_back(h); 
                 bkgProcs.push_back(proc); 
@@ -183,6 +268,11 @@ int main(int argc, char* argv[]) {
         SortByYield(bkgHists, bkgProcs);
         SortByYield(bkgHists_Run2, bkgProcs_Run2);
         SortByYield(bkgHists_Run3, bkgProcs_Run3);
+
+        gSystem->mkdir(outputDir.c_str(), kTRUE);
+        gSystem->mkdir((outputDir+"pdfs").c_str(), kTRUE);
+        for(const auto& bin : uniqueBinNames)
+            gSystem->mkdir((outputDir + "pdfs/" + SanitizeString(bin)).c_str(), kTRUE);
 
         for (const auto& kv : h2ByVarProcToBin) {
             const auto& binMap = kv.second;
