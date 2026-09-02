@@ -292,6 +292,10 @@ void Plot_Stack(const string& hname,
         axisHist->GetYaxis()->SetLabelSize(0.05);
     }
     axisHist->GetYaxis()->SetNdivisions(303);
+    if(!isFD_Stack){
+        axisHist->GetXaxis()->SetTitleSize(0.045);
+        axisHist->GetXaxis()->SetLabelSize(0.035);
+    }
 
     for (size_t i = 0; i < bkgHists.size(); ++i) { TH1* h = bkgHists[i]; if (!h || h->GetEntries()==0) continue;
         h->SetLineColor(kBlack); h->SetLineWidth(1);
@@ -302,7 +306,7 @@ void Plot_Stack(const string& hname,
         } else {
             color = fallbackColors[fallbackIndex % fallbackColors.size()];
             fallbackIndex++;
-            m_Color[it->first] = color;
+            m_Color[ExtractProcName(bkgHists[i]->GetName())] = color;
         }
         h->SetMarkerColor(color);
         h->SetFillColor(color); h->SetFillStyle(1001);
@@ -352,18 +356,22 @@ void Plot_Stack(const string& hname,
         h_ratio = (TH1D*) h_DATA->Clone("h_ratio");
         h_ratio->Divide(h_BKG);
         h_ratio->SetTitle("");
-        float XLabelSize = 0.08;
-        if (h_ratio->GetNbinsX() > 35) XLabelSize -= 0.001f * (h_ratio->GetNbinsX() - 5);
-        if (XLabelSize < 0.015) XLabelSize = 0.015;
-        h_ratio->GetXaxis()->SetLabelSize(XLabelSize);
-        //h_ratio->GetXaxis()->LabelsOption("v");
-        h_ratio->GetXaxis()->SetLabelOffset(0.01);
+        if(!isFD_Stack){
+            h_ratio->GetXaxis()->SetTitleSize(0.08);
+            h_ratio->GetXaxis()->SetTitleOffset(1.0);
+            h_ratio->GetXaxis()->SetLabelSize(0.055);
+            h_ratio->GetXaxis()->CenterTitle();
+        }
+        else{
+            h_ratio->GetXaxis()->SetTitleSize(0.);
+            h_ratio->GetXaxis()->SetLabelSize(0.);
+        }
         h_ratio->GetYaxis()->SetTitle("#frac{data}{bkg model}");
         h_ratio->GetYaxis()->CenterTitle();
         h_ratio->GetYaxis()->SetNdivisions(505);
         h_ratio->GetYaxis()->SetTitleSize(0.07);
         h_ratio->GetYaxis()->SetTitleOffset(0.45);
-        h_ratio->GetYaxis()->SetLabelSize(0.05);
+        h_ratio->GetYaxis()->SetLabelSize(0.055);
 
         double rmin = 1e9;
         double rmax = -1e9;
@@ -464,7 +472,7 @@ void Plot_Stack(const string& hname,
 
     TLatex l;
     l.SetNDC();
-    l.SetTextSize(textsize);
+    l.SetTextSize(textsize+0.01);
     l.SetTextFont(42);
     
     // Dynamic positions based on margins

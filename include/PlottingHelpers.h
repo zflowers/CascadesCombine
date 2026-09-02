@@ -63,6 +63,13 @@ double hto = 0.07;
 // Helpers
 // ----------------------
 
+bool isFakeProcess(const std::string& proc) {
+    std::string lower = proc;
+    std::transform(lower.begin(), lower.end(), lower.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+    return lower.find("fake") != std::string::npos;
+}
+
 void EnsurePlotDirectory(const std::string& path)
 {
     gSystem->mkdir(path.c_str(), kTRUE);
@@ -246,6 +253,9 @@ std::string makeSMSChiTitle(const std::string& key) {
     // Handle Sandwich models
     bool isSandwich = key.find("Sandwich") != std::string::npos;
     int m2 = (isSandwich && model != "TChipmWW") ? (m1 + m3) / 2 : m1;
+    m1 = UnquantizeMass(m1);
+    m2 = UnquantizeMass(m2);
+    m3 = UnquantizeMass(m3);
     std::string extra = "";
     if(key.find("preUL") != std::string::npos) extra += "preUL ";
     if(key.find("TEST") != std::string::npos) extra += "TEST ";

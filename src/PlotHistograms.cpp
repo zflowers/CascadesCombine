@@ -184,11 +184,15 @@ int main(int argc, char* argv[]) {
         
             if(matches.empty()) continue;
         
-            // Clone the first histogram as the destination.
-            TH1 *merged = dynamic_cast<TH1*>(procmap.at(matches.front())->Clone(
-                (rule.name + "__" + groupKey).c_str()));
-        
-            if(!merged) continue;
+            // groupKey is "<bin>__<var>" or just "<var>"
+            size_t sep = groupKey.find("__");
+            std::string mergedName = (sep == std::string::npos)
+                ? rule.name                       // no bin in this group
+                : groupKey.substr(0, sep) + "__" + rule.name + "__" + groupKey.substr(sep + 2);
+            
+            TH1 *merged = dynamic_cast<TH1*>(procmap.at(matches.front())->Clone(mergedName.c_str()));
+            merged->SetName(mergedName.c_str());
+            merged->SetTitle(rule.name.c_str());   // keep title as the clean proc key for anything that wants it directly
         
             merged->SetDirectory(nullptr);
             all_clones.push_back(merged);
@@ -212,7 +216,6 @@ int main(int argc, char* argv[]) {
         
         // Use merged map from here onward.
         procmap = mergedProcmap;
-
         bool isCutFlow = (groupKey.find("__CutFlow") != string::npos);
         
         // Separate histograms
@@ -237,7 +240,7 @@ int main(int argc, char* argv[]) {
                }
                continue;
             }
-            if(tool.BkgDict.count(proc)) {
+            if(tool.BkgDict.count(proc) || isFakeProcess(proc)) {
                 bkgHists.push_back(h); 
                 bkgProcs.push_back(proc); 
                 if(proc.find("Run2") != std::string::npos){

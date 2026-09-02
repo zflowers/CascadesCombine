@@ -20,8 +20,9 @@ for WS in "${dcdir}"/*/*_workspace.root; do
       -M Impacts \
       -d "$WSFILE" \
       -m "120" \
-      --doInitialFit
+      --doInitialFit \
       #--robustFit 1 \
+      --robustHesse 1
     popd > /dev/null || exit 1
     break
 done
@@ -38,7 +39,8 @@ for WS in "${dcdir}"/*/*_workspace.root; do
       -d "$WSFILE" \
       -m "120" \
       --doFits \
-      --robustFit 1
+      --robustHesse 1
+      #--robustFit 1
     popd > /dev/null || exit 1
     break
 done
@@ -55,7 +57,6 @@ for WS in "${dcdir}"/*/*_workspace.root; do
       -d "$WSFILE" \
       -m "120" \
       -o impacts.json
-      #--robustFit 1 \
     popd > /dev/null || exit 1
     break
 done

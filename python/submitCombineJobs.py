@@ -140,7 +140,8 @@ def make_submit_content(
 
     combine_name = extract_combine_name(extra_args)    
     name_part = combine_name if combine_name else ""
-    mass_fileout = combine_mass_str(mass)
+    #mass_fileout = combine_mass_str(mass)
+    mass_fileout = 120
     output_file = f"higgsCombine{name_part}.{method}.mH{mass_fileout}.root"
 
     return dedent(f"""\
@@ -195,7 +196,7 @@ def make_submit_file(
     ): return None
 
     # compute mass locally
-    mass = extract_mass(signal)
+    mass = "120" #extract_mass(signal)
 
     cmssw_tar = make_cmssw_runtime_tarball(Path(f"{output_dir}/../"))
 

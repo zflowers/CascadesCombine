@@ -64,4 +64,9 @@ class SampleTool{
 
 };
 
+inline float UnquantizeMass(int massInt)
+{
+    return static_cast<float>(massInt) / 100;
+}
+
 #endif

@@ -17,6 +17,6 @@ processes:
     - SMS_TSlepSleppreUL
 
 sms_filters:
-  - SMS_300_290
-  - SMS_300_270
-  - SMS_300_250
+  - SMS_30000_29000
+  - SMS_30000_27000
+  - SMS_30000_25000

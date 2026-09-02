@@ -105,52 +105,11 @@ bool BuildFit::HasProcFAKES(JSONFactory* j, const std::string& check_proc) {
 }
 
 std::string BuildFit::GetSignalMass(const std::string &proc) {
-    if (proc.find("SMS") != std::string::npos) {
-        size_t pos = proc.rfind("SMS");
-        std::string mass = proc.substr(pos + 3);
-        if (!mass.empty() && mass[0] == '_') mass.erase(0,1);
-        size_t uscore = mass.rfind('_');
-        if (uscore != std::string::npos) mass[uscore] = '0';
-        return mass;
-    }
-    if (proc.find("Cascades_") == 0) {
-        // Extract first and last mass only
-        std::string massStr = proc.substr(strlen("Cascades_"));  
-        std::vector<std::string> tokens = BFTool::SplitString(massStr, "_");
-        if (tokens.size() >= 2) {
-            std::string mass = tokens.front() + tokens.back(); // first + last
-            // replace any remaining underscores with zero just in case
-            std::replace(mass.begin(), mass.end(), '_', '0');
-            return mass;
-        } else {
-            // fallback: use whatever is present
-            std::replace(massStr.begin(), massStr.end(), '_', '0');
-            return massStr;
-        }
-    }
-    // fallback for other signals
-    std::vector<std::string> tokens = BFTool::SplitString(proc, "_");
-    std::string mass;
-    for (size_t i=1; i<tokens.size(); i++) mass += tokens[i];
-    return mass;
+     return "120";
 }
 
 std::string BuildFit::GetSignalProcName(const std::string &proc) {
-    // SMS: keep the usual prefix
-    if (proc.find("SMS") != std::string::npos) {
-        size_t pos = proc.rfind("SMS");
-        return proc.substr(0, pos + 3); // e.g. "SMS_TChiWZ_SMS"
-    }
-
-    // Cascades: keep full original mass info for datacard name
-    if (proc.rfind("Cascades_", 0) == 0) {
-        return proc; // e.g. "Cascades_220_220_209_200_190_180"
-    }
-
-    // fallback: use everything up to first '_' (or whole proc)
-    size_t p = proc.find('_');
-    if (p != std::string::npos) return proc.substr(0, p);
-    return proc;
+    return SanitizeName(proc);
 }
 
 stringlist BuildFit::ExtractSignalDetails(std::string signalPoint)
@@ -805,7 +764,7 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
 
     // 6) Add Systematics
     // Turn on autoMCstats
-    //cb.cp().SetAutoMCStats(cb, 0.); // Second arg is event threshold
+    cb.cp().SetAutoMCStats(cb, 0.); // Second arg is event threshold
 
     // All non-triboson processes -> rateParam
     //AddFakeFamiliesAsSharedNorms(truebkgprocs, fakesprocs, "rateParam", 1.0, "triboson", false /* exclude triboson */);
