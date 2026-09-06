@@ -201,7 +201,7 @@ def write_hadd_script(
     """
     Write a hadd script that:
       1) expands ONE representative glob per process first
-      2) then expands a final catch-all glob
+      2) expands a final catch-all glob without duplicates
       3) chunks large merges to avoid argv / fd limits
     IMPORTANT:
       - Python does NOT glob files
@@ -226,19 +226,31 @@ def write_hadd_script(
         sh.write("shopt -s nullglob\n")
         sh.write("# Auto-generated hadd script (process-ordered, glob-expanded at runtime)\n\n")
 
-        sh.write("FILES=()\n\n")
+        sh.write("FILES=()\n")
+        sh.write("declare -A seen_files\n\n")
 
-        # 1) Representative-first: one glob per process
+        # Register one file per process first, preserving merge ordering.
         sh.write("# Register one file per process (ordering matters)\n")
         for proc in proc_order:
             sh.write(
-                f'for f in {root_abs.as_posix()}/*{proc}*.root; do '
-                'FILES+=( "$f" ); break; '
+                f'for f in {root_abs.as_posix()}/*{proc}*.root; do\n'
+                '  if [[ -z "${seen_files[$f]+x}" ]]; then\n'
+                '    FILES+=( "$f" )\n'
+                '    seen_files["$f"]=1\n'
+                '  fi\n'
+                '  break\n'
                 'done\n'
             )
 
-        sh.write("\n# Append all files (duplicates are harmless; hadd ignores exact dup inputs)\n")
-        sh.write(f'for f in {root_abs.as_posix()}/*.root; do FILES+=( "$f" ); done\n\n')
+        sh.write("\n# Append remaining files exactly once.\n")
+        sh.write(
+            f'for f in {root_abs.as_posix()}/*.root; do\n'
+            '  if [[ -z "${seen_files[$f]+x}" ]]; then\n'
+            '    FILES+=( "$f" )\n'
+            '    seen_files["$f"]=1\n'
+            '  fi\n'
+            'done\n\n'
+        )
 
         sh.write(f'OUT="{merged_root.as_posix()}"\n')
         sh.write(f'CHUNK={CHUNK}\n\n')
@@ -526,7 +538,7 @@ def write_submit_file(
                 # pass only the basename; condor will transfer the YAML into the job CWD
                 args_list += ["--hist-yaml", f"{Path(job['hist_yaml']).name}"]
             if make_cutflow:
-                args_list += ["--cuflow"]
+                args_list += ["--cutflow"]
 
         # Add cut fields
         cuts_parts = []
