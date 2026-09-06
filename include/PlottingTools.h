@@ -393,6 +393,8 @@ void Plot_Stack(const string& hname,
         else rmin -= padding;
         rmax += padding;
         
+        rmin = std::min(rmin, 0.6);
+        rmax = std::max(rmax, 1.4);
         h_ratio->GetYaxis()->SetRangeUser(rmin, rmax);
 
         h_ratio->SetMarkerStyle(20);
