@@ -32,10 +32,10 @@ class SampleTool{
 		
 	void LoadBkgs( const stringlist& bkglist );
 	void LoadSigs( const stringlist& siglist );
-        void LoadData( const stringlist& datalist );
+    void LoadData( const stringlist& datalist );
 	void LoadAllBkgs();
-    	void LoadAllSigs();
-        void LoadAllData();
+    void LoadAllSigs();
+    void LoadAllData();
 	void LoadAllFromMaster();
 
 	SampleTool();

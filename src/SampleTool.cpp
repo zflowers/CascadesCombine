@@ -219,7 +219,6 @@ SampleTool::SampleTool(){
     {pathPrefix + "Summer23_130X/TTZ-ZtoQQ-1Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer23_130X.root",1.},
     {pathPrefix + "Summer23_130X/TTto2L2Nu-2Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer23_130X.root",1.},
     {pathPrefix + "Summer23_130X/TTto4Q_TuneCP5_13p6TeV_powheg-pythia8_Summer23_130X.root",1.},
-    {pathPrefix + "Summer23_130X/TTtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer23_130X.root",1.},
     {pathPrefix + "Summer23_130X/TTtoLminusNu2Q-2Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer23_130X.root",1.},
     {pathPrefix + "Summer23_130X/TTtoLplusNu2Q-2Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer23_130X.root",1.},
     {pathPrefix + "Summer23_130X/TZQB-ZtoLL-TtoL-CPV_TuneCP5_13p6TeV_madgraph-pythia8_Summer23_130X.root",1.},
@@ -780,7 +779,7 @@ SampleTool::SampleTool(){
   };
  MasterDict["ZInv_2023"] = {
     {pathPrefix + "Summer23_130X/Zto2Nu-4Jets_HT-100to200_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23_130X.root",1.},
-    //{pathPrefix + "Summer23_130X/Zto2Nu-4Jets_HT-1500to2500_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23_130X.root",1.},
+    {pathPrefix + "Summer23_130X/Zto2Nu-4Jets_HT-1500to2500_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23_130X.root",1.},
     {pathPrefix + "Summer23_130X/Zto2Nu-4Jets_HT-200to400_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23_130X.root",1.},
     {pathPrefix + "Summer23_130X/Zto2Nu-4Jets_HT-2500_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23_130X.root",1.},
     {pathPrefix + "Summer23_130X/Zto2Nu-4Jets_HT-400to800_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer23_130X.root",1.},
@@ -850,9 +849,9 @@ SampleTool::SampleTool(){
     {pathPrefix + "Summer26_130X/WWto4Q_TuneCP5_13p6TeV_powheg-pythia8_Summer24_Summer26_130X.root",1.},
     {pathPrefix + "Summer26_130X/WWtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer24_Summer26_130X.root",1.},
     {pathPrefix + "Summer26_130X/WZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer24_Summer26_130X.root",1.},
-    {pathPrefix + "Summer26_130X/WZto3LNu-1Jets-4FS_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer24_Summer26_130X.root",1.},
-    {pathPrefix + "Summer26_130X/WZtoL3Nu-1Jets-4FS_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer24_Summer26_130X.root",1.},
-    {pathPrefix + "Summer26_130X/WZtoLNu2Q-1Jets-4FS_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer24_Summer26_130X.root",1.},
+    {pathPrefix + "Summer26_130X/WZto3LNu_TuneCP5_13p6TeV_powheg-pythia8_Summer24_Summer26_130X.root",1.},
+    {pathPrefix + "Summer26_130X/WZtoL3Nu_TuneCP5_13p6TeV_powheg-pythia8_Summer24_Summer26_130X.root",1.},
+    {pathPrefix + "Summer26_130X/WZtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer24_Summer26_130X.root",1.},
     {pathPrefix + "Summer26_130X/ZZto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8_Summer24_Summer26_130X.root",1.},
     {pathPrefix + "Summer26_130X/ZZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer24_Summer26_130X.root",1.},
     {pathPrefix + "Summer26_130X/ZZto2Nu2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer24_Summer26_130X.root",1.},
@@ -870,9 +869,9 @@ SampleTool::SampleTool(){
     {pathPrefix + "Summer25_130X/WWto4Q_TuneCP5_13p6TeV_powheg-pythia8_Summer24_Summer25_130X.root",1.},
     {pathPrefix + "Summer25_130X/WWtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer24_Summer25_130X.root",1.},
     {pathPrefix + "Summer25_130X/WZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer24_Summer25_130X.root",1.},
-    {pathPrefix + "Summer25_130X/WZto3LNu-1Jets-4FS_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer24_Summer25_130X.root",1.},
-    {pathPrefix + "Summer25_130X/WZtoL3Nu-1Jets-4FS_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer24_Summer25_130X.root",1.},
-    {pathPrefix + "Summer25_130X/WZtoLNu2Q-1Jets-4FS_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer24_Summer25_130X.root",1.},
+    {pathPrefix + "Summer25_130X/WZto3LNu_TuneCP5_13p6TeV_powheg-pythia8_Summer24_Summer25_130X.root",1.},
+    {pathPrefix + "Summer25_130X/WZtoL3Nu_TuneCP5_13p6TeV_powheg-pythia8_Summer24_Summer25_130X.root",1.},
+    {pathPrefix + "Summer25_130X/WZtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer24_Summer25_130X.root",1.},
     {pathPrefix + "Summer25_130X/ZZto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8_Summer24_Summer25_130X.root",1.},
     {pathPrefix + "Summer25_130X/ZZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer24_Summer25_130X.root",1.},
     {pathPrefix + "Summer25_130X/ZZto2Nu2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer24_Summer25_130X.root",1.},
@@ -890,9 +889,9 @@ SampleTool::SampleTool(){
     {pathPrefix + "Summer24_130X/WWto4Q_TuneCP5_13p6TeV_powheg-pythia8_Summer24_130X.root",1.},
     {pathPrefix + "Summer24_130X/WWtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer24_130X.root",1.},
     {pathPrefix + "Summer24_130X/WZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer24_130X.root",1.},
-    {pathPrefix + "Summer24_130X/WZto3LNu-1Jets-4FS_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer24_130X.root",1.},
-    {pathPrefix + "Summer24_130X/WZtoL3Nu-1Jets-4FS_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer24_130X.root",1.},
-    {pathPrefix + "Summer24_130X/WZtoLNu2Q-1Jets-4FS_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer24_130X.root",1.},
+    {pathPrefix + "Summer24_130X/WZto3LNu_TuneCP5_13p6TeV_powheg-pythia8_Summer24_130X.root",1.},
+    {pathPrefix + "Summer24_130X/WZtoL3Nu_TuneCP5_13p6TeV_powheg-pythia8_Summer24_130X.root",1.},
+    {pathPrefix + "Summer24_130X/WZtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer24_130X.root",1.},
     {pathPrefix + "Summer24_130X/ZZto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8_Summer24_130X.root",1.},
     {pathPrefix + "Summer24_130X/ZZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer24_130X.root",1.},
     {pathPrefix + "Summer24_130X/ZZto2Nu2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer24_130X.root",1.},
@@ -904,9 +903,9 @@ SampleTool::SampleTool(){
     {pathPrefix + "Summer23BPix_130X/WWtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",1.},
     {pathPrefix + "Summer23BPix_130X/WWto4Q_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",1.},
     {pathPrefix + "Summer23BPix_130X/WZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",1.},
-    {pathPrefix + "Summer23BPix_130X/WZto3LNu-1Jets-4FS_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer23BPix_130X.root",1.},
-    {pathPrefix + "Summer23BPix_130X/WZtoL3Nu-1Jets-4FS_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer23BPix_130X.root",1.},
-    {pathPrefix + "Summer23BPix_130X/WZtoLNu2Q-1Jets-4FS_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer23BPix_130X.root",1.},
+    {pathPrefix + "Summer23BPix_130X/WZto3LNu_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",1.},
+    {pathPrefix + "Summer23BPix_130X/WZtoL3Nu_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",1.},
+    {pathPrefix + "Summer23BPix_130X/WZtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",1.},
     {pathPrefix + "Summer23BPix_130X/ZZto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",1.},
     {pathPrefix + "Summer23BPix_130X/ZZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",1.},
     {pathPrefix + "Summer23BPix_130X/ZZto2Nu2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer23BPix_130X.root",1.},
@@ -995,9 +994,9 @@ SampleTool::SampleTool(){
     {pathPrefix + "Summer23_130X/WWto4Q_TuneCP5_13p6TeV_powheg-pythia8_Summer23_130X.root",1.},
     {pathPrefix + "Summer23_130X/WWtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer23_130X.root",1.},
     {pathPrefix + "Summer23_130X/WZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer23_130X.root",1.},
-    {pathPrefix + "Summer23_130X/WZto3LNu-1Jets-4FS_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer23_130X.root",1.},
-    {pathPrefix + "Summer23_130X/WZtoL3Nu-1Jets-4FS_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer23_130X.root",1.},
-    {pathPrefix + "Summer23_130X/WZtoLNu2Q-1Jets-4FS_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer23_130X.root",1.},
+    {pathPrefix + "Summer23_130X/WZto3LNu_TuneCP5_13p6TeV_powheg-pythia8_Summer23_130X.root",1.},
+    {pathPrefix + "Summer23_130X/WZtoL3Nu_TuneCP5_13p6TeV_powheg-pythia8_Summer23_130X.root",1.},
+    {pathPrefix + "Summer23_130X/WZtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer23_130X.root",1.},
     {pathPrefix + "Summer23_130X/WWGtoLNu2QG-4FS_TuneCP5_13p6TeV_amcatnlo-pythia8_Summer23_130X.root",1.},
     {pathPrefix + "Summer23_130X/ZG2JtoG2L2J_EWK_MLL-50_MJJ-120_TuneCP5_13p6TeV_madgraph-pythia8_Summer23_130X.root",1.},
     {pathPrefix + "Summer23_130X/ZZto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8_Summer23_130X.root",1.},
@@ -1026,9 +1025,9 @@ SampleTool::SampleTool(){
      {pathPrefix + "Summer22EE_130X/WWto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8_Summer22EE_130X.root",1.},
      {pathPrefix + "Summer22EE_130X/WWto4Q_TuneCP5_13p6TeV_powheg-pythia8_Summer22EE_130X.root",1.},
      {pathPrefix + "Summer22EE_130X/WWtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer22EE_130X.root",1.},
-     {pathPrefix + "Summer22EE_130X/WZto3LNu-1Jets-4FS_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer22EE_130X.root",1.},
-     {pathPrefix + "Summer22EE_130X/WZtoL3Nu-1Jets-4FS_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer22EE_130X.root",1.},
-     {pathPrefix + "Summer22EE_130X/WZtoLNu2Q-1Jets-4FS_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer22EE_130X.root",1.},
+     {pathPrefix + "Summer22EE_130X/WZto3LNu_TuneCP5_13p6TeV_powheg-pythia8_Summer22EE_130X.root",1.},
+     {pathPrefix + "Summer22EE_130X/WZtoL3Nu_TuneCP5_13p6TeV_powheg-pythia8_Summer22EE_130X.root",1.},
+     {pathPrefix + "Summer22EE_130X/WZtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer22EE_130X.root",1.},
      {pathPrefix + "Summer22EE_130X/WWGtoLNu2QG-4FS_TuneCP5_13p6TeV_amcatnlo-pythia8_Summer22EE_130X.root",1.},
      {pathPrefix + "Summer22EE_130X/ZG2JtoG2L2J_EWK_MLL-50_MJJ-120_TuneCP5_withDipoleRecoil_13p6TeV_madgraph-pythia8_Summer22EE_130X.root",1.},
      {pathPrefix + "Summer22EE_130X/ZZto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8_Summer22EE_130X.root",1.},
@@ -1058,9 +1057,9 @@ SampleTool::SampleTool(){
     {pathPrefix + "Summer22_130X/WWto4Q_TuneCP5_13p6TeV_powheg-pythia8_Summer22_130X.root",1.},
     {pathPrefix + "Summer22_130X/WWtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer22_130X.root",1.},
     {pathPrefix + "Summer22_130X/WZto2L2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer22_130X.root",1.},
-    {pathPrefix + "Summer22_130X/WZto3LNu-1Jets-4FS_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer22_130X.root",1.},
-    {pathPrefix + "Summer22_130X/WZtoL3Nu-1Jets-4FS_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer22_130X.root",1.},
-    {pathPrefix + "Summer22_130X/WZtoLNu2Q-1Jets-4FS_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_Summer22_130X.root",1.},
+    {pathPrefix + "Summer22_130X/WZto3LNu_TuneCP5_13p6TeV_powheg-pythia8_Summer22_130X.root",1.},
+    {pathPrefix + "Summer22_130X/WZtoL3Nu_TuneCP5_13p6TeV_powheg-pythia8_Summer22_130X.root",1.},
+    {pathPrefix + "Summer22_130X/WZtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8_Summer22_130X.root",1.},
     {pathPrefix + "Summer22_130X/WWGtoLNu2QG-4FS_TuneCP5_13p6TeV_amcatnlo-pythia8_Summer22_130X.root",1.},
     {pathPrefix + "Summer22_130X/ZG2JtoG2L2J_EWK_MLL-50_MJJ-120_TuneCP5_withDipoleRecoil_13p6TeV_madgraph-pythia8_Summer22_130X.root",1.},
     {pathPrefix + "Summer22_130X/ZZto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8_Summer22_130X.root",1.},
@@ -2680,13 +2679,6 @@ SampleTool::SampleTool(){
     }
   );
 
-  MasterDict["top_2022_Run3"] = mergeEntriesList(
-    MasterDict,
-    {
-      "ttbar_2022",
-    }
-  );
-
   MasterDict["top_Run3"] = mergeEntriesList(
     MasterDict,
     {
@@ -3332,7 +3324,7 @@ void SampleTool::LoadData(const stringlist& datalist) {
 }
 
 void SampleTool::LoadAllData() {
-    stringlist allData = {"Data_2016", "Data_2016APV", "Data_2017", "Data_2018", "Data_2022", "Data_2022EE", "Data_2023", "Data_2023BPix", "Data_2024", "Data_2025"};
+    stringlist allData = {"data_obs", "Data_2016", "Data_2016APV", "Data_2017", "Data_2018", "Data_2022", "Data_2022EE", "Data_2023", "Data_2023BPix", "Data_2024", "Data_2025"};
     LoadData(allData);
 }
 
@@ -3523,8 +3515,9 @@ void SampleTool::WriteLatexTablesForGroups(const std::vector<std::string>& group
 
     // Iterate only over requested groups that are actually loaded in BkgDict
     for (const auto &group : groups) {
-        if (BkgDict.count(group) == 0) {
-            std::cerr << "[WriteLatexTablesForGroups] Group '" << group << "' not found in BkgDict. Did you call LoadBkgs()? Skipping.\n";
+        const auto &loadedGroups = (group == "data_obs") ? DataDict : BkgDict;
+        if (loadedGroups.count(group) == 0) {
+          std::cerr << "[WriteLatexTablesForGroups] Group '" << group << "' was not loaded. Skipping.\n";
             continue;
         }
 
@@ -3564,8 +3557,12 @@ void SampleTool::WriteLatexTablesForGroups(const std::vector<std::string>& group
             out << "\\begin{table}\n"
                 << "    \\centering\n"
                 << "    \\addtolength{\\leftskip}{-2cm}\n"
-                << "    \\addtolength{\\rightskip}{-2cm}\n"
-                << "    \\begin{tabular}{c|l|l} {\\textbf{process}}  & {\\textbf{" << group << " " << yearSuffix << "}} &  {\\textbf{$\\sigma$}} [pb$^{-1}$] \\\\ \\hline\n";
+              << "    \\addtolength{\\rightskip}{-2cm}\n";
+            if (group == "data_obs") {
+              out << "    \\begin{tabular}{c|l} {\\textbf{campaign}}  & {\\textbf{" << group << " " << yearSuffix << "}} \\\\ \\hline\n";
+            } else {
+              out << "    \\begin{tabular}{c|l|l} {\\textbf{process}}  & {\\textbf{" << group << " " << yearSuffix << "}} &  {\\textbf{$\\sigma$}} [pb$^{-1}$] \\\\ \\hline\n";
+            }
 
             // The authoritative file list for this groupKey (this defines membership)
             const std::map<std::string,double> &groupFiles = MasterDict.at(groupKey);
@@ -3573,7 +3570,8 @@ void SampleTool::WriteLatexTablesForGroups(const std::vector<std::string>& group
             // Stage 1: collect candidate procKeys that are strict subsets of groupFiles,
             // excluding groupKey itself (may add it later if no candidates found).
             std::vector<std::string> prockeys;
-            for (const auto &kv2 : MasterDict) {
+            const auto &candidateGroups = (group == "data_obs") ? DataDict : MasterDict;
+            for (const auto &kv2 : candidateGroups) {
                 const std::string &procKey = kv2.first;
 
                 // Skip the exact groupKey in this first pass to avoid listing the merged group itself.
@@ -3588,13 +3586,13 @@ void SampleTool::WriteLatexTablesForGroups(const std::vector<std::string>& group
                         break;
                     }
                 }
-                if (isSubset) prockeys.push_back(procKey);
+                if (isSubset && (group != "data_obs" || procKey != "data_obs")) prockeys.push_back(procKey);
             }
 
             // Stage 2: if no sub-processes found, fall back to the groupKey itself
             if (prockeys.empty()) {
-                auto itg = MasterDict.find(groupKey);
-                if (itg != MasterDict.end() && !itg->second.empty()) {
+                auto itg = candidateGroups.find(groupKey);
+                if (itg != candidateGroups.end() && !itg->second.empty()) {
                     prockeys.push_back(groupKey);
                 } else {
                     // Nothing found write a comment and continue.
@@ -3613,23 +3611,27 @@ void SampleTool::WriteLatexTablesForGroups(const std::vector<std::string>& group
 
             // For each proc, emit rows for its files
             for (const auto &procKey : prockeys) {
-                // get base proc name for the "process" column (strip final suffix)
-                size_t pos = procKey.rfind('_');
-                std::string procName = (pos == std::string::npos) ? procKey : procKey.substr(0, pos);
+                // Data rows use the campaign name; MC rows use the process name.
+                std::string procName = procKey;
+                if (group != "data_obs") {
+                  size_t pos = procKey.rfind('_');
+                  procName = (pos == std::string::npos) ? procKey : procKey.substr(0, pos);
+                } else if (procName.rfind("Data_", 0) == 0) {
+                  procName = procName.substr(5);
+                }
 
                 // retrieve file list from MasterDict (exists because procKey came from MasterDict)
                 bool firstRowForProc = true;
-                const std::map<std::string,double> &files = MasterDict.at(procKey);
+                const std::map<std::string,double> &files = candidateGroups.at(procKey);
                 
                 for(const auto& [fpath, factor] : files) {
-                    // Read KUAnalysis -> XSec
+                  std::ostringstream sigoss;
+                  if (group != "data_obs") {
                     double xsec = ReadXSecFromFile(fpath) * factor;
-                    if (!std::isnan(xsec)) xsec = xsec / 1000.0; // convert fb^{-1} to pb^{-1}
-
-                    // format sigma: print "N/A" if nan
-                    std::ostringstream sigoss;
+                    if (!std::isnan(xsec)) xsec = xsec / 1000.0;
                     if (std::isnan(xsec)) sigoss << "N/A";
                     else sigoss << std::fixed << std::setprecision(3) << xsec;
+                  }
 
                     // file basename for the second column
                     std::string fname = basename_of(fpath);
@@ -3644,21 +3646,28 @@ void SampleTool::WriteLatexTablesForGroups(const std::vector<std::string>& group
                     fname = std::regex_replace(fname, std::regex("_"), "\\_");
 
                     if (firstRowForProc) {
-                        out << "        " << procName << "&" << fname << " & " << sigoss.str() << " \\\\\n";
+                      out << "        " << procName << "&" << fname;
+                      if (group != "data_obs") out << " & " << sigoss.str();
+                      out << " \\\\\n";
                         firstRowForProc = false;
                     } else {
-                        out << "        &" << fname << " & " << sigoss.str() << " \\\\\n";
+                      out << "        &" << fname;
+                      if (group != "data_obs") out << " & " << sigoss.str();
+                      out << " \\\\\n";
                     }
                 } // files
                 if(files.size() > 0) out << "        \\hline\n"; // separate processes
             } // prockeys
 
-            out << "    \\end{tabular}\\\\\n"
-                << "    \\caption{"
-                << yearSuffix << " " << group
-                << " MC samples. "
-                //<< "simulated using the \\texttt{106X\\_mcRun2\\_asymptotic\\_v17-v2} global tag. "
-                << "Cross sections are given for each sample; the process column denotes the type of " << group << " process."
+            out << "    \\end{tabular}\\\n"
+              << "    \\caption{";
+            if (group == "data_obs") {
+              out << "Data samples for all years. The campaign column identifies the data-taking campaign.";
+            } else {
+              out << yearSuffix << " " << group
+                << " MC samples. Cross sections are given for each sample; the process column denotes the type of " << group << " process.";
+            }
+            out
                 << "}\n"
                 << "    \\label{tab:samples_" << group << "_" << yearSuffix << "}\n"
                 << "\\end{table}\n";
