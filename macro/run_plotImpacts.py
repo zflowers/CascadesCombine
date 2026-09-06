@@ -59,24 +59,6 @@ NUISANCE_GROUPS = [
         "use_all":    False,
         "overrides":  {},
     },
-    #{
-    #    "name":       "OSOF",
-    #    "substrings": ["OSOF"],
-    #    "use_all":    False,
-    #    "overrides":  {},
-    #},
-    #{
-    #    "name":       "SameSign",
-    #    "substrings": ["SameSign"],
-    #    "use_all":    False,
-    #    "overrides":  {},
-    #},
-    #{
-    #    "name":       "LepHemi",
-    #    "substrings": ["LepHemi"],
-    #    "use_all":    False,
-    #    "overrides":  {},
-    #},
     {
         "name":       "LepCat",
         "substrings": ["SameSign","OSOF","LepHemi"],
@@ -86,6 +68,12 @@ NUISANCE_GROUPS = [
     {
         "name":       "LepID",
         "substrings": ["IDISO", "SIP3D"],
+        "use_all":    False,
+        "overrides":  {},
+    },
+    {
+        "name":       "tnp",
+        "substrings": ["tnp"],
         "use_all":    False,
         "overrides":  {},
     },
@@ -174,7 +162,7 @@ def build_cmd(json_path, group, out_dir, datacard_path):
         if dc and os.path.isfile(dc):
             cmd += ["-d", dc]
         else:
-            print(f"  [warn] Datacard not found: {dc} — falling back to --no-absolute for group '{group['name']}'")
+            print(f"  [warn] Datacard not found: {dc} falling back to --no-absolute for group '{group['name']}'")
             cmd.append("--no-absolute")
     else:
         cmd.append("--no-absolute")

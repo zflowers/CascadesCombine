@@ -220,6 +220,21 @@ LABEL_OVERRIDES = {
     # Example irregular names -- populate as you encounter them:
     # "some_weird_nuisance":  "#kappa_{weird}^{special}",
     "scale_triboson":       "#kappa_{tri-boson}",
+
+    # Theory
+    "MuR": "#kappa_{#mu_{R}}",
+    "MuF": "#kappa_{#mu_{F}}",
+    "PDF": "#kappa_{PDF}",
+
+    # Pileup / MET / jet / b-tag / trigger
+    "PileUp": "#kappa_{Pileup}",
+    "Prefire": "#kappa_{Prefire}",
+    "METtrig": "#kappa_{MET trig}",
+    "METUncer_UnClust": "#kappa_{MET unclust.}",
+    "JesUncer_CMS_scale_j_Total": "#kappa_{JES}",
+    "JerUncertaintySetTotal": "#kappa_{JER}",
+    "BtagLF": "#kappa_{b-tag}^{LF}",
+    "BtagHF": "#kappa_{b-tag}^{HF}",
 }
 
 def parse_nuisance_name(name):
@@ -239,6 +254,25 @@ def parse_nuisance_name(name):
         era_str  = era.replace('Run', 'Run-')
         flav_str = 'e' if flavour == 'Elec' else '#mu'
         return f"#theta_{{Fakes}}^{{{era_str},{hf}{flav_str}}}"
+
+    # --- Tag-and-probe efficiency systematics ---
+    m = re.match(r'^tnp_(el|mu)(.+)$', name)
+    if m:
+        flavour, desc = m.group(1), m.group(2)
+        flav_label = 'e' if flavour == 'el' else '#mu'
+
+        TNP_LABELS = {
+            'ISO_over_ID':       'ISO/ID',
+            'ID_over_BLP':       'ID/BLP',
+            'BLP_over_COL':      'BLP/COL',
+            'NOT_ID_nor_ISO':    'not ID nor ISO',
+            'NOT_Prompt_ISOID':  'not Prompt ISOID',
+            'Prompt_ISOID':      'Prompt ISOID',
+        }
+
+        if desc in TNP_LABELS:
+            return f"#kappa_{{TnP {flav_label}}}^{{{TNP_LABELS[desc]}}}"
+        return None
 
     # --- Other simple scale_ rate params: scale_<bkg> ---
     m = re.match(r'^scale_(\w+)$', name)
@@ -431,7 +465,7 @@ def draw_impacts_graph(gr, labels, modes, entries, outbase, title="", ytitle=Non
     nBins = h.GetNbinsX()
     x = (nBins - 10.0) / (70.0 - 10.0)
     x = max(0.0, x)
-    labelSize = 0.065 - (0.065 - 0.01) * x**0.7
+    labelSize = 0.065 - (0.065 - 0.01) * x**0.37
     # don't let it get too small
     labelSize = max(0.015, labelSize)
     h.GetXaxis().SetLabelSize(labelSize)
