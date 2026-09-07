@@ -402,48 +402,48 @@ ROOT::RDF::RNode MultiSystWeights(ROOT::RDF::RNode node,
     node = node.Define(
         "syst_nomin_product",
         // all weights
-        //[](
-        //    double pu, double MuF, double MuR, double PDF,
-        //    double BtagHF, double BtagLF, double met_trig,
-        //    double elBLP_over_COL, double elID_over_BLP, double elISO_over_ID, double elPrompt_ISOID, double elNOT_Prompt_ISOID, double elNOT_ID_nor_ISO,
-        //    double muBLP_over_COL, double muID_over_BLP, double muISO_over_ID, double muPrompt_ISOID, double muNOT_Prompt_ISOID, double muNOT_ID_nor_ISO,
-        //    double prefire
-        //  ) {
-        //      return 1.0
-        //           * pu
-        //           * MuF
-        //           * MuR
-        //           * PDF
-        //           * BtagHF
-        //           * BtagLF
-        //           * met_trig
-        //           * elBLP_over_COL
-        //           * elID_over_BLP
-        //           * elISO_over_ID
-        //           * elPrompt_ISOID
-        //           * elNOT_Prompt_ISOID
-        //           * elNOT_ID_nor_ISO
-        //           * muBLP_over_COL
-        //           * muID_over_BLP
-        //           * muISO_over_ID
-        //           * muPrompt_ISOID
-        //           * muNOT_Prompt_ISOID
-        //           * muNOT_ID_nor_ISO
-        //           * prefire
-        //           ;
-        //},
-        //{
-        //  "PUweight", "MuFweight", "MuRweight", "PDFweight",
-        //  "BtagHFSFweight", "BtagLFSFweight", "MetTrigSFweight",
-        //  "elBLP_over_COL_SFweight", "elID_over_BLP_SFweight", "elISO_over_ID_SFweight", "elPrompt_ISOID_SFweight", "elNOT_Prompt_ISOID_SFweight", "elNOT_ID_nor_ISO_SFweight",
-        //  "muBLP_over_COL_SFweight", "muID_over_BLP_SFweight", "muISO_over_ID_SFweight", "muPrompt_ISOID_SFweight", "muNOT_Prompt_ISOID_SFweight", "muNOT_ID_nor_ISO_SFweight",
-        //  "PrefireWeight",
-        //}
-        // No SF weights
-        []() {
-            return 1.;
+        [](
+            double pu, double MuF, double MuR, double PDF,
+            double BtagHF, double BtagLF, double met_trig,
+            double elBLP_over_COL, double elID_over_BLP, double elISO_over_ID, double elPrompt_ISOID, double elNOT_Prompt_ISOID, double elNOT_ID_nor_ISO,
+            double muBLP_over_COL, double muID_over_BLP, double muISO_over_ID, double muPrompt_ISOID, double muNOT_Prompt_ISOID, double muNOT_ID_nor_ISO,
+            double prefire
+          ) {
+              return 1.0
+                   * pu
+                   * MuF
+                   * MuR
+                   * PDF
+                   * BtagHF
+                   * BtagLF
+                   * met_trig
+                   * elBLP_over_COL
+                   * elID_over_BLP
+                   * elISO_over_ID
+                   * elPrompt_ISOID
+                   * elNOT_Prompt_ISOID
+                   * elNOT_ID_nor_ISO
+                   * muBLP_over_COL
+                   * muID_over_BLP
+                   * muISO_over_ID
+                   * muPrompt_ISOID
+                   * muNOT_Prompt_ISOID
+                   * muNOT_ID_nor_ISO
+                   * prefire
+                   ;
         },
-        {}
+        {
+          "PUweight", "MuFweight", "MuRweight", "PDFweight",
+          "BtagHFSFweight", "BtagLFSFweight", "MetTrigSFweight",
+          "elBLP_over_COL_SFweight", "elID_over_BLP_SFweight", "elISO_over_ID_SFweight", "elPrompt_ISOID_SFweight", "elNOT_Prompt_ISOID_SFweight", "elNOT_ID_nor_ISO_SFweight",
+          "muBLP_over_COL_SFweight", "muID_over_BLP_SFweight", "muISO_over_ID_SFweight", "muPrompt_ISOID_SFweight", "muNOT_Prompt_ISOID_SFweight", "muNOT_ID_nor_ISO_SFweight",
+          "PrefireWeight",
+        }
+        // No SF weights
+        //[]() {
+        //    return 1.;
+        //},
+        //{}
     );
 
     // --- Multiply base weight by nominal product ---
