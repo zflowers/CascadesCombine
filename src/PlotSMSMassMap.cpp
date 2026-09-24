@@ -179,5 +179,6 @@ int main(int argc, char** argv)
         outputFile.Close();
         std::cout << "Wrote " << results.size() << " nominal trees to " << outputName << std::endl;
     }
+    std::cout << "Finished processing all input files." << std::endl;
     return EXIT_SUCCESS;
 }
