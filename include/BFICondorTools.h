@@ -338,7 +338,6 @@ bool TreeExistsInFile(const std::string& filename,
     return (obj && obj->InheritsFrom(TTree::Class()));
 }
 
-
 struct SystInfo {
     std::string tag;       // Example: "METtrig"
     std::string nominal;   // Example: "MetTrigSFweight"

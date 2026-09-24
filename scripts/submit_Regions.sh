@@ -23,7 +23,7 @@ run_all() {
 }
 
 SLEEP=70
-VERSION="v429"
+VERSION="v430"
 make clean
 make all -j 8
 echo "Submitting Regions..."
@@ -83,7 +83,7 @@ cat config/bin_cfgs/Regions_Run3.yaml >> config/bin_cfgs/Regions.yaml
 
 # Set BPJ to % of total
 BIN_COUNT=$(grep -c 'Bin' config/bin_cfgs/Regions.yaml)
-BINS_PER_JOB=$(awk -v n="$BIN_COUNT" 'BEGIN { printf "%d\n", n*0.02 + 0.5 }')
+BINS_PER_JOB=$(awk -v n="$BIN_COUNT" 'BEGIN { printf "%d\n", n*0.03 + 0.5 }')
 
 # Run2+Run3 Sensitivity
 # run_all --make-json --skip-compile --bins-cfg config/bin_cfgs/Regions.yaml --bins-per-job ${BINS_PER_JOB} --run-name Cascades_Regions_234L_Run2Run3_${VERSION}

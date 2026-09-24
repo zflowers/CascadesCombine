@@ -367,11 +367,14 @@ void BuildFit::AddFloatingNorms(stringlist procs, const std::string& type, doubl
     cb.SetFlag("filters-use-regex", false);
 }
 
-void BuildFit::AddSharedFloatingNorm(const stringlist& procs, const std::string& nuis_name, const std::string& type, double val){
+void BuildFit::AddSharedFloatingNorm(const stringlist& procs, const std::string& nuis_name, const std::string& type, double val, std::pair<double, double> range){
     cb.SetFlag("filters-use-regex", true);
     cb.cp()
       .process(procs)   // all processes get the SAME nuisance
       .AddSyst(cb, nuis_name, type, SystMap<>::init(val));
+    if (type == "rateParam") {
+        cb.GetParameter(nuis_name)->set_range(range.first, range.second);
+    }
     cb.SetFlag("filters-use-regex", false);
 }
 
@@ -415,7 +418,10 @@ void BuildFit::AddFloatingNormsGroupedByFakeType(
         if (procs.empty()) continue;
 
         std::string nuis_name = "scale_FAKES_" + key; // e.g. scale_FAKES_Run2_Elec
-        AddSharedFloatingNorm(procs, nuis_name, type, val);
+        if(type == "rateParam")
+            AddSharedFloatingNorm(procs, nuis_name, type, val, {0.01, 7.0}); // bound rate parameter to avoid unphysical values
+        else
+            AddSharedFloatingNorm(procs, nuis_name, type, val);
     }
 }
 
@@ -764,7 +770,7 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
 
     // 6) Add Systematics
     // Turn on autoMCstats
-    // cb.cp().SetAutoMCStats(cb, 0.); // Second arg is event threshold
+    //cb.cp().SetAutoMCStats(cb, 0.); // Second arg is event threshold
 
     // All non-triboson processes -> rateParam
     //AddFakeFamiliesAsSharedNorms(truebkgprocs, fakesprocs, "rateParam", 1.0, "triboson", false /* exclude triboson */);
@@ -772,8 +778,9 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
     //AddFakeFamiliesAsSharedNorms(truebkgprocs, fakesprocs, "lnN", 1.4, "triboson", true /* include only triboson */);
     // NEW implement all proc rates as lnNs with 50% prior
     AddFakeFamiliesAsSharedNorms(truebkgprocs, fakesprocs, "lnN", 1.5, "", false /* include only triboson */);
+    // AddFloatingNormsGroupedByFakeType(fakesprocs, "rateParam", 1.0);
+    AddFloatingNormsGroupedByFakeType(fakesprocs, "lnN", 2.0); // implement all fake rates as lnNs with 100% prior
 
-    AddFloatingNormsGroupedByFakeType(fakesprocs, "rateParam", 1.0);
     AddFAKETransferSys(kept_bins);
     AddPTISRSys(kept_bins, bkgprocs);
     AddSameSignSys(kept_bins, bkgprocs);

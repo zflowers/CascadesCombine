@@ -373,7 +373,7 @@ def write_submit_file(
     condor_base_dir: Path,
     cpus="1",
     max_materialize="100",
-    memory="1 GB",
+    memory="4 GB",
     lumi=1,
     make_json=True,
     make_root=True,
@@ -743,7 +743,7 @@ def main():
     parser.add_argument("--predefined-cuts", default="Cleaning")
     parser.add_argument("--user-cuts", default="")
     parser.add_argument("--cpus", default="1")
-    parser.add_argument("--memory", default="1 GB")
+    parser.add_argument("--memory", default="4 GB")
     parser.add_argument("--max-materialize", default="100")
     parser.add_argument("--lumi", type=float, default=1.)
     parser.add_argument("--make-json", action="store_true", help="Enable JSON output")
