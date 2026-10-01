@@ -604,17 +604,19 @@ def run_checkjobs_loop_parallel(condor_dir=None, work_dirs=None, no_resubmit=Fal
 def run_checkjobs_loop_parallel_BF(condor_dir, work_dirs, no_resubmit=False, max_resubmits=3):
     """
     Check all BF work directories, resubmit failing jobs across all dirs, then wait for them to finish.
-    Returns True if no failed jobs remain, False if max resubmits reached or unexpected errors.
+    Returns True if no failed jobs remain after at most max_resubmits retries.
     """
-    attempt = 0
-    while attempt < max_resubmits:
-        attempt += 1
-        print(f"[run_combine] Running checkJobsBF (attempt {attempt}/{max_resubmits})...", flush=True)
-        any_failed_this_round = False
-        resubmitted_dirs = []
+    resubmits = 0
+    while True:
+        print(
+            f"[run_combine] Running checkJobsBF (verification {resubmits + 1}; "
+            f"retries {resubmits}/{max_resubmits})...",
+            flush=True,
+        )
+        failed_dirs = []
         for work_dir in work_dirs:
             check_cmd = ["python3", "python/checkJobsBF.py", work_dir, "--root-dir", condor_dir]
-            if no_resubmit:
+            if no_resubmit or resubmits >= max_resubmits:
                 check_cmd.append("--no-submit")
             proc = subprocess.run(check_cmd, capture_output=True, text=True)
             # Print outputs
@@ -624,27 +626,25 @@ def run_checkjobs_loop_parallel_BF(condor_dir, work_dirs, no_resubmit=False, max
             if proc.stderr:
                 print(f"----- checkJobsBF stderr ({work_dir}) -----", file=sys.stderr, flush=True)
                 print(proc.stderr, file=sys.stderr, flush=True)
-            if proc.returncode != 0:
+            if proc.returncode == 1:
+                failed_dirs.append(work_dir)
+            elif proc.returncode != 0:
                 print(f"[run_combine] checkJobsBF returned non-zero ({proc.returncode}) for {work_dir}. Aborting.", file=sys.stderr)
                 return False
-            # Check if any resubmit files were created
-            resub_files = [f for f in os.listdir(os.path.join(condor_dir, work_dir)) if f.startswith("resubmit_") and f.endswith(".sub")]
-            if resub_files:
-                any_failed_this_round = True
-                resubmitted_dirs.append(work_dir)
-        if not any_failed_this_round:
+        if not failed_dirs:
             print("[run_combine] No failed jobs remaining. Proceeding.", flush=True)
             return True
         if no_resubmit:
-            print(f"[run_combine] Failed jobs exist in {resubmitted_dirs}, but no_resubmit=True. Stopping.", flush=True)
+            print(f"[run_combine] Failed jobs remain in {failed_dirs}, but no_resubmit=True. Stopping.", flush=True)
+            return False
+        if resubmits >= max_resubmits:
+            print(f"[run_combine] Failed jobs remain after {max_resubmits} retries: {failed_dirs}.", file=sys.stderr, flush=True)
             return False
         # Wait for all resubmitted jobs to finish
-        print(f"[run_combine] Waiting for resubmitted jobs in {resubmitted_dirs} to finish...", flush=True)
-        wait_for_jobs(work_dirs, condor_dir)
+        resubmits += 1
+        print(f"[run_combine] Waiting for resubmitted jobs in {failed_dirs} to finish...", flush=True)
+        wait_for_jobs(failed_dirs, condor_dir)
         time.sleep(3)  # small buffer for output transfer
-    # Reached max resubmits
-    print(f"[run_combine] Reached max_resubmits ({max_resubmits}). Some jobs may still be failing.", file=sys.stderr, flush=True)
-    return False
 
 def run_checkjobs_loop_parallel_Combine(
     condor_dir,

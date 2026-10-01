@@ -54,8 +54,8 @@ def _out_file_ok(out_path: str) -> bool:
 
 def check_job_ok(base_dir: str, job: str) -> bool:
     parent_dir = os.path.dirname(base_dir)
-    signal = job.replace('job_','')
-    datacard_path = os.path.join(parent_dir, "../datacards", job.replace('job_',''), f"{signal}.txt")
+    signal = job[len("job_"):]
+    datacard_path = os.path.join(parent_dir, "../datacards", signal, f"{signal}.txt")
     out_path  = os.path.join(base_dir, f"{signal}.out")
     err_path  = os.path.join(base_dir, f"{signal}.err")
     file_ok = _file_nonzero(datacard_path)
@@ -145,10 +145,13 @@ def main():
         sys.exit(2)
 
     # Find submit files in base_dir (single-job style)
-    submit_files = [f for f in os.listdir(base_dir) if f.endswith(".sub")]
+    submit_files = [
+        f for f in os.listdir(base_dir)
+        if f.startswith("job_") and f.endswith(".sub")
+    ]
     if not submit_files:
-        print(f"[checkJobsBF] No .sub files found in {base_dir}.", file=sys.stderr)
-        sys.exit(1)
+        print(f"[checkJobsBF] No original job .sub files found in {base_dir}.", file=sys.stderr)
+        sys.exit(2)
 
     failed_jobs: List[str] = []
 
@@ -181,6 +184,8 @@ def main():
                 print(proc.stderr, file=sys.stderr)
             else:
                 print(f"[checkJobsBF] Resubmit for {job_name} submitted successfully.", flush=True)
+
+    sys.exit(1)
 
 if __name__ == "__main__":
     main()
