@@ -1,0 +1,13 @@
+processes:
+  data:
+    - data_obs
+  bkg:
+    - top_Run3_FAKES
+    - boson_Run3_FAKES
+    - diboson_Run3_FAKES
+    - triboson_Run3_FAKES
+  sig:
+    - SMS_TChiWZ
+
+sms_filters:
+  - SMS_50000_45000
