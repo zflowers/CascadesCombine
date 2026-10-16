@@ -19,8 +19,8 @@ using json = nlohmann::json;
  * Merge flattened JSONs that use the 3-element totals layout:
  * [ count, sumW, err = sqrt(sumW2) ]
  *
- * Internally store index 2 = sumW2 (variance) while merging,
- * and output the final third element as sqrt(sumW2).
+ * Internally store index 2 = sumW2 (variance) while merging. Correlated
+ * dataset lineages combine errors linearly in the final reduction.
  */
 
 bool mergeJSONsFlattenedWithFileBreakdown(
@@ -113,6 +113,63 @@ bool mergeJSONsFlattenedWithFileBreakdown(
 
     // Types for clarity:
     using Triple = std::array<double,3>; // [count, sumW, sumW2]
+
+    auto correlatedDatasetKey = [](const std::string &filePath) -> std::string {
+        const fs::path path(filePath);
+        const std::string directory = path.parent_path().filename().string();
+        std::string filename = path.filename().string();
+
+        if (directory == "Summer24_130X" || directory == "Summer25_130X" || directory == "Summer26_130X") {
+            for (const char *era : {"Summer25", "Summer26"}) {
+                const std::string suffix = std::string("_Summer24_") + era + "_130X.root";
+                if (filename.size() >= suffix.size() && filename.compare(filename.size() - suffix.size(), suffix.size(), suffix) == 0) {
+                    filename.replace(filename.size() - suffix.size(), suffix.size(), "_Summer24_130X.root");
+                    break;
+                }
+            }
+            return "background:" + filename;
+        }
+
+        const std::vector<std::string> signalDatasetPrefixes = {
+            "SMS-TSlepSlep_Bin-genHT-50-genMET-80_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer",
+        };
+        if (directory == "Summer23_130X_SMS" || directory == "Summer24_130X_SMS") {
+            const std::string eraSuffix = directory == "Summer23_130X_SMS" ? "23_130X.root" : "24_130X.root";
+            for (const auto &prefix : signalDatasetPrefixes) {
+                if (filename.compare(0, prefix.size(), prefix) != 0) continue;
+                if (filename.size() >= eraSuffix.size() &&
+                    filename.compare(filename.size() - eraSuffix.size(), eraSuffix.size(), eraSuffix) == 0) {
+                    filename.replace(filename.size() - eraSuffix.size(), eraSuffix.size(), "24_130X.root");
+                    return "signal:" + filename;
+                }
+            }
+        }
+
+        return "";
+    };
+
+    auto sumContributions = [&correlatedDatasetKey](const auto &contributions) {
+        Triple acc = {0., 0., 0.};
+        std::map<std::string, double> correlatedErrors;
+        for (const auto &filePair : contributions) {
+            const std::string &filePath = filePair.first;
+            const Triple &values = filePair.second;
+            acc[0] += values[0];
+            acc[1] += values[1];
+
+            const std::string key = correlatedDatasetKey(filePath);
+            if (key.empty()) {
+                acc[2] += values[2];
+            } else {
+                correlatedErrors[key] += std::sqrt(values[2]);
+            }
+        }
+        for (const auto &entry : correlatedErrors) {
+            acc[2] += entry.second * entry.second;
+        }
+        return acc;
+    };
+
     // fileContribs[bin][group][filePath] -> Triple (sumW2 stored)
     std::map<std::string, std::map<std::string, std::map<std::string, Triple>>> fileContribs;
 
@@ -249,16 +306,7 @@ bool mergeJSONsFlattenedWithFileBreakdown(
         for (const auto &groupPair : binPair.second) {
             const std::string group = groupPair.first;
 
-            Triple acc = {0.,0.,0.}; // [count, sumW, sumW2]
-            for (const auto &filePair : groupPair.second) {
-                const Triple &farr = filePair.second;
-
-                acc[0] += farr[0];
-                acc[1] += farr[1];
-                acc[2] += farr[2]; // sum variances (sum of sumW2)
-            }
-
-            merged[binName][group] = acc;
+            merged[binName][group] = sumContributions(groupPair.second);
         }
     }
 
@@ -276,14 +324,7 @@ bool mergeJSONsFlattenedWithFileBreakdown(
                 for (const auto &dirPair : systPair.second) {
                     const std::string direction = dirPair.first;
 
-                    Triple acc = {0.,0.,0.};
-                    for (const auto &filePair : dirPair.second) {
-                        const Triple &farr = filePair.second;
-                        acc[0] += farr[0];
-                        acc[1] += farr[1];
-                        acc[2] += farr[2];
-                    }
-                    mergedSyst[binName][group][systName][direction] = acc;
+                    mergedSyst[binName][group][systName][direction] = sumContributions(dirPair.second);
                 }
             }
         }
