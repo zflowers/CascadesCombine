@@ -7,7 +7,7 @@ processes:
     - diboson_Run2_FAKES
     - triboson_Run2_FAKES
   sig:
-    - SMS_TChiWZ
+    - SMS_TChiWZ_Run2
 
 sms_filters:
-  - SMS_500_450
+  - SMS_50000_45000

@@ -12,9 +12,6 @@ processes:
   sig:
     - Cascades
     - SMS_TChiWZ
-    - SMS_TChiWZpreUL
-    - SMS_TChiWWpreUL
-    - SMS_TSlepSleppreUL
 
 sms_filters:
   - SMS_30000_29000

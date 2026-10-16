@@ -22,9 +22,9 @@ run_all() {
     fi
 }
 SLEEP=90
-VERSION="v18"
+VERSION="v19"
 make clean
 make all -j 8
 
-run_all --skip-compile --make-root --processes-cfg config/process_cfgs/trigger_processes/processes_TriggerStudies.yaml  --hist-cfg config/hist_cfgs/hist_TriggerStudies.yaml --bins-cfg config/bin_cfgs/trigger_bins/Trigger.yaml --bins-per-job 10 --max-materialize 400 --make-trig-fit --run-name TriggerStudies_${VERSION}
+run_all --skip-compile --make-root --processes-cfg config/process_cfgs/trigger_processes/processes_TriggerStudies.yaml --hist-cfg config/hist_cfgs/hist_TriggerStudies.yaml --bins-cfg config/bin_cfgs/trigger_bins/Trigger.yaml --bins-per-job 10 --max-materialize 400 --make-trig-fit --run-name TriggerStudies_${VERSION}
 sleep ${SLEEP}
