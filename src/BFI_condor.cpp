@@ -944,8 +944,10 @@ int main(int argc, char** argv) {
             processTree(baseTree, keyPT, activeSystematics, runInternalSystsOnNominal, "", false, runFAKES);
             if(!is_data){
                 for (const auto &treeSyst : activeSystematics.tree) {
-                    processTree(baseTree+"_"+treeSyst+"Up",   keyPT, activeSystematics, false, treeSyst, true, runFAKES);
-                    processTree(baseTree+"_"+treeSyst+"Down", keyPT, activeSystematics, false, treeSyst, false, runFAKES);
+                    const std::string treeSystTag =
+                        year > 0 ? treeSyst + "_" + std::to_string(year) : treeSyst;
+                    processTree(baseTree+"_"+treeSyst+"Up",   keyPT, activeSystematics, false, treeSystTag, true, runFAKES);
+                    processTree(baseTree+"_"+treeSyst+"Down", keyPT, activeSystematics, false, treeSystTag, false, runFAKES);
                 }
             }
         }

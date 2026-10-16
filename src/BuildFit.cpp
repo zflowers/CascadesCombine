@@ -267,6 +267,10 @@ std::vector<std::string> BuildFit::WriteJsonAsFlatHists(
 
             // Write nominal histogram for non-data processes (CH expects process histos and data_obs)
             if (!isData) {
+                constexpr double kMinYield = 1e-8;
+                const double kRelativeFloor = 1e-3;  // 0.1% of nominal
+                double floor = std::max(kMinYield, kRelativeFloor * sumW);
+                if (sumW < 0.0) sumW = floor;
                 TH1F *h = new TH1F(hname.c_str(), hname.c_str(), 1, 0, 1);
                 h->Sumw2();
                 h->SetBinContent(1, sumW);
@@ -295,14 +299,11 @@ std::vector<std::string> BuildFit::WriteJsonAsFlatHists(
                             double err_ud  = arr[IDX_ERR];
 
                             std::string hsyst = origBin + "__" + procName + "__" + systName + std::string(udKey);
-                            constexpr double kMinYield = 1e-8;
-                            const double kRelativeFloor = 1e-3;  // 0.1% of nominal
                             //if (sumW > 0.0 && sumW_ud <= 0.0) {
                             if (sumW > 0.0 && sumW_ud < 0.0) {
-                                double floor = std::max(kMinYield, kRelativeFloor * sumW);
                                 std::cout
                                     << "[WARNING] " << hsyst
-                                    << " has non-positive yield (" << sumW_ud
+                                    << " has negative yield (" << sumW_ud
                                     << "); replacing with " << floor << std::endl;
                                 sumW_ud = floor;
                             }
@@ -479,6 +480,13 @@ void BuildFit::AddFakeFamiliesAsSharedNorms(
 void BuildFit::AddShapeSystsFromJSON(JSONFactory* j, const std::vector<std::string>& kept_bins) {
     constexpr int IDX_SUMW = 1;
 
+    struct SystYields {
+        double nominal = 0.;
+        double up = 0.;
+        double down = 0.;
+        std::vector<std::string> procs;
+    };
+
     std::set<std::string> kept_set(kept_bins.begin(), kept_bins.end());
 
     for (const auto& itBin : j->j.items()) {
@@ -486,6 +494,7 @@ void BuildFit::AddShapeSystsFromJSON(JSONFactory* j, const std::vector<std::stri
         if (!kept_set.count(bin)) continue; // skip bins that were dropped
 
         const json& binJson = itBin.value();
+        std::map<std::string, SystYields> yieldsBySyst;
 
         for (const auto& itProc : binJson.items()) {
             const std::string proc = itProc.key();
@@ -498,13 +507,14 @@ void BuildFit::AddShapeSystsFromJSON(JSONFactory* j, const std::vector<std::stri
             if (!nominal.is_array() || nominal.size() <= IDX_SUMW) continue;
 
             const double nominalYield = nominal[IDX_SUMW];
+            if (!std::isfinite(nominalYield) || nominalYield <= 0.) continue;
+
             const json& systs = valsObj["systematics"];
 
             for (const auto& itS : systs.items()) {
                 const std::string systKey = itS.key();
                 const json& ud = itS.value();
 
-                if (nominalYield <= 0.) continue;
                 if (!ud.contains("Up") || !ud.contains("Down")) continue;
 
                 const json& upArr   = ud["Up"];
@@ -522,13 +532,33 @@ void BuildFit::AddShapeSystsFromJSON(JSONFactory* j, const std::vector<std::stri
                 if (!std::isfinite(upRatio)   || upRatio   <= 0.) continue;
                 if (!std::isfinite(downRatio) || downRatio <= 0.) continue;
 
-                const std::string systName = SanitizeName(systKey);
+                SystYields& yields = yieldsBySyst[systKey];
+                yields.nominal += nominalYield;
+                yields.up += upYield;
+                yields.down += downYield;
+                yields.procs.push_back(proc);
+            }
+        }
 
+        for (const auto& [systKey, yields] : yieldsBySyst) {
+            if (!std::isfinite(yields.nominal) || yields.nominal <= 0.) continue;
+            if (!std::isfinite(yields.up) || yields.up <= 0.) continue;
+            if (!std::isfinite(yields.down) || yields.down <= 0.) continue;
+
+            const double integral_upRatio = yields.up / yields.nominal;
+            const double integral_downRatio = yields.down / yields.nominal;
+            if (!std::isfinite(integral_upRatio) || integral_upRatio <= 0.) continue;
+            if (!std::isfinite(integral_downRatio) || integral_downRatio <= 0.) continue;
+
+            const double err_Ratio = 1. + (integral_upRatio - integral_downRatio) /
+                                           (integral_upRatio + integral_downRatio);
+            // if symmetrized err is 1 or unreasonable skip adding systematic
+            if (err_Ratio == 1. || err_Ratio < 0.01 || err_Ratio > 1.99) continue;
+
+            const std::string systName = SanitizeName(systKey);
+            for (const std::string& proc : yields.procs) {
                 cb.cp().bin({bin}).process({proc})
-                    .AddSyst(cb,
-                             systName,
-                             "lnN",
-                             ch::syst::SystMapAsymm<>::init(downRatio, upRatio));
+                    .AddSyst(cb, systName, "lnN", SystMap<>::init(err_Ratio));
             }
         }
     }
@@ -770,7 +800,7 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
 
     // 6) Add Systematics
     // Turn on autoMCstats
-    //cb.cp().SetAutoMCStats(cb, 0.); // Second arg is event threshold
+    // cb.cp().SetAutoMCStats(cb, 0.); // Second arg is event threshold
 
     // All non-triboson processes -> rateParam
     //AddFakeFamiliesAsSharedNorms(truebkgprocs, fakesprocs, "rateParam", 1.0, "triboson", false /* exclude triboson */);
@@ -778,8 +808,8 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
     //AddFakeFamiliesAsSharedNorms(truebkgprocs, fakesprocs, "lnN", 1.4, "triboson", true /* include only triboson */);
     // NEW implement all proc rates as lnNs with 50% prior
     AddFakeFamiliesAsSharedNorms(truebkgprocs, fakesprocs, "lnN", 1.5, "", false /* include only triboson */);
-    // AddFloatingNormsGroupedByFakeType(fakesprocs, "rateParam", 1.0);
-    AddFloatingNormsGroupedByFakeType(fakesprocs, "lnN", 2.0); // implement all fake rates as lnNs with 100% prior
+    AddFloatingNormsGroupedByFakeType(fakesprocs, "rateParam", 1.0);
+    // AddFloatingNormsGroupedByFakeType(fakesprocs, "lnN", 2.0); // implement all fake rates as lnNs with 100% prior
 
     AddFAKETransferSys(kept_bins);
     AddPTISRSys(kept_bins, bkgprocs);

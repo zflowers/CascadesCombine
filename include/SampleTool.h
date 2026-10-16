@@ -24,9 +24,9 @@ class SampleTool{
 	public:
 	std::map<std::string, std::map<std::string, double>> BkgDict{};
 	std::map<std::string, std::map<std::string, double>> SigDict{};
-        std::map<std::string, std::map<std::string, double>> DataDict{};
+    std::map<std::string, std::map<std::string, double>> DataDict{};
 	std::map<std::string, std::map<std::string, double>> MasterDict{};
-        map <string, double> LumiDict{};
+    std::map<string, double> LumiDict{};
 
 	stringlist SignalKeys{};
 		

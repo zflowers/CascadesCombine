@@ -438,11 +438,6 @@ ROOT::RDF::RNode MultiSystWeights(ROOT::RDF::RNode node,
           "muBLP_over_COL_SFweight", "muID_over_BLP_SFweight", "muISO_over_ID_SFweight", "muPrompt_ISOID_SFweight", "muNOT_Prompt_ISOID_SFweight", "muNOT_ID_nor_ISO_SFweight",
           "PrefireWeight",
         }
-        // No SF weights
-        //[]() {
-        //    return 1.;
-        //},
-        //{}
     );
 
     // --- Multiply base weight by nominal product ---
