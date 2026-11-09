@@ -1,6 +1,7 @@
 // mergeJSONs.cpp
 #include <iostream>
 #include <fstream>
+#include <algorithm>
 #include <filesystem>
 #include <map>
 #include <array>
@@ -130,19 +131,82 @@ bool mergeJSONsFlattenedWithFileBreakdown(
             return "background:" + filename;
         }
 
-        const std::vector<std::string> signalDatasetPrefixes = {
+        static const std::vector<std::string> run3HiggsinoPrefixes = {
+            "SMS-Higgsino-N2C1-N2ToZN1-ZTo2L_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer",
+            "SMS-Higgsino-N2N1-N2ToZN1-ZTo2L_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer",
+        };
+        static const std::vector<std::string> run3BinPrefixes = {
+            "SMS-TChiWW_Bin-genHT-50-genMET-80_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer",
+            "SMS-TChiWZ_Bin-genHT-50-genMET-80_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer",
             "SMS-TSlepSlep_Bin-genHT-50-genMET-80_TuneCP5_13p6TeV_madgraphMLM-pythia8_Summer",
         };
-        if (directory == "Summer23_130X_SMS" || directory == "Summer24_130X_SMS") {
-            const std::string eraSuffix = directory == "Summer23_130X_SMS" ? "23_130X.root" : "24_130X.root";
-            for (const auto &prefix : signalDatasetPrefixes) {
-                if (filename.compare(0, prefix.size(), prefix) != 0) continue;
-                if (filename.size() >= eraSuffix.size() &&
-                    filename.compare(filename.size() - eraSuffix.size(), eraSuffix.size(), eraSuffix) == 0) {
-                    filename.replace(filename.size() - eraSuffix.size(), eraSuffix.size(), "24_130X.root");
-                    return "signal:" + filename;
-                }
+        static const std::vector<std::string> run2BinPrefixes = {
+            "SMS-TChiWW_genHT-50_genMET-80_TuneCP5_13TeV-madgraphMLM-pythia8_Summer",
+            "SMS-TChiWZ_genHT-50_genMET-80_TuneCP5_13TeV-madgraphMLM-pythia8_Summer",
+            "SMS-TSlepSlep_genHT-50_genMET-80_TuneCP5_13TeV-madgraphMLM-pythia8_Summer",
+        };
+        static const std::vector<std::string> run3HiggsinoDirectories = {
+            "Summer22_130X_SMS", "Summer22EE_130X_SMS",
+            "Summer23_130X_SMS", "Summer23BPix_130X_SMS",
+            "Summer24_130X_SMS", "Summer25_130X_SMS",
+        };
+        static const std::vector<std::string> run3BinDirectories = {
+            "Summer23_130X_SMS", "Summer23BPix_130X_SMS",
+            "Summer24_130X_SMS", "Summer25_130X_SMS",
+        };
+        static const std::vector<std::string> run2BinDirectories = {
+            "Summer20UL16_106X_SMS", "Summer20UL16APV_106X_SMS",
+        };
+
+        auto normalizeSignalLineage = [&directory, &filename](
+            const std::vector<std::string> &prefixes,
+            const std::vector<std::string> &directories,
+            const std::string &canonicalSuffix
+        ) -> std::string {
+            if (std::find(directories.begin(), directories.end(), directory) == directories.end()) {
+                return "";
             }
+
+            const std::string directorySuffix =
+                "_" + directory.substr(0, directory.size() - 4) + ".root";
+            if (filename.size() < directorySuffix.size() ||
+                filename.compare(
+                    filename.size() - directorySuffix.size(),
+                    directorySuffix.size(),
+                    directorySuffix) != 0) {
+                return "";
+            }
+
+            for (const auto &prefix : prefixes) {
+                if (filename.compare(0, prefix.size(), prefix) != 0) {
+                    continue;
+                }
+
+                std::string normalized = filename;
+                normalized.replace(
+                    normalized.size() - directorySuffix.size(),
+                    directorySuffix.size(),
+                    canonicalSuffix);
+                return "signal:" + normalized;
+            }
+
+            return "";
+        };
+
+        std::string run3SignalKey = normalizeSignalLineage(
+            run3HiggsinoPrefixes, run3HiggsinoDirectories, "_Summer24_130X.root");
+        if (run3SignalKey.empty()) {
+            run3SignalKey = normalizeSignalLineage(
+                run3BinPrefixes, run3BinDirectories, "_Summer24_130X.root");
+        }
+        if (!run3SignalKey.empty()) {
+            return run3SignalKey;
+        }
+
+        const std::string run2SignalKey = normalizeSignalLineage(
+            run2BinPrefixes, run2BinDirectories, "_Summer20UL16_106X.root");
+        if (!run2SignalKey.empty()) {
+            return run2SignalKey;
         }
 
         return "";

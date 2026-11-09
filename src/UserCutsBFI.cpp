@@ -147,6 +147,63 @@ ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<st
     cut_2D_ll_low.expression = "pass2DLeptonCut_low == true";
     cuts[cut_2D_ll_low.name] = cut_2D_ll_low;
 
+    // --- cascades_yields (2026-10-30): smallest-invariant-mass lepton pair,
+    //     considering all leptons regardless of RJR hemisphere assignment;
+    //     type 0 OSSF, 1 OSOF, 2 SS, 3 no pair ---
+    if (node.HasColumn("hemipair_type") == false) {
+        node = node.Define("hemipair_type",
+            [](const std::vector<double> &pt, const std::vector<double> &eta, const std::vector<double> &phi,
+            const std::vector<double> &mass, const std::vector<int> &charge, const std::vector<int> &pdgid) -> int {
+                size_t n = std::min(std::min(std::min(pt.size(), eta.size()), std::min(phi.size(), mass.size())),
+                                    std::min(charge.size(), pdgid.size()));
+
+                double best = std::numeric_limits<double>::infinity();
+                int type = 3;
+
+                for (size_t i = 0; i + 1 < n; ++i) {
+                    TLorentzVector li;
+                    li.SetPtEtaPhiM(pt[i], eta[i], phi[i], mass[i]);
+
+                    for (size_t j = i + 1; j < n; ++j) {
+                        TLorentzVector lj;
+                        lj.SetPtEtaPhiM(pt[j], eta[j], phi[j], mass[j]);
+
+                        double m2 = (li + lj).M2();
+                        if (m2 < best) {
+                            best = m2;
+
+                            if (charge[i] == charge[j]) {
+                                type = 2;
+                            } else {
+                                bool isElectronI = (pdgid[i] == 11 || pdgid[i] == -11);
+                                bool isElectronJ = (pdgid[j] == 11 || pdgid[j] == -11);
+                                type = (isElectronI == isElectronJ) ? 0 : 1;
+                            }
+                        }
+                    }
+                }
+
+                return type;
+            },
+            {"PT_lep","Eta_lep","Phi_lep","M_lep","Charge_lep","PDGID_lep"}
+        );
+    }
+
+    for (const auto &hp : std::vector<std::pair<std::string, int>>{{"minMll_OSSF", 0}, {"minMll_OSOF", 1}, {"minMll_SS", 2}}) {
+        CutDef cut_hp;
+        cut_hp.name = hp.first;
+        cut_hp.columns = {"hemipair_type"};
+        cut_hp.expression = "hemipair_type==" + std::to_string(hp.second);
+        cuts[cut_hp.name] = cut_hp;
+    }
+
+    // the pair is OSOF or SS
+    CutDef cut_hp_not;
+    cut_hp_not.name = "hemipair_notOSSF";
+    cut_hp_not.columns = {"hemipair_type"};
+    cut_hp_not.expression = "hemipair_type==1 || hemipair_type==2";
+    cuts[cut_hp_not.name] = cut_hp_not;
+
     //if (do_2Dll_high && !node.HasColumn("pass2DLeptonCut_high")) {
     //    node = node.Define("pass2DLeptonCut_high",
     //        [](double mll, double dr) -> bool {

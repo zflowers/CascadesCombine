@@ -368,6 +368,19 @@ static const std::vector<SystInfo> kDefaultSFSystematics = {
     {"tnp_muNOT_ID_nor_ISO", "muNOT_ID_nor_ISO_SFweight", "muNOT_ID_nor_ISO_SFweight_up", "muNOT_ID_nor_ISO_SFweight_down"},
 };
 
+static std::vector<SystInfo> SFSystematicsForYear(const std::vector<SystInfo>& systs, int year)
+{
+    std::vector<SystInfo> yearSysts = systs;
+    if (year > 0) {
+        for (auto& syst : yearSysts) {
+            if (syst.tag == "PileUp" || syst.tag == "BtagHF" || syst.tag == "BtagLF") {
+                syst.tag += "_" + std::to_string(year);
+            }
+        }
+    }
+    return yearSysts;
+}
+
 static const std::vector<std::string> kDefaultTreeSystematics = {
     "JesUncer_CMS_scale_j_Total",
     "JerUncertaintySetTotal",
@@ -552,6 +565,7 @@ static BaseNodeHandle MakeBaseNode(const std::string &tree_name,
                                    double Lumi,
                                    bool is_data,
                                    int year,
+                                   const std::vector<SystInfo>& systs,
                                    std::vector<DerivedVar> validatedDerivedVars
                                   )
 {
@@ -583,7 +597,7 @@ static BaseNodeHandle MakeBaseNode(const std::string &tree_name,
 
     ;
 
-    node = MultiSystWeights(node, is_data, year);
+    node = MultiSystWeights(node, is_data, year, systs);
 
     // lepton counts / kinematics
     node = BFI->DefineLeptonPairCounts(node, "");

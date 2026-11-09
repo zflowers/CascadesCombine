@@ -1,4 +1,6 @@
 #include "BuildFit.h"
+#include <regex>
+#include <stdexcept>
 
 ch::Categories BuildFit::BuildCats(JSONFactory* j){
     ch::Categories cats{};
@@ -301,10 +303,7 @@ std::vector<std::string> BuildFit::WriteJsonAsFlatHists(
                             std::string hsyst = origBin + "__" + procName + "__" + systName + std::string(udKey);
                             //if (sumW > 0.0 && sumW_ud <= 0.0) {
                             if (sumW > 0.0 && sumW_ud < 0.0) {
-                                std::cout
-                                    << "[WARNING] " << hsyst
-                                    << " has negative yield (" << sumW_ud
-                                    << "); replacing with " << floor << std::endl;
+                                // std::cout << "[WARNING] " << hsyst << " has negative yield (" << sumW_ud << "); replacing with " << floor << std::endl;
                                 sumW_ud = floor;
                             }
 
@@ -477,24 +476,33 @@ void BuildFit::AddFakeFamiliesAsSharedNorms(
     }
 }
 
-void BuildFit::AddShapeSystsFromJSON(JSONFactory* j, const std::vector<std::string>& kept_bins) {
+void BuildFit::AddShapeSystsFromJSON(
+    JSONFactory* j,
+    const std::vector<std::string>& kept_bins,
+    bool write_err_ratio_histograms
+) {
     constexpr int IDX_SUMW = 1;
 
     struct SystYields {
         double nominal = 0.;
         double up = 0.;
         double down = 0.;
-        std::vector<std::string> procs;
+        std::vector<std::pair<std::string, std::string>> binProcs;
     };
 
+    const std::regex rToken(R"(_R(lt)?[0-9]+(_[0-9]+)?(?=_|$))");
+    const std::regex mToken(R"(_M(lt)?[0-9]+(_[0-9]+)?(?=_|$))");
+    const std::regex qualityToken(R"(_(Gold|Silver|Bronze)(?=_|$))");
+    const std::regex channelSuffix(R"(_(OS_(ee|emu|mumu)|OSOF[a-zA-Z]*|OSSF[a-zA-Z]*|SS[a-zA-Z]*)$)");
+
     std::set<std::string> kept_set(kept_bins.begin(), kept_bins.end());
+    std::map<std::pair<std::string, std::string>, SystYields> yieldsBySystAndGroup;
 
     for (const auto& itBin : j->j.items()) {
         const std::string& bin = itBin.key();
         if (!kept_set.count(bin)) continue; // skip bins that were dropped
 
         const json& binJson = itBin.value();
-        std::map<std::string, SystYields> yieldsBySyst;
 
         for (const auto& itProc : binJson.items()) {
             const std::string proc = itProc.key();
@@ -532,35 +540,94 @@ void BuildFit::AddShapeSystsFromJSON(JSONFactory* j, const std::vector<std::stri
                 if (!std::isfinite(upRatio)   || upRatio   <= 0.) continue;
                 if (!std::isfinite(downRatio) || downRatio <= 0.) continue;
 
-                SystYields& yields = yieldsBySyst[systKey];
+                const bool allBins = systKey.find("tnp_") != std::string::npos ||
+                                     systKey.find("PDF") != std::string::npos ||
+                                     systKey.find("MuR") != std::string::npos ||
+                                     systKey.find("Jes") != std::string::npos ||
+                                     systKey.find("Jer") != std::string::npos ||
+                                     systKey.find("UnClust") != std::string::npos ||
+                                     systKey.find("METtrig") != std::string::npos ||
+                                     systKey.find("MuF") != std::string::npos;
+                const bool btag = systKey.find("Btag") != std::string::npos;
+                const bool kinematic = systKey.find("Pile") != std::string::npos; // ||
+                                    //    systKey.find("Jes") != std::string::npos ||
+                                    //    systKey.find("Jer") != std::string::npos ||
+                                    //    systKey.find("UnClust") != std::string::npos;
+
+                std::string groupKey = bin;
+                if (allBins) {
+                    groupKey.clear();
+                } else if (btag || kinematic) {
+                    groupKey = std::regex_replace(groupKey, rToken, "");
+                    groupKey = std::regex_replace(groupKey, mToken, "");
+                    if (btag) {
+                        groupKey = std::regex_replace(groupKey, qualityToken, "");
+                        groupKey = std::regex_replace(groupKey, channelSuffix, "");
+                    }
+                }
+
+                SystYields& yields = yieldsBySystAndGroup[{systKey, groupKey}];
                 yields.nominal += nominalYield;
                 yields.up += upYield;
                 yields.down += downYield;
-                yields.procs.push_back(proc);
+                yields.binProcs.emplace_back(bin, proc);
             }
         }
+    }
 
-        for (const auto& [systKey, yields] : yieldsBySyst) {
-            if (!std::isfinite(yields.nominal) || yields.nominal <= 0.) continue;
-            if (!std::isfinite(yields.up) || yields.up <= 0.) continue;
-            if (!std::isfinite(yields.down) || yields.down <= 0.) continue;
+    std::map<std::string, std::vector<double>> errRatiosBySyst;
+    for (const auto& [systAndGroup, yields] : yieldsBySystAndGroup) {
+        const std::string& systKey = systAndGroup.first;
+        if (!std::isfinite(yields.nominal) || yields.nominal <= 0.) continue;
+        if (!std::isfinite(yields.up) || yields.up <= 0.) continue;
+        if (!std::isfinite(yields.down) || yields.down <= 0.) continue;
 
-            const double integral_upRatio = yields.up / yields.nominal;
-            const double integral_downRatio = yields.down / yields.nominal;
-            if (!std::isfinite(integral_upRatio) || integral_upRatio <= 0.) continue;
-            if (!std::isfinite(integral_downRatio) || integral_downRatio <= 0.) continue;
+        const double integral_upRatio = yields.up / yields.nominal;
+        const double integral_downRatio = yields.down / yields.nominal;
+        if (!std::isfinite(integral_upRatio) || integral_upRatio <= 0.) continue;
+        if (!std::isfinite(integral_downRatio) || integral_downRatio <= 0.) continue;
 
-            const double err_Ratio = 1. + (integral_upRatio - integral_downRatio) /
-                                           (integral_upRatio + integral_downRatio);
-            // if symmetrized err is 1 or unreasonable skip adding systematic
-            if (err_Ratio == 1. || err_Ratio < 0.01 || err_Ratio > 1.99) continue;
+        double err_Ratio = 1. + (integral_upRatio - integral_downRatio) /
+                                       (integral_upRatio + integral_downRatio);
+        const std::string systName = SanitizeName(systKey);
+        if (write_err_ratio_histograms) {
+            errRatiosBySyst[systName].push_back(err_Ratio);
+        }
 
-            const std::string systName = SanitizeName(systKey);
-            for (const std::string& proc : yields.procs) {
-                cb.cp().bin({bin}).process({proc})
-                    .AddSyst(cb, systName, "lnN", SystMap<>::init(err_Ratio));
+        // if symmetrized err is 1 or unreasonable skip adding systematic
+        if (err_Ratio == 1. || err_Ratio < 0.01 || err_Ratio > 1.99) continue;
+        for (const auto& [bin, proc] : yields.binProcs) {
+            cb.cp().bin({bin}).process({proc})
+                .AddSyst(cb, systName, "lnN", SystMap<>::init(err_Ratio));
+        }
+    }
+
+    if (write_err_ratio_histograms) {
+        const std::filesystem::path jsonPath(j->json_file_name);
+        const std::string outputName = jsonPath.stem().empty()
+            ? "err_Ratio.root"
+            : jsonPath.stem().string() + "_err_Ratio.root";
+        const std::filesystem::path outputPath = jsonPath.parent_path() / outputName;
+        TFile outputFile(outputPath.string().c_str(), "RECREATE");
+        if (outputFile.IsZombie()) {
+            throw std::runtime_error("Could not create err_Ratio histogram file " + outputPath.string());
+        }
+
+        for (const auto& [systName, values] : errRatiosBySyst) {
+            TH1F histogram(
+                systName.c_str(),
+                (systName + ";err_Ratio;Number of groups").c_str(), 100, 0., 2.
+            );
+            for (double value : values) {
+                histogram.Fill(value);
+            }
+            if (histogram.Write() <= 0) {
+                throw std::runtime_error("Could not write err_Ratio histogram " + systName +
+                                         " to " + outputPath.string());
             }
         }
+        outputFile.Close();
+        std::cout << "[BuildFit] Wrote err_Ratio histograms to " << outputPath << std::endl;
     }
 }
 
@@ -790,7 +857,7 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
     cb.AddProcesses({sigMass}, {signalDetails[0]}, {"13.6TeV"}, {signalDetails[1]}, {sigProcPrefix}, cats, true);
 
     // 4) Register shape systematics only for kept bins
-    AddShapeSystsFromJSON(j, kept_bins);
+    AddShapeSystsFromJSON(j, kept_bins, true); // last arg false is default and will not write extra histograms
     std::cout << "Added shape systs\n";
 
     // 5) Extract shapes (backgrounds + signals for kept bins)
@@ -800,7 +867,7 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
 
     // 6) Add Systematics
     // Turn on autoMCstats
-    // cb.cp().SetAutoMCStats(cb, 0.); // Second arg is event threshold
+    // cb.cp().SetAutoMCStats(cb, 0.); // Second arg is event threshold. 0. is default setting
 
     // All non-triboson processes -> rateParam
     //AddFakeFamiliesAsSharedNorms(truebkgprocs, fakesprocs, "rateParam", 1.0, "triboson", false /* exclude triboson */);
@@ -808,7 +875,7 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
     //AddFakeFamiliesAsSharedNorms(truebkgprocs, fakesprocs, "lnN", 1.4, "triboson", true /* include only triboson */);
     // NEW implement all proc rates as lnNs with 50% prior
     AddFakeFamiliesAsSharedNorms(truebkgprocs, fakesprocs, "lnN", 1.5, "", false /* include only triboson */);
-    AddFloatingNormsGroupedByFakeType(fakesprocs, "rateParam", 1.0);
+    AddFloatingNormsGroupedByFakeType(fakesprocs, "rateParam", 1.0); // add fakes as rate parameters
     // AddFloatingNormsGroupedByFakeType(fakesprocs, "lnN", 2.0); // implement all fake rates as lnNs with 100% prior
 
     AddFAKETransferSys(kept_bins);

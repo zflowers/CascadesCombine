@@ -266,7 +266,7 @@ int main(int argc, char** argv) {
     // --- Build active systematics config ---
     SystematicsConfig activeSystematics;
     // always default SF systematics for now (can later allow CLI override)
-    activeSystematics.sf = kDefaultSFSystematics;
+    activeSystematics.sf = SFSystematicsForYear(kDefaultSFSystematics, year);
 
     // if user passed -R, interpret these as tree-based syst names (override)
     if (!systematicNames.empty()) {
@@ -316,8 +316,8 @@ int main(int argc, char** argv) {
             // nominal always zero
             fy.nominal = {0.0, 0.0, 0.0};
             // internal SF systematics
-            if (!IsData && !isSignal && runInternalSystsOnNominal) {
-                for (const auto &s : activeSystematics.sf) {
+            if (!IsData && !isSignal && runInternalSysts) {
+                for (const auto &s : sysCfg.sf) {
                     fy.systs[s.tag].up   = {0.0, 0.0, 0.0};
                     fy.systs[s.tag].down = {0.0, 0.0, 0.0};
                 }
@@ -335,8 +335,8 @@ int main(int argc, char** argv) {
             // totals set to zero
             auto &tot = totalsByBin[bin][proc_key];
             tot.nominal = {0.0, 0.0, 0.0};
-            if (!IsData && !isSignal && runInternalSystsOnNominal) {
-                for (const auto &s : activeSystematics.sf) {
+            if (!IsData && !isSignal && runInternalSysts) {
+                for (const auto &s : sysCfg.sf) {
                     tot.systs[s.tag].up   = {0.0, 0.0, 0.0};
                     tot.systs[s.tag].down = {0.0, 0.0, 0.0};
                 }
@@ -395,7 +395,7 @@ int main(int argc, char** argv) {
         
         // First create the validation node WITH all derived variables.
         BaseNodeHandle valHandle =
-            MakeBaseNode(tree_name, rootFilePath, BFI, Lumi, IsData, year, derivedVars);
+            MakeBaseNode(tree_name, rootFilePath, BFI, Lumi, IsData, year, sysCfg.sf, derivedVars);
         
         ROOT::RDF::RNode base_node_val = valHandle.node;
         
@@ -419,8 +419,7 @@ int main(int argc, char** argv) {
         
         // Now create the actual filling node WITH the validated derived variables.
         BaseNodeHandle fillHandle =
-            MakeBaseNode(tree_name, rootFilePath, BFI, Lumi, IsData, year,
-                         validatedDerivedVars);
+            MakeBaseNode(tree_name, rootFilePath, BFI, Lumi, IsData, year, sysCfg.sf, validatedDerivedVars);
         
         ROOT::RDF::RNode base_node_fill = fillHandle.node;
         
@@ -1075,4 +1074,3 @@ int main(int argc, char** argv) {
     delete BFI;
     return 0;
 }
-
