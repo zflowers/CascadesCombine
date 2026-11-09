@@ -774,6 +774,19 @@ namespace BinTokens {
 
         return 500.0;   // unknown Mperp token, before Btag
     }
+
+    inline double ExtractERatioSortKey(const std::string& bin) {
+        std::smatch m;
+        if (std::regex_search(bin, m, std::regex("_Elt(\\d+)p(\\d+)(?:_|$)")))
+            return 0.0;
+        if (std::regex_search(bin, m, std::regex("_E(\\d+)p(\\d+)(?:_|$)")))
+            return std::stod(m[1].str() + "." + m[2].str());
+        return -1.0;
+    }
+
+    inline bool HasERatioToken(const std::string& bin) {
+        return std::regex_search(bin, std::regex("_E(?:lt)?\\d+p\\d+(?:_|$)"));
+    }
     
     // --- Flavor/Charge: a simple lexicographic fallback ----------
     //  OS_ee < OS_emu < OS_mumu < OS_SF < OS_OF < OS_* < SS < Btag
@@ -801,6 +814,8 @@ namespace BinTokens {
         int    ptisr;
         int risr;
         double mperp;
+        double eratio;
+        bool hasEratio;
         int    flavor;
         std::string raw;   // tiebreak
     };
@@ -814,6 +829,8 @@ namespace BinTokens {
         k.ptisr  = ExtractPTISR(bin);
         k.risr   = ExtractRISR(bin);
         k.mperp  = ExtractMperpSortKey(bin);
+        k.eratio = ExtractERatioSortKey(bin);
+        k.hasEratio = HasERatioToken(bin);
         k.flavor = ExtractFlavorRank(bin);
         k.raw    = bin;
         return k;
@@ -827,6 +844,8 @@ namespace BinTokens {
         if (a.ptisr  != b.ptisr)  return a.ptisr  < b.ptisr;
         if (a.risr   != b.risr)   return a.risr   < b.risr;
         if (a.mperp  != b.mperp)  return a.mperp  < b.mperp;
+        if (a.eratio != b.eratio) return a.eratio < b.eratio;
+        if (a.hasEratio != b.hasEratio) return a.hasEratio < b.hasEratio;
         if (a.flavor != b.flavor) return a.flavor < b.flavor;
         return a.raw < b.raw;
     }
@@ -854,6 +873,12 @@ inline bool SameMperpParent(const BinTokens::BinKey& a,
         a.jets    == b.jets    &&
         a.ptisr   == b.ptisr   &&
         a.risr    == b.risr;
+}
+
+inline bool SameERatioParent(const BinTokens::BinKey& a,
+                             const BinTokens::BinKey& b)
+{
+    return SameMperpParent(a, b) && a.mperp == b.mperp;
 }
 
 /// Call this after BuildMergedBinGroupsFromYaml to re-sort bin_names.
@@ -1002,6 +1027,28 @@ inline int FindNextMperpBoundary(
     return best;
 }
 
+inline double FindNextERatioBoundary(
+    int currentIndex,
+    const std::vector<BinTokens::BinKey>& keys)
+{
+    const auto& current = keys[currentIndex];
+    double best = 999.0;
+
+    for (size_t i = 0; i < keys.size(); ++i) {
+        if ((int)i == currentIndex)
+            continue;
+
+        const auto& other = keys[i];
+        if (!other.hasEratio || !SameERatioParent(current, other))
+            continue;
+
+        if (other.eratio > current.eratio && other.eratio < best)
+            best = other.eratio;
+    }
+
+    return best;
+}
+
 // Build once after LoadYamlConfig, pass into BuildBracketTiers
 // Key: include pattern with R-token replaced by placeholder
 // Value: sorted set of all R integer values seen across all YAML entries sharing that pattern shape
@@ -1096,7 +1143,7 @@ struct BracketSpan {
 };
 
 /// All the bracket tiers for one plot.
-/// tiers[0] = innermost (Mperp), tiers.back() = outermost (Run)
+/// tiers[0] = innermost (Mperp/E ratio), tiers.back() = outermost (Run)
 /// Only tiers with >1 unique value are included.
 struct BracketTierSet {
     std::vector<std::vector<BracketSpan>> tiers;
@@ -1152,10 +1199,16 @@ inline BracketTierSet BuildBracketTiers(
 
     BracketTierSet out;
 
-    // --- Tier: Mperp (innermost) ---
+    // --- Tier: Mperp and E ratio (innermost) ---
     {
-        // First pass: collect spans with their raw mperp keys
-        struct MperpSpanRaw { int binFirst; int binLast; double mkey; };
+        // Mperp and E ratio are shown together as one innermost tier.
+        struct MperpSpanRaw {
+            int binFirst;
+            int binLast;
+            double mkey;
+            double ekey;
+            bool hasEratio;
+        };
         std::vector<MperpSpanRaw> rawSpans;
         int start = 0;
         for (int i = 1; i <= n; ++i) {
@@ -1166,10 +1219,15 @@ inline BracketTierSet BuildBracketTiers(
                 keys[i].jets  == keys[i-1].jets   &&
                 keys[i].ptisr == keys[i-1].ptisr  &&
                 keys[i].risr  == keys[i-1].risr   &&
-                keys[i].mperp == keys[i-1].mperp
+                keys[i].mperp == keys[i-1].mperp  &&
+                keys[i].eratio == keys[i-1].eratio &&
+                keys[i].hasEratio == keys[i-1].hasEratio
             );
             if (newGroup) {
-                rawSpans.push_back({start + 1, i, keys[start].mperp});
+                rawSpans.push_back({
+                    start + 1, i, keys[start].mperp,
+                    keys[start].eratio, keys[start].hasEratio
+                });
                 start = i;
             }
         }
@@ -1179,6 +1237,7 @@ inline BracketTierSet BuildBracketTiers(
         std::vector<BracketSpan> spans;
         for (int s = 0; s < (int)rawSpans.size(); ++s) {
             double mkey     = rawSpans[s].mkey;
+            double ekey     = rawSpans[s].ekey;
             // nextMkey: lower edge of the span to the RIGHT
             int nextMkey = FindNextMperpBoundary(
                            rawSpans[s].binFirst - 1,
@@ -1186,18 +1245,22 @@ inline BracketTierSet BuildBracketTiers(
             BracketSpan sp;
             sp.binFirst = rawSpans[s].binFirst;
             sp.binLast  = rawSpans[s].binLast;
-            if (s == 0) sp.sideLabel = "M_{#perp}";
+            if (s == 0)
+                sp.sideLabel = rawSpans[s].hasEratio
+                    ? "#splitline{M_{#perp}}{E_{ratio}}"
+                    : "M_{#perp}";
  
+            std::string mLabel;
             if (mkey >= 1e5) {
-                sp.label = "b-tag";
+                mLabel = "b-tag";
             } else if (mkey == 0.0) {
                 // Mlt bin: upper bound is the lower edge of the next (right) span
                 if (nextMkey > 0.0 && nextMkey < 1e5) {
                     std::ostringstream ss;
                     ss << "[0," << static_cast<int>(nextMkey) << "]";
-                    sp.label = ss.str();
+                    mLabel = ss.str();
                 } else {
-                    sp.label = "M_{#perp}  low";
+                    mLabel = "M_{#perp}  low";
                 }
             } else {
                 int lo = static_cast<int>(mkey);
@@ -1205,13 +1268,28 @@ inline BracketTierSet BuildBracketTiers(
                     int hi = static_cast<int>(nextMkey);
                     std::ostringstream ss;
                     ss << "[" << lo << "," << hi << "]";
-                    sp.label = ss.str();
+                    mLabel = ss.str();
                 } else {
                     // Rightmost span -> no upper bound known
                     std::ostringstream ss;
                     ss << " > " << lo;
-                    sp.label = ss.str();
+                    mLabel = ss.str();
                 }
+            }
+
+            sp.label = mLabel;
+            if (rawSpans[s].hasEratio) {
+                double nextEkey = FindNextERatioBoundary(
+                    rawSpans[s].binFirst - 1, keys);
+                std::ostringstream eLabel;
+                if (ekey == 0.0 && nextEkey < 999.0) {
+                    eLabel << "< " << nextEkey;
+                } else if (nextEkey < 999.0) {
+                    eLabel << "[" << ekey << "," << nextEkey << "]";
+                } else {
+                    eLabel << "> " << ekey;
+                }
+                sp.label = "#splitline{" + mLabel + "}{" + eLabel.str() + "}";
             }
  
             if (!sp.label.empty()) spans.push_back(sp);
@@ -1295,10 +1373,14 @@ inline BracketTierSet BuildBracketTiers(
             sp.binFirst  = rawRisr[s].binFirst;
             sp.binLast   = rawRisr[s].binLast;
             sp.label     = ss.str();
-            if (s == 0) sp.sideLabel = "R_{ISR}";
             spans.push_back(sp);
         }
-        if (!AllSame(spans)) { out.tiers.push_back(spans); out.tierNames.push_back("RISR"); }
+        if (!spans.empty())
+            spans.front().sideLabel = "R_{ISR}";
+        if (!spans.empty() && (spans.size() == 1 || !AllSame(spans))) {
+            out.tiers.push_back(spans);
+            out.tierNames.push_back("RISR");
+        }
     }
     // --- Tier: PTISR ---
     {
@@ -1434,7 +1516,7 @@ inline void DrawBinAxisBrackets(TPad* pad,
                                 const YamlBinPattern*>& binLookup,
                                 const std::map<std::string, std::set<int>>& risrNeighborMap,
                                 const YamlBinPattern* groupPattern,
-                                double bottomFrac = 0.95, double tickClearance = -1.0
+                                double bottomFrac = 1.0, double tickClearance = -1.0
 )
 {
     if (!pad || !axisHist || sortedBins.empty()) return;
@@ -1505,9 +1587,21 @@ inline void DrawBinAxisBrackets(TPad* pad,
     }
 
     double bracketZoneTop = padBot - tickClearance;
-    double tierHeight = (bottomFrac * bracketZoneTop) / nTiers;
-    if (bracketZoneTop - nTiers * tierHeight < 0.0)
-        tierHeight = bracketZoneTop / nTiers;
+    bool separateStackedMperpFromRISR =
+        nTiers > 1 &&
+        tiers.tierNames[0] == "Mperp" &&
+        tiers.tierNames[1] == "RISR" &&
+        std::any_of(tiers.tiers[0].begin(), tiers.tiers[0].end(),
+                    [](const BracketSpan& span) {
+                        return span.label.compare(0, 11, "#splitline{") == 0;
+                    });
+    double tierGap = separateStackedMperpFromRISR
+        ? std::min(0.06, bracketZoneTop / (2.0 * nTiers))
+        : 0.0;
+    double tierHeight =
+        (bottomFrac * bracketZoneTop - tierGap) / nTiers;
+    if (bracketZoneTop - nTiers * tierHeight - tierGap < 0.0)
+        tierHeight = (bracketZoneTop - tierGap) / nTiers;
 
     auto BinCenterNDC = [&](int bin1) -> double {
         return padLeft + (bin1 - 0.5) * binWidth;
@@ -1520,7 +1614,8 @@ inline void DrawBinAxisBrackets(TPad* pad,
     // while still drawing the label. Everything shifts up naturally because
     // bracketZoneTop is already higher due to the collapsed tickClearance.
     for (int t = 0; t < nTiers; ++t) {
-        double yTop  = bracketZoneTop - t * tierHeight;
+        double yTop  = bracketZoneTop - t * tierHeight
+                     - (t > 0 ? tierGap : 0.0);
         double yBot  = yTop - tierHeight;
         double yLine = yTop - 0.12 * tierHeight;
         double yTick = yLine + 0.30 * tierHeight;
@@ -1563,9 +1658,13 @@ inline void DrawBinAxisBrackets(TPad* pad,
                 tsize = std::min(tsize, std::max(0.02, maxByHeight));
                 tsize = std::min(tsize, minSize);
             } 
+            if (span.label.compare(0, 11, "#splitline{") == 0)
+                tsize *= 0.85;
             double yText = suppressTopLine
                 ? 0.5 * (yTop + yBot)
                 : 0.5 * (yLine + yBot) - 0.001;
+            if (span.label.compare(0, 11, "#splitline{") == 0)
+                yText -= 0.28 * tierHeight;
             
             TLatex* tex = new TLatex(xMid, yText, span.label.c_str());
             tex->SetNDC(); tex->SetTextFont(42); tex->SetTextSize(tsize);
@@ -2048,8 +2147,16 @@ inline std::string BuildGroupTitle(const YamlBinPattern&           pattern,
         std::smatch m;
         std::regex re("_P(\\d+)");
         int selfBoundary = -1;
+        for (const auto& bin : binNames) {
+            std::smatch m;
+            if (std::regex_search(bin, m, re)) {
+                int boundary = std::stoi(m[1].str());
+                if (selfBoundary < 0 || boundary < selfBoundary)
+                    selfBoundary = boundary;
+            }
+        }
         auto itSelf = binLookup.find(nm);
-        if (itSelf != binLookup.end()) {
+        if (selfBoundary < 0 && itSelf != binLookup.end()) {
             ExtractPTISRBoundary(*itSelf->second, selfBoundary);
         }
         std::string partnerName = SwapPTISRTag(nm);
@@ -2620,4 +2727,3 @@ void DrawLogSmart(T* obj, const char* opt = "",
                   double fallbackMin = 1e-1, double rangeFactor = 1.2) {
     DrawLog(obj, opt, fallbackMin, rangeFactor);
 }
-

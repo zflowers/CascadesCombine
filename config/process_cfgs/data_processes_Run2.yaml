@@ -10,4 +10,4 @@ processes:
     - SMS_TChiWZ_Run2
 
 sms_filters:
-  - SMS_50000_45000
+  - SMS_30000_25000

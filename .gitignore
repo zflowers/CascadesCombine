@@ -10,6 +10,13 @@ libs/
 obj/
 python/__pycache__/
 *.yaml
+!config/bin_cfgs/derek_master_Regions.yaml
+!config/bin_cfgs/zach_Regions.yaml
+!config/bin_cfgs/zach_Regions_Run2.yaml
+!config/bin_cfgs/zach_Regions_Run3.yaml
+!config/bin_cfgs/zach_Regions_CR.yaml
+!config/bin_cfgs/zach_Regions_CR_Run2.yaml
+!config/bin_cfgs/zach_Regions_CR_Run3.yaml
 root/*
 plots/*
 *.root

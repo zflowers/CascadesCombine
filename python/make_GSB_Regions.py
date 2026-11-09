@@ -54,12 +54,12 @@ NEW_LEP_CUTS = {
     "Silver": {
         "2L": ["<=1Gold;", "=0Bronze;"],
         "3L": ["<3Gold;", "=0Bronze;"],
-        "4L": ["<4Gold;", "<=1Bronze;"],
+        "4L": ["<4Gold;", "=0Bronze;"],
     },
     "Bronze": {
         "2L": ["=1Bronze;"],
         "3L": [">=1Gold;", "=1Bronze;"],
-        "4L": ["<4Gold;", "=2Bronze;"],
+        "4L": [">=1Gold;", "=1Bronze;"],
     },
 }
 
