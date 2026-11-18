@@ -3,6 +3,7 @@
 #include "BuildFitTools.h"
 #include "Math/Vector4Dfwd.h"
 #include "Math/PxPyPzE4D.h"
+#include <optional>
 #pragma once
 
 using namespace std;
@@ -108,13 +109,13 @@ class BuildFitInput{
                     cutMap_[name] = fn;
                 }
             };
-        static ROOT::RDF::RNode loadCutsUser(ROOT::RDF::RNode &node, std::map<std::string, CutDef>& cuts, bool run_validation = true);
-        static bool ValidateUserCut(const ROOT::RDF::RNode& node, const CutDef &cut, unsigned nCheck = 50, unsigned maxCheck = 5000);
-        static std::map<std::string, CutDef> ValidateCuts(const ROOT::RDF::RNode& node, const std::map<std::string, CutDef>& cuts, unsigned nCheck = 50, unsigned maxCheck = 5000);
+        static ROOT::RDF::RNode loadCutsUser(ROOT::RDF::RNode &node, std::map<std::string, CutDef>& cuts, bool run_validation = true, const std::optional<std::vector<std::string>>& requestedCuts = std::nullopt, bool skipValidationEntryCount = false);
+        static bool ValidateUserCut(const ROOT::RDF::RNode& node, const CutDef &cut, unsigned nCheck = 50, unsigned maxCheck = 5000, bool skipEntryCount = false);
+        static std::map<std::string, CutDef> ValidateCuts(const ROOT::RDF::RNode& node, const std::map<std::string, CutDef>& cuts, unsigned nCheck = 50, unsigned maxCheck = 5000, bool skipEntryCount = false);
 
     private:
         static std::unordered_map<std::string, CutFn> cutMap_;
-        static void validateCutsUser(ROOT::RDF::RNode &node, std::map<std::string, CutDef>& ValidCuts, std::map<std::string, CutDef>& cuts);
+        static void validateCutsUser(ROOT::RDF::RNode &node, std::map<std::string, CutDef>& ValidCuts, std::map<std::string, CutDef>& cuts, const std::optional<std::vector<std::string>>& requestedCuts, bool skipValidationEntryCount);
 };
 #define REGISTER_CUT(classname, funcname, cutname) \
     static BuildFitInput::Registrar _registrar_##funcname( \

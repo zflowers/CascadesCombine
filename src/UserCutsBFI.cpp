@@ -6,7 +6,11 @@
 // -------------------------
 // User-defined cuts loader
 // -------------------------
-ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<std::string, CutDef>& ValidCuts, bool run_validation){
+ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node,
+                                              std::map<std::string, CutDef>& ValidCuts,
+                                              bool run_validation,
+                                              const std::optional<std::vector<std::string>>& requestedCuts,
+                                              bool skipValidationEntryCount){
     std::map<std::string, CutDef> cuts;
     RegisterSafeHelpers();
 
@@ -483,14 +487,27 @@ ROOT::RDF::RNode BuildFitInput::loadCutsUser(ROOT::RDF::RNode &node, std::map<st
     }, {"p4_jet0_vect", "p4_jet1_vect"});
     // Used *_vect in the names to avoid conflicts with the scalar-versions above.
     */
-    if (run_validation) validateCutsUser(node, ValidCuts, cuts);
+    if (run_validation) validateCutsUser(node, ValidCuts, cuts, requestedCuts, skipValidationEntryCount);
     return node;
 }
 
-void BuildFitInput::validateCutsUser(ROOT::RDF::RNode &node, std::map<std::string, CutDef>& ValidCuts, std::map<std::string, CutDef>& cuts){
-    // Validate the cuts that the user wrote
-    ValidCuts = ValidateCuts(node, cuts);
-    for (const auto &kv : cuts) {
+void BuildFitInput::validateCutsUser(ROOT::RDF::RNode &node,
+                                     std::map<std::string, CutDef>& ValidCuts,
+                                     std::map<std::string, CutDef>& cuts,
+                                     const std::optional<std::vector<std::string>>& requestedCuts,
+                                     bool skipValidationEntryCount){
+    std::map<std::string, CutDef> cutsToValidate;
+    if (!requestedCuts) {
+        cutsToValidate = cuts;
+    } else {
+        for (const auto &name : *requestedCuts) {
+            const auto it = cuts.find(name);
+            if (it != cuts.end()) cutsToValidate.emplace(*it);
+        }
+    }
+
+    ValidCuts = ValidateCuts(node, cutsToValidate, 50, 5000, skipValidationEntryCount);
+    for (const auto &kv : cutsToValidate) {
         if (!ValidCuts.count(kv.first)) {
             std::cerr << "[BuildFitInput loadUserCuts WARN] User cut \"" << kv.first
                       << "\" failed validation and will be ignored.\n";

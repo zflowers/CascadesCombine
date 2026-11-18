@@ -97,8 +97,8 @@ inline bool ColumnExists(ROOT::RDF::RNode rdf, const std::string& name) {
 ROOT::RDF::RNode BuildFitInput::DefinePairKinematics(ROOT::RDF::RNode rdf, const std::string& side) {
     // Determine side-specific index branch
     std::string indexBranch;
-    if (side == "A")      indexBranch = "index_lep_a_LEP"; // LEP only RJR tree
-    else if (side == "B") indexBranch = "index_lep_b_LEP"; // LEP only RJR tree
+    if (side == "A")      indexBranch = "index_lep_a";
+    else if (side == "B") indexBranch = "index_lep_b";
 
     std::string sideSuffix = "";
     std::string pairPrefix = "";
@@ -329,8 +329,8 @@ std::string BuildFitInput::BuildLeptonCut(const std::string& shorthand_in, const
 
     // helper to pick Nlep name depending on side requested
     auto nlepVar = [&](){
-        if (effectiveSide == "a") return std::string("Nlep_a_LEP");
-        if (effectiveSide == "b") return std::string("Nlep_b_LEP");
+        if (effectiveSide == "a") return std::string("Nlep_a");
+        if (effectiveSide == "b") return std::string("Nlep_b");
         return std::string("Nlep");
     };
     
@@ -342,7 +342,7 @@ std::string BuildFitInput::BuildLeptonCut(const std::string& shorthand_in, const
     // 3) Handle "AllSS" (All Same-Sign Leptons)
     if (first == "AllSS") {
         std::string branch = branchName("Charge_lep");      // Charge_lep_A / Charge_lep_B / Charge_lep_All
-        std::string nlep   = nlepVar();                    // Nlep_a_LEP / Nlep_b_LEP / Nlep
+        std::string nlep   = nlepVar();                    // Nlep_a / Nlep_b / Nlep
         return "((SUM(" + branch + "==1) == " + nlep + ") || (SUM(" + branch + "==-1) == " + nlep + "))";
     }
     
@@ -450,8 +450,8 @@ std::string BuildFitInput::BuildLeptonCut(const std::string& shorthand_in, const
 
 ROOT::RDF::RNode BuildFitInput::DefineLeptonPairCounts(ROOT::RDF::RNode rdf, const std::string& side) {
     std::string indexBranch;
-    if (side == "A")      indexBranch = "index_lep_a_LEP"; // LEP only RJR tree
-    else if (side == "B") indexBranch = "index_lep_b_LEP"; // LEP only RJR tree
+    if (side == "A")      indexBranch = "index_lep_a";
+    else if (side == "B") indexBranch = "index_lep_b";
     // else "" => all leptons
 
     // --- define side-specific flattened vectors (flavour, charge, quality)

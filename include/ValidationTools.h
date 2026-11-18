@@ -50,16 +50,18 @@ template <typename T>
 bool TryValidateType(ROOT::RDF::RNode node,
                      const DerivedVar &dv,
                      unsigned nCheck = 50,
-                     unsigned maxCheck = 50000) {
+                     unsigned maxCheck = 50000,
+                     bool skipEntryCount = false) {
     try {
-
-        auto cnt = node.Count();
-        if (cnt.GetValue() == 0) {
-            return true;
+        if (!skipEntryCount) {
+            auto cnt = node.Count();
+            if (cnt.GetValue() == 0) return true;
         }
 
+        const unsigned sampleSize = std::min(nCheck, maxCheck);
+
         auto subset = node.Filter(
-            [nCheck](ULong64_t e){ return e < nCheck; },
+            [sampleSize](ULong64_t e){ return e < sampleSize; },
             {"rdfentry_"}
         );
 
@@ -71,16 +73,16 @@ bool TryValidateType(ROOT::RDF::RNode node,
                 std::any_of(vals.begin(), vals.end(),
                             [](auto v){ return std::isfinite(v); });
 
-            if (!anyFinite) {
-                if (nCheck < maxCheck) {
+            if (!anyFinite && !vals.empty()) {
+                if (!skipEntryCount && nCheck < maxCheck) {
                     unsigned next = std::min(nCheck * 2u, maxCheck);
-                    return TryValidateType<T>(node, dv, next, maxCheck);
-                } else {
-                    std::cerr << "[ValidationTools] WARNING: '" << dv.name
-                              << "' evaluated as " << typeid(T).name()
-                              << " but produced no finite values in first "
-                              << maxCheck << " events.\n";
+                    return TryValidateType<T>(node, dv, next, maxCheck, skipEntryCount);
                 }
+                std::cerr << "[ValidationTools] WARNING: '" << dv.name
+                          << "' evaluated as " << typeid(T).name()
+                          << " but produced no finite values in first "
+                          << (skipEntryCount ? vals.size() : maxCheck)
+                          << " events.\n";
             }
             return true;
         }
@@ -103,55 +105,29 @@ bool TryValidateType(ROOT::RDF::RNode node,
                     if (anyFiniteInner) break;
                 }
 
-                if (!anyFiniteInner) {
-                    if (nCheck < maxCheck) {
+                if (!anyFiniteInner && !vals.empty()) {
+                    if (!skipEntryCount && nCheck < maxCheck) {
                         unsigned next = std::min(nCheck * 2u, maxCheck);
-                        return TryValidateType<T>(node, dv, next, maxCheck);
-                    } else {
-                        std::cerr << "[ValidationTools] WARNING: '" << dv.name
-                                  << "' evaluated as container of "
-                                  << typeid(Inner).name()
-                                  << " but produced no finite inner values.\n";
+                        return TryValidateType<T>(node, dv, next, maxCheck, skipEntryCount);
                     }
-                }
-
-                return true;
-            }
-
-            else {
-
-                if (vals.empty()) {
-                    if (nCheck < maxCheck) {
-                        unsigned next = std::min(nCheck * 2u, maxCheck);
-                        return TryValidateType<T>(node, dv, next, maxCheck);
-                    } else {
-                        std::cerr << "[ValidationTools] WARNING: '" << dv.name
-                                  << "' evaluated as container type "
-                                  << typeid(T).name()
-                                  << " but returned empty sequence.\n";
-                    }
-                }
-
-                return true;
-            }
-        }
-
-        else {
-
-            if (vals.empty()) {
-                if (nCheck < maxCheck) {
-                    unsigned next = std::min(nCheck * 2u, maxCheck);
-                    return TryValidateType<T>(node, dv, next, maxCheck);
-                } else {
                     std::cerr << "[ValidationTools] WARNING: '" << dv.name
-                              << "' evaluated as " << typeid(T).name()
-                              << " but returned empty vector.\n";
+                              << "' evaluated as container of "
+                              << typeid(Inner).name()
+                              << " but produced no finite inner values.\n";
                 }
+                return true;
             }
 
-            return true;
+            if (vals.empty() && !skipEntryCount && nCheck < maxCheck) {
+                unsigned next = std::min(nCheck * 2u, maxCheck);
+                return TryValidateType<T>(node, dv, next, maxCheck, skipEntryCount);
+            }
+        } else if (vals.empty() && !skipEntryCount && nCheck < maxCheck) {
+            unsigned next = std::min(nCheck * 2u, maxCheck);
+            return TryValidateType<T>(node, dv, next, maxCheck, skipEntryCount);
         }
 
+        return true;
     } catch (...) {
         return false;
     }
@@ -163,25 +139,26 @@ bool TryValidateType(ROOT::RDF::RNode node,
 inline bool ValidateDerivedVar(ROOT::RDF::RNode node,
                                const DerivedVar &dv,
                                unsigned nCheck = 50,
-                               unsigned maxCheck = 50000) {
+                               unsigned maxCheck = 50000,
+                               bool skipEntryCount = false) {
     try {
         ROOT::RDF::RNode tmpNode = node.Define(dv.name + "_test", dv.expr);
 
-        if (TryValidateType<double>(tmpNode, dv, nCheck, maxCheck)) return true;
-        if (TryValidateType<float>(tmpNode, dv, nCheck, maxCheck))  return true;
-        if (TryValidateType<int>(tmpNode, dv, nCheck, maxCheck))    return true;
-        if (TryValidateType<unsigned int>(tmpNode, dv, nCheck, maxCheck)) return true;
-        if (TryValidateType<long long>(tmpNode, dv, nCheck, maxCheck))    return true;
-        if (TryValidateType<unsigned long long>(tmpNode, dv, nCheck, maxCheck)) return true;
-        if (TryValidateType<bool>(tmpNode, dv, nCheck, maxCheck))   return true;
+        if (TryValidateType<double>(tmpNode, dv, nCheck, maxCheck, skipEntryCount)) return true;
+        if (TryValidateType<float>(tmpNode, dv, nCheck, maxCheck, skipEntryCount))  return true;
+        if (TryValidateType<int>(tmpNode, dv, nCheck, maxCheck, skipEntryCount))    return true;
+        if (TryValidateType<unsigned int>(tmpNode, dv, nCheck, maxCheck, skipEntryCount)) return true;
+        if (TryValidateType<long long>(tmpNode, dv, nCheck, maxCheck, skipEntryCount))    return true;
+        if (TryValidateType<unsigned long long>(tmpNode, dv, nCheck, maxCheck, skipEntryCount)) return true;
+        if (TryValidateType<bool>(tmpNode, dv, nCheck, maxCheck, skipEntryCount))   return true;
 
-        if (TryValidateType<ROOT::VecOps::RVec<double>>(tmpNode, dv, nCheck, maxCheck)) return true;
-        if (TryValidateType<ROOT::VecOps::RVec<float>>(tmpNode, dv, nCheck, maxCheck))  return true;
-        if (TryValidateType<ROOT::VecOps::RVec<int>>(tmpNode, dv, nCheck, maxCheck))    return true;
-        if (TryValidateType<ROOT::VecOps::RVec<unsigned int>>(tmpNode, dv, nCheck, maxCheck)) return true;
-        if (TryValidateType<ROOT::VecOps::RVec<long long>>(tmpNode, dv, nCheck, maxCheck))    return true;
-        if (TryValidateType<ROOT::VecOps::RVec<unsigned long long>>(tmpNode, dv, nCheck, maxCheck)) return true;
-        if (TryValidateType<ROOT::VecOps::RVec<bool>>(tmpNode, dv, nCheck, maxCheck))   return true;
+        if (TryValidateType<ROOT::VecOps::RVec<double>>(tmpNode, dv, nCheck, maxCheck, skipEntryCount)) return true;
+        if (TryValidateType<ROOT::VecOps::RVec<float>>(tmpNode, dv, nCheck, maxCheck, skipEntryCount))  return true;
+        if (TryValidateType<ROOT::VecOps::RVec<int>>(tmpNode, dv, nCheck, maxCheck, skipEntryCount))    return true;
+        if (TryValidateType<ROOT::VecOps::RVec<unsigned int>>(tmpNode, dv, nCheck, maxCheck, skipEntryCount)) return true;
+        if (TryValidateType<ROOT::VecOps::RVec<long long>>(tmpNode, dv, nCheck, maxCheck, skipEntryCount))    return true;
+        if (TryValidateType<ROOT::VecOps::RVec<unsigned long long>>(tmpNode, dv, nCheck, maxCheck, skipEntryCount)) return true;
+        if (TryValidateType<ROOT::VecOps::RVec<bool>>(tmpNode, dv, nCheck, maxCheck, skipEntryCount))   return true;
 
         std::cerr << "[ValidationTools] ERROR validating '" << dv.name
                   << "' from expression: " << dv.expr << "\n";

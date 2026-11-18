@@ -1,5 +1,6 @@
 // src/BFI_condor.cpp
 #include <getopt.h>
+#include <set>
 #include "TFile.h"
 #include "TROOT.h"
 
@@ -381,7 +382,9 @@ int main(int argc, char** argv) {
             return;
         }
     
-        if(!ROOT::IsImplicitMTEnabled()) ROOT::EnableImplicitMT();
+        if (!ROOT::IsImplicitMTEnabled()) {
+            ROOT::EnableImplicitMT(1);
+        }
 
         if(doHist) histFile->cd();
     
@@ -403,9 +406,24 @@ int main(int argc, char** argv) {
         unsigned long long nEntries = test_cnt.GetValue();
         
         std::map<std::string, CutDef> allUserCuts;
+        std::vector<std::string> requestedUserCuts;
+        if (!doHist) {
+            std::set<std::string> uniqueUserCuts;
+            for (const auto &bin : binNames) {
+                const auto it = userCutsPerBin.find(bin);
+                const auto &cuts = it != userCutsPerBin.end() ? it->second : userCutsVec;
+                for (const auto &cut : cuts) {
+                    if (!cut.empty()) uniqueUserCuts.insert(cut);
+                }
+            }
+            requestedUserCuts.assign(uniqueUserCuts.begin(), uniqueUserCuts.end());
+        }
+        std::optional<std::vector<std::string>> userCutsToValidate;
+        if (!doHist) userCutsToValidate = requestedUserCuts;
         
         // --- Load all user cuts ---
-        base_node_val = BuildFitInput::loadCutsUser(base_node_val, allUserCuts, true);
+        base_node_val = BuildFitInput::loadCutsUser(
+            base_node_val, allUserCuts, true, userCutsToValidate, !doHist);
         
         // skip validation if there are no events to validate on
         if (nEntries > 0) {
@@ -424,7 +442,7 @@ int main(int argc, char** argv) {
         ROOT::RDF::RNode base_node_fill = fillHandle.node;
         
         // Load user cuts onto the filling node as well.
-        base_node_fill = BuildFitInput::loadCutsUser(base_node_fill, allUserCuts, true);
+        base_node_fill = BuildFitInput::loadCutsUser(base_node_fill, allUserCuts, doHist);
 
         // Prepare histogram definitions
         auto userHists = loadHistogramsUser();
@@ -433,6 +451,24 @@ int main(int argc, char** argv) {
         auto histDefs = loadHistogramsYAML(histYamlPath, BFI);
         histDefs.insert(histDefs.end(), userHists.begin(), userHists.end());
         size_t N = histDefs.size();
+
+        struct DeferredSyst {
+            ROOT::RDF::RResultPtr<double> sum_up;
+            ROOT::RDF::RResultPtr<double> sum2_up;
+            ROOT::RDF::RResultPtr<double> sum_down;
+            ROOT::RDF::RResultPtr<double> sum2_down;
+        };
+
+        struct DeferredProc {
+            std::string bin;
+            std::string proc_key;
+            ROOT::RDF::RResultPtr<unsigned long long> cnt;
+            ROOT::RDF::RResultPtr<double> sumW;
+            ROOT::RDF::RResultPtr<double> sumW2;
+            std::map<std::string, DeferredSyst> systs;
+        };
+
+        std::vector<DeferredProc> deferred_procs;
     
         for (const auto &bin : binNames) {
             bool binEraMismatch = false;
@@ -776,24 +812,6 @@ int main(int argc, char** argv) {
                 }
             
                 // --- PHASE 1: BOOK ALL ACTIONS (LAZY) ---
-                struct DeferredSyst {
-                    ROOT::RDF::RResultPtr<double> sum_up;
-                    ROOT::RDF::RResultPtr<double> sum2_up;
-                    ROOT::RDF::RResultPtr<double> sum_down;
-                    ROOT::RDF::RResultPtr<double> sum2_down;
-                };
-            
-                struct DeferredProc {
-                    std::string proc_key;
-                    ROOT::RDF::RResultPtr<unsigned long long> cnt;
-                    ROOT::RDF::RResultPtr<double> sumW;
-                    ROOT::RDF::RResultPtr<double> sumW2;
-                    std::map<std::string, DeferredSyst> systs;
-                };
-            
-                std::vector<DeferredProc> deferred_procs;
-                deferred_procs.reserve(proc_json_nodes.size());
-            
                 for (auto &pkv : proc_json_nodes) {
                     const std::string &proc_key = pkv.first;
                     ROOT::RDF::RNode proc_json_node = pkv.second;
@@ -803,6 +821,7 @@ int main(int argc, char** argv) {
                     for (const auto &vc : validUserCuts) proc_json_node = proc_json_node.Filter(vc.expr);
             
                     DeferredProc dp;
+                    dp.bin = bin;
                     dp.proc_key = proc_key;
             
                     // 1. Book Count
@@ -836,95 +855,88 @@ int main(int argc, char** argv) {
                     }
                     deferred_procs.push_back(dp);
                 }
-            
-                // --- PHASE 2: TRIGGER EXECUTION ONCE ---
-                // Accessing GetValue on any single result forces RDataFrame to evaluate 
-                // ALL booked actions simultaneously across all threads.
-                if (!deferred_procs.empty()) {
-                    (void)deferred_procs.front().cnt.GetValue(); 
-                }
-            
-                // --- PHASE 3: READ AND PROCESS RESULTS ---
-                for (auto &dp : deferred_procs) {
-                    const std::string &proc_key = dp.proc_key;
-            
-                    unsigned long long n_entries = dp.cnt.GetValue();
-                    double sW = dp.sumW.GetValue();
-                    double sW2Val = dp.sumW2.GetValue();
-                    double err = (sW2Val >= 0.0) ? std::sqrt(sW2Val) : 0.0;
-            
-                    // Prepare container for this file
-                    FileYields fy;
-                    fy.nominal = { (double)n_entries, sW, err };
-            
-                    // Process pre-booked systematics
-                    if (treeSystTag.empty() && !IsData && !isSignal && runInternalSysts) {
-                        for (const auto &s : sysCfg.sf) {
-                            auto &ds = dp.systs[s.tag];
-                            
-                            double sum_up = 0.0, sum2_up = 0.0;
-                            try {
-                                sum_up = ds.sum_up.GetValue();
-                                sum2_up = ds.sum2_up.GetValue();
-                            } catch (...) { sum2_up = 0.0; }
-                            double err_up = (sum2_up >= 0.0) ? std::sqrt(sum2_up) : 0.0;
-            
-                            double sum_down = 0.0, sum2_down = 0.0;
-                            try {
-                                sum_down = ds.sum_down.GetValue();
-                                sum2_down = ds.sum2_down.GetValue();
-                            } catch (...) { sum2_down = 0.0; }
-                            double err_down = (sum2_down >= 0.0) ? std::sqrt(sum2_down) : 0.0;
-            
-                            SystYields sy;
-                            sy.up   = { (double)n_entries, sum_up, err_up };
-                            sy.down = { (double)n_entries, sum_down, err_down };
-                            fy.systs[s.tag] = sy;
-                        }
-                    }
-            
-                    // Handle tree-systematic passes
-                    if (!treeSystTag.empty()) {
-                        auto &fyr = fileResultsByBin[bin][proc_key][rootFilePath];
-                        if (treeSystIsUp) {
-                            fyr.systs[treeSystTag].up = { (double)n_entries, sW, err };
-                        } else {
-                            fyr.systs[treeSystTag].down = { (double)n_entries, sW, err };
-                        }
-                        continue;
-                    }
-                    
-                    // Nominal pass: write nominal + accumulate totals
-                    if (fileResultsByBin[bin].find(proc_key) == fileResultsByBin[bin].end() ||
-                        fileResultsByBin[bin][proc_key].find(rootFilePath) == fileResultsByBin[bin][proc_key].end()
-                       )
-                    {
-                        fileResultsByBin[bin][proc_key][rootFilePath] = fy;
-                        auto &tot = totalsByBin[bin][proc_key];
-                    
-                        tot.nominal[0] += (double)n_entries;
-                        tot.nominal[1] += sW;
-                        tot.nominal[2] += (err * err);
-                    
-                        if(!IsData){
-                            for (const auto &s_kv : fy.systs) {
-                                const std::string &stag = s_kv.first;
-                                const SystYields &sy = s_kv.second;
-                    
-                                auto &dest_syst = tot.systs[stag];
-                                dest_syst.up[0]  += sy.up[0];
-                                dest_syst.up[1]  += sy.up[1];
-                                dest_syst.up[2]  += (sy.up[2] * sy.up[2]);
-            
-                                dest_syst.down[0]+= sy.down[0];
-                                dest_syst.down[1]+= sy.down[1];
-                                dest_syst.down[2]+= (sy.down[2] * sy.down[2]);
-                            }
-                        }
-                    }
-                } // end deferred_procs loop
             } // end doJSON
         } // end loop over bins
+
+        if (doJSON && !deferred_procs.empty()) {
+            // Trigger all booked bin/process/systematic actions in one event loop.
+            (void)deferred_procs.front().cnt.GetValue();
+
+            for (auto &dp : deferred_procs) {
+                const std::string &bin = dp.bin;
+                const std::string &proc_key = dp.proc_key;
+
+                unsigned long long n_entries = dp.cnt.GetValue();
+                double sW = dp.sumW.GetValue();
+                double sW2Val = dp.sumW2.GetValue();
+                double err = (sW2Val >= 0.0) ? std::sqrt(sW2Val) : 0.0;
+
+                FileYields fy;
+                fy.nominal = { (double)n_entries, sW, err };
+
+                if (treeSystTag.empty() && !IsData && !isSignal && runInternalSysts) {
+                    for (const auto &s : sysCfg.sf) {
+                        auto &ds = dp.systs[s.tag];
+
+                        double sum_up = 0.0, sum2_up = 0.0;
+                        try {
+                            sum_up = ds.sum_up.GetValue();
+                            sum2_up = ds.sum2_up.GetValue();
+                        } catch (...) { sum2_up = 0.0; }
+                        double err_up = (sum2_up >= 0.0) ? std::sqrt(sum2_up) : 0.0;
+
+                        double sum_down = 0.0, sum2_down = 0.0;
+                        try {
+                            sum_down = ds.sum_down.GetValue();
+                            sum2_down = ds.sum2_down.GetValue();
+                        } catch (...) { sum2_down = 0.0; }
+                        double err_down = (sum2_down >= 0.0) ? std::sqrt(sum2_down) : 0.0;
+
+                        SystYields sy;
+                        sy.up   = { (double)n_entries, sum_up, err_up };
+                        sy.down = { (double)n_entries, sum_down, err_down };
+                        fy.systs[s.tag] = sy;
+                    }
+                }
+
+                if (!treeSystTag.empty()) {
+                    auto &fyr = fileResultsByBin[bin][proc_key][rootFilePath];
+                    if (treeSystIsUp) {
+                        fyr.systs[treeSystTag].up = { (double)n_entries, sW, err };
+                    } else {
+                        fyr.systs[treeSystTag].down = { (double)n_entries, sW, err };
+                    }
+                    continue;
+                }
+
+                if (fileResultsByBin[bin].find(proc_key) == fileResultsByBin[bin].end() ||
+                    fileResultsByBin[bin][proc_key].find(rootFilePath) == fileResultsByBin[bin][proc_key].end())
+                {
+                    fileResultsByBin[bin][proc_key][rootFilePath] = fy;
+                    auto &tot = totalsByBin[bin][proc_key];
+
+                    tot.nominal[0] += (double)n_entries;
+                    tot.nominal[1] += sW;
+                    tot.nominal[2] += (err * err);
+
+                    if (!IsData) {
+                        for (const auto &s_kv : fy.systs) {
+                            const std::string &stag = s_kv.first;
+                            const SystYields &sy = s_kv.second;
+
+                            auto &dest_syst = tot.systs[stag];
+                            dest_syst.up[0] += sy.up[0];
+                            dest_syst.up[1] += sy.up[1];
+                            dest_syst.up[2] += (sy.up[2] * sy.up[2]);
+
+                            dest_syst.down[0] += sy.down[0];
+                            dest_syst.down[1] += sy.down[1];
+                            dest_syst.down[2] += (sy.down[2] * sy.down[2]);
+                        }
+                    }
+                }
+            }
+        }
     }; // end processTree
 
     // Dispatch tree(s)

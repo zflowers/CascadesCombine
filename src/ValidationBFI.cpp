@@ -5,7 +5,8 @@
 bool BuildFitInput::ValidateUserCut(const ROOT::RDF::RNode& node,
                                            const CutDef &cut,
                                            unsigned nCheck,
-                                           unsigned maxCheck) {
+                                           unsigned maxCheck,
+                                           bool skipEntryCount) {
     try {
         ROOT::RDF::RNode tmpNode = node;
 
@@ -20,7 +21,7 @@ bool BuildFitInput::ValidateUserCut(const ROOT::RDF::RNode& node,
         dv.name = cut.name + "_test";
         dv.expr = cut.expression;
 
-        return ValidateDerivedVar(tmpNode, dv, nCheck, maxCheck);
+        return ValidateDerivedVar(tmpNode, dv, nCheck, maxCheck, skipEntryCount);
 
     } catch (const std::exception &e) {
         std::cerr << "[BuildFitInput] Exception validating user cut '" << cut.name
@@ -36,12 +37,13 @@ std::map<std::string, CutDef>
 BuildFitInput::ValidateCuts(const ROOT::RDF::RNode& node,
                             const std::map<std::string, CutDef>& cuts,
                             unsigned nCheck,
-                            unsigned maxCheck) {
+                            unsigned maxCheck,
+                            bool skipEntryCount) {
     std::map<std::string, CutDef> valid;
 
     for (const auto& kv : cuts) {
         const auto& cut = kv.second;
-        if (BuildFitInput::ValidateUserCut(node, cut, nCheck, maxCheck)) {
+        if (BuildFitInput::ValidateUserCut(node, cut, nCheck, maxCheck, skipEntryCount)) {
             valid[kv.first] = cut;
         } else {
             std::cerr << "[BuildFitInput] Cut '" << cut.name
@@ -51,4 +53,3 @@ BuildFitInput::ValidateCuts(const ROOT::RDF::RNode& node,
 
     return valid;
 }
-
