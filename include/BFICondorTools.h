@@ -421,27 +421,30 @@ ROOT::RDF::RNode MultiSystWeights(ROOT::RDF::RNode node,
             double muBLP_over_COL, double muID_over_BLP, double muISO_over_ID, double muPrompt_ISOID, double muNOT_Prompt_ISOID, double muNOT_ID_nor_ISO,
             double prefire
           ) {
+              const auto nominalFactor = [](double factor) {
+                  return factor == 0.0 ? 1.0 : factor;
+              };
               return 1.0
-                   * pu
-                   * MuF
-                   * MuR
-                   * PDF
-                   * BtagHF
-                   * BtagLF
-                   * met_trig
-                   * elBLP_over_COL
-                   * elID_over_BLP
-                   * elISO_over_ID
-                   * elPrompt_ISOID
-                   * elNOT_Prompt_ISOID
-                   * elNOT_ID_nor_ISO
-                   * muBLP_over_COL
-                   * muID_over_BLP
-                   * muISO_over_ID
-                   * muPrompt_ISOID
-                   * muNOT_Prompt_ISOID
-                   * muNOT_ID_nor_ISO
-                   * prefire
+                   * nominalFactor(pu)
+                   * nominalFactor(MuF)
+                   * nominalFactor(MuR)
+                   * nominalFactor(PDF)
+                   * nominalFactor(BtagHF)
+                   * nominalFactor(BtagLF)
+                   * nominalFactor(met_trig)
+                   * nominalFactor(elBLP_over_COL)
+                   * nominalFactor(elID_over_BLP)
+                   * nominalFactor(elISO_over_ID)
+                   * nominalFactor(elPrompt_ISOID)
+                   * nominalFactor(elNOT_Prompt_ISOID)
+                   * nominalFactor(elNOT_ID_nor_ISO)
+                   * nominalFactor(muBLP_over_COL)
+                   * nominalFactor(muID_over_BLP)
+                   * nominalFactor(muISO_over_ID)
+                   * nominalFactor(muPrompt_ISOID)
+                   * nominalFactor(muNOT_Prompt_ISOID)
+                   * nominalFactor(muNOT_ID_nor_ISO)
+                   * nominalFactor(prefire)
                    ;
         },
         {
