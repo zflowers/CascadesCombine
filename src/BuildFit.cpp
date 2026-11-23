@@ -547,9 +547,10 @@ void BuildFit::AddShapeSystsFromJSON(
                                      systKey.find("Jer") != std::string::npos ||
                                      systKey.find("UnClust") != std::string::npos ||
                                      systKey.find("METtrig") != std::string::npos ||
+                                     systKey.find("Pile") != std::string::npos ||
                                      systKey.find("MuF") != std::string::npos;
                 const bool btag = systKey.find("Btag") != std::string::npos;
-                const bool kinematic = systKey.find("Pile") != std::string::npos; // ||
+                const bool kinematic = false; // systKey.find("Pile") != std::string::npos; // ||
                                     //    systKey.find("Jes") != std::string::npos ||
                                     //    systKey.find("Jer") != std::string::npos ||
                                     //    systKey.find("UnClust") != std::string::npos;
