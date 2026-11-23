@@ -668,15 +668,19 @@ void BuildFit::AddPTISRSys(const stringlist& binset, const stringlist& procs){
         .AddSyst(cb, "Run2_PTISR_2L_0J", "lnN", SystMap<>::init(1.10));
     cb.cp().process(procs).bin({".*Run2.*2L.*1J.*P350.*"})
         .AddSyst(cb, "Run2_PTISR_2L_1J", "lnN", SystMap<>::init(1.10));
-    cb.cp().process(procs).bin({".*Run2.*3L.*P300.*"})
-        .AddSyst(cb, "Run2_PTISR_3L", "lnN", SystMap<>::init(1.10));
+    cb.cp().process(procs).bin({".*Run2.*3L.*0J.*P300.*"})
+        .AddSyst(cb, "Run2_PTISR_3L_0J", "lnN", SystMap<>::init(1.10));
+    cb.cp().process(procs).bin({".*Run2.*3L.*1J.*P300.*"})
+        .AddSyst(cb, "Run2_PTISR_3L_1J", "lnN", SystMap<>::init(1.10));
 
     cb.cp().process(procs).bin({".*Run3.*2L.*0J.*P350.*"})
         .AddSyst(cb, "Run3_PTISR_2L_0J", "lnN", SystMap<>::init(1.10));
     cb.cp().process(procs).bin({".*Run3.*2L.*1J.*P350.*"})
         .AddSyst(cb, "Run3_PTISR_2L_1J", "lnN", SystMap<>::init(1.10));
-    cb.cp().process(procs).bin({".*Run3.*3L.*P300.*"})
-        .AddSyst(cb, "Run3_PTISR_3L", "lnN", SystMap<>::init(1.10));
+    cb.cp().process(procs).bin({".*Run3.*3L.*0J.*P300.*"})
+        .AddSyst(cb, "Run3_PTISR_3L_0J", "lnN", SystMap<>::init(1.10));
+    cb.cp().process(procs).bin({".*Run3.*3L.*1J.*P300.*"})
+        .AddSyst(cb, "Run3_PTISR_3L_1J", "lnN", SystMap<>::init(1.10));
 
     cb.SetFlag("filters-use-regex", false);
 }
@@ -801,19 +805,23 @@ void BuildFit::AddBtagSys(const stringlist& binset, const stringlist& procs){
 
     cb.cp().process(procs).bin({".*Run2.*2L.*0J.*P250.*Btag.*"})
         .AddSyst(cb, "Run2_Btag_2L_0J_PTISR", "lnN", SystMap<>::init(1.20));
-    cb.cp().process(procs).bin({".*Run2.*2L.*1J.*P250.*Btag.*"})
+    cb.cp().process(procs).bin({".*Run2.*2L.*1J.*P200.*Btag.*"})
         .AddSyst(cb, "Run2_Btag_2L_1J_PTISR", "lnN", SystMap<>::init(1.20));
-    cb.cp().process(procs).bin({".*Run2.*3L.*P200.*Btag.*"})
-        .AddSyst(cb, "Run2_Btag_3L_PTISR", "lnN", SystMap<>::init(1.20));
+    cb.cp().process(procs).bin({".*Run2.*3L.*0J.*P200.*Btag.*"})
+        .AddSyst(cb, "Run2_Btag_3L_0J_PTISR", "lnN", SystMap<>::init(1.20));
+    cb.cp().process(procs).bin({".*Run2.*3L.*1J.*P200.*Btag.*"})
+        .AddSyst(cb, "Run2_Btag_3L_1J_PTISR", "lnN", SystMap<>::init(1.20));
     cb.cp().process(procs).bin({".*Run2.*4L.*Btag.*"})
         .AddSyst(cb, "Run2_Btag_4L", "lnN", SystMap<>::init(1.20));
 
     cb.cp().process(procs).bin({".*Run3.*2L.*0J.*P250.*Btag.*"})
         .AddSyst(cb, "Run3_Btag_2L_0J_PTISR", "lnN", SystMap<>::init(1.20));
-    cb.cp().process(procs).bin({".*Run3.*2L.*1J.*P250.*Btag.*"})
+    cb.cp().process(procs).bin({".*Run3.*2L.*1J.*P200.*Btag.*"})
         .AddSyst(cb, "Run3_Btag_2L_1J_PTISR", "lnN", SystMap<>::init(1.20));
-    cb.cp().process(procs).bin({".*Run3.*3L.*P200.*Btag.*"})
-        .AddSyst(cb, "Run3_Btag_3L_PTISR", "lnN", SystMap<>::init(1.20));
+    cb.cp().process(procs).bin({".*Run3.*3L.*0J.*P200.*Btag.*"})
+        .AddSyst(cb, "Run3_Btag_3L_0J_PTISR", "lnN", SystMap<>::init(1.20));
+    cb.cp().process(procs).bin({".*Run3.*3L.*1J.*P200.*Btag.*"})
+        .AddSyst(cb, "Run3_Btag_3L_1J_PTISR", "lnN", SystMap<>::init(1.20));
     cb.cp().process(procs).bin({".*Run3.*4L.*Btag.*"})
         .AddSyst(cb, "Run3_Btag_4L", "lnN", SystMap<>::init(1.20));
 
@@ -857,7 +865,7 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
     cb.AddProcesses({sigMass}, {signalDetails[0]}, {"13.6TeV"}, {signalDetails[1]}, {sigProcPrefix}, cats, true);
 
     // 4) Register shape systematics only for kept bins
-    AddShapeSystsFromJSON(j, kept_bins, true); // last arg false is default and will not write extra histograms
+    // AddShapeSystsFromJSON(j, kept_bins, true); // last arg false is default and will not write extra histograms
     std::cout << "Added shape systs\n";
 
     // 5) Extract shapes (backgrounds + signals for kept bins)
@@ -870,20 +878,20 @@ void BuildFit::BuildFitSkeleton(JSONFactory* j, const std::string& signalPoint, 
     // cb.cp().SetAutoMCStats(cb, 0.); // Second arg is event threshold. 0. is default setting
 
     // All non-triboson processes -> rateParam
-    //AddFakeFamiliesAsSharedNorms(truebkgprocs, fakesprocs, "rateParam", 1.0, "triboson", false /* exclude triboson */);
+    AddFakeFamiliesAsSharedNorms(truebkgprocs, fakesprocs, "rateParam", 1.0, "triboson", false /* exclude triboson */);
     // Only triboson processes -> lnN 1.4
-    //AddFakeFamiliesAsSharedNorms(truebkgprocs, fakesprocs, "lnN", 1.4, "triboson", true /* include only triboson */);
+    AddFakeFamiliesAsSharedNorms(truebkgprocs, fakesprocs, "lnN", 1.4, "triboson", true /* include only triboson */);
     // NEW implement all proc rates as lnNs with 50% prior
-    AddFakeFamiliesAsSharedNorms(truebkgprocs, fakesprocs, "lnN", 1.5, "", false /* include only triboson */);
-    AddFloatingNormsGroupedByFakeType(fakesprocs, "rateParam", 1.0); // add fakes as rate parameters
+    // AddFakeFamiliesAsSharedNorms(truebkgprocs, fakesprocs, "lnN", 1.5, "", false /* include only triboson */);
+    // AddFloatingNormsGroupedByFakeType(fakesprocs, "rateParam", 1.0); // add fakes as rate parameters
     // AddFloatingNormsGroupedByFakeType(fakesprocs, "lnN", 2.0); // implement all fake rates as lnNs with 100% prior
 
-    AddFAKETransferSys(kept_bins);
-    AddPTISRSys(kept_bins, bkgprocs);
-    AddSameSignSys(kept_bins, bkgprocs);
-    AddOSOFSys(kept_bins, bkgprocs);
-    AddLepHemiSys(kept_bins, bkgprocs);
-    AddBtagSys(kept_bins, bkgprocs);
+    // AddFAKETransferSys(kept_bins);
+    // AddPTISRSys(kept_bins, bkgprocs);
+    // AddSameSignSys(kept_bins, bkgprocs);
+    // AddOSOFSys(kept_bins, bkgprocs);
+    // AddLepHemiSys(kept_bins, bkgprocs);
+    // AddBtagSys(kept_bins, bkgprocs);
 
     cb.FilterSysts([](ch::Systematic const *s){ return s->value_u() == 1.0 && s->value_d() == 1.0; });
     std::cout << "Added all systs\n";
